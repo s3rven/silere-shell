@@ -116,7 +116,8 @@ you share your screen or record it, and a red share mark sits beside the clock.
 Hyprland ignores brief screenshot captures. Switch automatic quieting off with
 **Hide while sharing screen** under **Feedback › Notifications**. **Presentation Mode**
 in Quick Actions, and in Home under Do Not Disturb's options, hides notification content on every compositor, including
-critical notifications and cards already on screen.
+critical notifications and cards already on screen, and keeps the screen awake until you turn it off.
+While popups are held back, the bell beside the clock takes the accent colour once one arrives.
 
 A muted app's notifications skip the popup and go straight to history, without counting
 as missed. Critical ones follow **Let critical through**, as under Do Not Disturb. Unmute

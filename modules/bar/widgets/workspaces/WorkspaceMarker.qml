@@ -239,24 +239,6 @@ Item {
 
     }
 
-    Rectangle {
-        readonly property bool _show: Notifications.silencingActive && Notifications.missedCount > 0
-        // placed, not anchored: the underline needs it at the line's tip and a conditional anchor leaves the stale edge set
-        x: root._bar ? root.width - width + 2 : (root.width - width) / 2
-        y: -1
-        width:  4
-        height: 4
-        radius: width / 2
-        antialiasing: true
-        color: Theme.error
-        opacity: _show ? 1 : 0
-        scale:   _show ? 1 : 0.2
-        transformOrigin: Item.Center
-        visible: opacity > 0.01
-        MotionBehavior on opacity {NumberAnimation { duration: Motion.ms(160); easing.type: Easing.OutCubic } }
-        MotionBehavior on scale   {NumberAnimation { duration: Motion.ms(150); easing.type: Easing.OutCubic } }
-    }
-
     BumpAnimation {
         id: _specialPulse
         target: root

@@ -57,6 +57,7 @@ Item {
         && (CalendarState.anchorSource === root
             || (CalendarState.anchorSource === null && root._anchorFallbackBar))
     readonly property bool _pressed: _calTap.pressed || _cycleTap.pressed
+    readonly property bool _missed: Notifications.silencingActive && Notifications.missedCount > 0
     readonly property bool _hov: root.barActive && root.show
         && _hover.hovered && ShellSettings.barHoverHighlight
     readonly property color _cSub:   _hov ? Theme.mix(Theme.barSubtext, Theme.barAccent, 0.30) : Theme.barSubtext
@@ -157,23 +158,30 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 0
 
+            // red is for a screen another app is capturing; a mode the user chose stays quiet
             CollapsingText {
                 text:     "󱒃 "
                 color:    Theme.error
                 animate:  root._animatable
-                expanded: Compositor.screenSharing || Notifications.presentationMode
+                expanded: Compositor.screenSharing
+            }
+            CollapsingText {
+                text:     "󰐨 "
+                color:    root._cSub
+                animate:  root._animatable
+                expanded: Notifications.presentationMode && !Compositor.screenSharing
             }
             CollapsingText {
                 text:     "󰅶 "
                 color:    root._cSub
                 animate:  root._animatable
-                expanded: Idle.keepAwake
+                expanded: Idle.keepAwake && !Notifications.presentationMode
             }
             CollapsingText {
                 text:     "󰂛 "
-                color:    root._cSub
+                color:    root._missed ? Theme.barAccent : root._cSub
                 animate:  root._animatable
-                expanded: Notifications.effectiveDnd
+                expanded: Notifications.effectiveDnd || root._missed
             }
             RollingText {
                 tabularDigits: true
@@ -217,6 +225,8 @@ Item {
         + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
         + (Notifications.dndUntil > 0 ? " until " + DateTime.clockText(new Date(Notifications.dndUntil)) : "")
+        + (!root._missed ? "" : Notifications.missedCount === 1 ? ", 1 missed notification"
+            : ", " + Notifications.missedCount + " missed notifications")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canInteract

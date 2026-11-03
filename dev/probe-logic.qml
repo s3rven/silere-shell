@@ -3012,6 +3012,27 @@ ShellRoot {
         root._check(!CalendarState.open, "a disabled clock rejects opening the calendar")
         barClock.destroy()
 
+        const statusClock = clockFactory.createObject(root)
+        const statusGlyph = glyph => root._findTrayNode(statusClock, item => item.text === glyph && item.expanded !== undefined)
+        const statusDndWas = ShellSettings.dnd, statusMissedWas = Notifications.missedCount
+        ShellSettings.dnd = false
+        Notifications.presentationMode = true
+        Notifications.missedCount = 2
+        root._check(statusGlyph("󰐨 ").expanded && !statusGlyph("󱒃 ").expanded
+                && statusGlyph("󰂛 ").expanded && Qt.colorEqual(statusGlyph("󰂛 ").color, Theme.barAccent)
+                && statusClock.accessibleName.indexOf(", 2 missed notifications") >= 0,
+            "presentation mode shows a quiet glyph and the bell takes the accent for held-back notifications")
+        Idle.keepAwake = true
+        root._check(!statusGlyph("󰅶 ").expanded,
+            "presentation mode already keeps the screen awake, so the clock shows no second cup")
+        Idle.keepAwake = false
+        Notifications.presentationMode = false
+        root._check(Notifications.missedCount === 0 && !statusGlyph("󰂛 ").expanded,
+            "ending the silence clears the held-back count and folds the bell")
+        ShellSettings.dnd = statusDndWas
+        Notifications.missedCount = statusMissedWas
+        statusClock.destroy()
+
         const updateBadge = updatesWidgetFactory.createObject(barFixtureHost)
         updateBadge.show = true
         updateBadge.busy = true
