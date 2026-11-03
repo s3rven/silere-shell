@@ -5,13 +5,13 @@ Hidden menus and popups unload their content after closing.
 
 ## Reference numbers
 
-These are the 1.4.3 release measurements on reference machine A in
+These are the 1.5.0 release measurements on reference machine A in
 [performance history](perf-history.md), not a memory limit for the current checkout.
 
 | State | PSS | What it is |
 |---|---|---|
-| cold | ~90 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~99 MB | The same session after the menu has been opened once. |
+| cold | ~93 MB | Freshly started, menu never opened. Only the bar has drawn. |
+| warm | ~101 MB | The same session after the menu has been opened once. |
 
 Menu and popup instances unload after closing. The first open also loads code, font and
 driver caches that can remain warm, so closing a menu does not return the process to its
@@ -30,7 +30,7 @@ Underline event animations stop during quiet idle; a critical temperature warnin
 stays lit but still.
 
 Read PSS, not RSS. `top` and `htop` show RSS, which counts shared Qt, Mesa and font pages in
-full and reads about 180 to 195 MB for the same session.
+full and reads about 190 to 205 MB for the same session.
 
 Results vary with hardware, drivers, fonts and which widgets you enable. To measure your own
 setup, close other heavy programs first:

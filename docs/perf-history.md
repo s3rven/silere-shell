@@ -48,6 +48,8 @@ Hardware not already listed takes a new letter.
 | 1.4.3 | 2026-10-18 | A | warm | 99 MB | 193 MB | 0.0% | 26 | 55 |
 | 1.4.4 | 2026-10-22 | A | cold | — | — | — | — | — |
 | 1.4.4 | 2026-10-22 | A | warm | — | — | — | — | — |
+| 1.5.0 | 2026-11-03 | A | cold | 93 MB | 192 MB | 0.2% | 26 | 55 |
+| 1.5.0 | 2026-11-03 | A | warm | 101 MB | 202 MB | 0.3% | 26 | 55 |
 
 A dash means that release was not measured.
 
@@ -93,3 +95,15 @@ no second Quickshell instance was running.
 
 Raw reports: [cold](perf/1.4.3-cold.json) · [warm](perf/1.4.3-warm.json). They were collected
 from runtime commit `15531e8` while the release metadata and notes were being prepared.
+
+The 1.5.0 runs use reference-A hardware with kernel `7.3.1-1-cachyos`, Quickshell 0.3.2,
+Qt 6.12.0, and the display at 240 Hz / 125% scale. The kernel and refresh rate changed since
+1.4.3, and the bar now carries the system monitor, so this is not a controlled comparison of
+code changes alone. Both samples come from one restart and were steady, with a per-second CPU
+median of 0.0% of one core, and both descriptor counts stayed flat. Each sample started just
+after a minute boundary: the clock's minute roll redraws the bar for one busy second at 240 Hz,
+and a window holding it reads as noisy. The visualizer was stopped, and no second Quickshell
+instance was running.
+
+Raw reports: [cold](perf/1.5.0-cold.json) · [warm](perf/1.5.0-warm.json). They were collected
+from runtime commit `03d2653` while the release metadata and notes were being prepared.
