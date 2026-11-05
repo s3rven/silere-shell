@@ -3058,6 +3058,17 @@ ShellRoot {
                 "a hover reveal closes without holding the wide label's width")
             pill.shrinkDelay = 600
         }
+        {
+            const held = pillFactory.createObject(root, { text: "12.4 MB/s" })
+            const heldRow = held.children.find(item => typeof item.forceLayout === "function")
+            heldRow.forceLayout()
+            held.width = heldRow.width + held.horizontalPadding * 2 + 30
+            const pinned = heldRow.x === held.horizontalPadding
+            held.width = heldRow.width + held.horizontalPadding * 2 - 20
+            root._check(pinned && heldRow.x < held.horizontalPadding && heldRow.width > 0,
+                "a pill holding a wider width keeps its content at its padding, and still grows it from the centre")
+            held.destroy()
+        }
         pill.text = "A current label"
         pill.animateText = true
         root._check(root._showsText(pill, "A current label"),

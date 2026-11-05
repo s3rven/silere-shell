@@ -86,7 +86,7 @@ Item {
     }
 
     onRowWidthChanged: {
-        if (shrinkDelay <= 0 || !root.hoverEnabled) {
+        if (shrinkDelay <= 0 || !root.hoverEnabled || _release.running) {
             _shrinkDelay.stop()
             _minW = rowWidth
             return
@@ -94,11 +94,30 @@ Item {
         if (rowWidth > _minW) _minW = rowWidth
         _shrinkDelay.restart()
     }
-    onTextChanged: if (text.length === 0) { _minW = 0; _shrinkDelay.stop() }
+    onTextChanged: if (text.length === 0) root._releaseHold()
     onShrinkDelayChanged: if (shrinkDelay <= 0) { _shrinkDelay.stop(); _minW = rowWidth }
-    onCompactChanged: { _shrinkDelay.stop(); _minW = 0 }
-    // the hold is for readings that flicker; a hover reveal closing is deliberate and settles at once
-    onExpandedChanged: if (!expanded) { _shrinkDelay.stop(); _minW = 0 }
+    onCompactChanged: root._releaseHold()
+    // the hold is for readings that flicker; a hover reveal closing, compact, or a new font or scale is
+    // deliberate and settles at once. The row relays out on the next frame and can shrink in steps, so the
+    // content is followed down for a moment: measured against a released hold, the first step read as growth
+    // and kept the pill near its old width, with empty room after the readings, for the whole shrink delay
+    function _releaseHold(): void {
+        _shrinkDelay.stop()
+        _minW = 0
+        _release.restart()
+    }
+    onExpandedChanged: if (!expanded) root._releaseHold()
+    Connections {
+        target: Settings
+        function onFontChanged() { root._releaseHold() }
+        function onIconFontChanged() { root._releaseHold() }
+        function onFontSizeChanged() { root._releaseHold() }
+        function onIconSizeChanged() { root._releaseHold() }
+    }
+    Timer {
+        id: _release
+        interval: 250
+    }
     onHoverEnabledChanged: if (!hoverEnabled) {
         _hoverRevealTimer.stop()
         _shrinkDelay.stop()
@@ -246,7 +265,9 @@ Item {
     // first rounds twice and drops the text a pixel below every other label on the bar
     Row {
         id: row
-        x: Math.round((parent.width - width) / 2)
+        // centred only while the pill eases open around it; a pill holding or releasing a wider width keeps the
+        // content at its padding, or every shorter reading jumped right by half the slack and back when the hold let go
+        x: Math.round(Math.min((parent.width - width) / 2, root.horizontalPadding))
         height: parent.height
         spacing: Metrics.pillGapFor(root.compact)
 
