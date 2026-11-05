@@ -4932,6 +4932,9 @@ ShellRoot {
                 && CalendarState.weekendFor(6, [0, 1, 2, 3, 4])
                 && !CalendarState.weekendFor(0, [0, 1, 2, 3, 4]),
             "a Sunday-to-Thursday working week shades Friday and Saturday instead of Sunday")
+        root._check(CalendarState.weekendFor(5, Qt.locale("he_IL").weekDays)
+                && !CalendarState.weekendFor(0, Qt.locale("he_IL").weekDays),
+            "a locale's own working days shade its weekend, not the Saturday and Sunday fallback")
         root._check(CalendarState.weekendFor(5, [0, 1, 2, 3, 4, 6])
                 && !CalendarState.weekendFor(6, [0, 1, 2, 3, 4, 6])
                 && CalendarState.weekendFor(0, null) && CalendarState.weekendFor(6, []),

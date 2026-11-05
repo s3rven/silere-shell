@@ -42,9 +42,11 @@ AnchoredPopupState {
         return locale.standaloneDayName(day, Locale.ShortFormat)
     }
 
+    // Locale.weekDays is a sequence, not a JS array
     function weekendFor(day: int, weekdays): bool {
-        if (!Array.isArray(weekdays) || weekdays.length === 0) return day === 0 || day === 6
-        return weekdays.indexOf(day) < 0
+        const days = weekdays && weekdays.length > 0 ? Array.from(weekdays) : []
+        if (days.length === 0) return day === 0 || day === 6
+        return days.indexOf(day) < 0
     }
 
     function isWeekend(day: int): bool { return root.weekendFor(day, root.workingDays) }
