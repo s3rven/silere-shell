@@ -4309,6 +4309,11 @@ ShellRoot {
                 Notifications.historyModel.get(i).summary === s),
             "history lists a burst by arrival even when its popups close newest first")
         Notifications.clearHistory()
+        Notifications._prependHistory({ id: 271, appName: "Chat", summary: "from a clock ahead", time: Date.now() + 3600000 })
+        Notifications._prependHistory({ id: 272, appName: "Chat", summary: "now", time: Date.now() })
+        root._check(Notifications.historyModel.get(0).id === 272,
+            "a new arrival stays above a row dated after now by a clock that went back")
+        Notifications.clearHistory()
         Notifications._prependHistory({ id: 261, appName: "Agent", summary: "Approval requested", time: 10 })
         Notifications._prependHistory({ id: 262, appName: "Agent", summary: "Approval requested", time: 20 })
         Notifications._prependHistory({ id: 260, appName: "Agent", summary: "Approval requested", time: 5 })

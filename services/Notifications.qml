@@ -226,8 +226,10 @@ Singleton {
         const e = root._normalizeEntry(entry)
         if (!e) return
         if (root.historyExpiredAt(e.time, ShellSettings.notifHistoryDays, Date.now(), ShellSettings.ready)) return
+        // a row dated after now came from a clock that went back; walking past it buries the new arrival
+        const now = Date.now()
         let at = 0
-        while (at < _history.count && _history.get(at).time > e.time) at++
+        while (at < _history.count && _history.get(at).time > e.time && _history.get(at).time <= now) at++
         // a sender repeating itself word for word takes one row, not a run of the same row out of a short history
         const same = r => r.appName === e.appName && r.summary === e.summary && r.body === e.body
         if (at > 0 && same(_history.get(at - 1))) return
