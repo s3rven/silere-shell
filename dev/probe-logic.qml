@@ -8272,6 +8272,38 @@ ShellRoot {
             "hook runs stamped before the wall clock stepped back do not hold the budget")
         Hooks._runTimes = []
 
+        const hooksPresentWas = Hooks._present
+        const hooksFoundWas = Hooks._found
+        const hooksDelayWas = Hooks._rescanDelayMs
+        Hooks._present = { probe: true }
+        const knownHooks = Hooks._present
+        Hooks._found = { partial: true }
+        Hooks._rescanDelayMs = 0
+        Hooks._acceptScanResult(127, false)
+        root._check(Hooks._present === knownHooks && Object.keys(Hooks._found).length === 0
+                && Hooks._rescanDelayMs === Hooks._minRescanDelayMs,
+            "a hook scanner that fails to start keeps known hooks, discards partial input, and retries")
+        Hooks._acceptScanResult(1, false)
+        root._check(Hooks._present === knownHooks
+                && Hooks._rescanDelayMs === 2 * Hooks._minRescanDelayMs,
+            "a nonzero hook scan exit backs off instead of disarming hooks")
+        Hooks._rescanDelayMs = Hooks._maxRescanDelayMs
+        Hooks._acceptScanResult(0, true)
+        root._check(Hooks._present === knownHooks
+                && Hooks._rescanDelayMs === Hooks._maxRescanDelayMs,
+            "a truncated hook scan keeps its previous list and caps retry backoff")
+        Hooks._found = { recovered: true }
+        Hooks._acceptScanResult(0, false)
+        root._check(Hooks.has("recovered") && !Hooks.has("probe")
+                && Hooks._rescanDelayMs === 0 && Object.keys(Hooks._found).length === 0,
+            "a successful hook scan replaces the known list and resets retry backoff")
+        Hooks._acceptScanResult(0, false)
+        root._check(Object.keys(Hooks._present).length === 0,
+            "a successful empty hook scan still removes hooks that are gone")
+        Hooks._present = hooksPresentWas
+        Hooks._found = hooksFoundWas
+        Hooks._rescanDelayMs = hooksDelayWas
+
         const supervised = supervisedProcessFactory.createObject(root, {
             superviseWhen: false,
             _gaveUp: true,

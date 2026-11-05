@@ -173,6 +173,7 @@ Singleton {
 
     function rescan(): void {
         if (root.directory.length === 0 || _scan.running) return
+        _rescanTimer.stop()
         root._found = ({})
         _scan.running = true
     }
@@ -181,13 +182,29 @@ Singleton {
     readonly property int _maxRescanDelayMs: 120000
     property int _rescanDelayMs: 0
 
+    function _acceptScanResult(code: int, timedOut: bool): void {
+        // a failed or truncated scan says nothing about which hooks were removed
+        if (code !== 0 || timedOut) {
+            root._found = ({})
+            root._rescanDelayMs = root._rescanDelayMs > 0
+                ? Math.min(root._rescanDelayMs * 2, root._maxRescanDelayMs)
+                : root._minRescanDelayMs
+            _rescanTimer.restart()
+            return
+        }
+        _rescanTimer.stop()
+        root._present = Object.assign({}, root._found)
+        root._found = ({})
+        root._rescanDelayMs = 0
+    }
+
     BoundedProcess {
         id: _scan
         timeoutMs: 5000
         command: ["bash", "-c",
             "d=\"$1\"; shift; cd -- \"$d\" 2>/dev/null || exit 0; "
             + "for f in \"$@\"; do [ -f \"$f\" ] && [ -x \"$f\" ] "
-            + "&& printf '%s\\n' \"$f\"; done",
+            + "&& printf '%s\\n' \"$f\"; done; exit 0",
             "bash", root.directory].concat(root.events)
         // every write to _present rebinds all five hook targets; collect, then swap once
         stdout: SplitParser {
@@ -199,22 +216,7 @@ Singleton {
         }
         onTimeoutReached: console.warn(
             "silere-shell: hook scan timed out; keeping the last known set")
-        onExited: {
-            // the exit code here is noise (the probe script only intentionally exits
-            // early on a missing directory), but a killed-by-timeout run truncated
-            // mid-scan must not disarm hooks it never got to check
-            if (timedOut) {
-                root._found = ({})
-                root._rescanDelayMs = root._rescanDelayMs > 0
-                    ? Math.min(root._rescanDelayMs * 2, root._maxRescanDelayMs)
-                    : root._minRescanDelayMs
-                _rescanTimer.restart()
-                return
-            }
-            root._present = Object.assign({}, root._found)
-            root._found = ({})
-            root._rescanDelayMs = 0
-        }
+        onExited: code => root._acceptScanResult(code, timedOut)
     }
 
     Timer {
