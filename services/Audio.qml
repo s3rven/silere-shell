@@ -278,12 +278,24 @@ Singleton {
         ? String(Settings.soundSettingsCommand[0]) : ""
 
     // a headset an app's microphone moved onto hands-free keeps its name and drops to call quality; the suffix is what makes the osd say so
-    function sinkLabel(node): string {
+    function sinkLabel(node, peers): string {
         if (!node) return ""
-        const name = SafeText.singleLineText(
-            node.description || node.nickname || node.name || (node.isSink ? "Output" : "Input"), 256)
+        const name = SafeText.singleLineText(root._cardLabel(node, peers ?? (node.isSink ? root.sinks : root.sources))
+            || node.nickname || node.name || (node.isSink ? "Output" : "Input"), 256)
         const profile = String((node.properties || {})["api.bluez5.profile"] || "")
         return node.isSink && profile.indexOf("headset") === 0 ? name + " · Call mode" : name
+    }
+
+    // ALSA names a node card + profile ("… Analog Stereo"), which truncates in the menu; the card
+    // alone is enough unless another node of the same card is in the list beside it
+    function _cardLabel(node, peers): string {
+        const desc = String(node.description || "")
+        const profile = String((node.properties || {})["device.profile.description"] || "")
+        if (profile.length === 0 || desc.length <= profile.length + 1 || !desc.endsWith(" " + profile)) return desc
+        const card = desc.slice(0, desc.length - profile.length - 1)
+        for (const p of peers || [])
+            if (p && p !== node && String(p.description || "").startsWith(card)) return desc
+        return card
     }
 
     // a stream is named for the app behind it; its own description is the track or pipeline

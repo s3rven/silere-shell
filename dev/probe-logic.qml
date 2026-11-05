@@ -5785,6 +5785,16 @@ ShellRoot {
                     properties: { "api.bluez5.profile": "headset-head-unit" } }) === "Q45"
                 && Audio.sinkLabel({ description: "Speakers" }) === "Speakers",
             "a bluetooth output on its hands-free profile is named as call mode, a microphone never is")
+        const alsa = (desc, profile) => ({ description: desc, isSink: true,
+            properties: { "device.profile.description": profile } })
+        const analog = alsa("Ryzen HD Audio Controller Analog Stereo", "Analog Stereo")
+        const digital = alsa("Ryzen HD Audio Controller Digital Stereo (IEC958)", "Digital Stereo (IEC958)")
+        root._check(Audio.sinkLabel(analog, [analog]) === "Ryzen HD Audio Controller"
+                && Audio.sinkLabel(alsa("Analog Stereo", "Analog Stereo"), []) === "Analog Stereo",
+            "an ALSA output drops its profile from its name")
+        root._check(Audio.sinkLabel(analog, [analog, digital]) === "Ryzen HD Audio Controller Analog Stereo"
+                && Audio.sinkLabel(digital, [analog, digital]) === "Ryzen HD Audio Controller Digital Stereo (IEC958)",
+            "two outputs of one card keep their profiles so they stay apart")
 
         const audioStatus = JSON.parse(Audio._ipc.status())
         root._check(audioStatus.output.ready === Audio.ready
