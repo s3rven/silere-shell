@@ -2331,11 +2331,18 @@ ShellRoot {
         const scrollList = scrollListFactory.createObject(root)
         Scroll._page.movedAt = 0
         scrollList.contentY = 24
-        root._check(Scroll.wheelBelongsToPage(0),
-            "scrolling a nested list keeps the gesture on the page when a slider passes under the pointer")
+        root._check(Scroll._page.movedAt === 0 && !Scroll.wheelBelongsToPage(0),
+            "a list moved by code leaves the wheel with a slider under the pointer")
         Scroll._page.movedAt = Date.now() - Scroll.pageLatchMs - 1
         root._check(!Scroll.wheelBelongsToPage(0),
             "a settled list releases its scroll gesture for deliberate slider adjustment")
+        const latchedAt = Date.now() - Scroll.pageLatchMs / 2
+        Scroll._page.movedAt = latchedAt
+        root._check(Scroll.wheelBelongsToPage(0) && Scroll._page.movedAt > latchedAt,
+            "a wheel query renews the page latch while the page holds the gesture")
+        Scroll._page.movedAt = 0
+        root._check(Scroll.wheelBelongsToPage(Date.now()) && Scroll._page.movedAt === 0,
+            "a hover that has not rested passes the wheel on without starting a page latch")
         scrollList.destroy()
         Scroll._page.movedAt = pageMovedWas
         const palette = MatugenTheme._parsePalette(

@@ -7,7 +7,7 @@ Flickable {
     flickDeceleration: Motion.flickDeceleration
     maximumFlickVelocity: Motion.flickVelocity
     boundsMovement: Flickable.StopAtBounds
-    onContentYChanged: Scroll.notePageMoved()
+    onContentYChanged: if (moving) Scroll.notePageMoved()
 
     function scrollToTop(): void {
         // assigning contentY alone leaves a running flick free to move the next page again on its first frame

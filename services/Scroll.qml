@@ -23,17 +23,23 @@ Singleton {
     // a plain field, so stamping it on every scrolled frame notifies nothing
     readonly property var _page: ({ movedAt: 0 })
 
+    // scrollers call this only while the user moves them: a reveal, a clamp or an animated scroll is no gesture to yield to
     function notePageMoved(): void {
         root._page.movedAt = Date.now()
     }
 
-    // a wheel gesture that is scrolling the page keeps scrolling it when a slider passes under the pointer
+    // a wheel gesture that is scrolling the page keeps scrolling it when a slider passes under the pointer.
+    // Asking renews a latch already held, so wheeling on at the page's end nudges nothing, but a hover that
+    // has not rested starts none: the slider takes the gesture as soon as the hover rests
     function wheelBelongsToPage(hoveredSince: real): bool {
         const now = Date.now()
-        if (now - root._page.movedAt >= root.pageLatchMs
-                && now - hoveredSince >= root.sliderRestMs) return false
-        root._page.movedAt = now
-        return true
+        const pageAge = now - root._page.movedAt
+        if (pageAge >= 0 && pageAge < root.pageLatchMs) {
+            root._page.movedAt = now
+            return true
+        }
+        const hoverAge = now - hoveredSince
+        return hoverAge >= 0 && hoverAge < root.sliderRestMs
     }
 
     // natural scrolling flips the delta; a level keeps "up means more", as Qt's own sliders do

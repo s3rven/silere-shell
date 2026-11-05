@@ -9,5 +9,5 @@ ListView {
     flickDeceleration: Motion.flickDeceleration
     maximumFlickVelocity: Motion.flickVelocity
     boundsMovement: Flickable.StopAtBounds
-    onContentYChanged: Scroll.notePageMoved()
+    onContentYChanged: if (moving) Scroll.notePageMoved()
 }
