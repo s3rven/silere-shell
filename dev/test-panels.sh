@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 source "$ROOT/dev/probe-lib.sh"
+_probe_private_bus "$@"
 
 trap 'exit 130' INT TERM
 

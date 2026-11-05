@@ -8,10 +8,34 @@
 # shellcheck disable=SC2034
 SILERE_PROBE_ERRORS='Unable to assign .*|Cannot assign .*|is not a type|ReferenceError: [^,]*|TypeError: [^,]*|Binding loop detected[^,]*'
 
-# pgrep/pkill match the live night light by name; see NightLight._sandboxed
+# a test shell must not lock, suspend or adopt anything of the desktop it runs on
 export SILERE_SANDBOX=1
 # probes load fresh temp copies, whose compiled units would pile up in ~/.cache/quickshell/qmlcache forever
 export QML_DISABLE_DISK_CACHE=1
+
+# A probe on the desktop's own session bus takes org.freedesktop.Notifications from a live shell that
+# restarts during the run, and the desktop's players and tray items leak into what it checks. Each probe
+# script reruns itself on a private bus that activates nothing and exits with the rerun's status; without
+# dbus-run-session it stays put. Call it before the script makes anything it has to clean up
+_probe_private_bus() { # "$@" = the calling script's own arguments
+    [ "${SILERE_PROBE_BUS:-}" = private ] && return 0
+    command -v dbus-run-session >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 || return 0
+    local pid status
+    # a group of its own: a stop sent here reaches the rerun script, which cleans up, and the bus beside it,
+    # where signalling dbus-run-session alone would leave both running. Ctrl-C goes on as TERM, since a
+    # background job starts with INT ignored and the probes clean up the same on either
+    SILERE_PROBE_BUS=private setsid dbus-run-session --config-file="$ROOT/dev/probe-bus.conf" \
+        -- bash "$ROOT/dev/${BASH_SOURCE[1]##*/}" "$@" &
+    pid=$!
+    trap 'kill -TERM -- "-$pid" 2>/dev/null || true' INT TERM
+    # a trapped signal ends wait early, so wait again until the group is really gone
+    while :; do
+        status=0
+        wait "$pid" || status=$?
+        kill -0 "$pid" 2>/dev/null || break
+    done
+    exit "$status"
+}
 
 _probe_require_qs() {
     if ! command -v qs >/dev/null 2>&1; then

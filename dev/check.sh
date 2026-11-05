@@ -610,11 +610,16 @@ if [ "$qs_usable" = 1 ]; then
     par_dir="$scratch/par"
     mkdir -p "$par_dir"
     smoke_pids=""
+    # the probes' private bus (dev/probe-lib.sh): a whole shell on the desktop's bus takes its notifications
+    # if the live shell restarts during the dwell. timeout signals its whole group, so the bus goes down too
+    smoke_bus=()
+    command -v dbus-run-session >/dev/null 2>&1 \
+      && smoke_bus=(dbus-run-session --config-file="$ROOT/dev/probe-bus.conf" --)
     _smoke_case() {
       mkdir -p "$par_dir/$1/silere-shell"
       printf '%s' "$2" > "$par_dir/$1/silere-shell/settings.json"
       _case_code=0
-      XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" XDG_CACHE_HOME="$par_dir/$1/cache" timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color \
+      XDG_CONFIG_HOME="$par_dir/$1" XDG_STATE_HOME="$par_dir/$1" XDG_CACHE_HOME="$par_dir/$1/cache" timeout --kill-after=2s 5s "${smoke_bus[@]}" qs "${smoke_flags[@]}" -p shell.qml --no-color \
         >"$par_dir/$1.log" 2>&1 || _case_code=$?
       printf '%s' "$_case_code" > "$par_dir/$1.code"
     }
@@ -627,7 +632,7 @@ if [ "$qs_usable" = 1 ]; then
       printf '{ "__version": 1, "history": [ { "id": 7, "appName": "probe", "summary": "carried across", "urgency": 1, "time": 1 } ] }' \
         > "$par_dir/move/config/silere-shell/notifications.json"
       XDG_CONFIG_HOME="$par_dir/move/config" XDG_STATE_HOME="$par_dir/move/state" XDG_CACHE_HOME="$par_dir/move/cache" \
-        timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color >"$par_dir/move.log" 2>&1 || true
+        timeout --kill-after=2s 5s "${smoke_bus[@]}" qs "${smoke_flags[@]}" -p shell.qml --no-color >"$par_dir/move.log" 2>&1 || true
     }
     _history_move_case &
     smoke_pids="$smoke_pids $!"
@@ -698,7 +703,7 @@ if [ "$qs_usable" = 1 ]; then
     # the startup dwell runs beside the cases below instead of ahead of them; they only
     # report once it has passed, so a shell that cannot start still fails just once
     ( _main_code=0
-      XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" XDG_CACHE_HOME="$smoke_home/cache" timeout --kill-after=2s 5s qs "${smoke_flags[@]}" -p shell.qml --no-color \
+      XDG_CONFIG_HOME="$smoke_home" XDG_STATE_HOME="$smoke_home" XDG_CACHE_HOME="$smoke_home/cache" timeout --kill-after=2s 5s "${smoke_bus[@]}" qs "${smoke_flags[@]}" -p shell.qml --no-color \
         >"$smoke_log" 2>&1 || _main_code=$?
       printf '%s' "$_main_code" > "$scratch/smoke.code" ) &
     smoke_pids="$smoke_pids $!"

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 source "$ROOT/dev/probe-lib.sh"
+_probe_private_bus "$@"
 PROBE_SOURCE="dev/probe-logic.qml"
 
 _probe_require_qs

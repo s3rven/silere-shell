@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 source "$ROOT/dev/probe-lib.sh"
+_probe_private_bus "$@"
 PROBE_SOURCE="dev/probe-ui-stress.qml"
 
 if ! [[ "${SILERE_UI_STRESS_CYCLES:-120}" =~ ^[1-9][0-9]*$ ]]; then

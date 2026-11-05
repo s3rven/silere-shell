@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/dev/probe-lib.sh"
+_probe_private_bus "$@"
 _probe_require_qs
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/silere-daily-qml.XXXXXX")"
 probe_pid=""
