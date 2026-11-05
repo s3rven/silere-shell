@@ -204,7 +204,8 @@ else
     printf 'write %s\n' "$5" >> "$fixtures/ddc-calls"
     sleep 0.2
     [ ! -s "$fixtures/ddc-fail" ] || exit 1
-    awk -F '\t' -v level="$5" 'BEGIN { OFS="\t" } { $4=level; print }' \
+    if [ -s "$fixtures/ddc-fail-connector" ] && [ "$(cat "$fixtures/ddc-fail-connector")" = "$2" ]; then exit 1; fi
+    awk -F '\t' -v level="$5" -v connector="$2" 'BEGIN { OFS="\t" } $1 == connector { $4=level } { print }' \
         "$fixtures/ddc-displays" > "$fixtures/ddc-next"
     mv "$fixtures/ddc-next" "$fixtures/ddc-displays"
 fi

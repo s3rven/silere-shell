@@ -135,12 +135,16 @@ Singleton {
         id: _write
         timeoutMs: 15000
         onExited: code => {
+            const key = root._writingKey
             root._writingKey = ""
             if (root._writeGeneration !== root._generation) {
                 root._refreshPending = true
             } else if (!_write.completedSuccessfully(code)) {
                 root._writeError = "Display brightness could not be changed."
-                root._queued = ({})
+                // the failed display must be read back; other displays still own their queued changes
+                const queued = Object.assign({}, root._queued)
+                delete queued[key]
+                root._queued = queued
                 root._lastScan = 0
             } else {
                 root._writeError = ""

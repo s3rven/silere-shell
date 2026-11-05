@@ -313,6 +313,28 @@ Scope {
                 && root.read("ddc-calls").indexOf("write 85") >= 0,
             "a successful brightness retry clears its write error")
 
+        const secondKey = "card1-DP-2:" + root.identity
+        root.write("ddc-displays", root.display(90)
+            + "card1-DP-2\t8\t" + root.identity + "\t30\t100\n")
+        DisplayBrightness.refresh(true)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2,
+            "brightness discovery includes a second external display")
+        root.write("ddc-calls", "")
+        root.write("ddc-fail-connector", "card1-DP-1")
+        DisplayBrightness.setPercent(root.displayKey, 80)
+        root.waitFor(() => DisplayBrightness._writingKey === root.displayKey,
+            "a brightness write starts on the display that will reject it")
+        DisplayBrightness.setPercent(root.displayKey, 75)
+        DisplayBrightness.setPercent(secondKey, 55)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness._writingKey.length === 0
+                && root.read("ddc-calls").indexOf("write 55") >= 0,
+            "one display's failed write preserves a pending brightness change for another display")
+        root.check(DisplayBrightness.levelFor(root.displayKey) === 90
+                && DisplayBrightness.levelFor(secondKey) === 55
+                && root.read("ddc-calls").indexOf("write 75") < 0,
+            "a failed display returns to its measured level without retrying its rejected queued value")
+        root.write("ddc-fail-connector", "")
+
         root.write("ddc-calls", "")
         root.write("ddc-fail", "fail")
         DisplayBrightness.setPercent(root.displayKey, 80)
