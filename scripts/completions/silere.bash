@@ -5,10 +5,15 @@ _silere() {
     local cur="${COMP_WORDS[COMP_CWORD]}" words=() line target current=""
     COMPREPLY=()
     if [ "$COMP_CWORD" -eq 1 ]; then
-        words=(run restart status log doctor ipc link update repair service version uninstall help)
+        words=(run stop restart use status log doctor ipc link update repair service version uninstall help)
     else
         case "${COMP_WORDS[1]}" in
             run) [ "$COMP_CWORD" -eq 2 ] && words=(--startup --supervised) ;;
+            use)
+                words=(--dry-run)
+                # readline adds directories and quotes names containing spaces
+                compopt -o plusdirs -o filenames 2>/dev/null || true
+                ;;
             log) [ "$COMP_CWORD" -eq 2 ] && words=(--follow) ;;
             update) [ "$COMP_CWORD" -eq 2 ] && words=(--apply --rollback) ;;
             repair) words=(--apply --undo --yes) ;;

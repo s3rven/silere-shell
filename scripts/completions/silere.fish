@@ -47,11 +47,15 @@ function __silere_setting_values
         | string replace -rf "^$key=.*  \[([^/].*\|.*)\]\$" '$1' | string split '|'
 end
 
-set -l commands run restart status log doctor ipc link update repair service version uninstall help
+set -l commands run stop restart use status log doctor ipc link update repair service version uninstall help
 
 complete -c silere -f
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a run -d 'Start Silere once'
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a stop -d 'Stop Silere and its user service'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a restart -d 'Stop the running shell and start it again'
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a use -d 'Switch the checkout that runs'
+complete -c silere -n '__fish_seen_subcommand_from use' -a '(__fish_complete_directories)'
+complete -c silere -n '__fish_seen_subcommand_from use' -l dry-run -d 'Preview switching checkouts'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a status -d 'Installation and updater state'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a log -d "The running shell's log"
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a doctor -d 'Read-only installation diagnostics'

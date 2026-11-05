@@ -33,6 +33,7 @@ Usage: silere <command> [options]
   service install        Install the optional service; --dry-run previews it
   service status         Show the optional service state
   service remove         Stop and remove the owned service
+  stop                   Stop Silere, including its optional user service
   restart                Stop the running shell and start it again
   use [checkout]         Make this checkout (or the given one) the one that runs
   status                 Show installation and updater state
@@ -223,6 +224,30 @@ stop_stray_shell() {
     [ -n "$pid" ] || return 0
     user_qs kill -p "$ROOT/shell.qml" >/dev/null 2>&1 || true
     await_exit || die "the running shell (pid $pid) did not stop"
+}
+
+stop_shell() {
+    local pid other supervised=0
+    pid="$(running_pid)" || pid=""
+    # A service waiting to retry may have no shell and report neither active nor
+    # enabled. Stop an owned unit before killing any stray instance it left behind.
+    if command -v systemctl >/dev/null 2>&1 && _silere_unit_runs_checkout "$ROOT"; then
+        supervised=1
+    fi
+    if [ -z "$pid" ] && [ "$supervised" -eq 0 ]; then
+        if other="$(other_shell)"; then
+            die "the shell on screen runs from $(dirname "$other"); use that checkout's scripts/silere stop"
+        fi
+        printf 'Silere is not running\n'
+        return 0
+    fi
+    if [ "$supervised" -eq 1 ]; then
+        systemctl --user stop silere-shell.service \
+            || die "systemd could not stop silere-shell.service"
+        pid="$(running_pid)" || pid=""
+    fi
+    stop_stray_shell "$pid"
+    printf '%sSilere stopped%s\n' "$GREEN" "$R"
 }
 
 restart_shell() {
@@ -477,6 +502,10 @@ case "$command_name" in
     service)
         exec bash "$ROOT/scripts/service.sh" "$@"
         ;;
+    stop)
+        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        stop_shell
+        ;;
     restart)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         restart_shell
@@ -651,7 +680,7 @@ case "$command_name" in
     *)
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
         # within two edits of a real command is a typo, not a guess
-        near="$(printf '%s\n' run restart use status log doctor ipc link update repair version uninstall help \
+        near="$(printf '%s\n' run stop restart use status log doctor ipc link update repair service version uninstall help \
             | awk -v w="$command_name" '
                 function dist(a, b,   i, j, m, n, d, c) {
                     m = length(a); n = length(b)

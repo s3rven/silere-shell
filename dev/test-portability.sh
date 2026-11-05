@@ -2320,9 +2320,10 @@ test_cli_restart_and_log() (
         '#!/bin/sh' \
         'echo "systemctl $*" >> "$SILERE_TEST_STATE.calls"' \
         'case "$*" in' \
-        '    *is-active*|*is-enabled*) [ -n "${SILERE_TEST_UNIT-}" ]; exit $? ;;' \
-        '    *show*) printf "{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -n -p %s/shell.qml ; }\n" "$SILERE_TEST_ROOT" ;;' \
+        '    *is-active*|*is-enabled*) [ -n "${SILERE_TEST_UNIT-}" ] && [ -z "${SILERE_TEST_UNIT_INACTIVE-}" ]; exit $? ;;' \
+        '    *show*) [ -n "${SILERE_TEST_UNIT-}" ] || exit 1; printf "{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -n -p %s/shell.qml ; }\n" "${SILERE_TEST_UNIT_ROOT:-$SILERE_TEST_ROOT}" ;;' \
         '    *" restart "*) echo 888 > "$SILERE_TEST_STATE" ;;' \
+        '    *" stop "*) [ -z "${SILERE_TEST_STOP_FAIL-}" ] || exit 1; : > "$SILERE_TEST_STATE" ;;' \
         'esac' > "$stubs/systemctl"
     chmod +x "$stubs/qs" "$stubs/systemctl"
     cli() {
@@ -2373,12 +2374,54 @@ test_cli_restart_and_log() (
     cli log --follow > "$state.out" || fail "log of a running shell failed"
     assert_eq "log log --no-color -p $ROOT/shell.qml --follow" "$(grep '^log' "$state.calls")" \
         "log argv drops color when not writing to a terminal"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    out="$(cli stop)" || fail "stop without a unit failed"
+    assert_eq "Silere stopped" "$out" "stop without a unit"
+    assert_eq "" "$(cat "$state")" "stop leaves no shell running"
+    assert_eq kill "$(grep -v '^systemctl' "$state.calls")" "stop does not relaunch the shell"
+
+    : > "$state.calls"
+    out="$(cli stop)" || fail "stopping an already stopped shell failed"
+    assert_eq "Silere is not running" "$out" "stop is idempotent"
+    ! grep -qx kill "$state.calls" || fail "stop sent a kill with no shell running"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    SILERE_TEST_UNIT=1 SILERE_TEST_UNIT_ROOT="$TMP/other-checkout" cli stop > /dev/null \
+        || fail "stop failed beside another checkout's service"
+    assert_eq "" "$(cat "$state")" "stop still stops this checkout's unsupervised shell"
+    ! grep -qFx 'systemctl --user stop silere-shell.service' "$state.calls" \
+        || fail "stop touched another checkout's service"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    out="$(SILERE_TEST_UNIT=1 cli stop)" || fail "stop through the unit failed"
+    assert_eq "Silere stopped" "$out" "stop through the unit"
+    assert_eq "" "$(cat "$state")" "supervised stop leaves no shell running"
+    grep -qFx 'systemctl --user stop silere-shell.service' "$state.calls" \
+        || fail "stop did not go through the user unit"
+    ! grep -qx kill "$state.calls" || fail "stop killed the unit's shell behind systemd"
+
+    : > "$state.calls"
+    SILERE_TEST_UNIT=1 SILERE_TEST_UNIT_INACTIVE=1 cli stop > /dev/null \
+        || fail "stop could not cancel a service awaiting a restart"
+    grep -qFx 'systemctl --user stop silere-shell.service' "$state.calls" \
+        || fail "stop left an inactive service free to restart"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    if SILERE_TEST_UNIT=1 SILERE_TEST_STOP_FAIL=1 cli stop >/dev/null 2>&1; then
+        fail "stop claimed success after the service refused to stop"
+    fi
+    assert_eq 4242 "$(cat "$state")" "a failed service stop leaves its shell alone"
+    ! grep -qx kill "$state.calls" || fail "a failed service stop killed the shell behind systemd"
+    if cli stop unexpected >/dev/null 2>&1; then fail "stop accepted an unexpected argument"; fi
+    assert_eq 4242 "$(cat "$state")" "invalid stop arguments leave the shell alone"
 )
 
 test_cli_ipc_resolution() (
     local stubs="$TMP/ipc-stubs" other="$TMP/ipc-other" out
     mkdir -p "$stubs" "$other/scripts"
     printf '#!/bin/sh\n' > "$other/scripts/silere"; chmod +x "$other/scripts/silere"
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
     # this checkout never answers; the other copy answers when SILERE_TEST_OTHER is set
     cat > "$stubs/qs" <<'STUB'
 #!/bin/sh
@@ -2395,7 +2438,7 @@ case "$1" in
     log)  echo "log $*" ;;
 esac
 STUB
-    chmod +x "$stubs/qs"
+    chmod +x "$stubs/qs" "$stubs/systemctl"
     cli() { env -u LC_ALL PATH="$stubs:$PATH" bash "$ROOT/scripts/silere" "$@"; }
 
     if out="$(cli ipc 2>&1)"; then fail "ipc claimed success with no shell running"; fi
@@ -2412,6 +2455,11 @@ STUB
     out="$(SILERE_TEST_OTHER="$other" cli log 2>/dev/null)" || fail "log did not follow the copy that is running"
     case "$out" in *"-p $other/shell.qml"*) ;; *) fail "log read the wrong shell: $out" ;; esac
     if cli log >/dev/null 2>&1; then fail "log claimed a shell with none running"; fi
+
+    if out="$(SILERE_TEST_OTHER="$other" cli stop 2>&1)"; then
+        fail "stop claimed another checkout's shell"
+    fi
+    case "$out" in *"runs from $other"*) ;; *) fail "stop did not identify the other checkout: $out" ;; esac
 
     out="$(cli restrat 2>&1)" && fail "a mistyped command succeeded"
     case "$out" in *"Did you mean: silere restart"*) ;; *) fail "no suggestion for restrat: $out" ;; esac
