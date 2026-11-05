@@ -7,8 +7,8 @@ if [ "${1:-}" = --inner ]; then
     scratch="$2"; backend="$3"; benchmark="${4:-}"
     [[ "$XDG_CONFIG_HOME" = "$scratch/"* && -z "${XDG_SESSION_ID:-}" ]] || exit 1
     case "${DBUS_SESSION_BUS_ADDRESS:-}" in ''|*/run/user/*/bus*) exit 1 ;; esac
-    parent_pid=""; child_pid=""; shell_pid=""
-    trap '_probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
+    parent_pid=""; child_pid=""; shell_pid=""; monitors_pid=""
+    trap '_probe_stop "$monitors_pid"; _probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
     kwin_wayland --virtual --no-lockscreen --no-global-shortcuts --width 1280 --height 900 \
         --socket silere-test-parent > "$scratch/parent.log" 2>&1 &
     parent_pid=$!
@@ -29,11 +29,13 @@ if [ "${1:-}" = --inner ]; then
             cat > "$hypr_config" <<'EOF'
 hl.monitor({ output = "", mode = "1280x900@60", position = "auto", scale = 1 })
 hl.config({ misc = { disable_hyprland_logo = true, disable_splash_rendering = true } })
+hl.workspace_rule({ workspace = "2", default_name = "two" })
 EOF
         else
             hypr_config="$scratch/hyprland.conf"
             cat > "$hypr_config" <<'EOF'
 monitor = ,1280x900@60,auto,1
+workspace = 2, defaultName:two
 misc {
     disable_hyprland_logo = true
     disable_splash_rendering = true
@@ -125,9 +127,67 @@ EOF
         sleep 2
         bash "$ROOT/scripts/bench.sh" 10 --json --label "$backend-after-30-menu-cycles" > "$benchmark/$backend-cycles.json"
     fi
+    checked="panels, popup interactions, startup, menu/audio IPC"
+    if [ "$backend" = hyprland ]; then
+        # a special workspace shown before the shell starts is still marked, and a second output showing a
+        # named numbered workspace keeps it active as focus moves there and back (dev/probe-hypr-monitors.qml);
+        # the shell above also puts a bar on the new output
+        first_output="$(hyprctl monitors | sed -n 's/^Monitor \([^ ]*\) .*/\1/p' | head -n 1)"
+        focus() { # $1 = monitor, $2 = optional workspace id
+            if [[ "$hypr_config" = *.lua ]]; then
+                hyprctl dispatch "hl.dsp.focus({ monitor = \"$1\" })" > /dev/null
+                [ -z "${2:-}" ] || hyprctl dispatch "hl.dsp.focus({ workspace = $2 })" > /dev/null
+            else
+                hyprctl dispatch focusmonitor "$1" > /dev/null
+                [ -z "${2:-}" ] || hyprctl dispatch workspace "$2" > /dev/null
+            fi
+        }
+        step() { # $1 = phase name; the refresh behind focusedmon needs a moment to land
+            sleep 0.6
+            printf '%s\n' "$1" > "$scratch/phase"
+            for _ in $(seq 1 50); do grep -q "PROBE-MONITORS $1 " "$scratch/monitors.log" && return 0; sleep 0.1; done
+            return 1
+        }
+        toggle_special() {
+            if [[ "$hypr_config" = *.lua ]]; then hyprctl dispatch 'hl.dsp.workspace.toggle_special("magic")' > /dev/null
+            else hyprctl dispatch togglespecialworkspace magic > /dev/null
+            fi
+        }
+        toggle_special
+        mkdir -p "$scratch/monitors"
+        _probe_project "$ROOT" "$ROOT/dev/probe-hypr-monitors.qml" "$scratch/monitors"
+        printf 'start\n' > "$scratch/phase"
+        SILERE_PROBE_PHASE="$scratch/phase" qs -p "$scratch/monitors/probe-hypr-monitors.qml" --no-color \
+            > "$scratch/monitors.log" 2>&1 &
+        monitors_pid=$!
+        for _ in $(seq 1 100); do grep -q 'PROBE-MONITORS start' "$scratch/monitors.log" && break; sleep 0.1; done
+        step special-before-start
+        if ! grep -q "PROBE-MONITORS special-before-start .*special=$first_output\$" "$scratch/monitors.log"; then
+            printf 'FAIL: a special workspace shown before the shell started is not marked\n' >&2
+            grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2 || cat "$scratch/monitors.log" >&2
+            exit 1
+        fi
+        toggle_special
+        step special-closed
+        grep -q "PROBE-MONITORS special-closed .*special=\$" "$scratch/monitors.log" \
+            || { printf 'FAIL: closing the special workspace left it marked\n' >&2; exit 1; }
+        hyprctl output create headless SILERE-2 > /dev/null
+        focus SILERE-2 2; step second
+        focus "$first_output"; step first
+        focus SILERE-2; step second-again
+        for phase in second first second-again; do
+            grep -q "PROBE-MONITORS $phase .*SILERE-2=two" "$scratch/monitors.log" && continue
+            printf 'FAIL: the second monitor lost its named workspace at "%s"\n' "$phase" >&2
+            grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2 || cat "$scratch/monitors.log" >&2
+            exit 1
+        done
+        errors="$(_probe_errors "$scratch/monitors.log")"
+        [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
+        checked="$checked, a special workspace open at start, a second monitor's named workspace"
+    fi
     errors="$(_probe_errors "$scratch/shell.log")"
     [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
-    printf 'compositor integration passed (%s; panels, popup interactions, startup, menu/audio IPC)\n' "$backend"
+    printf 'compositor integration passed (%s; %s)\n' "$backend" "$checked"
     exit 0
 fi
 
@@ -141,7 +201,8 @@ elif [ "$#" -gt 1 ]; then exit 2; fi
 for tool in qs kwin_wayland dbus-run-session; do
     command -v "$tool" >/dev/null 2>&1 || { echo "FAIL: integration requires $tool" >&2; exit 1; }
 done
-case "$backend" in hyprland) command -v Hyprland >/dev/null ;; niri) command -v niri >/dev/null ;; esac
+case "$backend" in hyprland) need=Hyprland ;; niri) need=niri ;; *) need="" ;; esac
+[ -z "$need" ] || command -v "$need" >/dev/null 2>&1 || { echo "FAIL: integration requires $need" >&2; exit 1; }
 # Hyprland cannot start without a render node, even nested; a hosted runner has none
 if [ "$backend" = hyprland ] && ! compgen -G '/dev/dri/renderD*' >/dev/null; then
     printf 'SKIP: Hyprland integration needs a GPU render node\n'
