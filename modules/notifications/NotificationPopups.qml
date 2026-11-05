@@ -357,6 +357,18 @@ PanelWindow {
         }
     }
 
+    // a card its sender closed is still in the stack, closed: it plays its exit, and the stack keeps it until then
+    Connections {
+        target: Notifications
+        function onWithdrawn(notification): void {
+            for (let i = 0; i < stack.count; i++) {
+                const slot = stack.itemAt(i)
+                if (!slot || slot.modelData !== notification || !slot.cardItem) continue
+                if (slot.cardItem.withdraw()) Notifications.holdWithdrawn(notification)
+            }
+        }
+    }
+
     // removing a card the moment its own exit ends snaps the still-animating cards below it upward
     function _noteBatchExit(): void {
         if (win._batchExits <= 0) return

@@ -273,7 +273,102 @@ Singleton {
         root._queueDiskSave()
     }
 
-    readonly property var popupModel: notifServer.trackedNotifications
+    // the server drops a notification its sender closes, or one an action closes (a non-resident notification
+    // closes inside invoke()), in the same step that closed fires, and its card left the screen with no exit.
+    // The stack reads its own list instead, which keeps such a card, retained, through the exit a dismissal plays
+    property var _popupValues: []
+    readonly property ScriptModel popupModel: ScriptModel { values: root._popupValues }
+    // a card on screen answers this by starting its exit and holding the notification until it ends
+    signal withdrawn(var notification)
+    property var _withdrawals: []
+
+    // live order, with each leaving card kept after the neighbour it followed
+    function popupsWithLeaving(previous, live, leaving): var {
+        const out = Array.from(live || [])
+        const prior = Array.from(previous || [])
+        const keep = Array.from(leaving || [])
+        let anchor = -1
+        for (let i = 0; i < prior.length; i++) {
+            const at = out.indexOf(prior[i])
+            if (at >= 0) { anchor = at; continue }
+            if (keep.indexOf(prior[i]) < 0) continue
+            out.splice(++anchor, 0, prior[i])
+        }
+        return out
+    }
+
+    function _syncPopups(): void {
+        const next = root.popupsWithLeaving(root._popupValues,
+            notifServer.trackedNotifications.values, root._withdrawals.map(w => w.notification))
+        const current = root._popupValues
+        if (next.length === current.length && next.every((n, i) => n === current[i])) return
+        root._popupValues = next
+    }
+
+    Connections {
+        target: notifServer.trackedNotifications
+        function onValuesChanged() { root._syncPopups() }
+    }
+
+    function _withdrawalOf(notification): var {
+        return notification ? root._withdrawals.find(w => w.notification === notification) ?? null : null
+    }
+
+    // runs inside closed, while the object is still listed and the card still has its thread
+    function _beginWithdrawal(notification): void {
+        if (!notification || root._withdrawalOf(notification)
+                || root._popupValues.indexOf(notification) < 0) return
+        const w = { notification: notification, holders: 0, lock: null, until: Date.now() + 1500 }
+        root._withdrawals = root._withdrawals.concat([w])
+        root.withdrawn(notification)
+        // reduced motion, idle or a hidden stack: every card finished at once or none started
+        if (w.holders <= 0) { root._finishWithdrawal(w); return }
+        // declared locked before the object is set: RetainableLock refs once on the object and once more on a
+        // later locked: true, but releases only one on destruction
+        w.lock = _retainLock.createObject(root, { object: notification })
+        _withdrawalSafety.restart()
+    }
+
+    function holdWithdrawn(notification): void {
+        const w = root._withdrawalOf(notification)
+        if (w) w.holders++
+    }
+
+    // true when the notification was leaving: it is already closed and archived, so there is nothing to dismiss
+    function releaseWithdrawn(notification): bool {
+        const w = root._withdrawalOf(notification)
+        if (!w) return false
+        w.holders--
+        if (w.holders <= 0 && w.lock) root._finishWithdrawal(w)
+        return true
+    }
+
+    function _finishWithdrawal(w): void {
+        root._withdrawals = root._withdrawals.filter(other => other !== w)
+        root._syncPopups()
+        if (!w.lock) return
+        const lock = w.lock
+        w.lock = null
+        lock.locked = false
+        lock.destroy()
+    }
+
+    Component {
+        id: _retainLock
+        RetainableLock { locked: true }
+    }
+
+    // a card torn down mid-exit, such as on an unplugged screen, never reports back
+    Timer {
+        id: _withdrawalSafety
+        interval: 1600
+        onTriggered: {
+            const now = Date.now()
+            const due = root._withdrawals.filter(w => w.until <= now)
+            for (let i = 0; i < due.length; i++) root._finishWithdrawal(due[i])
+            if (root._withdrawals.length > 0) restart()
+        }
+    }
 
     function _ensurePersistentState(): void {
         // var properties can be undefined for one frame during hot-reload
@@ -986,6 +1081,8 @@ Singleton {
     // is the only one that runs and a batch can safely defer it to one pass
     function _dismissObject(notifId: int, notification, expired,
             immediate): bool {
+        // a card that finishes its exit inside closed would otherwise close the object a second time
+        if (root.releaseWithdrawn(notification)) return false
         const n = list.find(e => e.id === notifId && e.notification === notification)
         if (!n) return false
         const entry = root._historyEntry(n)
@@ -1031,6 +1128,7 @@ Singleton {
         // a late or repeated close belongs to that object, not a newer one that reused its id
         if (!n) return
         const entry = root._historyEntry(n)
+        root._beginWithdrawal(notification)
         if (entry) { root._prependHistory(entry); root._saveHistory() }
         root._forget(id)
     }
@@ -1062,6 +1160,7 @@ Singleton {
     }
 
     Component.onCompleted: {
+        root._syncPopups()
         if (ConfigStore.ready) root._storeOpened = true
         if (FullscreenState.wanted) Compositor.refreshToplevels()
     }

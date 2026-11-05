@@ -1446,6 +1446,14 @@ ShellRoot {
         Notifications._consumeClosing(9001, same)
         Notifications.list = listWas
         for (const n of [same, plain, other, next]) n.destroy()
+
+        const a = { n: "a" }, b = { n: "b" }, c = { n: "c" }, d = { n: "d" }
+        const merged = Notifications.popupsWithLeaving([a, b, c], [a, c, d], [b])
+        const first = Notifications.popupsWithLeaving([a, b, c], [b, c], [a])
+        const gone = Notifications.popupsWithLeaving([a, b, c], [a, c], [])
+        const order = (got, want) => got.length === want.length && got.every((v, i) => v === want[i])
+        root._check(order(merged, [a, b, c, d]) && order(first, [a, b, c]) && order(gone, [a, c]),
+            "the popup stack keeps a leaving card where it was, keeps the live order and drops a card that is not leaving")
     }
 
     function _checkThreadFolding(): void {

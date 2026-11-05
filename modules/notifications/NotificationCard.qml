@@ -110,7 +110,8 @@ Item {
         card.appNameText || card.summaryText, "N")
     readonly property bool hasBody:       bodyText.length > 0
     // messages this card folded in from the same app and sender, oldest first
-    readonly property var  _thread:       Notifications.threadFor(card.notifId)
+    // dismiss() pins it: the service forgets a thread as soon as its notification closes, mid-exit for a withdrawn card
+    property var           _thread:       Notifications.threadFor(card.notifId)
     readonly property int  earlierCount:  card._thread ? card._thread.count - 1 : 0
     readonly property var  earlierLines:  card._thread ? card._thread.lines : []
     readonly property bool isCritical: notification.urgency === NotificationUrgency.Critical
@@ -128,6 +129,7 @@ Item {
         const inPlace = card._swiping && Math.sign(cardRect.x) !== card.slideDir
         card._swiping = false
         card._leaving = true
+        card._thread = card._thread
         card.leaving()
         card._collapseBasis = cardRect.height
         _autoClose.stop()
@@ -139,8 +141,18 @@ Item {
             card._completeDismiss()
             return
         }
+        _openAnim.stop()
         if (card.collapseOnDismiss) _collapseAnim.restart()
         _exitTimer.start()
+    }
+
+    // the sender closed it, or an action did: it leaves the way a dismissal does. True when dismissRequested follows
+    function withdraw(): bool {
+        if (card._leaving) return true
+        if (!card.enabled || !card.visible
+                || !Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) return false
+        card.dismiss(false)
+        return card._leaving
     }
 
     property bool _swiping: false
