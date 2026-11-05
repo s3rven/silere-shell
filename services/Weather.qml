@@ -36,23 +36,24 @@ Singleton {
     property var _place: null
     property var _xhr: null
 
-    // the WMO codes Open-Meteo reports
+    // WMO codes: https://open-meteo.com/en/docs#weathervariables
     function conditionFor(code: int): string {
         if (code === 0) return "Clear"
         if (code === 1) return "Mostly clear"
         if (code === 2) return "Partly cloudy"
         if (code === 3) return "Overcast"
         if (code === 45 || code === 48) return "Fog"
-        if (code >= 51 && code <= 55) return "Drizzle"
+        if (code === 51 || code === 53 || code === 55) return "Drizzle"
         if (code === 56 || code === 57) return "Freezing drizzle"
         if (code === 61 || code === 63) return "Rain"
         if (code === 65) return "Heavy rain"
         if (code === 66 || code === 67) return "Freezing rain"
-        if (code >= 71 && code <= 77) return "Snow"
+        if (code === 71 || code === 73 || code === 75 || code === 77) return "Snow"
         if (code === 80 || code === 81) return "Showers"
         if (code === 82) return "Heavy showers"
         if (code === 85 || code === 86) return "Snow showers"
         if (code === 95) return "Thunderstorm"
+        if (code === 97) return "Heavy thunderstorm"
         if (code === 96 || code === 99) return "Thunderstorm, hail"
         return ""
     }
@@ -64,11 +65,11 @@ Singleton {
         if (code === 45 || code === 48) return "󰖑"
         if (code === 56 || code === 57 || code === 66 || code === 67) return "󰙿"
         if (code === 65 || code === 82) return "󰖖"
-        if ((code >= 51 && code <= 55) || code === 61 || code === 63
+        if (code === 51 || code === 53 || code === 55 || code === 61 || code === 63
                 || code === 80 || code === 81) return "󰖗"
-        if (code >= 71 && code <= 77) return "󰖘"
+        if (code === 71 || code === 73 || code === 75 || code === 77) return "󰖘"
         if (code === 85 || code === 86) return "󰼶"
-        if (code === 95) return "󰖓"
+        if (code === 95 || code === 97) return "󰖓"
         if (code === 96 || code === 99) return "󰙾"
         return ""
     }
@@ -89,9 +90,16 @@ Singleton {
         const values = [current?.temperature_2m, current?.weather_code,
             daily?.temperature_2m_max?.[0], daily?.temperature_2m_min?.[0]]
         if (values.some(v => typeof v !== "number" || !isFinite(v))) return null
+        // Open-Meteo defines is_day as 0 or 1 and weather_code as a WMO code
+        // missing flags otherwise become daytime, and rounding a code can turn
+        // malformed data into a different condition; keep the last good reading
+        if ((current.is_day !== 0 && current.is_day !== 1)
+                || !Number.isInteger(values[1]) || values[1] < 0 || values[1] > 99
+                || root.conditionFor(values[1]).length === 0
+                || values[2] < values[3]) return null
         return {
             temperature: Math.round(values[0]),
-            code: Math.round(values[1]),
+            code: values[1],
             high: Math.round(values[2]),
             low: Math.round(values[3]),
             isDay: current.is_day !== 0

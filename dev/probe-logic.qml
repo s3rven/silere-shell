@@ -1869,6 +1869,25 @@ ShellRoot {
                 && Weather.parseForecast({ current: { temperature_2m: 9, weather_code: 3 },
                     daily: { temperature_2m_max: [], temperature_2m_min: [7] } }) === null,
             "a partial or malformed forecast is rejected rather than shown")
+        const forecast = day => ({ current: { temperature_2m: 9, weather_code: 0, is_day: day },
+            daily: { temperature_2m_max: [11], temperature_2m_min: [7] } })
+        root._check(codes.every(code => {
+            const data = forecast(1)
+            data.current.weather_code = code
+            return Weather.parseForecast(data)?.code === code
+        }) && Weather.conditionFor(97) === "Heavy thunderstorm",
+            "every documented weather code, including heavy thunderstorms, is accepted unchanged")
+        root._check(Weather.parseForecast(forecast(1))?.isDay === true
+                && [undefined, null, "0", 2].every(day => Weather.parseForecast(forecast(day)) === null),
+            "a missing or invalid weather day flag cannot turn a night forecast into sunshine")
+        const invertedRange = forecast(1)
+        invertedRange.daily.temperature_2m_min = [12]
+        root._check([2.5, 4, 52, 72, 4294967296, -4294967296].every(code => {
+            const data = forecast(1)
+            data.current.weather_code = code
+            return Weather.parseForecast(data) === null
+        }) && Weather.parseForecast(invertedRange) === null,
+            "invalid weather codes and an inverted daily range do not replace the last forecast")
 
         const url = Weather.forecastUrl(56.9496, 24.1052, true)
         root._check(url.startsWith("https://api.open-meteo.com/") && url.indexOf("latitude=56.95") > 0
