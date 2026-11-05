@@ -2600,6 +2600,11 @@ ShellRoot {
         root._check(trackedAudio.filter(node => node === speakerNode).length === 1
                 && trackedAudio.filter(node => node === builtInMic).length === 1,
             "default devices and repeated node roles bind only once")
+        const replacedNode = { name: "headset" }
+        root._check(Audio.namesake("headset", [{ name: "speaker" }, replacedNode]) === replacedNode
+                && Audio.namesake("headset", [{ name: "speaker" }]) === null
+                && Audio.namesake("", [{ name: "" }]) === null,
+            "a default device replaced under its own name is found by that name; no name finds nothing")
         root._check(Audio.trackedNodes(null, null, [null], [], [], []).length === 0,
             "a disconnected PipeWire graph leaves no tracked devices")
         const replacementMic = { id: 3 }

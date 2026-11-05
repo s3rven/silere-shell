@@ -13,8 +13,24 @@ Singleton {
     readonly property bool armed: true
     readonly property real stepPct: 0.05
 
-    readonly property PwNode      sink:  Pipewire.defaultAudioSink
-    readonly property PwNode      source: Pipewire.defaultAudioSource
+    // quickshell#1301: a node that replaces the default under its own name, as a Bluetooth transport
+    // reconnecting can, never becomes the default, because the metadata naming it did not change
+    readonly property PwNode      sink:  Pipewire.defaultAudioSink || root.namesake(root._lastSinkName, root.sinks)
+    readonly property PwNode      source: Pipewire.defaultAudioSource || root.namesake(root._lastSourceName, root.sources)
+
+    property string _lastSinkName: ""
+    property string _lastSourceName: ""
+    readonly property PwNode _reportedSink: Pipewire.defaultAudioSink
+    readonly property PwNode _reportedSource: Pipewire.defaultAudioSource
+    on_ReportedSinkChanged: if (_reportedSink) _lastSinkName = _reportedSink.name
+    on_ReportedSourceChanged: if (_reportedSource) _lastSourceName = _reportedSource.name
+
+    function namesake(name: string, nodes): var {
+        if (name.length === 0) return null
+        for (let i = 0; i < nodes.length; i++)
+            if (nodes[i] && nodes[i].name === name) return nodes[i]
+        return null
+    }
 
     readonly property PwVolumeControl _out: PwVolumeControl {
         node: root.sink
