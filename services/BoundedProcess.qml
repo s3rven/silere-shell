@@ -43,6 +43,8 @@ Process {
         function onRunningChanged() {
             if (root.running) {
                 root.timedOut = false
+                // a run chained from exited starts before the old run's flag clears
+                root._exitSeen = false
                 return
             }
             if (!root._exitSeen) root.exited(127, 0)

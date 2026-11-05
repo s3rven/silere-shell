@@ -62,7 +62,10 @@ Process {
     // superviseWhen going false and true again, as a tool rescan does, is the retry
     property bool _exitSeen: false
     onRunningChanged: {
-        if (running) return
+        if (running) {
+            _exitSeen = false
+            return
+        }
         if (!_exitSeen && superviseWhen) proc._gaveUp = true
         _exitSeen = false
     }

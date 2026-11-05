@@ -10235,8 +10235,54 @@ ShellRoot {
             root._missingSupervised.superviseWhen = false
             root._missingSupervised.destroy()
             root._missingSupervised = null
-            Qt.callLater(root._startHistoryPersistenceProbe)
+            Qt.callLater(root._runChainedSpawnCheck)
         }
+    }
+
+    // Process signals exited before the next run's runningChanged, so a command chained from exited
+    // must not inherit the finished run's exit
+    function _runChainedSpawnCheck(): void {
+        const chained = boundedProcessFactory.createObject(root, { command: ["true"] })
+        const codes = []
+        let settled = false
+        chained.exited.connect(function(code) {
+            codes.push(code)
+            if (codes.length === 1) chained.exec(["/nonexistent/silere-probe-binary"])
+        })
+        chained.runningChanged.connect(function() {
+            if (codes.length === 0 || chained.running || settled) return
+            settled = true
+            Qt.callLater(function() {
+                root._check(codes.length === 2 && codes[0] === 0 && codes[1] === 127,
+                    "a bounded process chained from exited still reports its spawn failure")
+                chained.destroy()
+                root._runChainedSupervisedCheck()
+            })
+        })
+        chained.running = true
+    }
+
+    function _runChainedSupervisedCheck(): void {
+        const chained = supervisedProcessFactory.createObject(root, {
+            command: ["true"], restartDelay: 60000, superviseWhen: true
+        })
+        let exits = 0
+        let settled = false
+        chained.exited.connect(function() {
+            exits++
+            if (exits === 1) chained.exec(["/nonexistent/silere-probe-binary"])
+        })
+        chained.runningChanged.connect(function() {
+            if (exits === 0 || chained.running || settled) return
+            settled = true
+            Qt.callLater(function() {
+                root._check(exits === 1 && chained.gaveUp,
+                    "a supervised process chained from exited gives up when that command cannot start")
+                chained.superviseWhen = false
+                chained.destroy()
+                root._startHistoryPersistenceProbe()
+            })
+        })
     }
 
     property int _historyDiskCase: 0
