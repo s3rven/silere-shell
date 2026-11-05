@@ -90,6 +90,67 @@ Scope {
         root.check(!Vpn._wanted, "idle sessions do not poll VPN profiles")
         Vpn.requestList(root, false)
         Idle.isIdle = false
+
+        // Home only asks for a peek; there is no open picker to force backend recovery.
+        Vpn._peekedAt = 0
+        Vpn.peek()
+        root.waitFor(() => Vpn._peek && Vpn.refreshing, "a background VPN peek starts")
+        Network.toolAvailable = false
+        Network.toolAvailable = true
+        root.waitFor(() => Vpn.profiles.length === 1 && !Vpn.refreshing && !Vpn._peek,
+            "a backend restart during a background VPN peek obtains a fresh profile list")
+        root.check(!Vpn.requested, "background VPN recovery does not acquire a picker request")
+        Network.toolAvailable = false
+        Network.toolAvailable = true
+        root.waitFor(() => Vpn.profiles.length === 1 && !Vpn.refreshing,
+            "a backend restart invalidates the recent VPN peek cache")
+        root.write("vpn-calls", "")
+        Vpn._peekedAt = 0
+        Vpn.peek()
+        root.waitFor(() => !Vpn.refreshing && !Vpn._peek, "a background VPN peek finishes its request")
+        root.check(root.read("vpn-calls").trim() === "list",
+            "a background VPN peek launches one helper instead of queueing its own duplicate")
+
+        Vpn._peekedAt = 0
+        root.write("vpn-profiles", root.profile(false))
+        root.write("vpn-calls", "")
+        Vpn.peek()
+        root.waitFor(() => root.read("vpn-calls").length > 0, "a background VPN read captures its snapshot")
+        input.wait(60)
+        root.write("vpn-profiles", root.profile(true))
+        Vpn.refresh()
+        root.waitFor(() => !Vpn.refreshing && !Vpn._peek && Vpn.profiles[0]?.active === true,
+            "a background VPN peek preserves a refresh queued while its previous read was running")
+
+        Vpn._peekedAt = 0
+        root.write("vpn-profiles", root.profile(false))
+        root.write("vpn-calls", "")
+        Vpn.peek()
+        root.waitFor(() => root.read("vpn-calls").length > 0, "a background VPN read is pending before idle")
+        input.wait(60)
+        Idle.isIdle = true
+        root.waitFor(() => !Vpn.refreshing, "the VPN read completes while idle")
+        root.check(Vpn._peek && !Vpn._wanted, "an idle VPN peek retains its unfulfilled one-shot demand")
+        Idle.isIdle = false
+        root.waitFor(() => !Vpn.refreshing && !Vpn._peek && Vpn.profiles[0]?.active === false,
+            "waking finishes the paused VPN peek with a fresh snapshot")
+
+        Vpn._peekedAt = 0
+        root.write("vpn-calls", "")
+        Vpn.peek()
+        for (let i = 0; i < 6; i++) {
+            Network.toolAvailable = false
+            root.write("vpn-profiles", root.profile(i % 2 === 1))
+            input.wait(20)
+            Network.toolAvailable = true
+            input.wait(20)
+        }
+        root.waitFor(() => !Vpn.refreshing && !Vpn._peek && Vpn.profiles[0]?.active === true,
+            "repeated VPN backend restarts settle on the newest snapshot")
+        const settledCalls = root.read("vpn-calls")
+        input.wait(300)
+        root.check(root.read("vpn-calls") === settledCalls && !Vpn.requested && !Vpn._refreshPending,
+            "VPN restart recovery leaves no recurring helper or unowned foreground request")
     }
 
     function powerChecks(): void {

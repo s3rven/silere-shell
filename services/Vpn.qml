@@ -21,9 +21,11 @@ Singleton {
     function peek(): void {
         const age = Date.now() - root._peekedAt
         if (!root.available || _list.running || (age >= 0 && age < 60000)) return
+        const alreadyWanted = root._wanted
         root._peekedAt = Date.now()
         root._peek = true
-        root.refresh()
+        // a new demand edge starts the read itself; queue only when a picker already wanted it
+        if (alreadyWanted) root.refresh()
     }
     Component.onCompleted: if (root.available) Qt.callLater(root.peek)
     property var profiles: []
@@ -59,6 +61,7 @@ Singleton {
     }
     onAvailableChanged: {
         root._generation++
+        root._peekedAt = 0
         if (available) Qt.callLater(root.peek)
         else {
             root.profiles = []
@@ -108,14 +111,29 @@ Singleton {
         command: ["nmcli", "-t", "-f", "UUID,TYPE,NAME,ACTIVE", "connection", "show"]
         stdout: StdioCollector { id: _listOut }
         onExited: code => {
-            if (root._wanted && root._listGeneration === root._generation) {
+            // an old read cannot consume the replacement backend's one-shot request
+            if (root._listGeneration !== root._generation) {
+                root._peek = false
+                root._refreshPending = false
+                root._peekedAt = 0
+                if (root.available) Qt.callLater(root.peek)
+                return
+            }
+            if (root._wanted) {
                 if (_list.completedSuccessfully(code)) {
                     root._publishProfiles(root.parseProfiles(_listOut.text))
                     root._listError = ""
                 } else root._listError = "Could not read VPN profiles. Open network settings to check NetworkManager."
             }
+            const refreshAgain = root._refreshPending
+            root._refreshPending = false
+            // keep a peek alive until its queued read finishes, including across idle
+            if (root._peek && root.available && (refreshAgain || Idle.isIdle)) {
+                if (refreshAgain) Qt.callLater(root.refresh)
+                return
+            }
             root._peek = false
-            if (root._refreshPending || root._listGeneration !== root._generation)
+            if (refreshAgain)
                 Qt.callLater(root.refresh)
         }
     }
