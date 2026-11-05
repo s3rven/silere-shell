@@ -485,11 +485,14 @@ PageShell {
                     active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
                     glyph: PowerProfiles.glyph
                     title: "Power Mode"
-                    valueText: PowerProfiles.changing ? "Changing…"
-                             : PowerProfiles.profile !== "" ? PowerProfiles.label
-                             : "Unavailable"
+                    // the mode reads as a subtitle, as Bluetooth's device does: a value is wider than
+                    // a switch and pushed this chevron out of the column the rows above share
                     status: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
-                          : PowerProfiles.degraded ? "Throttled" : ""
+                          : PowerProfiles.changing ? "Changing…"
+                          : PowerProfiles.profile === "" ? "Unavailable"
+                          : PowerProfiles.degraded ? PowerProfiles.label + " · Throttled"
+                          : PowerProfiles.label
+                    reserveSwitchSlot: true
                     accentColor: PowerProfiles.lastError.length > 0 || PowerProfiles.degraded
                         ? Theme.error : Theme.accent
                     statusColor: PowerProfiles.lastError.length > 0 ? Theme.error

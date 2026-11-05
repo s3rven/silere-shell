@@ -16,6 +16,8 @@ MenuRow {
     property bool   active:       false
     property bool   available:    true
     property bool   showSwitch:   false
+    // keeps the switch's width with no switch, so this row's chevron lines up with its neighbours'
+    property bool   reserveSwitchSlot: false
     property bool   expandable:   false
     property bool   expanded:     false
     property bool   passive:      false
@@ -216,7 +218,7 @@ MenuRow {
         // gives way first: 42 of label inset + 22 of margins + the same 96 label floor
         // SelectRow reserves. Uncapped, the value took its full width and elided the title
         readonly property real _valMax: Math.max(0, root.width - 160 - _chevronW)
-        readonly property real _ctrlW: root.showSwitch ? 36
+        readonly property real _ctrlW: root.showSwitch || root.reserveSwitchSlot ? 36
             : root.valueText.length === 0 ? 0
             : root.width <= 0 ? _valNatural
             : Math.min(_valNatural, _valMax)
@@ -257,8 +259,9 @@ MenuRow {
             visible: root.expandable
             width:  visible ? 24 : 0
             height: parent.height
-            anchors.right: (root.showSwitch || root.valueText.length > 0) ? undefined : parent.right
-            x: (root.showSwitch || root.valueText.length > 0)
+            readonly property bool _beside: root.showSwitch || root.reserveSwitchSlot || root.valueText.length > 0
+            anchors.right: _beside ? undefined : parent.right
+            x: _beside
                 ? parent.width - _rightSlot._ctrlW - 8 - width
                 : 0
 
