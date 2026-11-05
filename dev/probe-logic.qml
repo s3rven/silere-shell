@@ -2605,6 +2605,10 @@ ShellRoot {
                 && Audio.namesake("headset", [{ name: "speaker" }]) === null
                 && Audio.namesake("", [{ name: "" }]) === null,
             "a default device replaced under its own name is found by that name; no name finds nothing")
+        OsdBarState._clearEntries()
+        OsdBarState._updateVolume()
+        root._check(!Audio.ready && OsdBarState.activeCount === 0,
+            "an output that is not there claims no mute on the OSD")
         root._check(Audio.trackedNodes(null, null, [null], [], [], []).length === 0,
             "a disconnected PipeWire graph leaves no tracked devices")
         const replacementMic = { id: 3 }

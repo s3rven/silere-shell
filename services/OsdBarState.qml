@@ -306,6 +306,8 @@ Singleton {
 
     function _updateVolume(): void {
         _volumeUpdateQueued = false
+        // an output that went away reads as volume 0, which is not the user muting anything
+        if (!Audio.ready) return
         const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
         const lbl = effectiveMuted ? "Muted"
             : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
@@ -338,6 +340,8 @@ Singleton {
             if (isFirst || Idle.isIdle) return
             root._showDeviceName = true
             _deviceNameTimer.restart()
+            // a node still binding has no level yet; its first reading shows the name through _updateVolume
+            if (!Audio.ready) return
             const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
             root.show("volume", Audio.icon, Audio.uiVolume, `${name} · ${Audio.label}`, effectiveMuted)
         }
