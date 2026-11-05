@@ -111,7 +111,35 @@ Singleton {
         return want.length > 0 && want !== current ? want : ""
     }
 
-    // shortcut: a mode set outside silere (powerprofilesctl) is not remembered for its source
+    // a mode changed outside silere, as with a laptop's mode key, is the latest choice for its source too.
+    // A first read or a daemon coming back is no change, and Silere's own write saves itself once it applies
+    function outsideChoice(was: string, now: string, writing: bool, settling: bool): bool {
+        return was.length > 0 && now.length > 0 && was !== now && !writing && !settling
+    }
+
+    function _noteProfileChange(was: string, now: string): void {
+        // UPower answers its first read with a default before the live mode, and firmware that switches mode
+        // with the charger lands inside the source settle window; neither is a choice
+        if (!ShellSettings.powerProfileRemember || !Battery.available
+                || !root.outsideChoice(was, now, _set.running,
+                    _sourceSettle.running || _startSettle.running)) return
+        const key = Battery.onBattery ? "powerProfileBattery" : "powerProfileAc"
+        if (ShellSettings[key] !== now) ShellSettings[key] = now
+    }
+
+    property string _seenProfile: ""
+    Component.onCompleted: root._seenProfile = root.profile
+    onProfileChanged: {
+        const was = root._seenProfile
+        if (root.profile.length > 0) root._seenProfile = root.profile
+        root._noteProfileChange(was, root.profile)
+    }
+    property Timer _startSettleTimer: Timer {
+        id: _startSettle
+        interval: 3000
+        running: true
+    }
+
     Connections {
         target: Battery
         function onOnBatteryChanged() { _sourceSettle.restart() }

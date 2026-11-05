@@ -171,6 +171,27 @@ Scope {
         }
         Battery.onBattery = false
         PowerProfiles._sourceSettleTimer.stop()
+
+        // a mode key changes the mode outside the menu; it is the latest choice for the source it lands on
+        PowerProfiles._startSettleTimer.stop()
+        ShellSettings.powerProfileAc = "balanced"
+        ShellSettings.powerProfileBattery = "power-saver"
+        PowerProfiles._noteProfileChange("balanced", "performance")
+        root.check(ShellSettings.powerProfileAc === "performance" && ShellSettings.powerProfileBattery === "power-saver",
+            "a mode changed outside the menu is remembered for the current source only")
+        PowerProfiles._sourceSettleTimer.restart()
+        PowerProfiles._noteProfileChange("performance", "balanced")
+        PowerProfiles._sourceSettleTimer.stop()
+        PowerProfiles._startSettleTimer.restart()
+        PowerProfiles._noteProfileChange("performance", "power-saver")
+        PowerProfiles._startSettleTimer.stop()
+        root.check(ShellSettings.powerProfileAc === "performance",
+            "a mode switch beside a charger edge or UPower's first read is not remembered")
+        ShellSettings.powerProfileRemember = false
+        PowerProfiles._noteProfileChange("performance", "power-saver")
+        ShellSettings.powerProfileRemember = true
+        root.check(ShellSettings.powerProfileAc === "performance",
+            "a mode changed outside the menu is not remembered while remembering is off")
     }
 
     function brightnessChecks(): void {

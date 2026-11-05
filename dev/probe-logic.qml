@@ -6925,6 +6925,14 @@ ShellRoot {
                 && PowerProfiles.glyphFor("performance")
                     !== PowerProfiles.glyphFor("balanced"),
             "every power profile names and marks itself the same way in list and row")
+        root._check(PowerProfiles.outsideChoice("balanced", "performance", false, false)
+                && !PowerProfiles.outsideChoice("", "performance", false, false)
+                && !PowerProfiles.outsideChoice("balanced", "", false, false)
+                && !PowerProfiles.outsideChoice("balanced", "balanced", false, false),
+            "only a change between two live modes counts as a choice made outside the menu")
+        root._check(!PowerProfiles.outsideChoice("balanced", "performance", true, false)
+                && !PowerProfiles.outsideChoice("balanced", "performance", false, true),
+            "Silere's own write and a settling source are no outside choice")
         const fullOrder = PowerProfiles.cycleOrder(true, true)
         root._check(PowerProfiles.nextProfile("balanced", fullOrder) === "performance"
                 && PowerProfiles.nextProfile("power-saver", fullOrder) === "balanced",
