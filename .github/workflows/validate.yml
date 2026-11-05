@@ -47,13 +47,15 @@ jobs:
         with:
           persist-credentials: false
       - name: Build the minimum supported Quickshell
+        shell: bash
         run: |
           git clone --depth 1 --branch v0.3.1 https://github.com/quickshell-mirror/quickshell.git /tmp/minimum-quickshell
           test "$(git -C /tmp/minimum-quickshell rev-parse HEAD)" = 1a4716cde794a59928d9d9fc15f2afc7a95de360
-          cmake -S /tmp/minimum-quickshell -B /tmp/minimum-quickshell/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/minimum-quickshell -DINSTALL_QML_PREFIX=qml -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF
-          cmake --build /tmp/minimum-quickshell/build --parallel 4
-          cmake --install /tmp/minimum-quickshell/build
+          cmake -S /tmp/minimum-quickshell -B /tmp/minimum-quickshell/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/minimum-quickshell -DINSTALL_QML_PREFIX=qml -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF 2>&1 | tee /tmp/minimum-configure.log
+          cmake --build /tmp/minimum-quickshell/build --parallel 4 2>&1 | tee /tmp/minimum-build.log
+          cmake --install /tmp/minimum-quickshell/build 2>&1 | tee /tmp/minimum-install.log
       - name: Check QML and behavior against the minimum runtime
+        shell: bash
         env:
           PATH: /opt/minimum-quickshell/bin:/usr/local/sbin:/usr/local/bin:/usr/bin
           QML2_IMPORT_PATH: /opt/minimum-quickshell/qml
@@ -63,9 +65,18 @@ jobs:
           DEBUGINFOD_URLS: ""
           SILERE_PROBE_WRAP: gdb -q -batch -ex run -ex bt --args
         run: |
-          qs --version
-          bash scripts/test-qml-headless.sh
-          bash dev/test-logic.sh
+          { qs --version; pacman -Q qt6-base qt6-declarative; } | tee /tmp/minimum-runtime.log
+          bash scripts/test-qml-headless.sh 2>&1 | tee /tmp/minimum-types.log
+          bash dev/test-logic.sh 2>&1 | tee /tmp/minimum-logic.log
+          bash dev/test-surfaces.sh 2>&1 | tee /tmp/minimum-surfaces.log
+      - name: Save minimum-runtime logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: minimum-quickshell-${{ github.run_attempt }}
+          path: /tmp/minimum-*.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   compositor-integration:
     runs-on: ubuntu-latest
@@ -86,16 +97,64 @@ jobs:
         with:
           persist-credentials: false
       - name: Exercise isolated compositor sessions
+        shell: bash
         env:
           SILERE_TEST_COMPOSITOR: ${{ matrix.compositor }}
           # the crash reporter cannot save a report in this container, so gdb has to catch the stack
           QS_DISABLE_CRASH_HANDLER: "1"
           DEBUGINFOD_URLS: ""
           SILERE_PROBE_WRAP: gdb -q -batch -ex run -ex bt --args
-        run: runuser -u silere-test -- bash dev/test-compositors.sh "$SILERE_TEST_COMPOSITOR"
+        run: |
+          { qs --version; pacman -Q qt6-base hyprland niri kwin; } | tee /tmp/compositor-runtime.log
+          runuser -u silere-test -- bash dev/test-compositors.sh "$SILERE_TEST_COMPOSITOR" 2>&1 | tee /tmp/compositor-probe.log
       - name: Exercise output removal
         if: matrix.compositor == 'kwin'
-        run: runuser -u silere-test -- bash dev/test-screens.sh
+        shell: bash
+        run: runuser -u silere-test -- bash dev/test-screens.sh 2>&1 | tee /tmp/compositor-screens.log
+      - name: Save compositor logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compositor-${{ matrix.compositor }}-${{ github.run_attempt }}
+          path: /tmp/compositor-*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ui-compatibility:
+    name: UI compatibility (${{ matrix.scale }}x)
+    runs-on: ubuntu-latest
+    container: archlinux:base
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        scale: ["1.25", "1.5"]
+    env:
+      QT_SCALE_FACTOR: ${{ matrix.scale }}
+      FIT_REQUIRE_FONT: "1"
+    steps:
+      - name: Install UI compatibility dependencies
+        run: |
+          pacman -Syu --noconfirm git quickshell fontconfig ttf-jetbrains-mono-nerd util-linux
+          fc-cache -f >/dev/null
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exercise fractional-scale input and layouts
+        shell: bash
+        run: |
+          { qs --version; pacman -Q qt6-base qt6-declarative; } | tee /tmp/fractional-runtime.log
+          bash dev/test-logic.sh 2>&1 | tee /tmp/fractional-logic.log
+          bash dev/test-ui-stress.sh 2>&1 | tee /tmp/fractional-ui.log
+          bash dev/test-layout-fit.sh 2>&1 | tee /tmp/fractional-layout.log
+      - name: Save fractional-scale logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fractional-ui-${{ matrix.scale }}-${{ github.run_attempt }}
+          path: /tmp/fractional-*.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   validate:
     runs-on: ubuntu-latest
@@ -159,7 +218,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          qs --version
+          { qs --version; pacman -Q qt6-base qt6-declarative; } | tee /tmp/count-runtime.log
           source scripts/lib/qml-modules.sh
           for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
             _qml_module_available "$module" || {
@@ -179,12 +238,13 @@ jobs:
 
       - name: Extended UI interaction stress
         shell: bash
-        run: bash dev/test-ui-stress.sh
+        run: bash dev/test-ui-stress.sh 2>&1 | tee /tmp/count-ui.log
 
       - name: Settings surface build probe
         # offscreen QPA needs no display; catches runtime-only errors in the
         # lazily-loaded settings pages that qmlcachegen and qmllint cannot see
-        run: bash dev/test-surfaces.sh
+        shell: bash
+        run: bash dev/test-surfaces.sh 2>&1 | tee /tmp/count-surfaces.log
 
       - name: Live settings change sweep
         # drives the whole schema against surfaces that already exist; the passes
@@ -196,7 +256,8 @@ jobs:
         # a section can build and still lose its labels; Qt elides and reports success
         env:
           FIT_REQUIRE_FONT: "1"
-        run: bash dev/test-layout-fit.sh
+        shell: bash
+        run: bash dev/test-layout-fit.sh 2>&1 | tee /tmp/count-layout.log
 
       # the README badge reads this notice back through the API; see badge.yml
       - name: Count the checks
@@ -209,3 +270,12 @@ jobs:
           total=$(( ${lint:-0} + ${types:-0} + ${logic:-0} + ${sweep:-0} ))
           echo "lint $lint, types $types, logic $logic, sweep $sweep"
           echo "::notice title=Check count::$total"
+
+      - name: Save validation logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: validation-${{ github.run_attempt }}
+          path: /tmp/count-*.log
+          if-no-files-found: ignore
+          retention-days: 7
