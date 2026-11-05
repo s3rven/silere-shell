@@ -378,7 +378,7 @@ Singleton {
                 || !ShellSettings.osdChargedNotify || !root._armed
                 || !root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
         root._lastChargeRevision = Battery.chargeRevision
-        root.showAlert("battery", Battery.icon, 1.0, "Fully charged · " + Battery.label, Theme.success)
+        root.showAlert("battery", Battery.icon, 1.0, "Fully charged · " + Math.round(Battery.pct) + "%", Theme.success)
     }
     function _alertTempHot(): void {
         if (!CpuTemp.hot || !ShellSettings.osdTempWarn) return
