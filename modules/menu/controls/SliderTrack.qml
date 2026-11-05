@@ -125,15 +125,25 @@ Item {
         _shownValue = next
         if (!(commitOnRelease && root.dragging)) changed(next)
     }
+    // grabbing the handle only picks it up: the value moves once the pointer does. A reading off the step grid,
+    // such as a volume another app set to 67%, otherwise snapped to 65% on a plain click of the handle
+    property real _pressX: 0
+    property bool _heldStill: false
     function _press(px: real): void {
         if (!root._canInteract) return
         root._gestureActive = true
         const off = px - root._thumbCenter
-        root._grab = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2 ? off : 0
-        root._setFromUser(root._posToVal(px - root._grab))
+        const onHandle = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2
+        root._grab = onHandle ? off : 0
+        root._pressX = px
+        root._heldStill = onHandle
+        if (!onHandle) root._setFromUser(root._posToVal(px))
     }
     function _drag(px: real): void {
         if (!root.dragging || !root._canInteract) return
+        // a hand resting on the handle wobbles a pixel or two without meaning to move it
+        if (root._heldStill && Math.abs(px - root._pressX) < 3) return
+        root._heldStill = false
         root._setFromUser(root._posToVal(px - root._grab))
     }
     function _release(): void {

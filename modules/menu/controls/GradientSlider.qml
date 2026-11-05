@@ -54,6 +54,8 @@ Item {
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     readonly property real _thumbCenter: _track.x + root._clamped(root.position) * _track.width
     property real _grab: 0
+    property real _pressX: 0
+    property bool _heldStill: false
     transform: PixelSnap { item: root; dpr: root._dpr }
     opacity: root.enabled && root.interactive ? 1.0 : Theme.disabledOpacity
 
@@ -144,11 +146,20 @@ Item {
             if (n !== 0) root._nudge(n, 1)
         }
 
+        // as SliderTrack: grabbing the handle only picks it up, so a click on it does not rewrite the accent
+        // with a hue a rounding step away, and a hand resting on it may wobble a pixel or two
         onPressed: mouse => {
             const off = mouse.x - root._thumbCenter
-            root._grab = Math.abs(off) <= _thumb.width / 2 + 2 ? off : 0
+            const onHandle = Math.abs(off) <= _thumb.width / 2 + 2
+            root._grab = onHandle ? off : 0
+            root._pressX = mouse.x
+            root._heldStill = onHandle
+            if (!onHandle) root._pickAt(mouse.x)
+        }
+        onPositionChanged: mouse => {
+            if (!pressed || (root._heldStill && Math.abs(mouse.x - root._pressX) < 3)) return
+            root._heldStill = false
             root._pickAt(mouse.x - root._grab)
         }
-        onPositionChanged: mouse => { if (pressed) root._pickAt(mouse.x - root._grab) }
     }
 }
