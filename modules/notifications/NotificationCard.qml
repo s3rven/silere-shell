@@ -130,6 +130,7 @@ Item {
         card._swiping = false
         card._leaving = true
         card._thread = card._thread
+        card._rimHeld = card._showCountdown
         card.leaving()
         card._collapseBasis = cardRect.height
         _autoClose.stop()
@@ -405,6 +406,8 @@ Item {
     function _shownMs(): real { return Math.max(0, Date.now() - card.timeoutStartedAt) }
 
     property real _timeoutProgress: 1.0
+    // a leaving card is disabled first: the rim stays, frozen, and fades out with the card instead of snapping off
+    property bool _rimHeld: false
     readonly property bool _showCountdown: card.visible && card.enabled
         && _autoClose.shouldRun
         && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
@@ -1064,7 +1067,7 @@ Item {
 
     Loader {
         anchors.fill: cardRect
-        active: card._showCountdown
+        active: card._showCountdown || card._rimHeld
         opacity: cardRect.opacity
         sourceComponent: PerimeterProgress {
             paused: card.quietPaint
