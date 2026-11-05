@@ -1788,9 +1788,56 @@ ShellRoot {
         SystemTools._tools = toolsWas
     }
 
+    function _checkInputRecovery(): void {
+        const lookup = InputState._capsLookup
+        const was = { enabled: ShellSettings.barShowKeyboard, command: lookup.command.slice(),
+            path: InputState._capsPath, caps: InputState.capsLock, failures: InputState._capsFailures }
+        const settle = function() {
+            const deadline = Date.now() + 3000
+            while (lookup.running && Date.now() < deadline) discoveryClock.wait(10)
+        }
+        ShellSettings.barShowKeyboard = false
+        settle()
+        lookup.command = ["/nonexistent/silere-probe-caps-lookup"]
+        InputState._capsPath = ""
+        InputState._capsFailures = 0
+        ShellSettings.barShowKeyboard = true
+        settle()
+        root._check(!lookup.running && InputState._capsFailures === 1
+                && InputState._capsRetry.running && InputState._capsRetry.interval === 5000,
+            "a missing Caps Lock sensor schedules rediscovery without opening the menu")
+        InputState._capsRetry.triggered()
+        settle()
+        root._check(!lookup.running && InputState._capsFailures === 2
+                && InputState._capsRetry.running && InputState._capsRetry.interval === 10000,
+            "a failed Caps Lock retry backs off instead of continuously spawning discovery")
+        InputState._capsFailures = 5
+        root._check(InputState._capsRetry.interval === 60000,
+            "Caps Lock discovery retries stay bounded to one minute")
+        InputState._capsPath = "/sys/class/leds/silere-probe::capslock/brightness"
+        InputState.capsLock = true
+        InputState._capsReadFailed()
+        root._check(!InputState.capsAvailable && !InputState.capsLock && InputState._capsRetry.running,
+            "an unplugged Caps Lock sensor clears its stale state and resumes discovery")
+        ShellSettings.barShowKeyboard = false
+        InputState.refreshCaps()
+        root._check(!lookup.running && !InputState._capsRetry.running,
+            "a hidden keyboard widget stops discovery retries and ignores refresh requests")
+        InputState._capsPath = "/sys/class/leds/silere-probe::capslock/brightness"
+        InputState.capsLock = true
+        InputState._capsReadFailed()
+        root._check(InputState.capsAvailable && InputState.capsLock,
+            "a read invalidated while the widget is hidden preserves its cached keyboard path")
+        lookup.command = was.command
+        InputState._capsPath = was.path
+        InputState.capsLock = was.caps
+        InputState._capsFailures = was.failures
+        ShellSettings.barShowKeyboard = was.enabled
+    }
+
     function _checkWeather(): void {
         const codes = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
-            71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]
+            71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 97, 99]
         root._check(codes.every(c => Weather.conditionFor(c).length > 0
                 && Weather.glyphFor(c, true).length > 0 && Weather.glyphFor(c, false).length > 0)
                 && Weather.conditionFor(4) === "" && Weather.glyphFor(-1, true) === "",
@@ -2346,6 +2393,7 @@ ShellRoot {
         root._checkStackTags()
         root._checkThreadFolding()
         root._checkWeather()
+        root._checkInputRecovery()
         root._checkBarSizing()
         root._checkWorkspaceIndicators()
         root._checkAccentPills()
