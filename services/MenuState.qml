@@ -85,7 +85,10 @@ AnchoredPopupState {
         _settingsSelectOwner = null
         if (previous) previous._setOpen(false)
     }
-    onOpenChanged: if (!open) closeSettingsSelect()
+    onOpenChanged: if (!open) {
+        closeSettingsSelect()
+        homePicker = ""
+    }
 
     // order by user impact and frequency: global appearance first, daily bar surfaces next, then feedback; operational and recovery tools stay last
     readonly property var settingsTree: [
@@ -305,6 +308,15 @@ AnchoredPopupState {
         root.selectTab(tab)
         root.openAt(point && isFinite(point.x) ? point.x : 10, screen, source)
         root.tabRequested(tab)
+    }
+
+    // the drawer a bar icon stands for (the network icon's Wi-Fi list), for Home to open as it shows;
+    // one-shot, and dropped with the menu so a later plain open cannot inherit it
+    property string homePicker: ""
+    function showHomeAt(picker: string, source, screen): void {
+        root.homePicker = picker
+        root.showTabAt(root.homeTab, source, screen)
+        if (!root.open) root.homePicker = ""
     }
 
     function showSettingsAt(section: string, source, screen): void {

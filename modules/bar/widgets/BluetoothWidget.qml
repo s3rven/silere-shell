@@ -37,7 +37,7 @@ Pill {
     accessibleName: "Bluetooth, " + Bluetooth.statusText
     interactive: root.show
     pressed: _tap.pressed
-    onActivated: if (root.canActivate) MenuState.showTabAt(MenuState.homeTab, root, root.screen)
+    onActivated: if (root.canActivate) MenuState.showHomeAt("bt", root, root.screen)
 
     TapHandler {
         id: _tap

@@ -13,6 +13,7 @@ PageShell {
     onPageShown: {
         if (Network.hasVpn) Network.refreshVpnAddress()
         Vpn.peek()
+        root._takePicker()
     }
     onPageHidden: {
         _vpnRow.copied = false
@@ -46,6 +47,22 @@ PageShell {
         _volumeRow.closeInline()
         _brightnessRow.closeInline()
         _picker = which
+    }
+
+    // a picker the bar asked for opens only where its row would offer the chevron
+    function _takePicker(): void {
+        const want = MenuState.homePicker
+        if (want.length === 0) return
+        MenuState.homePicker = ""
+        const allowed = want === "wifi" ? root._wifiAvailable && Network.wifiEnabled
+            : want === "bt" ? root._btAvailable && Bluetooth.enabled
+            : false
+        if (allowed && root._picker !== want) root._togglePicker(want)
+    }
+    Connections {
+        target: MenuState
+        enabled: root.active
+        function onHomePickerChanged() { root._takePicker() }
     }
 
     function _closePicker(): bool {

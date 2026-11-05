@@ -1319,7 +1319,10 @@ ShellRoot {
                         && MenuState.anchorSource === widget && MenuState.triggerScreen === screen
                         && Network.wifiEnabled === wifiWas && Bluetooth.enabled === btWas,
                     name + " opens Home on its own screen without changing either radio")
+                root._check(MenuState.homePicker === (name === "NetworkWidget" ? "wifi" : "bt"),
+                    name + " asks Home for its own picker")
                 MenuState.close()
+                root._check(MenuState.homePicker === "", name + "'s picker request goes with the menu")
                 widget.barActive = false
                 widget.activated()
                 root._check(!MenuState.open, name + " rejects activation while its bar is inactive")
