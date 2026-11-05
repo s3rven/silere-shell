@@ -34,8 +34,12 @@ Item {
     property bool   animateGlyph: true
     property bool   animateText: false
     property int    glyphPixelSize: Settings.iconSize + 2
+    // a reading sits left in its reserve: one digit keeps to its glyph and the spare room trails it
     property string reserveText: ""
-    readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.advanceWidth) : 0
+    readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.implicitWidth) : 0
+    // further { glyph, text, reserve, color } pairs after the text, for one widget showing several readings;
+    // the content scan does not sweep them, which only the status pills use
+    property var    segments: []
     property bool   contentScanEnabled: false
     property color  contentScanColor: Theme.barText
     property real   contentScanProgress: 0.0
@@ -106,12 +110,6 @@ Item {
         id: _shrinkDelay
         interval: root.shrinkDelay
         onTriggered: root._minW = root.rowWidth
-    }
-
-    TextMetrics {
-        id: _reserveMetrics
-        font: _textEl.font
-        text: root.reserveText
     }
 
     property bool _ready: false
@@ -285,13 +283,23 @@ Item {
                 readonly property bool _hasShownText: root.animateText ? _shown.length > 0 : root.hasText
                 width: parent.width
                 anchors.verticalCenter: parent.verticalCenter
-                horizontalAlignment: root.reserveText.length > 0 ? Text.AlignHCenter : Text.AlignLeft
                 elide:   Text.ElideRight
                 text:    root.animateText ? _shown : root.text
                 color:   root._hoverTextColor
                 font.pixelSize: Settings.fontSize
                 font.features: root.reserveText.length > 0 ? ({ "tnum": 1 }) : ({})
                 ColorFade on color {}
+            }
+
+            // measured as the reading is: an advance leaves out the overhang of a trailing "%", so "00%" came up
+            // a pixel short of "14%" and every reserved pill grew a pixel between one digit and two
+            Text {
+                id: _reserveMetrics
+                visible: false
+                textFormat: Text.PlainText
+                renderType: _textEl.renderType
+                font: _textEl.font
+                text: root.reserveText
             }
 
             Component.onCompleted: if (root.animateText) _textEl._shown = root.text
@@ -358,8 +366,6 @@ Item {
                     ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
-                        // must match the real text's alignment (centers when a reserveText floor is set) or the swept copy lands offset and looks doubled/garbled
-                        horizontalAlignment: root.reserveText.length > 0 ? Text.AlignHCenter : Text.AlignLeft
                         elide: Text.ElideRight
                         text: root.animateText ? _textEl._shown : root.text
                         color: root.contentScanColor

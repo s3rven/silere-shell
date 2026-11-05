@@ -24,7 +24,7 @@ Pill {
     glyphColor: Audio.muted ? Theme.barSubtext : Theme.barText
     textColor:  Theme.barSubtext
     interactive: Audio.ready
-    // two digits is the common case; reserving "100%" left half a character of air on each side of every reading
+    // two digits is the common case; reserving "100%" left a character of air after every reading
     reserveText: "00%"
     text: !Audio.ready ? ""
         : (ShellSettings.valuesOnHover && !expanded) ? ""
