@@ -14,7 +14,7 @@ chmod 0700 "$scratch/run"
 cp "$ROOT/dev/probe-daily-driver.qml" "$scratch/probe.qml"
 cp "$ROOT/services/Vpn.qml" "$ROOT/services/DisplayBrightness.qml" "$ROOT/services/FontScan.qml" \
     "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$ROOT/services/RequestSet.qml" \
-    "$ROOT/services/PowerProfiles.qml" "$ROOT/services/SafeText.qml" "$ROOT/services/SystemAlerts.qml" \
+    "$ROOT/services/PowerProfiles.qml" "$ROOT/services/SafeText.qml" "$ROOT/services/Grapheme.js" "$ROOT/services/SystemAlerts.qml" \
     "$scratch/services/"
 cat > "$scratch/services/qmldir" <<'EOF'
 singleton Vpn 1.0 Vpn.qml

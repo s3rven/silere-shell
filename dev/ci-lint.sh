@@ -889,6 +889,15 @@ else
   ok "lazy compile" "popups and large menu pages compile when first wanted"
 fi
 
+section "grapheme walk"
+# a binding records a dependency per id lookup, from a pool Qt never shrinks: walking a long string through root held ~30 MB for good
+if grep -qF '.pragma library' services/Grapheme.js && ! grep -qE '(^|[^a-zA-Z_])root\.' services/Grapheme.js \
+    && grep -qF 'return Grapheme.clip(text, cap)' services/SafeText.qml; then
+  ok "grapheme walk" "SafeText clips outside QML, where a binding cannot capture the walk"
+else
+  fail "services/SafeText.qml must clip through the Grapheme.js library, not a loop over root"
+fi
+
 section "installer environment defaults"
 if ! grep -qF '${MALLOC_CONF-' scripts/silere \
     && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \
