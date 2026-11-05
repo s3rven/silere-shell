@@ -112,6 +112,9 @@ if [ "$qs_usable" = 1 ]; then
       && command -v dbus-run-session >/dev/null 2>&1 && compgen -G '/dev/dri/renderD*' >/dev/null; then
     _start hyprland dev/test-compositors.sh hyprland
   fi
+  if command -v pipewire >/dev/null 2>&1 && command -v wireplumber >/dev/null 2>&1; then
+    _start audio dev/test-audio.sh
+  fi
 fi
 
 section "versions"
@@ -850,6 +853,13 @@ if [ -n "${_pid_hyprland:-}" ]; then
   _report hyprland "nested hypr" "the shell failed against a nested Hyprland" 'passed \(hyprland[^)]*\)'
 else
   info "nested hypr" "not run: needs Hyprland, KWin and a GPU render node"
+fi
+
+section "audio integration"
+if [ -n "${_pid_audio:-}" ]; then
+  _report audio audio "volume feedback or a device or daemon change failed against a private PipeWire" 'passed \([0-9]+ checks\)'
+else
+  info "audio" "not run: needs PipeWire and WirePlumber"
 fi
 
 if [ "$status" -eq 0 ]; then
