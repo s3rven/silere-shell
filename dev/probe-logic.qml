@@ -7735,7 +7735,7 @@ ShellRoot {
         const nightProviderWas = ShellSettings.nightLightProvider
         const nightToolsWas = SystemTools._tools
         const nightReadyWas = SystemTools.ready
-        SystemTools._tools = { wlsunset: true, pgrep: true, pkill: true }
+        SystemTools._tools = { wlsunset: true, pgrep: true }
         SystemTools.ready = true
         ShellSettings.nightLightProvider = "wlsunset"
         NightLight.toggle()

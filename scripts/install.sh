@@ -997,8 +997,7 @@ _optdep_any "AUR helper" "AUR update count" paru yay
 _optdep busctl        "notification daemon check"
 _optdep upower        "battery percentage + warnings"
 _optdep_any "night light" "night light toggle" hyprsunset wlsunset
-_optdep pgrep         "optional night light external state check"
-_optdep pkill         "optional night light external stop fallback"
+_optdep pgrep         "optional night light external state check and stop"
 _optdep powerprofilesctl "power profile selector"
 _optdep_any "lock screen" "lock action" hyprlock swaylock gtklock
 _optdep_any "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol

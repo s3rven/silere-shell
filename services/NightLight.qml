@@ -22,7 +22,7 @@ Singleton {
     property string _runningTool: ""
     readonly property string _killTarget: _runningTool.length > 0 ? _runningTool : tool
     readonly property bool toolAvailable: tool.length > 0
-    // pgrep and pkill match by name, so a test copy of the shell would adopt and kill the live tool
+    // a test shell on the same desktop stays hands off anyway; scripts/session.sh keeps any other session's tool safe
     readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     // auto is a mode, not a value: nightLightTemp stays whatever the user last chose by hand,
     // so turning auto off restores it instead of leaving the last solar step behind
@@ -258,12 +258,16 @@ Singleton {
         if (_sunsetProc.running || _stopping) {
             _stopping = true
             if (_sunsetProc.running) _sunsetProc.running = false
-        } else if (SystemTools.hasPkill && !_killProc.running) {
-            _killProc.exec(["pkill", "-x", root._killTarget])
+        } else if (SystemTools.hasPgrep && !_killProc.running) {
+            root._stopSessionTool()
         } else if (!_killProc.running) {
             _pendingEnable = false
-            root.lastError = "Install pkill to change an external night light"
+            root.lastError = "Install pgrep to change an external night light"
         }
+    }
+
+    function _stopSessionTool(): void {
+        _killProc.exec(["bash", Quickshell.shellDir + "/scripts/session.sh", "tool-stop", root._killTarget])
     }
 
     onTemperatureChanged: root._setTemperature()
@@ -288,16 +292,16 @@ Singleton {
             if (_sunsetProc.running || _stopping) {
                 _stopping = true
                 if (_sunsetProc.running) _sunsetProc.running = false
-            } else if (SystemTools.hasPkill) {
-                _killProc.exec(["pkill", "-x", root._killTarget])
+            } else if (SystemTools.hasPgrep) {
+                root._stopSessionTool()
             } else {
-                root.lastError = "Install pkill to stop an external night light"
+                root.lastError = "Install pgrep to stop an external night light"
                 return
             }
             enabled = false
         } else {
             if (_sunsetProc.running || _stopping) { _pendingEnable = true; return }
-            // don't spawn while a fallback pkill is in flight — it matches hyprsunset by name and would kill the new instance; queue instead
+            // don't spawn while a stop is in flight — it matches hyprsunset by name and would kill the new instance; queue instead
             if (_killProc.running) { _pendingEnable = true; return }
             if (ShellSettings.nightLightAuto) root._solarTick++
             _startSunset()

@@ -236,7 +236,6 @@ optional_any_tool "updates" "update count widget" checkupdates apt dnf zypper xb
 optional_any_tool "AUR helper" "AUR update count" paru yay
 optional_any_tool "night light" "night light toggle" hyprsunset wlsunset
 optional_tool pgrep "night light external state check"
-optional_tool pkill "night light external stop fallback"
 optional_tool powerprofilesctl "power profile selector"
 optional_any_tool "lock screen" "lock action" hyprlock swaylock gtklock
 optional_any_tool "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol

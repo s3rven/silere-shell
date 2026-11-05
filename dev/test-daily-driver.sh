@@ -56,6 +56,34 @@ checks=$((checks+1))
 if SILERE_TEST_LOCK_MODE=error bash "$ROOT/scripts/session.sh" status; then exit 1; fi
 checks=$((checks+1))
 
+# a tool of another session is neither found nor stopped; one that names no session counts as ours
+decoy="sdecoy$$"
+cp "$(command -v bash)" "$scratch/bin/$decoy"
+mkfifo "$scratch/decoy.fifo"
+# a read on a fifo nobody writes: no child process, and a failed run's decoys still end on their own
+decoy_wait="read -r -t 60 _ <> '$scratch/decoy.fifo'"
+decoy_up() { for _ in $(seq 1 300); do [ "$(cat "/proc/$1/comm" 2>/dev/null)" = "$decoy" ] && return 0; sleep 0.01; done; return 1; }
+gone() { for _ in $(seq 1 300); do kill -0 "$1" 2>/dev/null || return 0; sleep 0.01; done; return 1; }
+own=(WAYLAND_DISPLAY=fixture-1 XDG_RUNTIME_DIR=/run/fixture)
+env WAYLAND_DISPLAY=other-1 XDG_RUNTIME_DIR=/run/fixture "$scratch/bin/$decoy" -c "$decoy_wait" & other_display=$!
+env WAYLAND_DISPLAY=fixture-1 XDG_RUNTIME_DIR=/run/other "$scratch/bin/$decoy" -c "$decoy_wait" & other_runtime=$!
+check decoy_up "$other_display"; check decoy_up "$other_runtime"
+if env "${own[@]}" bash "$ROOT/scripts/session.sh" tool-find "$decoy"; then echo 'FAIL: adopted another session tool' >&2; exit 1; fi
+checks=$((checks+1))
+if env "${own[@]}" bash "$ROOT/scripts/session.sh" tool-stop "$decoy"; then echo 'FAIL: claimed to stop another session tool' >&2; exit 1; fi
+checks=$((checks+1))
+check kill -0 "$other_display"; check kill -0 "$other_runtime"
+env "${own[@]}" "$scratch/bin/$decoy" -c "$decoy_wait" & ours=$!
+check decoy_up "$ours"
+check env "${own[@]}" bash "$ROOT/scripts/session.sh" tool-find "$decoy"
+check env "${own[@]}" bash "$ROOT/scripts/session.sh" tool-stop "$decoy"
+check gone "$ours"; check kill -0 "$other_display"
+env -u WAYLAND_DISPLAY -u XDG_RUNTIME_DIR "$scratch/bin/$decoy" -c "$decoy_wait" & unnamed=$!
+check decoy_up "$unnamed"
+check env "${own[@]}" bash "$ROOT/scripts/session.sh" tool-find "$decoy"
+kill "$other_display" "$other_runtime" "$unnamed" 2>/dev/null || true
+wait "$other_display" "$other_runtime" "$ours" "$unnamed" 2>/dev/null || true
+
 printf connected > "$scratch/drm/card1-DP-1/status"
 printf 'fixture-edid' > "$scratch/drm/card1-DP-1/edid"
 fingerprint="$(sha256sum "$scratch/drm/card1-DP-1/edid" | cut -d' ' -f1)"

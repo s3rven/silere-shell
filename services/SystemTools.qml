@@ -44,7 +44,6 @@ Singleton {
     readonly property bool hasLoginctl:      _tools.loginctl ?? false
     readonly property bool hasHyprctl:       _tools.hyprctl ?? false
     readonly property bool hasPgrep:         _tools.pgrep ?? false
-    readonly property bool hasPkill:         _tools.pkill ?? false
     readonly property bool hasNotifySend:    _tools["notify-send"] ?? false
     readonly property bool hasBusctl:        _tools.busctl ?? false
     readonly property bool hasCheckupdates:  _tools.checkupdates ?? false
@@ -201,7 +200,7 @@ Singleton {
             "command -v busctl >/dev/null 2>&1 && busctl --system --no-pager --timeout=2 get-property " +
             "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
             ">/dev/null 2>&1 && echo @powerprofiles; " +
-            "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep pkill notify-send " +
+            "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep notify-send " +
             "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl curl xdg-open " +
             "blueman-manager nm-connection-editor nmtui xdg-terminal-exec ddcutil " +
             "missioncenter resources gnome-system-monitor plasma-systemmonitor btop htop " +
