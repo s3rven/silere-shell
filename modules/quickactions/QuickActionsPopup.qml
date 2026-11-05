@@ -117,8 +117,11 @@ FittedPopupWindow {
             anchors.right: parent.right
             anchors.rightMargin: 10
             anchors.verticalCenter: _glyph.verticalCenter
-            width: Math.min(_row.width * 0.48, Math.max(30, _stateLabel.implicitWidth + 12))
-            height: Math.max(20, _stateLabel.implicitHeight + 4)
+            // rows step 41px, so without the snap every other pill's outline straddles two device pixels at 1.25
+            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+            width: Metrics.devicePx(Math.min(_row.width * 0.48, Math.max(30, _stateLabel.implicitWidth + 12)), _dpr)
+            height: Metrics.devicePx(Math.max(20, _stateLabel.implicitHeight + 4), _dpr)
+            transform: PixelSnap { item: _state; dpr: _state._dpr }
             radius: 7
             antialiasing: true
             color: _row.error || _row.warning || _row.highlighted
