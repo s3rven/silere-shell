@@ -4317,6 +4317,21 @@ ShellRoot {
             "restoring the exact previous settings file clears its error and reapplies disk values")
         root._check(ShellSettings.flushForUpdate(),
             "restoring the exact previous settings file re-enables saving")
+        const settingsStore = ShellSettings._persistence
+        root._check(settingsStore !== undefined, "the settings store is available for persistence barrier checks")
+        if (settingsStore) {
+            const pausedWas = settingsStore.writePaused
+            const reloadingWas = settingsStore._reloading
+            settingsStore.writePaused = true
+            root._check(!ShellSettings.flushForUpdate(),
+                "a pending migration backup cannot report settings safely saved for an update")
+            settingsStore.writePaused = false
+            settingsStore._reloading = true
+            root._check(!ShellSettings.flushForUpdate(),
+                "an unresolved external settings reload cannot report a successful update flush")
+            settingsStore.writePaused = pausedWas
+            settingsStore._reloading = reloadingWas
+        }
         // recover the remaining probe even if the unchanged-file shortcut failed
         ShellSettings._applyText(beforeEdit.slice(0, -1) + "\n}")
         ShellSettings._loaded = savedLoaded
@@ -10692,6 +10707,26 @@ ShellRoot {
         root._check(store.pending, "a stopped writer accepts a new save request")
         store.stop()
         root._check(!store.pending, "stopping a writer also cancels its debounce timer")
+
+        let removedReadSeen = false
+        store.watchChanges = true
+        store.loadFailed.connect(function() { removedReadSeen = true })
+        const removal = boundedProcessFactory.createObject(root, {
+            command: ["rm", "--", store.path], timeoutMs: 2000
+        })
+        removal.running = true
+        const removalDeadline = Date.now() + 3000
+        while ((!removedReadSeen || removal.running) && Date.now() < removalDeadline)
+            discoveryClock.wait(10)
+        root._check(removedReadSeen && !removal.running,
+            "removing a watched settings fixture reports the failed reload")
+        root._check(store.lastSavedText.length === 0,
+            "a failed reload invalidates the saved-content cache for a removed file")
+        store.flush(true)
+        persistenceGuardFixture.reload()
+        root._check(persistenceGuardFixture.text().trim() === sessionText,
+            "flushing unchanged settings recreates a file removed after the previous save")
+        removal.destroy()
         store.destroy()
         root._barPointerWindow = barPointerFactory.createObject(root)
         root._check(root._barPointerWindow !== null, "the bar pointer fixture creates an offscreen window")

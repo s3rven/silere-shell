@@ -771,7 +771,7 @@ Singleton {
     }
 
     function flushForUpdate(): bool {
-        if (!root._loaded || !_store.writeAllowed) return false
+        if (!root._loaded || !_store.writeAllowed || _store.writePaused || _store._reloading) return false
         root._writeError = ""
         _store.flush(true)
         return root._writeError.length === 0
@@ -828,6 +828,8 @@ Singleton {
         }
         ConfigStore.ensureDirectory()
     }
+
+    readonly property PersistedFile _persistence: _store
 
     PersistedFile {
         id: _store

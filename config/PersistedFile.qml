@@ -101,6 +101,8 @@ Scope {
         }
         onLoadFailed: error => {
             root._reloading = false
+            // a deleted file no longer contains the last saved text, even when the next save has identical contents
+            root.lastSavedText = ""
             root.loadFailed(error)
         }
         onSaved: {
