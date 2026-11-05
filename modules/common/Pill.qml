@@ -325,6 +325,53 @@ Item {
                 onFinished: if (root.motionActive && _textEl._shown !== root.text) _textSwap.start()
             }
         }
+
+        // indexed, not modelled: a reading that ticks rebinds its text instead of rebuilding the pair
+        Repeater {
+            model: root.segments.length
+            Row {
+                id: _segment
+                required property int index
+                readonly property var seg: root.segments[index] ?? ({})
+                height: row.height
+                // half again the glyph gap ahead of each pair: a glyph reads as its own reading's, yet the pairs stay one widget
+                leftPadding: Math.round(row.spacing / 2)
+                spacing: row.spacing
+
+                Item {
+                    y: Math.round((parent.height - height) / 2)
+                    implicitWidth: Metrics.iconCellFor(root.glyphPixelSize)
+                    implicitHeight: _segGlyph.implicitHeight
+                    ShellText {
+                        id: _segGlyph
+                        anchors.centerIn: parent
+                        text: _segment.seg.glyph ?? ""
+                        color: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
+                        font.pixelSize: root.glyphPixelSize
+                        ColorFade on color {}
+                    }
+                }
+
+                ShellText {
+                    id: _segText
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: Math.ceil(Math.max(implicitWidth, _segReserve.implicitWidth))
+                    text: _segment.seg.text ?? ""
+                    color: root._hoverTextColor
+                    font.pixelSize: Settings.fontSize
+                    font.features: ({ "tnum": 1 })
+                    ColorFade on color {}
+                    Text {
+                        id: _segReserve
+                        visible: false
+                        textFormat: Text.PlainText
+                        renderType: _segText.renderType
+                        font: _segText.font
+                        text: _segment.seg.reserve ?? ""
+                    }
+                }
+            }
+        }
     }
 
     Loader {

@@ -15,6 +15,8 @@ Pill {
     opacity: _baseOpacity
     visible: layoutVisible
     glyph:           Brightness.icon
+    // the sun's rays fill its whole em, a quarter more ink than the bar's other glyphs at the same size
+    glyphPixelSize:  Settings.iconSize
     accessibleName: root.canControl
         ? "Brightness " + Brightness.label : "Brightness unavailable"
     glyphColor:      canControl ? Theme.barText : Theme.barSubtext

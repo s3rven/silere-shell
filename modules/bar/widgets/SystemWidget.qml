@@ -35,9 +35,14 @@ Pill {
             root._cpuHigh = false
         }
     }
+    readonly property int _cpuLevel: root._cpuHigh ? 1 : 0
     // memory uses Home's own bands, so the two never disagree about the same reading
-    readonly property int severity: (root._temp >= 0 && CpuTemp.critical) || root._mem > 0.9 ? 2
-        : root._cpuHigh || root._mem > 0.75 || (root._temp >= 0 && CpuTemp.hot) ? 1 : 0
+    readonly property int _memLevel: root._mem > 0.9 ? 2 : root._mem > 0.75 ? 1 : 0
+    readonly property int _tempLevel: root._temp < 0 ? 0 : CpuTemp.critical ? 2 : CpuTemp.hot ? 1 : 0
+    readonly property int severity: Math.max(root._cpuLevel, root._memLevel, root._tempLevel)
+    function _levelTint(level: int): color {
+        return level === 2 ? Theme.error : level === 1 ? Theme.warning : Theme.barText
+    }
 
     function percent(value: real): string {
         return value < 0 ? "—" : Math.round(value * 100) + "%"
@@ -49,39 +54,43 @@ Pill {
 
     readonly property var _parts: {
         const parts = []
-        if (root._cpuOn) parts.push({ glyph: "󰍛", value: root.percent(root._cpu),
-            detail: "CPU " + root.percent(root._cpu), spoken: "CPU " + root.percent(root._cpu) })
+        // two digits reserved per reading: the pill keeps its width as values tick, and only grows at 100%
+        if (root._cpuOn) parts.push({ glyph: "󰍛", value: root.percent(root._cpu), reserve: "00%",
+            detail: root.percent(root._cpu), level: root._cpuLevel, spoken: "CPU " + root.percent(root._cpu) })
         if (root._memOn) {
             const used = SysInfo.memTotalKb - SysInfo.memAvailKb
-            parts.push({ glyph: "󰘚", value: root.percent(root._mem),
-                detail: root._mem < 0 ? "Memory —"
+            parts.push({ glyph: "󰘚", value: root.percent(root._mem), reserve: "00%",
+                detail: root._mem < 0 ? "—"
                     : root.gigabytes(used) + " of " + root.gigabytes(SysInfo.memTotalKb)
                         + (SysInfo.swapActive ? " · " + root.gigabytes(SysInfo.swapUsedKb) + " swap" : ""),
+                level: root._memLevel,
                 spoken: "memory " + root.percent(root._mem)
                     + (SysInfo.swapActive ? ", " + root.gigabytes(SysInfo.swapUsedKb) + " swap" : "") })
         }
         if (root._tempOn) {
             const t = root._temp < 0 ? "—" : Math.round(root._temp) + "°"
-            parts.push({ glyph: "󰔏", value: t, detail: t + "C", spoken: "temperature " + t + "C" })
+            parts.push({ glyph: "󰔏", value: t, reserve: "00°", detail: t + "C", level: root._tempLevel,
+                spoken: "temperature " + t + "C" })
         }
         return parts
     }
 
+    // resting as the glyph alone, it speaks for every reading; beside the readings, each glyph speaks for its own
+    readonly property bool _readingsShown: !ShellSettings.valuesOnHover || root.expanded
     glyph: root._parts.length > 0 ? root._parts[0].glyph : "󰍛"
-    glyphColor: root.severity === 2 ? Theme.error : root.severity === 1 ? Theme.warning : Theme.barText
+    glyphColor: root._levelTint(root._readingsShown && root._parts.length > 0 ? root._parts[0].level : root.severity)
     textColor: Theme.barSubtext
     animateGlyph: false
-    // two digits per reading: the pill keeps its width as values tick, and only grows at 100%
-    reserveText: root._parts.map((p, i) => (i > 0 ? p.glyph + " " : "") + "00%").join("  ")
+    reserveText: root._parts.length > 0 ? root._parts[0].reserve : ""
     // above the 2 s poll, so a reading that shortens does not re-animate the width every tick
     shrinkDelay: 2400
     maxTextWidth: compact ? 160 : 280
 
-    text: {
-        if (ShellSettings.valuesOnHover && !root.expanded) return ""
-        if (root.expanded) return root._parts.map(p => p.detail).join(" · ")
-        return root._parts.map((p, i) => (i > 0 ? p.glyph + " " : "") + p.value).join("  ")
-    }
+    text: !root._readingsShown || root._parts.length === 0 ? ""
+        : root.expanded ? root._parts[0].detail : root._parts[0].value
+    segments: !root._readingsShown ? [] : root._parts.slice(1).map(p => ({
+        glyph: p.glyph, text: root.expanded ? p.detail : p.value, reserve: p.reserve,
+        color: root._levelTint(p.level) }))
     accessibleName: "System, " + root._parts.map(p => p.spoken).join(", ")
         + (root.severity === 2 ? ", critical" : root.severity === 1 ? ", high" : "")
 

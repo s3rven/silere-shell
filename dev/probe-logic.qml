@@ -1736,11 +1736,19 @@ ShellRoot {
         SysInfo.memTotalKb = 32 * 1048576
         SysInfo.memAvailKb = 32 * 1048576 * 0.68
         const w = systemWidgetFactory.createObject(barFixtureHost)
-        root._check(w.text === "14%  󰘚 32%" && w.glyph === "󰍛" && w.severity === 0
+        const wRow = w.children.find(item => typeof item.forceLayout === "function")
+        root._check(w.text === "14%" && w.glyph === "󰍛" && w.severity === 0
+                && w.segments.length === 1 && w.segments[0].glyph === "󰘚" && w.segments[0].text === "32%"
                 && w._parts[1].detail === "10 GB of 32 GB",
-            "the system monitor reads CPU then memory, with the amounts on hover")
-        root._check(w.reserveText === "00%  󰘚 00%",
+            "the system monitor reads CPU then memory, each beside its own glyph, with the amounts on hover")
+        root._check(w.reserveText === "00%" && w.segments[0].reserve === "00%",
             "the monitor reserves two digits per reading so ticking values keep its width")
+        wRow.forceLayout()
+        const twoDigitW = w.rowWidth
+        SysInfo.cpuPct = 0.06
+        wRow.forceLayout()
+        root._check(w.text === "6%" && w.rowWidth === twoDigitW && twoDigitW > 0,
+            "a one-digit reading fills its reserve and keeps to its own glyph")
         SysInfo.cpuPct = 0.95
         const single = w.severity === 0
         SysInfo.cpuPct = 0.96
@@ -1751,8 +1759,9 @@ ShellRoot {
         root._check(single && rose && held && w.severity === 0,
             "a sustained busy CPU tints the monitor, one spike does not, and it lets go only well below")
         SysInfo.memAvailKb = 32 * 1048576 * 0.03
-        root._check(w.severity === 2 && Qt.colorEqual(w.glyphColor, Theme.error),
-            "nearly full memory turns the monitor red")
+        root._check(w.severity === 2 && Qt.colorEqual(w.segments[0].color, Theme.error)
+                && Qt.colorEqual(w.glyphColor, Theme.barText),
+            "nearly full memory turns its own glyph red, not the CPU's")
         ShellSettings.systemShowCpu = false
         root._check(w.glyph === "󰘚" && w.text === "97%",
             "with CPU off the monitor leads with memory")
@@ -1761,7 +1770,8 @@ ShellRoot {
         root._check(w.text.startsWith("—") && w.severity === 2,
             "a CPU reading not yet sampled shows a dash rather than a stale value")
         ShellSettings.valuesOnHover = true
-        root._check(w.text === "" && w.glyph === "󰍛",
+        root._check(w.text === "" && w.glyph === "󰍛" && w.segments.length === 0
+                && Qt.colorEqual(w.glyphColor, Theme.error),
             "with values on hover the monitor rests as its glyph, still tinted")
         w.destroy()
         ShellSettings.valuesOnHover = was.hoverValues
