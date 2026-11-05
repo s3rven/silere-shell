@@ -2504,6 +2504,14 @@ ShellRoot {
                 && Updates.sourceIdentity("pacman", false, true, true) === "pacman|"
                 && Updates.sourceIdentity("aur", true, false, true) === "aur|yay",
             "update source identity follows package-manager and helper changes")
+        const updateCheckedAt = 10000000
+        root._check(!Updates.backgroundCheckDue(updateCheckedAt, false, updateCheckedAt + 3599999)
+                && Updates.backgroundCheckDue(updateCheckedAt, false, updateCheckedAt + 3600000),
+            "reconnecting rechecks an hour-old package result while keeping a recent successful one")
+        root._check(Updates.backgroundCheckDue(updateCheckedAt, true, updateCheckedAt + 1)
+                && Updates.backgroundCheckDue(0, false, updateCheckedAt)
+                && Updates.backgroundCheckDue(updateCheckedAt, false, updateCheckedAt - 1),
+            "package checks resume after a failure, an uncompleted first check, or a clock rollback")
 
         const providerWas = ShellSettings.lockProvider
         ShellSettings.lockProvider = "gtklock"

@@ -259,7 +259,9 @@ Singleton {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running
                 || root._discardResult) return
-        // a manual check supersedes delayed recovery work. Leaving either timer armed makes a successful check run again a few seconds/minutes later
+        // a manual check supersedes startup and recovery work too
+        _initDelay.stop()
+        _sourceRefresh.stop()
         _retry.stop()
         _reconnect.stop()
         _proc.exec(["bash", "-c", root._cmd()])
@@ -272,6 +274,7 @@ Singleton {
 
     function _resetDisabledState(): void {
         _initDelay.stop()
+        _sourceRefresh.stop()
         _retry.stop()
         _reconnect.stop()
         if (_proc.running) {
@@ -418,17 +421,23 @@ Singleton {
         onTriggered: root._refreshBackground()
     }
 
+    function backgroundCheckDue(lastCheck: real, failed: bool, now: real): bool {
+        const age = now - lastCheck
+        return failed || lastCheck <= 0 || age < 0 || age >= _poll.interval
+    }
+
+    // wake can precede the network returning; either edge must catch up an overdue check
+    function _resumeBackgroundCheck(): void {
+        if (Idle.isIdle || !root.enabled || !root.supported
+                || (Network.toolAvailable && !Network.connected)
+                || !root.backgroundCheckDue(root.lastCheckMs, root.lastFailed, Date.now())) return
+        _initDelay.stop()
+        _reconnect.restart()
+    }
+
     Connections {
         target: Idle
-        function onIsIdleChanged() {
-            if (Idle.isIdle || !root.enabled || !root.supported || !root._online) return
-            if (root.lastFailed) {
-                _reconnect.restart()
-                return
-            }
-            const age = Date.now() - root.lastCheckMs
-            if (age < 0 || age >= _poll.interval) root._refreshBackground()
-        }
+        function onIsIdleChanged() { root._resumeBackgroundCheck() }
     }
 
     Timer { id: _reconnect; interval: 5000; onTriggered: root._refreshBackground() }
@@ -444,11 +453,7 @@ Singleton {
     Connections {
         target: Network
         function onConnectedChanged() {
-            if (Network.connected && root.enabled && root.supported
-                    && (root.lastFailed || root.lastCheckMs <= 0)) {
-                _initDelay.stop()
-                _reconnect.restart()
-            }
+            if (Network.connected) root._resumeBackgroundCheck()
         }
     }
 
