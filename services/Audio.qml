@@ -307,6 +307,26 @@ Singleton {
             app || node.description || node.nickname || node.name || "App", 256)
     }
 
+    // DesktopEntries answers null until its first scan lands; reading this reruns a lookup then
+    property int _entriesRevision: 0
+    Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() { root._entriesRevision++ }
+    }
+
+    // the app's own icon: its icon name if it sends one, else the name it plays under, else its binary
+    function streamIcon(node): string {
+        void root._entriesRevision
+        if (!node) return ""
+        const props = node.properties || ({})
+        for (const key of ["application.icon-name", "application.name", "application.process.binary"]) {
+            const id = String(props[key] || "")
+            const icon = id.length > 0 ? (IconResolver.appMeta(id)?.icon ?? "") : ""
+            if (icon.length > 0) return icon
+        }
+        return ""
+    }
+
     function bumpBy(delta: real): void { root._out.bumpBy(delta) }
     function setVolume(v: real): void  { root._out.setVolume(v) }
     function toggleMute(): void        { root._out.toggleMute() }

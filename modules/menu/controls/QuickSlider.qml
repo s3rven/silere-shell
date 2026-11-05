@@ -1,4 +1,6 @@
 import QtQuick
+import Quickshell
+import Quickshell.Widgets
 import "../../../config"
 import "../../common"
 
@@ -11,6 +13,8 @@ MenuRow {
     property alias interactionKey: _track.interactionKey
     property string accessibleName: ""
     property bool   glyphClickable: false
+    // an icon in place of the glyph (an app's own); the glyph shows until it loads, or if it fails
+    property string glyphSource: ""
     property bool   muted: false
     property bool   expandable: false
     property bool   expanded:   false
@@ -49,11 +53,27 @@ MenuRow {
 
         ShellText {
             anchors.centerIn: parent
+            visible: _icon.status !== Image.Ready
             text: root.glyph
             color: root.glyphClickable && (_glyphHover.hovered || _glyphTap.pressed)
                 ? Theme.text : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.iconSize + 2
             ColorFade on color {}
+        }
+
+        IconImage {
+            id: _icon
+            anchors.centerIn: parent
+            anchors.alignWhenCentered: false
+            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+            transform: PixelSnap { item: _icon; dpr: _icon._dpr }
+            width: 16
+            height: 16
+            implicitSize: 16
+            asynchronous: true
+            visible: status === Image.Ready
+            source: root.glyphSource
+            opacity: root.glyphClickable && (_glyphHover.hovered || _glyphTap.pressed) ? 1 : 0.88
         }
 
         HoverHandler { id: _glyphHover; enabled: root._canInteract && root.glyphClickable; cursorShape: Qt.PointingHandCursor }

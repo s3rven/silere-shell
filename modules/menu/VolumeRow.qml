@@ -275,6 +275,7 @@ Item {
                         id: _app
                         required property var modelData
                         readonly property PwVolumeControl ctl: PwVolumeControl { node: _app.modelData.value; capExternal: false }
+                        readonly property string icon: Audio.streamIcon(_app.modelData.value)
 
                         width: _optCol.width
 
@@ -292,6 +293,7 @@ Item {
                         QuickSlider {
                             width: _app.width
                             glyph: _app.ctl.muted ? "󰝟" : "󰝚"
+                            glyphSource: _app.ctl.muted ? "" : _app.icon
                             accessibleName: _app.modelData.label
                             wheelKey: "appvolume"
                             interactionKey: _app.ctl.node ? String(_app.ctl.node.id) : ""
