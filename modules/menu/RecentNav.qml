@@ -10,7 +10,7 @@ import "../common"
 Item {
     id: root
 
-    readonly property int _navTop:  42
+    readonly property int _navTop:  _nav.listTop
     readonly property int _rowH:    Metrics.rowHeightFor(28)
     readonly property int _rowGap:   1
     readonly property bool compact: width < 132

@@ -238,7 +238,7 @@ PageShell {
         Item {
             id: _header
             width: parent.width
-            height: Metrics.rowHeightFor(38)
+            height: Metrics.rowHeightFor(32)
 
             ShellText {
                 id: _headerTitle

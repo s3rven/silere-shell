@@ -8,6 +8,8 @@ Item {
 
     required property string title
     property real contentHeight: 0
+    // the title shares the page header's line: MenuWindow's 12px page inset, then a 32px header row
+    readonly property int listTop: _title.y + _title.height + 8
     default property alias content: _content.data
     readonly property alias viewportHeight: _scroll.height
     signal viewportResized()
@@ -51,10 +53,11 @@ Item {
             height: root.contentHeight
 
             Item {
+                id: _title
                 x: 8
-                y: 6
+                y: 12
                 width: Math.max(1, parent.width - 16)
-                height: 28
+                height: Metrics.rowHeightFor(32)
 
                 ShellText {
                     anchors.left: parent.left

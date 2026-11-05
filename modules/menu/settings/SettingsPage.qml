@@ -365,7 +365,7 @@ PageShell {
             id: _detailHeader
             width: parent.width
             readonly property real _mainH: _search.expanded ? _search.fieldHeight
-                : Math.max(30, _hdrText.implicitHeight, _search.toggleHeight)
+                : Math.max(Metrics.rowHeightFor(32), _hdrText.implicitHeight, _search.toggleHeight)
             readonly property real _contentBottom: _hdrError.visible
                 ? _hdrError.y + _hdrError.height
                 : _mainH
@@ -406,7 +406,7 @@ PageShell {
                     width: parent.width
                     text: _detailHeader._meta.label
                     color: Theme.text
-                    font.pixelSize: Settings.fontSize + 3
+                    font.pixelSize: Settings.fontSize + 4
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }

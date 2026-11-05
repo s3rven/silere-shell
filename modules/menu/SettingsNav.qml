@@ -33,7 +33,7 @@ Item {
 
     implicitHeight: _navContentHeight()
 
-    readonly property int _navTop:      42
+    readonly property int _navTop:      _nav.listTop
     readonly property int _navBottom:    8
     readonly property int _groupH:      Metrics.rowHeightFor(28)
     readonly property int _groupGap:     6
