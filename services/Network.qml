@@ -410,8 +410,10 @@ Singleton {
         _pendingNetwork = null
     }
 
+    // a same-name network already linked when the connect began proves nothing about the new link
+    property bool _wifiNameWasLinked: false
     function _acceptWifiLink(network): bool {
-        if (root.wifiConnecting.length === 0 || !network || !network.connected
+        if (root.wifiConnecting.length === 0 || root._wifiNameWasLinked || !network || !network.connected
                 || network.name !== root.wifiConnecting) return false
         root._finishWifi(true, ConnectionFailReason.Unknown)
         return true
@@ -445,6 +447,7 @@ Singleton {
         wifiError = ""
         wifiErrorReason = ConnectionFailReason.Unknown
         wifiConnecting = ssid
+        _wifiNameWasLinked = network.connected
         _pendingNetwork = network
         _connectTimeout.restart()
         const security = network.security
