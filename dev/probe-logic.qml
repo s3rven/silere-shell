@@ -7808,6 +7808,13 @@ ShellRoot {
         root._check(OsdBarState.holdFor("volume", 2000) === 2000 && OsdBarState.holdFor("battery", 2000) === 5000
                 && OsdBarState.holdFor("temp", 8000) === 8000 && OsdBarState.holdFor("brightness", 100) === 500,
             "an alert stays up long enough to read while level feedback keeps the chosen timeout")
+        root._check(OsdBarState.powerChangeShown("balanced", "performance", false)
+                && !OsdBarState.powerChangeShown("", "balanced", false)
+                && !OsdBarState.powerChangeShown("balanced", "", false)
+                && !OsdBarState.powerChangeShown("balanced", "balanced", false)
+                && !OsdBarState.powerChangeShown("balanced", "power-saver", true)
+                && !OsdBarState._hasBarKind("power"),
+            "a power mode change shows a label-only osd, but not the first read, a daemon restart or under the open menu")
         root._check(SystemAlerts.criticalPopupFor(true, true, false, false)
                 && SystemAlerts.criticalPopupFor(true, true, true, true)
                 && !SystemAlerts.criticalPopupFor(true, true, false, true)

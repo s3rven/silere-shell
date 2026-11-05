@@ -75,7 +75,7 @@ Singleton {
     }
 
     function _hasBarKind(kind: string): bool {
-        return kind !== "battery" && kind !== "temp" && kind !== "notif"
+        return kind !== "battery" && kind !== "temp" && kind !== "notif" && kind !== "power"
     }
 
     function _presentationAllowed(idle: bool, enabled: bool): bool {
@@ -421,6 +421,23 @@ Singleton {
         function onConflictChanged() {
             if (NotifWatch.conflict.length === 0) return
             root.showAlert("notif", "󰂛", 0, "Notifications blocked · " + NotifWatch.conflict, Theme.warning)
+        }
+    }
+
+    // a laptop's mode key or a power source switch changes the mode out of sight; a first read or a daemon restart
+    // is no change, and an open control surface already shows its own
+    function powerChangeShown(was: string, now: string, surfaceOpen: bool): bool {
+        return was.length > 0 && now.length > 0 && was !== now && !surfaceOpen
+    }
+    property string _powerProfile: ""
+    Component.onCompleted: root._powerProfile = PowerProfiles.profile
+    Connections {
+        target: PowerProfiles
+        function onProfileChanged() {
+            const now = PowerProfiles.profile
+            if (root.powerChangeShown(root._powerProfile, now, ControlSurfaces.anyOpen))
+                root.showAlert("power", PowerProfiles.glyph, 0, PowerProfiles.label, Theme.accent)
+            if (now.length > 0) root._powerProfile = now
         }
     }
 
