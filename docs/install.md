@@ -1,9 +1,18 @@
-# Installing
+# Installing Silere
+
+[All docs](README.md) · [Everyday use](usage.md) · [Troubleshooting](troubleshooting.md)
+
+## Requirements
 
 You need Hyprland or niri, `git`, and Quickshell 0.3.1 or newer, built against at least
 Qt 6.10. The one-line installer below also needs `curl`; installing from a clone does not.
 On Arch and its derivatives, use `sudo pacman -S --needed quickshell git curl`.
 For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
+
+## Install
+
+Run the installer as your normal user. You can also install from a TTY when your
+Hyprland or niri configuration already exists:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
@@ -29,18 +38,30 @@ The installer:
 - prints the final install path when it's done
 - offers to start Silere right away in a Wayland session
 
-To start it later, restart your compositor, or run `silere run`. Before the
-optional maintenance-command link exists, use `/that/path/scripts/silere run`.
-Launches through `silere run` hold the loaded shell steady while an update replaces QML
-files; run `silere restart` after an update if you do not use the systemd user service.
-For a development checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
-`silere restart` uses an existing `silere-shell.service` when it runs this checkout.
-With two copies, such as an installed one and a development clone, `silere status` shows
-which one is running, and `silere use` in the other copy makes it the one that runs. It
-repoints the `~/.local/bin/silere` link, points the service at that copy through a drop-in
-(`silere-shell.service.d/silere-use.conf`, the unit file itself is left alone), and restarts.
-`silere use /path/to/copy` switches back.
-Silere ships an optional update timer; create the shell service yourself if you want one.
+The default path is `~/.config/silere-shell`, or `$XDG_CONFIG_HOME/silere-shell` if
+you set an absolute config root. The interactive installer lets you choose another path.
+
+## First start
+
+Inside your Hyprland or niri session, stop your old bar and notification daemon,
+such as waybar and mako or dunst, then run:
+
+```bash
+silere run
+```
+
+If `silere` is not found, use the path printed by the installer:
+
+```bash
+~/.config/silere-shell/scripts/silere run
+```
+
+For a custom install, replace `~/.config/silere-shell` with that path. The bar should
+appear on your desktop. Click the active workspace to open the menu, or the clock
+to open the calendar. [Everyday use](usage.md) covers the other controls.
+
+Use `silere stop` to stop it and `silere restart` to start it again. If it does not
+appear, run `silere doctor` and follow [troubleshooting](troubleshooting.md).
 
 ## Previewing the install
 
@@ -48,30 +69,43 @@ Silere ships an optional update timer; create the shell service yourself if you 
 the autostart and keybind lines it would add, then exits without writing anything. It
 answers the prompts the way an unattended install does, so it shows the fullest plan.
 
-## Maintenance command
+## Installation options
 
-The installer offers a link at `~/.local/bin/silere`. It is a small dispatcher over the
-same reviewed scripts in the checkout—there is no daemon:
+| Option | What it does |
+|---|---|
+| `--dry-run` | Preview the changes without writing files. |
+| `--dir PATH` | Choose a directory; quote paths containing spaces. |
+| `--yes` or `-y` | Accept the default answers without a terminal. |
+| `--no-start` | Leave starting or restarting Silere for later. |
+
+Options can be combined in any order. For example, preview a custom installation,
+then install to the same place:
 
 ```bash
-silere run
-silere link
-silere restart
-silere use [checkout]
-silere status
-silere log --follow
-silere doctor
-silere ipc <target> <function> [args]
-silere update
-silere update --apply
-silere update --rollback
-silere repair
-silere repair --apply
-silere repair --undo
-silere version
-silere -V
-silere uninstall
+bash scripts/install.sh --dry-run --dir "$HOME/Desktop tools/silere-shell"
+bash scripts/install.sh --dir "$HOME/Desktop tools/silere-shell" --no-start
 ```
+
+Run `bash scripts/install.sh --help` for the full list. `--check` and
+`--repair-matugen` are separate maintenance modes and must be used on their own.
+
+## Maintenance command
+
+The installer offers a link at `~/.local/bin/silere`. It runs the scripts in your
+checkout. `~/.local/bin` must be on your `PATH`; run `scripts/silere link` from the
+checkout if you skipped creating the link.
+
+| Task | Command |
+|---|---|
+| Start, stop or restart | `silere run`, `silere stop`, `silere restart` |
+| See which copy is running | `silere status` |
+| Follow the running shell's log | `silere log --follow` |
+| Diagnose setup problems | `silere doctor` |
+| Show the installed version | `silere version` |
+| Check, install or undo an update | [Update commands](updates.md) |
+| Preview, apply or undo a repair | `silere repair`, `silere repair --apply`, `silere repair --undo` |
+| Call a function from a keybind or script | `silere ipc <target> <function> [args]` — [scripting guide](scripting.md) |
+| Remove installer integrations | `silere uninstall` |
 
 `silere` alone lists its commands, and `silere ipc` alone lists the calls the running
 shell answers. `silere --version` also prints the installed version. The link adds fish
@@ -84,20 +118,8 @@ trust key. Missing optional packages are
 reported with a command for the detected package family; Silere prints that command but
 never runs it or elevates privileges.
 
-`silere update --apply` stages the signed release in a detached worktree and validates it
-there — headless type-check, then a sandboxed launch against a copy of your settings —
-before the live checkout changes at all. Applying needs a connection to confirm that the
-release tag is still published. It writes a private transaction journal recording
-that validation passed, then fast-forwards. If power is lost or the updater is killed after
-that point, the next update run authenticates the journal with a snapshot of the previously
-installed release key and retains the validated revision, or restores the previous one.
-Recovery refuses to reset a checkout that gained local edits after the interruption.
-If a recovery journal is damaged, Silere preserves it under the XDG state directory
-and reports the location in `silere doctor`. The failed run leaves the checkout alone;
-later update checks can run again.
-
-A checkout the installer marked as a development install — or any checkout not on
-`main` — is left to Git; Updates shows its branch and state but self-update is disabled.
+See [updates and recovery](updates.md) for signed releases, rollback, timers and
+development checkouts.
 
 ## Crash recovery
 
@@ -114,17 +136,50 @@ Replace your compositor's existing Silere startup command with
 The service restarts failed runs with a delay and a retry limit.
 `silere service status` shows its state; `silere service remove` stops and removes
 the generated service. Installation does not edit compositor startup settings.
+`silere stop` also stops the service, so it stays stopped until you start it again.
+Use `silere run --supervised` to start through the service again. To switch a
+currently unsupervised shell, run `silere stop` first, then `silere run --supervised`.
+
+## Using another checkout
+
+With an installed copy and a development clone, `silere status` shows which one is
+running. To switch, run the target copy's command:
+
+```bash
+/path/to/other-copy/scripts/silere use --dry-run
+/path/to/other-copy/scripts/silere use
+```
+
+This updates the command link, points an existing service at that copy through a
+drop-in, and restarts the shell. Compositor startup lines keep their own paths;
+follow the command's reminder to update yours. `silere use /path/to/copy` switches back.
+Tab completes checkout directories in bash and fish, including paths containing spaces.
+Before applying a switch, Silere checks the runtime, session and service override.
+If these checks fail, it leaves the command link and service unchanged. The preview
+still works without a live desktop session.
+
+Normal launches keep the loaded QML steady during updates. For a development
+checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
 
 ## Unattended installs
 
-Bootstrapping from a dotfiles script or a container? `SILERE_ASSUME_YES=1` answers the
-`[Y/n]` prompts and installs to the default path. It still backs up every file it edits,
-and still stops on a compositor it does not support. With the one-line install, set it on
-`bash`:
+For a dotfiles script or another unattended setup, use:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | SILERE_ASSUME_YES=1 bash
+bash scripts/install.sh --yes --dir "$HOME/.config/silere-shell" --no-start
 ```
+
+`--yes` accepts the default answers and backs up edited files. Opt-in prompts keep
+their default **No**, including the update timer and installing for an unsupported
+compositor. Unattended installs leave the shell stopped until you choose to start it.
+
+With the one-line installer, pass options to `bash`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash -s -- --yes --no-start
+```
+
+Existing scripts using `SILERE_ASSUME_YES=1` continue to work.
 
 ## Fonts
 
@@ -147,6 +202,7 @@ hides that widget or marks it unavailable.
 | `upower` | battery |
 | `nmcli` | VPN indicator, name and address (network and Wi-Fi use Quickshell directly) |
 | `brightnessctl` | brightness |
+| `ddcutil` | external monitor brightness over DDC/CI; enable **External brightness** in Settings › Appearance › Interface |
 | `hyprsunset` / `wlsunset` | night light (`hyprsunset` on Hyprland, `wlsunset` elsewhere) |
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
@@ -158,13 +214,15 @@ hides that widget or marks it unavailable.
 | `paru` / `yay` | AUR update count on Arch Linux |
 | `hyprlock` / `swaylock` / `gtklock` / `loginctl lock-session` | lock action |
 | `pwvucontrol` / `pavucontrol` | Sound settings, reached from the volume control |
+| `nm-connection-editor` / `nmtui` | advanced network settings; `nmtui` opens in a terminal |
+| `blueman-manager` + a Bluetooth pairing agent | passkey or PIN pairing; see [Bluetooth troubleshooting](troubleshooting.md#bluetooth-pairing-fails-for-a-passkey-device) |
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
 | `hyprshutdown` | Log out on Hyprland closes your apps before it ends the session |
 | `notify-send` | battery, temperature, and update notifications |
 | `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
 | `ssh-keygen` | cryptographic verification of Silere release tags |
 
-The installer also reports on `busctl`, `pgrep`, `pkill` and `timeout`. Those ship with
+The installer also reports on `busctl`, `pgrep` and `timeout`. Those ship with
 systemd, procps and coreutils, so they are listed only so a minimal system can see what
 is missing.
 

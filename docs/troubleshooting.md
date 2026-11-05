@@ -1,5 +1,7 @@
 # Troubleshooting
 
+[All docs](README.md) · [Installation](install.md)
+
 Start here:
 
 ```bash
@@ -10,10 +12,25 @@ It reports the runtime, the optional tools, the font, which program owns notific
 whether Silere is set to start on login, either from the compositor config or from a
 systemd user unit. It changes nothing.
 
-`silere log --follow` prints the running shell's log as it grows, and `silere restart`
-starts the shell again. A second `qs -p` next to a running shell brings its own bar and
-notification server, so stop the first with `qs kill -p` on the same path before running
-one in the foreground.
+`silere log --follow` prints the running shell's log as it grows. Use `silere restart`
+to restart it, or `silere stop` followed by `silere run` to watch a fresh start in
+your terminal. Stop Silere before launching another `qs -p` instance.
+
+| Problem | Start here |
+|---|---|
+| No bar after login | [Startup](#it-installed-but-nothing-appears) |
+| Crashes after updating packages | [Qt and Quickshell](#it-stopped-working-after-a-system-update) |
+| No notifications | [Notification daemon conflict](#notifications-never-appear) |
+| Missing icons or the wrong font | [Fonts](#icons-or-text-use-the-wrong-font) |
+| Blank tray icons | [Tray image cache](#tray-icons-disappear-when-shown-again) |
+| A failed Silere update | [Rollback](#the-shell-does-not-come-back-after-an-update) |
+| An update refuses local changes | [Repair](#a-shell-update-is-blocked-by-local-edits) |
+
+## The silere command is not found
+
+Run `~/.config/silere-shell/scripts/silere doctor`, replacing the checkout path
+if you installed elsewhere. To create the command link, run that same script with
+`link` instead of `doctor`, then make sure `~/.local/bin` is on your `PATH`.
 
 ## It installed but nothing appears
 
@@ -61,7 +78,8 @@ Silere's bar opacity stops at 0.4, so 0.3 never cuts into a card.
 
 The updater keeps the signed transaction journal until it sees the shell running on the
 new revision. From a working terminal, `silere update --rollback` restores the previous
-revision, and restarts the shell when a systemd user unit runs it.
+revision, and restarts the shell when a systemd user unit runs it. Otherwise, run
+`silere restart` afterwards. See [updates and recovery](updates.md).
 
 ## Notifications never appear
 
@@ -185,3 +203,17 @@ reports no internet. Allow the address, or turn the check off with `enabled=fals
 Hyprland 0.57 changes how it names special and named workspaces, and Quickshell 0.3.1 reads
 them all as the same workspace. Numbered workspaces are not affected. If you rely on the others,
 update Quickshell to 0.3.2 or newer. `silere doctor` warns about this pairing.
+
+## Reporting a problem
+
+Include the steps to reproduce it, your distribution and compositor version, and
+the output of `silere version`, `qs --version` and `silere doctor` in your
+[bug report](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml).
+Use `silere log` for a running shell. If a user service failed to start, read its log:
+
+```bash
+journalctl --user -u silere-shell.service -b -n 80 --no-pager
+```
+
+Include the relevant errors, with private window titles, network names and other
+personal information removed.

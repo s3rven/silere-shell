@@ -1,17 +1,28 @@
 # Scripting
 
-The menu, calendar, quick actions and settings are scriptable over Quickshell IPC, so compositor keybinds and scripts can
-open them without simulating a click. Set `SILERE_DIR` to the path the installer printed.
+[All docs](README.md) · [Everyday use](usage.md)
+
+Use `silere ipc` to control a running shell from a terminal, compositor keybind or script.
+For example:
+
+```bash
+silere ipc menu toggle
+silere ipc settings set osdTimeout 3000
+silere ipc
+```
+
+The first opens or closes the menu, the second changes a setting, and the third lists
+all available calls. The shell must already be running.
+When this copy is not the one running, such as a checkout beside an installed copy, `silere ipc`
+uses the single other Silere that is running and says so on stderr. With none running it exits 1.
+
+To target a specific checkout directly with Quickshell, set `SILERE_DIR` to its path:
 
 ```bash
 SILERE_DIR="$HOME/.config/silere-shell"
 qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
+qs ipc -p "$SILERE_DIR/shell.qml" show
 ```
-
-Run `qs ipc -p "$SILERE_DIR/shell.qml" show` for the current list. The `silere` command makes
-the same calls without the path: `silere ipc menu toggle`, and `silere ipc` alone for the list.
-When this copy is not the one running, such as a checkout beside an installed copy, `silere ipc`
-uses the single other Silere that is running and says so on stderr. With none running it exits 1.
 
 ## Surfaces
 
@@ -51,7 +62,7 @@ Bluetooth adapter, a Wi-Fi radio blocked in hardware, or a missing night light t
 `powerMode` prints the profile it asked for, since the daemon answers afterwards.
 
 ```bash
-qs ipc -p "$SILERE_DIR/shell.qml" call quickActions dnd
+silere ipc quickActions dnd
 ```
 
 ## Audio
@@ -89,10 +100,10 @@ and percentages outside 0–100 return `error:` replies and exit 1.
 `settings` reads and writes any setting the Settings pages expose.
 
 ```bash
-qs ipc -p "$SILERE_DIR/shell.qml" call settings set osdTimeout 3000
-qs ipc -p "$SILERE_DIR/shell.qml" call settings toggle reduceMotion
-qs ipc -p "$SILERE_DIR/shell.qml" call settings list clock
-qs ipc -p "$SILERE_DIR/shell.qml" call settings list ""
+silere ipc settings set osdTimeout 3000
+silere ipc settings toggle reduceMotion
+silere ipc settings list clock
+silere ipc settings list ""
 ```
 
 | call | does |

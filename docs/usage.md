@@ -1,5 +1,7 @@
 # Using Silere
 
+[All docs](README.md) · [Installation](install.md) · [Troubleshooting](troubleshooting.md)
+
 Click the active workspace to open the menu. Right-click it for quick actions, or
 click the clock for the calendar. Escape steps back through an open picker or search,
 then closes the popup. Clicking outside also closes it.
@@ -13,16 +15,35 @@ silere ipc menu toggle
 
 ## Controls
 
+### Open a panel
+
+| Panel | Action |
+|---|---|
+| Main menu | Click the active workspace, or use the optional Super + / shortcut. |
+| Quick actions | Right-click the active workspace. |
+| Calendar | Click the clock. |
+| Now Playing | Right-click the media widget. |
+| Wi-Fi or Bluetooth list | Click its bar widget; when the radio is off, this opens Home. |
+
+### Keyboard and scrolling
+
 Use **Tab / Shift+Tab** to move between controls, **Enter / Space** to activate them,
 and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
 Page Up/Down. **Ctrl+F** searches notification history and Settings. Escape steps
 back or closes the popup. Controls expose the same actions to accessibility tools.
+The mouse back button also steps back through the menu before closing it.
 
 In an open dropdown, repeat an initial to cycle matches; Backspace corrects the search.
 Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses
 the focused notification; it edits text normally while writing a reply.
 
-| area | pointer |
+In an open dropdown, type to jump to a row. Home, End, Page Up and Page Down move
+further through the list. Drag the scrollbar on long pages and lists; hovering it
+makes the handle wider.
+
+### Bar and calendar
+
+| Area | Pointer controls |
 |---|---|
 | workspaces | **click** switches · on the active workspace, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Widgets › Workspaces |
 | clock | **click** opens the calendar · **middle-click** cycles through adding seconds, the date, or both |
@@ -33,30 +54,46 @@ the focused notification; it edits text normally while writing a reply.
 | volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
 | brightness | **scroll** changes brightness |
-| network / bluetooth | **click** opens Home for connection and radio controls |
 | updates | **click** opens package details in Settings › System › Overview · **right-click** rechecks for packages |
 | shell update | **click** opens Settings › System › Overview |
 | tray | **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
-| notifications | **click** runs the default action · **right-click** or **drag sideways** dismisses · **middle-click** jumps to the app that sent it · a reply action opens an inline text field when the sender supports one · a new message from the same app and sender joins its card, which shows the last few earlier lines; **hover** shows them all |
-| wi-fi list | **click** joins a saved or open network, or opens a password field for a personal one; use the eye button to show or hide the password · **click** the connected network twice to disconnect · **right-click** or **middle-click** a saved network twice to forget it, unless you are connected to it |
-| vpn | appears in Connectivity while a VPN is up · **click** copies its IPv4 address, or IPv6 address on an IPv6-only tunnel |
-| bluetooth list | **click** pairs or connects · **click** a connected device twice to disconnect · **right-click** or **middle-click** a paired device twice to forget it, unless it is connected |
-| menu | **Escape** or the mouse **back** button steps back, then closes · **click** anywhere outside to close |
-| history | **type** in Search, or press **Ctrl+F** to get there, to find an app or message · **click** an app in the rail to show only its notifications · **click** an entry to read it in full, **right-click** removes it, **middle-click** jumps to the app that sent it · **Clear** removes what is shown, after a second click to confirm · **Mute** beside it holds back the selected app's popups · **Escape** clears search, then closes |
 
-Disconnect, forget and power confirmations expire after three seconds. A later
-click starts a fresh confirmation.
+### Notifications and history
 
-In an open dropdown, type to jump to a row, and use Home, End, Page Up and Page Down to
-move further. A Settings page you've changed shows a dot in the sidebar.
+On a popup, **click** runs the default action, **right-click** or **drag sideways**
+dismisses, and **middle-click** jumps to the sending app. A reply action opens a text
+field when the sender supports it. Messages from the same app and sender join one
+card; **hover** shows the earlier lines.
 
-Drag the scrollbar at the right of a long menu page, history or dropdown list to
-scroll through it. Hovering it makes the handle wider and easier to grab.
+In notification history:
+
+| Action | Result |
+|---|---|
+| Type in Search, or press Ctrl+F | Find an app, title or message. |
+| Click an app in the sidebar | Show only that app's notifications. |
+| Click an entry | Read it in full. |
+| Right-click an entry | Remove it from history. |
+| Middle-click an entry | Jump to the sending app. |
+| Click Clear twice | Remove the entries currently shown. |
+| Click Mute | Hold back the selected app's popups. |
+| Press Escape | Clear search, then close. |
 
 History search ignores case and accents: `cafe` finds `Café`. Words can match across
 the sender, title and message. Selecting an app in the rail further narrows the results.
 
 ## Connections
+
+| Connection | Actions |
+|---|---|
+| Wi-Fi | Click a saved or open network to join. A personal network opens a password field; the eye button shows or hides the password. |
+| Connected Wi-Fi | Click twice to disconnect. |
+| Saved Wi-Fi | Right-click or middle-click twice to forget it; disconnect first if it is connected. |
+| Bluetooth | Click to pair or connect; click a connected device twice to disconnect. |
+| Paired Bluetooth | Right-click or middle-click twice to forget it; disconnect first if it is connected. |
+| Active VPN | Click its address to copy IPv4, or IPv6 on an IPv6-only tunnel. |
+
+Disconnect, forget and power confirmations expire after three seconds. A later
+click starts a fresh confirmation.
 
 Expand **VPN** in Home to connect or disconnect saved NetworkManager profiles.
 Use **Network settings** in the Wi-Fi list for hidden networks, enterprise Wi-Fi
@@ -70,6 +107,7 @@ For Bluetooth devices needing a PIN or confirmation, **Pair with a passkey** ope
 Open **Settings** in the menu. Most changes apply immediately and are saved to
 `~/.config/silere-shell/settings.json`, or the corresponding `$XDG_CONFIG_HOME` path.
 The file stores only values changed from the defaults.
+A dot beside a Settings page means it has changes from the defaults.
 
 Click the **search icon** beside the section heading, or press **Ctrl+F**, to expand
 **Find a setting…** and find the section for a feature.
@@ -110,6 +148,8 @@ lock-before-sleep action separately for lid-close and other suspend requests.
 
 To reset one setting, delete its key from `settings.json`. To reset preferences together,
 use Restore defaults in Overview; it keeps notification history and wallpaper colours.
+For a manual reset when the menu cannot open, stop Silere, back up `settings.json`,
+replace its contents with `{ "__version": 2 }`, then start Silere again.
 
 On Hyprland and niri versions providing cast events, popups wait in history while
 you share your screen or record it, and a red share mark sits beside the clock.
@@ -147,14 +187,7 @@ Caps Lock. Click it to switch to the next configured layout.
 
 ## Updates
 
-Open **Settings › System › Overview** to check for Silere releases. Review the release
-notes, then press Install and Confirm. The updater verifies the release signature.
-
-From a terminal, `silere update` checks for a release, `silere update --apply` installs
-it, and `silere update --rollback` restores the previously installed version.
-Restart with `silere restart` after an update if your shell is not managed by the
-systemd user service.
-
-The optional timer checks for Silere releases. Installation still needs confirmation.
-The package badge counts system updates; use your package manager to install those.
-Development checkouts are managed with Git. [More about updates](install.md#maintenance-command).
+Use **Settings › System › Overview** to check for Silere releases, review the notes
+and confirm installation. From a terminal, `silere update` checks and
+`silere update --apply` installs. See [updates and recovery](updates.md) for rollback,
+automatic checks, local edits and development checkouts.
