@@ -224,8 +224,7 @@ QtObject {
             // t.address/t.title land the instant hyprland reports them; lastIpcObject only
             // catches up on the next refreshToplevels() round-trip, well behind a new window
             if (!t || !t.address) continue
-            const c = t.lastIpcObject
-            next["0x" + t.address] = root._title(t.title || (c ? c.title : ""))
+            next["0x" + t.address] = root._title(t.title || (t.lastIpcObject ? t.lastIpcObject.title : ""))
         }
 
         const oldKeys = Object.keys(root._liveTitles)
@@ -242,8 +241,7 @@ QtObject {
             if (root._activeTitle.length > 0) root._activeTitle = ""
             return
         }
-        const c = t.lastIpcObject
-        const next = root._title(t.title || (c ? c.title : ""))
+        const next = root._title(t.title || (t.lastIpcObject ? t.lastIpcObject.title : ""))
         if (root._activeTitle !== next) root._activeTitle = next
     }
 
