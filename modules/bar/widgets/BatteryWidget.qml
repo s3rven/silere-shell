@@ -20,16 +20,15 @@ Pill {
         if (Battery.statusLabel.length > 0) parts.push(Battery.statusLabel)
         return parts.length > 0 ? "Battery " + parts.join(", ") : "Battery"
     }
-    glyphPixelSize: Settings.iconSize + 3
-    glyphColor:     Battery.iconColor
-    textColor:      Battery.iconColor
+    glyphColor:     Battery.barIconColor
+    textColor:      Theme.barSubtext
     animateGlyph:   false
     shrinkDelay:    0
     reserveText:    "00%"
     levelValue:     Battery.pct > 0 ? Battery.pct / 100 : -1
     levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
                     && ShellSettings.hoverLevelBar && !expanded
-    levelColor:     Battery.iconColor
+    levelColor:     Qt.colorEqual(Battery.barIconColor, Theme.barText) ? Theme.barAccent : Battery.barIconColor
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: layoutVisible

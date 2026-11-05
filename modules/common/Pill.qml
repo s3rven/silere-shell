@@ -254,10 +254,12 @@ Item {
         || root.visualPressed
     // "pills follow theming": tint only glyphs resting at the neutral text color up
     // to the bar accent, so inactive, warning and error states keep their own meaning
-    readonly property color _restGlyphColor: ShellSettings.barAccentPills
-        && Qt.colorEqual(glyphColor, Theme.barText) ? Theme.barAccent : glyphColor
-    readonly property color _hoverGlyphColor: _contentHot
-        ? Theme.mix(_restGlyphColor, Theme.barAccent, 0.20) : _restGlyphColor
+    function _glyphTint(c: color, hot: bool): color {
+        const rest = ShellSettings.barAccentPills && Qt.colorEqual(c, Theme.barText) ? Theme.barAccent : c
+        return hot ? Theme.mix(rest, Theme.barAccent, 0.20) : rest
+    }
+    readonly property color _restGlyphColor: _glyphTint(glyphColor, false)
+    readonly property color _hoverGlyphColor: _glyphTint(glyphColor, _contentHot)
     readonly property color _hoverTextColor: _contentHot
         ? Theme.mix(textColor, Theme.barAccent, 0.16) : textColor
 
