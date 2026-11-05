@@ -326,9 +326,15 @@ Singleton {
             return
         }
         if (_killProc.running || root._stopping || root._pendingEnable) return
+        // the tool this shell launched is known alive without scanning the process table on every menu open
+        if (_sunsetProc.running) {
+            root._probedOnce = true
+            root._maybeRestore()
+            return
+        }
         if (!_checkProc.running) {
             _checkProc._generation = root._stateGeneration
-            _checkProc.exec(["pgrep", "-x", root.tool])
+            _checkProc.exec(["bash", Quickshell.shellDir + "/scripts/session.sh", "tool-find", root.tool])
         }
     }
 
