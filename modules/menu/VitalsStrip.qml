@@ -30,6 +30,10 @@ SettingsCard {
         for (let i = 0; i < rows.length; i++) rows[i].intro(Motion.ms(40 + 35 * i))
     }
     readonly property int _rowH: Metrics.rowHeightFor(40)
+    // one width for every bar, the narrowest any caption allows: a bar sized to its own row drew 50% shorter
+    // on Battery than on CPU, and the column could not be read as one scale
+    readonly property real _barW: Math.min(_cpu.barFit, _memory.barFit, _disk.barFit,
+        _battery.visible ? _battery.barFit : Infinity)
 
     function sizeText(kb: real): string {
         if (!isFinite(kb) || kb <= 0) return ""
@@ -207,15 +211,17 @@ SettingsCard {
             }
         }
 
+        // give the reading's caption room before sizing its progress bar. Rounding up the text and down the bar avoids fractional elision
+        readonly property real barFit: Metrics.snap4Down(Math.max(48, Math.min(136, tile.width * 0.38,
+            _val.x - 64 - Math.max(96, Math.ceil(_labelMetrics.advanceWidth + 8
+                + _detailMetrics.advanceWidth) + 1))))
+
         WaveLine {
             id: _bar
             anchors.right: _val.left
             anchors.rightMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            // give the reading's caption room before sizing its progress bar. Rounding up the text and down the bar avoids fractional elision
-            width: Metrics.snap4Down(Math.max(48, Math.min(136, tile.width * 0.38,
-                _val.x - 64 - Math.max(96, Math.ceil(_labelMetrics.advanceWidth + 8
-                    + _detailMetrics.advanceWidth) + 1))))
+            width: root._barW
             height: implicitHeight
             value: tile._disp
             reveal: tile._grow
@@ -260,7 +266,8 @@ SettingsCard {
         openable: Settings.systemMonitorCommand.length > 0
         topRadius: Theme.radiusCard
         onActivated: root.openMonitor()
-        glyph: "󰔏"
+        // the bar's CPU glyph; the temperature it alerts on rides in the caption and tint
+        glyph: "󰍛"
         label: "CPU"
         value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
         sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""

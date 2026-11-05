@@ -62,6 +62,10 @@ Item {
             if (!loader.item) { failures.push("vitals fixture did not load"); continue }
             const rows = loader.item.rows.filter(child => child.value !== undefined && child.visible)
             if (rows.length !== 4) failures.push("vitals fixture must measure all four readings")
+            const bars = rows.map(row => row.children.find(child => child.wavelength !== undefined))
+            if (bars.some(bar => !bar || Math.abs(bar.width - bars[0].width) > 0.5
+                    || Math.abs(bar.x - bars[0].x) > 0.5))
+                failures.push("vital bars differ in width or start at " + loader.width + "px")
             for (const row of rows) {
                 const names = row.children.find(child => child.inline !== undefined)
                 const value = row.children.find(child => child.horizontalAlignment === Text.AlignRight)
