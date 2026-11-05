@@ -9348,6 +9348,9 @@ ShellRoot {
                 root._check(tile && icon && icon.status === Image.Ready
                         && !tile.fallbackVisible && !tile._providedIconFailed,
                     "a tray app gaining a valid icon replaces its fallback")
+                s.first.icon = "file://" + trayIconFixture.path + "?frame=2"
+                root._check(icon.status === Image.Loading && icon.opacity === 1 && !tile.fallbackVisible,
+                    "a tray icon stays up while the app's next icon loads")
                 s.zone.destroy()
                 s.settings.destroy()
                 root._trayProbeItems = []

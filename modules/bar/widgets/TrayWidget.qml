@@ -94,7 +94,7 @@ Item {
                 property bool _providedIconFailed: false
                 readonly property string iconSource: IconResolver.trayAppIconSource(
                     _tile._providedIconFailed ? "" : _tile._providedIconSource, modelData.id)
-                readonly property bool fallbackVisible: !_icon.ready
+                readonly property bool fallbackVisible: !_icon.shown
                     && (_tile.iconSource.length === 0 || _icon.status === Image.Error || _tile._fallbackDue)
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
                 readonly property bool passive: modelData.status === Status.Passive
@@ -113,7 +113,9 @@ Item {
                     _tile._providedIconFailed = false
                     _tile._fallbackDue = false
                     _tile._dwelled = false
-                    if (!_icon.ready) _fallbackTimer.restart()
+                    // another app's last frame is not this one's to hold
+                    _icon._hadImage = false
+                    if (!_icon.shown) _fallbackTimer.restart()
                 }
 
                 Accessible.role: Accessible.Button
@@ -226,7 +228,12 @@ Item {
                 IconImage {
                     id: _icon
                     readonly property bool ready: status === Image.Ready
+                    // an app that redraws its icon (an unread count, a sync spinner) sends a new
+                    // pixmap url each time; the last frame stays up instead of dipping to nothing
+                    property bool _hadImage: false
+                    readonly property bool shown: ready || (status === Image.Loading && _hadImage)
                     onStatusChanged: {
+                        if (status !== Image.Loading) _hadImage = status === Image.Ready
                         if (status === Image.Error && !_tile._providedIconFailed
                                 && _tile._providedIconSource.length > 0)
                             _tile._providedIconFailed = true
@@ -242,10 +249,11 @@ Item {
                     backer.sourceSize.height: Math.ceil(root.iconSize * root._dpr)
                     // apps reuse an icon url across restarts and updates; a reload must not keep an earlier failed image
                     backer.cache: false
+                    backer.retainWhileLoading: true
                     asynchronous: true
                     transform: PixelSnap { item: _icon; dpr: root._dpr }
                     visible: opacity > 0.01
-                    opacity: ready ? 1.0 : 0.0
+                    opacity: shown ? 1.0 : 0.0
                     transformOrigin: Item.Center
                     scale: _ma.pressed ? 0.94 : 1.0
                     MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
