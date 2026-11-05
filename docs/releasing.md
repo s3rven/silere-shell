@@ -9,6 +9,11 @@ version for a batch worth announcing. A minor bump should read as "here is what 
 not "here is Tuesday". Four minors in four days looks like an unstable API from the
 outside, whatever the diff actually says.
 
+## Before tagging
+
+Run `bash dev/test-faults.sh` on a machine with a render node. CI has none, so nothing else
+covers broken tools and hostile input.
+
 ## Tags
 
 Release tags must be annotated `vMAJOR.MINOR.PATCH` tags signed by a key in
