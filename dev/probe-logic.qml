@@ -2640,7 +2640,10 @@ ShellRoot {
             slots.perOutputWorkspaceIds = scenario % 2 === 0
             slots.monitorName = scenario % 11 === 0 ? "" : "DP-1"
             const own = rows.filter(row => row.output === slots.monitorName)
-            const anchor = Math.min(slots.activeId, ...own.map(row => row.wsId))
+            const lowest = Math.min(slots.activeId, ...own.map(row => row.wsId))
+            const follows = !slots.perOutputWorkspaceIds
+                && rows.some(row => row.wsId < lowest && row.output !== slots.monitorName)
+            const anchor = follows ? lowest : 1
             const cap = slots.perOutputWorkspaceIds && own.length > 0
                 ? Math.max(...own.map(row => row.wsId)) : 0
             const allowed = []
@@ -2669,6 +2672,18 @@ ShellRoot {
         slots.activeId = 1000000
         root._check(slots.visibleIdsKey === "999998,999999,1000000,1000001",
             "high workspace IDs resolve directly without scanning the intervening integers")
+        slots.effectiveWsCount = 5
+        slots.workspaces = [{ wsId: 4, output: "DP-1" }]
+        slots.activeId = 4
+        root._check(slots.visibleIdsKey === "1,2,3,4,5",
+            "a lone monitor keeps the first page after Hyprland drops the empty workspaces below")
+        slots.workspaces = [{ wsId: 2, output: "DP-1" }, { wsId: 7, output: "HDMI-A-1" }]
+        slots.activeId = 2
+        const firstMonitor = slots.visibleIdsKey
+        slots.monitorName = "HDMI-A-1"
+        slots.activeId = 7
+        root._check(firstMonitor === "1,2,3,4,5" && slots.visibleIdsKey === "7,8,9,10,11",
+            "the first monitor pages from 1 while the next one keeps its own ids")
         slots.destroy()
         const appIconsWere = ShellSettings.wsShowAppIcons
         ShellSettings.wsShowAppIcons = true

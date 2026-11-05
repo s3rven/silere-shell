@@ -41,7 +41,12 @@ QtObject {
         let first = root.activeId > 0 ? root.activeId : 1
         if (root.workspaceIndex.first > 0)
             first = Math.min(first, root.workspaceIndex.first)
-        return first
+        // Hyprland drops an empty workspace once it is left, so a monitor anchored on its lowest
+        // live id paged up with it (on 4 with 1-3 gone: 4-8). Only one that follows another's ids starts past 1
+        const owners = root.workspaceOwners
+        for (const id in owners)
+            if (Number(id) < first && owners[id] !== root.monitorName) return first
+        return 1
     }
 
     function knownOnOtherMonitor(id: int): bool {
