@@ -248,12 +248,28 @@ FittedPopupWindow {
                     width: visible ? Settings.fontSize : 0
                     height: Settings.fontSize
 
-                    ShellText {
+                    Rectangle {
+                        id: _box
+                        // even, so the outline stays on whole device pixels at fractional scale
+                        readonly property int side: 2 * Math.round(Settings.fontSize * 0.45)
                         anchors.centerIn: parent
-                        visible: _entry.btnType === 1 && _entry.checked
-                        text: "󰄬"
-                        color: Theme.accent
-                        font.pixelSize: Settings.fontSize
+                        visible: _entry.btnType === 1
+                        width: side; height: side
+                        radius: Math.round(side * 0.28)
+                        antialiasing: true
+                        color: _entry.checked ? Theme.accent : "transparent"
+                        OutlineBorder {
+                            radius: _box.radius
+                            outlineColor: _entry.checked
+                                ? "transparent" : Theme.withAlpha(Theme.subtext, 0.5)
+                        }
+                        ShellText {
+                            anchors.centerIn: parent
+                            visible: _entry.checked
+                            text: "󰄬"
+                            color: Theme.background
+                            font.pixelSize: Math.round(_box.side * 0.85)
+                        }
                     }
                     Rectangle {
                         anchors.centerIn: parent
