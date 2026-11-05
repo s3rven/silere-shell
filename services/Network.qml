@@ -559,8 +559,9 @@ Singleton {
             ?? addresses.find(a => /^[0-9a-f.]*:[0-9a-f:.]*$/i.test(a) && !/^fe80:/i.test(a)) ?? ""
     }
 
+    // reads _vpnState itself: on_VpnStateChanged runs before the hasVpn binding catches up
     function refreshVpnAddress(): void {
-        const uuid = root.hasVpn ? String(root._vpnState.uuid || "") : ""
+        const uuid = root._vpnState.active === true ? String(root._vpnState.uuid || "") : ""
         if (uuid !== root._vpnAddressFor) root.vpnAddress = ""
         if (_vpnAddressProc.running) return
         root._vpnAddressFor = uuid
@@ -671,7 +672,7 @@ Singleton {
             "connection", "show", "uuid", root._vpnAddressFor]
         stdout: StdioCollector { id: _vpnAddressOut }
         onExited: (code) => {
-            if (root._vpnAddressFor !== (root.hasVpn ? String(root._vpnState.uuid || "") : "")) {
+            if (root._vpnAddressFor !== (root._vpnState.active === true ? String(root._vpnState.uuid || "") : "")) {
                 Qt.callLater(root.refreshVpnAddress)
                 return
             }

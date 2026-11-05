@@ -6612,6 +6612,10 @@ ShellRoot {
             "losing VPN detection clears both published and in-flight state")
         root._check(Network.vpnAddress.length === 0 && Network._vpnAddressFor.length === 0,
             "a VPN going away takes its address off the Connectivity card")
+        Network._vpnAddressFor = ""
+        Network._vpnState = ({ active: true, name: "probe VPN", uuid: "probe-up-uuid" })
+        root._check(Network._vpnAddressFor === "probe-up-uuid",
+            "a tunnel coming up asks for its address from the state change itself")
         Network._vpnState = vpnStateWas
         Network._vpnAddressFor = vpnAddressForWas
         root._check(Network.vpnAddressFrom("10.10.14.23/23\n") === "10.10.14.23"
