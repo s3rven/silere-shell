@@ -140,6 +140,8 @@ Singleton {
     property string barDisabledMonitors: ""
     property string overlayMonitor:      ""
 
+    // network, sound, brightness and battery read as one status cluster, as on every desktop bar;
+    // split into groups, a lone Wi-Fi glyph sat between two dividers
     readonly property var barWidgetMeta: ({
         // no setting: the diamond is the only way into the menu, so this one cannot be hidden
         workspaces:  { glyph: "󰕰", label: "Workspaces",      group: "workspaces",  zone: "left",   setting: "" },
@@ -148,13 +150,13 @@ Singleton {
         tray:        { glyph: "󰇘", label: "System tray",     group: "tray",        zone: "right",  setting: "trayWidget" },
         updates:     { glyph: "󰚰", label: "Package updates", group: "updates",     zone: "right",  setting: "updatesWidget" },
         system:      { glyph: "󰍛", label: "System monitor",  group: "system",      zone: "right",  setting: "barShowSystem" },
-        network:     { glyph: "󰛳", label: "Network",         group: "network",     zone: "right",  setting: "barShowNetwork" },
-        bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "network",     zone: "right",  setting: "barShowBluetooth" },
-        keyboard:    { glyph: "󰌌", label: "Keyboard",        group: "input",       zone: "right",  setting: "barShowKeyboard" },
-        volume:      { glyph: "󰕾", label: "Volume",          group: "levels",      zone: "right",  setting: "barShowVolume" },
-        microphone:  { glyph: "󰍬", label: "Microphone",      group: "levels",      zone: "right",  setting: "barShowMic" },
-        brightness:  { glyph: "󰃟", label: "Brightness",      group: "levels",      zone: "right",  setting: "barShowBrightness" },
-        battery:     { glyph: "󰂄", label: "Battery",         group: "power",       zone: "right",  setting: "barShowBattery" },
+        network:     { glyph: "󰛳", label: "Network",         group: "status",      zone: "right",  setting: "barShowNetwork" },
+        bluetooth:   { glyph: "󰂯", label: "Bluetooth",       group: "status",      zone: "right",  setting: "barShowBluetooth" },
+        keyboard:    { glyph: "󰌌", label: "Keyboard",        group: "status",      zone: "right",  setting: "barShowKeyboard" },
+        volume:      { glyph: "󰕾", label: "Volume",          group: "status",      zone: "right",  setting: "barShowVolume" },
+        microphone:  { glyph: "󰍬", label: "Microphone",      group: "status",      zone: "right",  setting: "barShowMic" },
+        brightness:  { glyph: "󰃟", label: "Brightness",      group: "status",      zone: "right",  setting: "barShowBrightness" },
+        battery:     { glyph: "󰂄", label: "Battery",         group: "status",      zone: "right",  setting: "barShowBattery" },
         media:       { glyph: "󰝚", label: "Media",           group: "media",       zone: "left",   setting: "barShowMedia" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",       zone: "right",  setting: "barShowClock" }
     })
