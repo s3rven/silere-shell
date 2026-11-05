@@ -255,10 +255,24 @@ Singleton {
     }
     readonly property bool metadataPrivacyProtected: root.metadataIsPrivacyProtected(
         title, artist, trackUrl, identity, desktopEntry, player ? player.dbusName : "")
+    // a browser calls itself "Mozilla zen" over MPRIS; its desktop entry has the name its launcher shows
+    property int _entriesRevision: 0
+    Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() { root._entriesRevision++ }
+    }
+    readonly property string entryName: {
+        void root._entriesRevision
+        const entry = desktopEntry.length > 0 ? DesktopEntries.byId(desktopEntry) : null
+        // "Spotify (Launcher)": a packaging note, not part of the app's name
+        return entry ? SafeText.singleLineText(entry.name || "", root.maxIdentityChars)
+            .replace(/\s*\([^()]*\)$/, "") : ""
+    }
     readonly property string sourceLabel: {
         const placeholder = root.metadataPrivacyProtected
             ? root.privacyPlaceholderSource(title) : ""
         if (placeholder.length > 0) return placeholder
+        if (entryName.length > 0) return entryName
         if (identity.length > 0) return identity
         if (desktopEntry.length > 0) return desktopEntry
         return ""
