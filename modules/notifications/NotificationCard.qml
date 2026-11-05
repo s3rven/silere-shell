@@ -886,7 +886,7 @@ Item {
                     anchors.right: _replySend.left
                     anchors.rightMargin: 2
                     anchors.verticalCenter: parent.verticalCenter
-                    buttonSize: 28
+                    buttonSize: Metrics.rowHeightFor(28)
                     glyph: "󰅖"
                     accessibleName: "Cancel reply"
                     onTriggered: card.cancelReply()
@@ -897,7 +897,7 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
-                    buttonSize: 28
+                    buttonSize: Metrics.rowHeightFor(28)
                     glyph: "󰒊"
                     accessibleName: "Send reply"
                     enabled: _replyInput.text.trim().length > 0

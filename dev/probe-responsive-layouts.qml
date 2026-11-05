@@ -12,7 +12,7 @@ Item {
         { value: "compact", label: "Sep 30" }
     ]
 
-    function notificationFixture(): var {
+    function notificationFixture(reply = false): var {
         return { actions: [
                 { identifier: "open", text: "Open", invoke: function() {} },
                 { identifier: "remind", text: "Remind me", invoke: function() {} },
@@ -20,7 +20,8 @@ Item {
                 { identifier: "read", text: "Mark read", invoke: function() {} }
             ], hints: ({}), appIcon: "", image: "", appName: "Probe", desktopEntry: "",
             summary: "Action layout", body: "", urgency: 1, expireTimeout: 0,
-            resident: true, transient: false, hasInlineReply: false }
+            resident: true, transient: false, hasInlineReply: reply,
+            inlineReplyPlaceholder: "Reply", sendInlineReply: function() {} }
     }
 
     function fillVitals(item): void {
@@ -142,6 +143,20 @@ Item {
             if (loader === wideNotification && rows.size !== 1)
                 failures.push("wide notification unnecessarily wraps compact actions")
         }
+        if (!replyNotification.item) failures.push("notification reply fixture did not load")
+        else {
+            const buttons = root.descendants(replyNotification.item,
+                item => item.accessibleName === "Cancel reply" || item.accessibleName === "Send reply")
+            if (buttons.length !== 2) failures.push("notification reply fixture lacks its controls")
+            for (const button of buttons) {
+                const bounds = button.mapToItem(replyNotification.item, 0, 0)
+                if (button.width < Config.Metrics.rowHeightFor(28)
+                        || button.height < Config.Metrics.rowHeightFor(28))
+                    failures.push("notification reply target ignores interface size: " + button.accessibleName)
+                if (bounds.x < -0.5 || bounds.x + button.width > replyNotification.width + 0.5)
+                    failures.push("notification reply target escapes its narrow card")
+            }
+        }
         const dependency = root.descendants(blockedSetting, item => item.text === blockedSetting._detailText)[0]
         if (!dependency || dependency.truncated || dependency.contentWidth > dependency.width + 0.5)
             failures.push("the unavailable setting's explanation is clipped in a narrow pane")
@@ -197,6 +212,16 @@ Item {
                 width: wideNotification.width, notification: root.notificationFixture(),
                 notifId: 2147483644, createdAt: Date.now()
             })
+        }
+
+        Loader {
+            id: replyNotification
+            width: 232
+            Component.onCompleted: setSource("../modules/notifications/NotificationCard.qml", {
+                width: 232, notification: root.notificationFixture(true),
+                notifId: 2147483643, createdAt: Date.now()
+            })
+            onLoaded: item.beginReply()
         }
 
         Loader { id: narrowVitals; width: 332; source: "../modules/menu/VitalsStrip.qml"; onLoaded: root.fillVitals(item) }
