@@ -1555,6 +1555,16 @@ ShellRoot {
             "a timed-out Bluetooth attempt releases its row even if the device still says connecting")
         root._check(!Bluetooth.deviceBusy(connecting, true, false),
             "a pairing row stays usable so it can be cancelled")
+        const dev = (name, paired, connected, pairing) => ({ address: "4E:5B:85:24:93:E7",
+            deviceName: name, paired: paired, connected: connected, pairing: pairing })
+        root._check(!Bluetooth.listed(dev("", false, false, false))
+                && !Bluetooth.listed(dev("4E-5B-85-24-93-E7", false, false, false))
+                && Bluetooth.listed(dev("JBL GO 2", false, false, false)),
+            "the Bluetooth picker leaves out an unpaired device known only by its address")
+        root._check(Bluetooth.listed(dev("", true, false, false))
+                && Bluetooth.listed(dev("", false, true, false))
+                && Bluetooth.listed(dev("", false, false, true)),
+            "a nameless device stays listed while paired, connected or pairing")
     }
 
     function _checkBarSizing(): void {

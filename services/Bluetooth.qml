@@ -122,8 +122,17 @@ Singleton {
         return ""
     }
 
+    // a device BlueZ knows only by address can't be told apart from the other beacons nearby
+    // (randomised phone addresses, tags), so the picker lists it once it is paired or connected
+    function listed(device): bool {
+        if (!device) return false
+        if (device.connected || device.paired || device.pairing) return true
+        const name = String(device.deviceName || "")
+        return name.length > 0 && name !== String(device.address || "").replace(/:/g, "-")
+    }
+
     readonly property var devices: {
-        const list = _devices.slice()
+        const list = _devices.filter(d => root.listed(d))
         list.sort((a, b) => {
             if (!a || !b) return 0
             if (a.connected !== b.connected) return a.connected ? -1 : 1
