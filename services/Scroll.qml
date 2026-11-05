@@ -102,7 +102,7 @@ Singleton {
         if (!deltaY) return 0
         const now = Date.now()
         // a busy event loop can deliver input before the cleanup timer fires. Expired gestures must still start without the previous remainder
-        if (_expires[key] !== undefined && _expires[key] <= now) _forgetKey(key)
+        if (_expires[key] !== undefined && root._gestureExpired(_expires[key], now)) _forgetKey(key)
         const previous = _accums[key] || 0
         // a complete notch leaves no remainder, so direction must survive separately
         const reversed = (_directions[key] || 0) * deltaY < 0
@@ -165,12 +165,17 @@ Singleton {
         delete root._expires[key]
     }
 
+    function _gestureExpired(expiry: real, now: real): bool {
+        // every expiry is one reset interval ahead; anything further came from a clock that went back
+        return !isFinite(expiry) || expiry <= now || expiry - now > root.resetMs
+    }
+
     // return the time until the next expiry; zero means there is no work left
     function _expireKeys(now: real): int {
         let next = Infinity
         for (const key in root._expires) {
             const expiry = root._expires[key]
-            if (expiry <= now) root._forgetKey(key)
+            if (root._gestureExpired(expiry, now)) root._forgetKey(key)
             else next = Math.min(next, expiry)
         }
         return isFinite(next) ? Math.max(1, Math.ceil(next - now)) : 0

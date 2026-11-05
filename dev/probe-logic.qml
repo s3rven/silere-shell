@@ -6692,11 +6692,30 @@ ShellRoot {
         Scroll._expires[expiredKey] = Date.now() - 1
         root._check(Scroll._processDelta(60, expiredKey, 120, 2, 0) === 0,
             "input arriving before a delayed cleanup does not reuse an expired half-notch")
+        const rollbackKey = "probe-scroll-clock-rollback"
+        Scroll._processDelta(60, rollbackKey, 120, 2, 0)
+        Scroll._expires[rollbackKey] = Date.now() + 3600000
+        root._check(Scroll._processDelta(60, rollbackKey, 120, 2, 0) === 0,
+            "a clock rollback discards a previous wheel gesture's half-notch")
+        Scroll._lastSteps[rollbackKey] = Date.now() + 3600000
+        Scroll._expires[rollbackKey] = Date.now() + 3600000
+        root._check(Scroll._processDelta(120, rollbackKey, 120, 2, 1000) === 1,
+            "a clock rollback cannot leave wheel steps throttled until the old time returns")
+        Scroll._expires[rollbackKey] = Date.now() + 3600000
+        Scroll._expireKeys(Date.now())
+        root._check(Scroll._expires[rollbackKey] === undefined
+                && Scroll._lastSteps[rollbackKey] === undefined,
+            "shared wheel cleanup removes gestures stamped before a clock rollback")
+        const rollbackPageWas = Scroll._page.movedAt
+        Scroll._page.movedAt = Date.now() + 3600000
+        root._check(!Scroll.wheelBelongsToPage(Date.now() + 3600000),
+            "future page and hover timestamps cannot keep a slider's wheel input on the page")
+        Scroll._page.movedAt = rollbackPageWas
         const cleanupTime = Date.now()
         const retainedKey = "probe-scroll-retained"
         Scroll._processDelta(40, retainedKey, 120, 2, 0)
         Scroll._expires[expiredKey] = cleanupTime
-        Scroll._expires[retainedKey] = cleanupTime + 1000
+        Scroll._expires[retainedKey] = cleanupTime + Scroll.resetMs
         root._check(Scroll._expireKeys(cleanupTime) > 0
                 && Scroll._accums[expiredKey] === undefined
                 && Scroll._directions[expiredKey] === undefined
