@@ -7,11 +7,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/silere-portability-test.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
-# No test may reach the live session's notification daemon. Individual stubs are
-# still preferred, but a path that notifies from a helper cannot leak past this one.
+# No test may reach the live session's notification daemon or service manager.
+# Individual stubs provide fixture state; defaults keep unhandled calls isolated.
 mkdir -p "$TMP/suite-stubs"
 printf '#!/bin/sh\nexit 0\n' > "$TMP/suite-stubs/notify-send"
-chmod +x "$TMP/suite-stubs/notify-send"
+printf '#!/bin/sh\nexit 1\n' > "$TMP/suite-stubs/systemctl"
+chmod +x "$TMP/suite-stubs/notify-send" "$TMP/suite-stubs/systemctl"
 PATH="$TMP/suite-stubs:$PATH"
 export PATH
 
