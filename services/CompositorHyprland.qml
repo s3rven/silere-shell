@@ -370,11 +370,9 @@ QtObject {
         }
         root._closedAddrs = next
     }
+    // t.address, not lastIpcObject: each read of that map builds a fresh JS object, per window per tick
     function _withoutClosed(tops, closed): var {
-        return tops.filter(t => {
-            const c = t ? t.lastIpcObject : null
-            return !(c && closed[c.address] === true)
-        })
+        return tops.filter(t => !(t && t.address && closed["0x" + t.address] === true))
     }
     function _liveToplevels(): var {
         return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], root._closedAddrs)
@@ -604,7 +602,7 @@ QtObject {
             }
             if (n === "openwindow" || n === "closewindow") root._setClosed(event.data, n === "closewindow")
             if (n === "openwindow" || n === "closewindow" || n === "movewindowv2"
-                || n === "fullscreen")
+                || n === "fullscreen" || n === "changeworkspaceid")
                 root.refreshToplevels()
             // a window that never retitles after opening has no windowtitlev2 to arm this on
             if (n === "openwindow" && root._liveTitlesWanted && !Idle.isIdle && !_titleSync.running)
@@ -617,6 +615,8 @@ QtObject {
                 root._requestWorkspaceRefresh("id:" + String(event.data ?? ""))
             if (n === "configreloaded")
                 root.checkBlur()
+            // quickshell 0.3.2 resolves focusedmon's workspace by name and drops a named numbered one (quickshell#1427)
+            if (n === "focusedmon") Hyprland.refreshMonitors()
             if (n === "workspacev2" || n === "focusedmon"
                 || n === "focusedmonv2" || n === "activemon")
                 root.workspaceActivated(root.focusedMonitor)

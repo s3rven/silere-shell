@@ -5192,8 +5192,8 @@ ShellRoot {
             const closedWas = hypr._closedAddrs
             hypr._closedAddrs = ({})
             hypr._eventConn.onRawEvent({ name: "closewindow", data: "5561ab" })
-            const ghost = { lastIpcObject: { address: "0x5561ab", workspace: { id: 2 } } }
-            const live = { lastIpcObject: { address: "0x77aa", workspace: { id: 1 } } }
+            const ghost = { address: "5561ab", lastIpcObject: { address: "0x5561ab", workspace: { id: 2 } } }
+            const live = { address: "77aa", lastIpcObject: { address: "0x77aa", workspace: { id: 1 } } }
             const kept = hypr._withoutClosed([ghost, live], hypr._closedAddrs)
             root._check(kept.length === 1 && kept[0] === live
                     && hypr._missingWorkspaceId([{ id: 1 }], hypr._withoutClosed([ghost, live], hypr._closedAddrs)) === -1,
