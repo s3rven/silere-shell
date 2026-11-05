@@ -48,6 +48,27 @@ CPU percentages use the measured elapsed time, including collection overhead, ra
 than assuming every sample takes exactly one second. JSON reports include both the
 requested `sample_seconds` and the measured `elapsed_seconds`.
 
+## Optional tuning
+
+**Two settings for the user service save about 10 MB.** Neither is on by default, because they
+fit one setup rather than every desktop. Add what suits you with
+`systemctl --user edit silere-shell.service`:
+
+```ini
+[Service]
+# fewer allocator caches: about 6 MB less at start and 7 MB less once the menu has opened
+Environment=MALLOC_CONF=narenas:1,tcache:false,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0
+# only if your session sets a KDE platform theme: about 4 MB less
+Environment=QT_QPA_PLATFORMTHEME=
+Environment=QT_QUICK_CONTROLS_STYLE=
+Environment=QS_ICON_THEME=your-icon-theme
+```
+
+| Setting | The trade-off |
+|---|---|
+| Allocator | No difference above noise in 25 menu cycles. It suits one small process, not a heavy multithreaded one. |
+| KDE theme off | The shell draws its own UI, and apps it opens go through the compositor and keep their theme. The icon theme becomes a fixed name here, so change it if you change your theme. |
+
 ## Animation driver
 
 Keep Awake uses an input-free overlay window so it keeps receiving frame callbacks
