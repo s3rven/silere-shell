@@ -1551,6 +1551,18 @@ ShellRoot {
         ShellSettings.notifGroupThreads = groupWas
     }
 
+    function _checkBrightnessChoices(): void {
+        const labels = list => Brightness.choicesFor(list.map(name => ({ name: name, type: "raw" })))
+            .map(c => c.label).join("|")
+        root._check(labels(["amdgpu_bl2", "nvidia_0"]) === "Automatic|AMD graphics|NVIDIA graphics"
+                && labels(["ddcci5"]) === "Automatic|External display"
+                && labels(["weird_bl"]) === "Automatic|weird_bl",
+            "backlight choices read as the hardware they drive")
+        root._check(labels(["acpi_video0", "acpi_video1", "intel_backlight"])
+                === "Automatic|acpi_video0|acpi_video1|Intel graphics",
+            "two backlights of one kind keep their own names")
+    }
+
     function _checkBluetoothRowRelease(): void {
         const connecting = Bt.BluetoothDeviceState.Connecting
         const disconnecting = Bt.BluetoothDeviceState.Disconnecting
@@ -2338,6 +2350,7 @@ ShellRoot {
         root._checkWorkspaceIndicators()
         root._checkAccentPills()
         root._checkBluetoothRowRelease()
+        root._checkBrightnessChoices()
         root._checkSystemWidget()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()

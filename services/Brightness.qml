@@ -31,14 +31,30 @@ Singleton {
             if (devices[i].name === wanted) return wanted
         return ""
     }
-    readonly property var deviceChoices: {
+    // sysfs names say which driver owns a backlight; the menu says it in words
+    function deviceKind(name: string): string {
+        const n = String(name || "").toLowerCase()
+        return /^amdgpu_bl/.test(n) ? "AMD graphics"
+            : /^intel_backlight/.test(n) ? "Intel graphics"
+            : /^nvidia_wmi_ec/.test(n) ? "NVIDIA firmware"
+            : /^nvidia/.test(n) ? "NVIDIA graphics"
+            : /^acpi_video/.test(n) ? "ACPI firmware"
+            : /^apple-panel/.test(n) ? "Apple panel"
+            : /^ddcci/.test(n) ? "External display"
+            : ""
+    }
+
+    function choicesFor(list): var {
         const out = [{ value: "", label: "Automatic" }]
-        for (let i = 0; i < devices.length; i++) {
-            const d = devices[i]
-            out.push({ value: d.name, label: d.name + (d.type.length > 0 ? " · " + d.type : "") })
+        const kinds = list.map(d => root.deviceKind(d.name))
+        for (let i = 0; i < list.length; i++) {
+            // two of one kind (acpi_video0 and 1) keep the names that tell them apart
+            const unique = kinds[i].length > 0 && kinds.indexOf(kinds[i]) === kinds.lastIndexOf(kinds[i])
+            out.push({ value: list[i].name, label: unique ? kinds[i] : list[i].name })
         }
         return out
     }
+    readonly property var deviceChoices: root.choicesFor(devices)
 
     readonly property real   pct: maxBrightness > 0
         ? Math.max(0, Math.min(1, currentBrightness / maxBrightness)) : 0
