@@ -96,7 +96,7 @@ Singleton {
         if (root.connectedCount === 0) return "Not connected"
         if (root.connectedCount > 1) return root.connectedCount + " connected"
         return root.connectedBattery >= 0
-            ? root.connectedName + "  " + root.connectedBattery + "%"
+            ? root.connectedName + " · " + root.connectedBattery + "%"
             : root.connectedName
     }
 
