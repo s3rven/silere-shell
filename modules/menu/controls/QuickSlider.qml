@@ -88,8 +88,9 @@ MenuRow {
 
     Item {
         id: _chev
-        anchors.right: _v.left
-        anchors.rightMargin: 10
+        // on the column ControlRow keeps beside its 36px switch, so chevrons line up across the page
+        anchors.right: _v.right
+        anchors.rightMargin: Math.max(36, _v.width) + 8
         anchors.verticalCenter: parent.verticalCenter
         width: root._hasChevSlot ? 24 : 0
         height: parent.height
