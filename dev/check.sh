@@ -52,10 +52,10 @@ _cleanup() {
 }
 trap _cleanup EXIT
 
-_start() { # $1 = job, $2 = script
+_start() { # $1 = job, $2 = script, then its arguments
   if [ -f "$2" ]; then
     # a background job starts with Ctrl-C ignored, and the probes clean up on it
-    ( trap - INT; exec bash "$2" ) >"$scratch/$1.out" 2>&1 &
+    ( trap - INT; exec bash "$2" "${@:3}" ) >"$scratch/$1.out" 2>&1 &
     printf -v "_pid_$1" '%s' "$!"
     _jobs="$_jobs $1"
   else
@@ -107,6 +107,11 @@ if [ "$qs_usable" = 1 ]; then
   _start screens dev/test-screens.sh
   _start mutate dev/test-mutate.sh
   _start fit dev/test-layout-fit.sh
+  # CI has no render node, so this is the only place a real Hyprland's IPC is checked
+  if command -v Hyprland >/dev/null 2>&1 && command -v kwin_wayland >/dev/null 2>&1 \
+      && command -v dbus-run-session >/dev/null 2>&1 && compgen -G '/dev/dri/renderD*' >/dev/null; then
+    _start hyprland dev/test-compositors.sh hyprland
+  fi
 fi
 
 section "versions"
@@ -821,6 +826,13 @@ section "layout fit"
 # Building a section says nothing about whether its labels survive the width they
 # ship at; Qt elides them and reports success either way.
 _report fit layout "settings text is truncated at the shipped panel width"
+
+section "hyprland integration"
+if [ -n "${_pid_hyprland:-}" ]; then
+  _report hyprland "nested hypr" "the shell failed against a nested Hyprland" 'passed \(hyprland[^)]*\)'
+else
+  info "nested hypr" "not run: needs Hyprland, KWin and a GPU render node"
+fi
 
 if [ "$status" -eq 0 ]; then
   printf '\nchecks passed (%d warning(s))\n' "$warnings"
