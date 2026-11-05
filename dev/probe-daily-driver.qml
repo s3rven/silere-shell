@@ -444,6 +444,22 @@ Scope {
         SystemTools.hasTimeout = true
         root.waitFor(() => Session.lockStateKnown && Session.canLockSleep,
             "restoring all session tools recovers readiness without a restart")
+
+        Compositor.commands = []
+        root.write("session-status-hold", "hold")
+        const beforeCalls = root.read("session-calls").length
+        root.check(Session.lockAndSleep(), "a lock request can wait on its initial session read")
+        root.waitFor(() => root.read("session-calls").length > beforeCalls,
+            "the initial lock-state read is pending before session tools disappear")
+        SystemTools.hasLoginctl = false
+        root.write("session-status-hold", "")
+        root.waitFor(() => !Session.busy, "cancelling the initial lock-state read releases its request")
+        input.wait(150)
+        root.check(Compositor.commands.length === 0 && SystemTools.commands.length === 1,
+            "a cancelled pre-lock read cannot launch the locker or suspend")
+        SystemTools.hasLoginctl = true
+        root.waitFor(() => Session.lockStateKnown && Session.canLockSleep,
+            "readiness recovers after cancelling an initial lock-state read")
     }
 
     Component.onCompleted: Qt.callLater(function() {

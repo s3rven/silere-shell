@@ -79,14 +79,17 @@ Singleton {
         command: ["bash", Quickshell.shellDir + "/scripts/session.sh", "status"]
         stdout: StdioCollector { id: _beforeOut }
         onExited: code => {
+            const current = root._waitGeneration === root._generation && root.canLockSleep
+            if (!current) {
+                root._cancelSleep("Session readiness changed. Sleep was cancelled.")
+                return
+            }
             // a cached hint may predate an unlock, so request the lock on every action
             Compositor.launch(Settings.lockCommand)
-            const current = root._waitGeneration === root._generation && root.canLockSleep
             const state = _before.completedSuccessfully(code)
                 ? (/(^|\n)locked=(yes|no)(\n|$)/.exec(_beforeOut.text) || [])[2] : undefined
-            if (current && state === "no") _wait.running = true
-            else root._cancelSleep(!current ? "Session readiness changed. Sleep was cancelled."
-                : state === "yes" ? "The session was already marked locked, so the new lock could not be confirmed. Sleep was cancelled."
+            if (state === "no") _wait.running = true
+            else root._cancelSleep(state === "yes" ? "The session was already marked locked, so the new lock could not be confirmed. Sleep was cancelled."
                 : "Could not confirm screen lock. Sleep was cancelled.")
         }
     }
