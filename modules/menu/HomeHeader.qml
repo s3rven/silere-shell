@@ -46,8 +46,9 @@ Item {
 
     ShellText {
         id: _uptime
-        anchors.left: root._stackMeta ? parent.left : undefined
         anchors.right: parent.right
+        // a width, not a left anchor: a dropped anchor leaves the width it set, so unstacking kept the full line
+        width: root._stackMeta ? parent.width : implicitWidth
         y: root._stackMeta ? _date.y + _date.height + 2
             : _date.y + Math.round((_date.height - height) / 2)
         visible: root.uptimeText.length > 0

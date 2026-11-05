@@ -55,11 +55,12 @@ list="$(find modules/menu/settings -name 'Settings*Section.qml' | sort)"
 [ -n "$list" ] || { echo "FAIL: no settings sections found" >&2; exit 1; }
 
 # The 332px RecentPage case is a narrow-screen stress check; the normal history pane is
-# wider. The nav column ships at its 160 cap. HomePage stays out on purpose — its status lines carry
-# network and device names from outside the shell, which are meant to elide.
+# wider. The nav column ships at its 160 cap, and the power drawer inside it at that cap
+# less its 9px sides; both take the type gain. HomePage stays out on purpose — its status
+# lines carry network and device names from outside the shell, which are meant to elide.
 list="$list
 modules/menu/RecentPage.qml|332
-modules/menu/PowerRailContent.qml|332
+modules/menu/PowerRailContent.qml|142
 modules/menu/VitalsStrip.qml|332
 modules/menu/SettingsNav.qml|160
 dev/probe-responsive-layouts.qml"

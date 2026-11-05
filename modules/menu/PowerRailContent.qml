@@ -22,8 +22,7 @@ Item {
         : Battery.onAc ? "AC"
         : "Battery"
     readonly property string _batteryValue: Battery.label
-    // "Performance · throttled" overflows the rail's value column at every size, so the suffix
-    // could never render; degraded rides the row tint here and the Now page says the word
+    // "Performance · throttled" overflows the rail at every size; degraded rides the row tint and the Now page says the word
     readonly property string _profileValue: PowerProfiles.changing ? "Changing…"
         : PowerProfiles.lastError.length > 0 ? "Failed"
         : PowerProfiles.profile !== "" ? PowerProfiles.label
@@ -55,8 +54,7 @@ Item {
                 id: _powMode
                 visible: PowerProfiles.available
                 width: parent.width
-                label: "Mode"
-                value: root._profileValue
+                label: root._profileValue
                 glyph: PowerProfiles.glyph
                 dangerous: PowerProfiles.degraded || PowerProfiles.lastError.length > 0
                 enabled: PowerProfiles.available && PowerProfiles.profile !== ""

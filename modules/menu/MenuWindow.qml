@@ -50,7 +50,7 @@ FittedPopupWindow {
 
         // every panel width stays on the 4px grid, or the outline's right edge lands on a half output px at fractional scale and rasterizes wider than its left
         readonly property int _compactW: 400 + Metrics.menuContentGrowth
-        readonly property int _powerW: 572 + Metrics.menuContentGrowth
+        readonly property int _powerW: 572 + _typeGain + Metrics.menuContentGrowth
         readonly property int _settingsW: 632 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentBaseW: 492 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentW: _recentBaseW + _navMaxW + 16
@@ -79,7 +79,8 @@ FittedPopupWindow {
         readonly property int _navMaxW: 160 + _typeGain
         readonly property int navW: {
             const available = panelW - railCollapsedW
-            const desired = Math.max(_navMinW, Metrics.snap4(panelW * 0.28))
+            // the power panel is the home pane plus a nav column, so a share of it undercuts the column above 100% type
+            const desired = Math.max(_navMinW, powerOpen ? _navMaxW : Metrics.snap4(panelW * 0.28))
             const detailSafe = Math.max(_navMinW, available - 224)
             const sidebarFit = Math.max(0, available - 96)
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))

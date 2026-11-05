@@ -445,7 +445,7 @@ PageShell {
                             ToggleRow {
                                 glyph: "󰐨"
                                 label: "Presentation Mode"
-                                description: "Hides all popups and keeps the screen awake"
+                                description: "Hides popups, keeps the screen awake"
                                 checked: Notifications.presentationMode
                                 onToggled: nextChecked => Notifications.presentationMode = nextChecked
                             }

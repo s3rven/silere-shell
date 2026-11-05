@@ -141,7 +141,7 @@ ShellRoot {
         const path = split < 0 ? entry : entry.slice(0, split)
         root.paneWidth = split < 0 ? root.contentWidth + Metrics.menuContentGrowth
             : Number(entry.slice(split + 1)) + (entry.indexOf("SettingsNav.qml") >= 0
-                ? Metrics.menuTypeGain : Metrics.menuContentGrowth)
+                || entry.indexOf("PowerRailContent.qml") >= 0 ? Metrics.menuTypeGain : Metrics.menuContentGrowth)
         root.component = Qt.createComponent("file://" + root.base + "/" + path)
         if (root.component.status === Component.Error) {
             console.warn("FIT-FAIL " + path + " :: " + root.component.errorString())
