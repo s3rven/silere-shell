@@ -284,6 +284,13 @@ Item {
         target: card; property: "collapseRatio"
         to: 0; duration: Motion.ms(190); easing.type: Easing.InOutCubic
     }
+    // an arrival opens its slot the way a dismissal closes one: taking it whole in one frame dropped every card
+    // below it a card's height before the new one had faded in
+    NumberAnimation {
+        id: _openAnim
+        target: card; property: "collapseRatio"
+        from: 0; to: 1; duration: Motion.ms(200); easing.type: Easing.OutCubic
+    }
 
     Timer { id: _exitTimer; interval: Motion.ms(210) + 10; onTriggered: card._completeDismiss() }
 
@@ -332,6 +339,8 @@ Item {
 
     implicitWidth:  320
     property real collapseRatio: 1
+    // the opening slot shows the arrival unfolding rather than drawing it, faint, over the card it pushes down
+    clip: _openAnim.running
 
     property real _collapseBasis: cardRect.height
     implicitHeight: _collapseBasis * collapseRatio
@@ -469,7 +478,9 @@ Item {
     Connections {
         target: ShellSettings
         function onReduceMotionChanged() {
-            if (ShellSettings.reduceMotion) card._completeDismiss()
+            if (!ShellSettings.reduceMotion) return
+            if (_openAnim.running) _openAnim.complete()
+            card._completeDismiss()
         }
     }
 
@@ -506,6 +517,7 @@ Item {
             const isNew = !Notifications.isSeen(card.notifId)
             if (isNew) {
                 Notifications.markSeen(card.notifId)
+                if (card.visible && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) _openAnim.start()
                 _behaviorEnabled = true
                 opacity = 1.0
                 x = 0
