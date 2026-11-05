@@ -972,7 +972,7 @@ test_shared_launcher() (
         '#!/bin/sh' \
         'for arg do [ "$arg" = "${SILERE_STUB_REJECT-}" ] && exit 109; done' \
         ': > "$SILERE_LAUNCH_CAPTURE"' \
-        'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" >> "$SILERE_LAUNCH_CAPTURE"' \
+        'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\npipewire=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" "${QS_PIPEWIRE_IMMEDIATE_RECONNECT-}" >> "$SILERE_LAUNCH_CAPTURE"' \
         'for arg do printf "arg=%s\n" "$arg" >> "$SILERE_LAUNCH_CAPTURE"; done' \
         > "$stub_dir/qs"
     chmod +x "$stub_dir/qs"
@@ -994,6 +994,8 @@ test_shared_launcher() (
         || fail "shared launcher changed the user's umask"
     grep -qFx 'watch=0' "$capture" \
         || fail "shared launcher did not disable reload during managed updates"
+    grep -qFx 'pipewire=1' "$capture" \
+        || fail "shared launcher did not ask Quickshell to wait for a late PipeWire"
     expected_args=$'arg=--no-duplicate\narg=--no-detailed-logs\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv"
     # a quickshell without the hidden flag must still start

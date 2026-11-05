@@ -100,6 +100,8 @@ run_shell() {
     unset QSG_TRANSIENT_IMAGES
     # an update rewrites qml files one by one, so a reload mid-update loads a mixed tree
     export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
+    # without it a shell that starts before PipeWire never connects; nothing changes once it has
+    export QS_PIPEWIRE_IMMEDIATE_RECONNECT=1
     # the detailed log keeps every debug line in the RAM-backed runtime dir, about 3 MB an hour; warnings still land
     # the flag is hidden, and an unknown flag stops qs from starting, so probe it first
     local detail=()
