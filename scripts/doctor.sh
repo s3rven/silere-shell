@@ -328,7 +328,13 @@ optional_tool cava "audio visualizer"
 optional_tool notify-send "desktop alerts"
 optional_tool fc-list "font verification"
 if command -v fc-list >/dev/null 2>&1; then
-    if fc-list : family 2>/dev/null | grep -qi 'nerd font'; then ok "Nerd Font" "installed"
+    # stderr rides along, so a fontconfig failure names itself instead of reading as no font
+    font_families="$(fc-list : family 2>&1)"
+    font_status=$?
+    font_error="$(grep -m1 -i '^fontconfig' <<<"$font_families")"
+    if grep -qi 'nerd font' <<<"$font_families"; then ok "Nerd Font" "installed"
+    elif [ "$font_status" -ne 0 ] || [ -n "$font_error" ]; then
+        fail "Nerd Font" "fc-list could not list fonts (exit $font_status)${font_error:+: $font_error}"
     else fail "Nerd Font" "none installed; bar and menu icons render as boxes"
     fi
 fi
