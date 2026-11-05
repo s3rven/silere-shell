@@ -7,6 +7,7 @@ PageLoader         1.0 PageLoader.qml
 SettingsCard       1.0 SettingsCard.qml
 
 # rows and inputs
+ArmConfirm      1.0 ArmConfirm.qml
 ChoiceChipRow   1.0 ChoiceChipRow.qml
 ControlRow      1.0 ControlRow.qml
 InlineOptionRow 1.0 InlineOptionRow.qml

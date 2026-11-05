@@ -17,15 +17,7 @@ Item {
     width: parent ? parent.width : 0
     implicitHeight: _col.implicitHeight
 
-    property string _armedAddr: ""
-    property string _forgetAddr: ""
-    property real _armedAtMs: 0
-    property real _forgetAtMs: 0
-    Timer {
-        id: _disarmTimer
-        interval: 3000
-        onTriggered: { root._armedAddr = ""; root._forgetAddr = "" }
-    }
+    readonly property ArmConfirm _confirm: ArmConfirm {}
 
     property bool _searchLapsed: false
     Timer {
@@ -38,20 +30,12 @@ Item {
 
     function _syncScanState(): void {
         Bluetooth.requestScan(root, root.open && Bluetooth.available && Bluetooth.enabled && !Idle.isIdle)
-        if (!Bluetooth.available || !Bluetooth.enabled) {
-            _disarmTimer.stop()
-            root._armedAddr = ""
-            root._forgetAddr = ""
-        }
+        if (!Bluetooth.available || !Bluetooth.enabled) root._confirm.clear()
     }
 
     onOpenChanged: {
         _syncScanState()
-        if (!open) {
-            _disarmTimer.stop()
-            root._armedAddr = ""
-            root._forgetAddr = ""
-        }
+        if (!open) root._confirm.clear()
     }
     Component.onCompleted: _syncScanState()
     Component.onDestruction: {
@@ -121,8 +105,8 @@ Item {
                 width: _list.width
                 bottomRadius: _row.index === _list.count - 1 ? root.lastRowRadius : 0
 
-                readonly property bool   _armed: root._armedAddr === modelData.address && modelData.connected
-                readonly property bool   _forgetArmed: root._forgetAddr === modelData.address
+                readonly property bool   _armed: root._confirm.key === "disconnect:" + modelData.address && modelData.connected
+                readonly property bool   _forgetArmed: root._confirm.key === "forget:" + modelData.address
                 readonly property bool   _failed: Bluetooth.errorAddr === modelData.address
                 readonly property int _batt: Bluetooth.batteryPercent(modelData)
                 readonly property bool _busy: Bluetooth.deviceBusy(modelData.state, modelData.pairing, _row._failed)
@@ -148,27 +132,11 @@ Item {
 
                 function _activate(): void {
                     const addr = modelData.address
-                    const now = Date.now()
-                    if (root._forgetAddr === addr) {
-                        root._forgetAddr = ""
-                        _disarmTimer.stop()
-                    }
+                    if (_row._forgetArmed) root._confirm.clear()
                     if (modelData.pairing) {
                         Bluetooth.cancelPair(addr)
                     } else if (modelData.connected) {
-                        const age = now - root._armedAtMs
-                        if (root._armedAddr === addr && age >= 0 && age < _disarmTimer.interval) {
-                            // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-                            if (age < Metrics.confirmGuardMs) return
-                            root._armedAddr = ""
-                            _disarmTimer.stop()
-                            Bluetooth.disconnectDevice(addr)
-                        } else {
-                            root._armedAddr = addr
-                            root._forgetAddr = ""
-                            root._armedAtMs = now
-                            _disarmTimer.restart()
-                        }
+                        if (root._confirm.press("disconnect:" + addr)) Bluetooth.disconnectDevice(addr)
                     } else if (modelData.paired) {
                         Bluetooth.connectDevice(addr)
                     } else {
@@ -180,20 +148,7 @@ Item {
                 // right- or middle-click forgets a paired device; the first press only arms it
                 function _forgetTap(): void {
                     if (!modelData.paired || modelData.connected) return
-                    const addr = modelData.address
-                    const now = Date.now()
-                    const age = now - root._forgetAtMs
-                    if (root._forgetAddr === addr && age >= 0 && age < _disarmTimer.interval) {
-                        if (age < Metrics.confirmGuardMs) return
-                        root._forgetAddr = ""
-                        _disarmTimer.stop()
-                        Bluetooth.forgetDevice(addr)
-                    } else {
-                        root._forgetAddr = addr
-                        root._armedAddr = ""
-                        root._forgetAtMs = now
-                        _disarmTimer.restart()
-                    }
+                    if (root._confirm.press("forget:" + modelData.address)) Bluetooth.forgetDevice(modelData.address)
                 }
                 TapHandler {
                     enabled: _row.interactive

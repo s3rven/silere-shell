@@ -19,17 +19,9 @@ Item {
     // held here, not in the delegate: a recycled row would lose it
     property string _passwordDraft: ""
     property bool _passwordVisible: false
-    property string _armedSsid: ""
-    property string _forgetSsid: ""
     // the model is a held snapshot: any content change in Network.wifiNetworks destroys every delegate, and with it the password field being typed into
     property var _networks: []
-    property real _armedAtMs: 0
-    property real _forgetAtMs: 0
-    Timer {
-        id: _disarmTimer
-        interval: 3000
-        onTriggered: { root._armedSsid = ""; root._forgetSsid = "" }
-    }
+    readonly property ArmConfirm _confirm: ArmConfirm {}
 
     function _syncNetworks(): void {
         if (root._selected === "") root._networks = Network.wifiNetworks
@@ -43,9 +35,7 @@ Item {
         Network.requestWifiScan(root, _canScan())
         if (!_canScan() && root.open) {
             _selected = ""
-            _disarmTimer.stop()
-            _armedSsid = ""
-            _forgetSsid = ""
+            root._confirm.clear()
         }
     }
 
@@ -58,9 +48,7 @@ Item {
         _syncScanState()
         if (!open) {
             _selected = ""
-            _disarmTimer.stop()
-            _armedSsid = ""
-            _forgetSsid = ""
+            root._confirm.clear()
         }
     }
     Component.onCompleted: { _syncScanState(); _syncNetworks() }
@@ -157,8 +145,8 @@ Item {
                 Timer { id: _settle; interval: 0; onTriggered: _entry.motionReady = true }
                 Component.onDestruction: _settle.stop()
 
-                readonly property bool _armed:      root._armedSsid === modelData.ssid && modelData.active
-                readonly property bool _forgetArmed: root._forgetSsid === modelData.ssid
+                readonly property bool _armed:      root._confirm.key === "disconnect:" + modelData.ssid && modelData.active
+                readonly property bool _forgetArmed: root._confirm.key === "forget:" + modelData.ssid
                 readonly property bool _sel:        root._selected === modelData.ssid
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
@@ -204,25 +192,10 @@ Item {
                             || _entry.modelData.active)
 
                     function _activate(): void {
-                        const now = Date.now()
-                        if (root._forgetSsid === _entry.modelData.ssid) {
-                            root._forgetSsid = ""
-                            _disarmTimer.stop()
-                        }
+                        if (_entry._forgetArmed) root._confirm.clear()
                         if (_entry.modelData.active) {
-                            const age = now - root._armedAtMs
-                            if (_entry._armed && age >= 0 && age < _disarmTimer.interval) {
-                                // TapHandler fires once per tap, so a double-click would arm and confirm in one gesture
-                                if (age < Metrics.confirmGuardMs) return
-                                root._armedSsid = ""
-                                _disarmTimer.stop()
+                            if (root._confirm.press("disconnect:" + _entry.modelData.ssid))
                                 Network.disconnectWifi(_entry.modelData.ssid)
-                            } else {
-                                root._armedSsid = _entry.modelData.ssid
-                                root._forgetSsid = ""
-                                root._armedAtMs = now
-                                _disarmTimer.restart()
-                            }
                             return
                         }
                         // an enterprise or WEP network can only join from a stored profile; the shell has no way to collect those credentials
@@ -247,20 +220,8 @@ Item {
                     // right- or middle-click forgets a saved profile; the first press only arms it
                     function _forgetTap(): void {
                         if (!_entry.modelData.known || _entry.modelData.active) return
-                        const now = Date.now()
-                        const age = now - root._forgetAtMs
-                        if (root._forgetSsid === _entry.modelData.ssid
-                                && age >= 0 && age < _disarmTimer.interval) {
-                            if (age < Metrics.confirmGuardMs) return
-                            root._forgetSsid = ""
-                            _disarmTimer.stop()
+                        if (root._confirm.press("forget:" + _entry.modelData.ssid))
                             Network.forgetWifi(_entry.modelData.ssid)
-                        } else {
-                            root._forgetSsid = _entry.modelData.ssid
-                            root._armedSsid = ""
-                            root._forgetAtMs = now
-                            _disarmTimer.restart()
-                        }
                     }
                     TapHandler {
                         enabled: _row.interactive

@@ -1994,10 +1994,8 @@ ShellRoot {
             pairing: false, paired: true, connected: true, state: -1
         })
         const cases = [
-            { name: "Wi-Fi", path: "modules/menu/WifiList.qml", identity: "__silere_confirmation_probe__",
-                disconnectKey: "_armedSsid", forgetKey: "_forgetSsid" },
-            { name: "Bluetooth", path: "modules/menu/BluetoothList.qml", identity: device.address,
-                disconnectKey: "_armedAddr", forgetKey: "_forgetAddr" }
+            { name: "Wi-Fi", path: "modules/menu/WifiList.qml", identity: "__silere_confirmation_probe__" },
+            { name: "Bluetooth", path: "modules/menu/BluetoothList.qml", identity: device.address }
         ]
         for (const test of cases) {
             const component = Qt.createComponent(test.path)
@@ -2020,22 +2018,26 @@ ShellRoot {
                     const row = root._findTrayNode(picker, item => typeof item._forgetTap === "function")
                     root._check(row !== null, test.name + " creates its confirmation row")
                     if (!row) continue
-                    const key = disconnect ? test.disconnectKey : test.forgetKey
-                    const timeKey = disconnect ? "_armedAtMs" : "_forgetAtMs"
+                    const arm = picker._confirm
+                    const key = (disconnect ? "disconnect:" : "forget:") + test.identity
                     const request = () => disconnect ? row._activate() : row._forgetTap()
                     const label = test.name + (disconnect ? " disconnect" : " forget")
                     request()
                     request()
-                    root._check(picker[key] === test.identity,
+                    root._check(arm.key === key,
                         label + " arms and rejects an immediate double-click")
                     for (const offset of [-3001, 1000]) {
-                        picker[timeKey] = Date.now() + offset
+                        arm.armedAtMs = Date.now() + offset
                         request()
-                        root._check(picker[key] === test.identity
-                                && picker[timeKey] <= Date.now()
-                                && Date.now() - picker[timeKey] < Metrics.confirmGuardMs,
+                        root._check(arm.key === key
+                                && arm.armedAtMs <= Date.now()
+                                && Date.now() - arm.armedAtMs < Metrics.confirmGuardMs,
                             label + " rearms an expired or future-dated confirmation without running its action")
                     }
+                    arm.armedAtMs = Date.now() - Metrics.confirmGuardMs - 1
+                    const fired = arm.press(key)
+                    root._check(fired && arm.key === "",
+                        label + " runs on a second press inside the window and disarms")
                 }
                 picker.destroy()
             }
