@@ -261,7 +261,7 @@ Item {
         onTapped: (eventPoint, button) => {
             if (!root._canInteract) return
             if (button === Qt.MiddleButton)
-                WindowActions.focusMediaPlayer(Media.playerName, Media.title)
+                Media.focusPlayer()
             else if (button === Qt.RightButton)
                 MenuState.toggleMediaAt(root, root.screen)
             else

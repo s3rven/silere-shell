@@ -279,9 +279,9 @@ Singleton {
         return c ? (c.wsId ?? -1) : -1
     }
 
-    function focusMediaPlayer(playerName: string, songTitle: string): void {
+    function focusMediaPlayer(playerName: string, songTitle: string): bool {
         const clients = root._clients()
-        if (clients.length === 0) return
+        if (clients.length === 0) return false
 
         const name   = String(playerName || "").toLowerCase()
         const norm   = (s) => String(s || "").toLowerCase()
@@ -309,6 +309,7 @@ Singleton {
         }
 
         if (best) Compositor.focusToplevel(best)
+        return !!best
     }
 
     function focusTrayItem(id: string, title: string, tooltip: string): bool {

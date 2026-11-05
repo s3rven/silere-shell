@@ -88,7 +88,7 @@ PageShell {
     function _openPlayer(): void {
         if (!root.enabled || !root.visible || !MenuState.mediaActive || Media.playerName.length === 0) return
         MenuState.close()
-        WindowActions.focusMediaPlayer(Media.playerName, Media.title)
+        Media.focusPlayer()
     }
 
     Connections {

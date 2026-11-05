@@ -784,6 +784,12 @@ Singleton {
         onRunningChanged: if (!running) root.barHeights = root._zeroBars
     }
 
+    // a player closed to its tray (Spotify) has no window to find; MPRIS can still bring one back
+    function focusPlayer(): void {
+        if (WindowActions.focusMediaPlayer(root.playerName, root.title)) return
+        if (player && player.canRaise) player.raise()
+    }
+
     function togglePlay(): void {
         if (!canTogglePlaying) return
         player.togglePlaying()
