@@ -66,7 +66,8 @@ Singleton {
     property var _wasPlaying: ({})
     property int _activeSeq: 0
     readonly property var _playingNames: root.playerList.filter(p => p && p.isPlaying).map(p => p.dbusName)
-    on_PlayingNamesChanged: {
+    on_PlayingNamesChanged: root._trackActivity()
+    function _trackActivity(): void {
         const now = {}
         for (const name of root._playingNames) now[name] = true
         const changed = []
@@ -75,10 +76,14 @@ Singleton {
         root._wasPlaying = now
         if (changed.length === 0) return
         const next = {}
-        for (const p of root.playerList)
-            if (p && root._lastActive[p.dbusName] !== undefined)
-                next[p.dbusName] = root._lastActive[p.dbusName]
-        for (const name of changed) next[name] = ++root._activeSeq
+        const listed = {}
+        for (const p of root.playerList) {
+            if (!p) continue
+            listed[p.dbusName] = true
+            if (root._lastActive[p.dbusName] !== undefined) next[p.dbusName] = root._lastActive[p.dbusName]
+        }
+        // a player that left while playing keeps no rank to win ties with if its name returns
+        for (const name of changed) if (listed[name]) next[name] = ++root._activeSeq
         root._lastActive = next
     }
 
@@ -125,7 +130,8 @@ Singleton {
         else if (_cavaProc.running) _cavaPauseHold.restart()
         else _cavaPlaying = false
     }
-    Component.onCompleted: { _syncShown(); _reanchor(); if (artUrl.length > 0) stableArtUrl = artUrl }
+    // players already playing at start raise no change, so a later start would outrank them as new
+    Component.onCompleted: { _trackActivity(); _syncShown(); _reanchor(); if (artUrl.length > 0) stableArtUrl = artUrl }
 
     Timer { id: _pauseTimer; interval: 5000;  onTriggered: _hideTimer.start() }
     Timer { id: _hideTimer;  interval: 10000; onTriggered: root.shown = false  }
