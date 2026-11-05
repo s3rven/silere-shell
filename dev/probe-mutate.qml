@@ -60,8 +60,11 @@ ShellRoot {
                 continue
             }
             let obj = c.createObject(host, { width: 400 })
+            // a PageShell subclass builds bare but stays inactive and unbuilt, so it has to reach the rung its own page needs
+            if (obj !== null && "_pageLoader" in obj) { obj.destroy(); obj = null }
             if (obj === null)
                 obj = c.createObject(host, { width: 400, active: true, powerOpen: false })
+            if (obj !== null && "_pageLoader" in obj && "viewportHeight" in obj) { obj.destroy(); obj = null }
             if (obj === null)
                 obj = c.createObject(host, { width: 400, active: true, powerOpen: false,
                                              viewportHeight: 600 })

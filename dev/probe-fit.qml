@@ -109,7 +109,8 @@ ShellRoot {
         }
     }
 
-    // PageShell subclasses declare required properties; widen the set until one takes
+    // some surfaces declare required properties; widen the set until one takes. A PageShell subclass
+    // builds with fewer but stays inactive and unbuilt, so it has to reach the rung its own page needs
     function _build(): var {
         const w = root.paneWidth
         const ladder = [
@@ -120,6 +121,10 @@ ShellRoot {
         for (let i = 0; i < ladder.length; i++) {
             let built = null
             try { built = root.component.createObject(host, ladder[i]) } catch (e) { built = null }
+            if (built && "_pageLoader" in built && (i === 0 || (i === 1 && "viewportHeight" in built))) {
+                built.destroy()
+                continue
+            }
             if (built) return built
         }
         return null

@@ -23,7 +23,7 @@ PageShell {
     revealReady: contentReady
 
     // the arranger scrolls this while a row is dragged past the viewport edge
-    property Flickable scroller: null
+    property Flickable scroller: root._pageLoader?.scroller ?? null
     // keep the search field in view while results own scrolling. Restore the scroller's original binding when the query clears or this page leaves
     Binding {
         target: root.scroller

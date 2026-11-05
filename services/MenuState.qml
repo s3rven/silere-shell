@@ -39,6 +39,7 @@ AnchoredPopupState {
     // another bar's request
     property QtObject warmSource: null
     property var warmScreen: null
+    property var surfaceScreen: null
     readonly property bool warmRequested: warmSource !== null
 
     function requestWarm(source, screen): void {

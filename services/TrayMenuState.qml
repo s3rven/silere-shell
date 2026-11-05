@@ -7,6 +7,7 @@ AnchoredPopupState {
     id: root
 
     readonly property bool armed: true
+    property var surfaceScreen: null
     property QtObject sourceItem: null
     property bool barBottom: false
     // QtObject (not var) so the reference auto-nulls when the SNI item dies with the menu open

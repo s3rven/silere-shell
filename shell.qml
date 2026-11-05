@@ -1,4 +1,3 @@
-//@ pragma UseQApplication
 // regular Qt Quick animations fall back to a ~16 ms GUI timer while Silere's
 // bar and a popup are both visible. The elapsed-time driver avoids that
 // multi-window fallback; DefaultEnv still lets a user or driver override it
@@ -8,11 +7,12 @@ import QtQuick
 import Quickshell
 import "modules/bar"
 import "modules/osd"
-import "modules/notifications"
-import "modules/menu"
-import "modules/calendar"
-import "modules/traymenu"
-import "modules/quickactions"
+import "modules/notifications" // qmllint disable unused-imports
+// popups load from files, not named below; Quickshell only scans a directory it sees imported
+import "modules/menu" // qmllint disable unused-imports
+import "modules/calendar" // qmllint disable unused-imports
+import "modules/traymenu" // qmllint disable unused-imports
+import "modules/quickactions" // qmllint disable unused-imports
 import "modules/common"
 import "services"
 import "config"
@@ -112,7 +112,11 @@ ShellRoot {
     component PopupLoader: Scope {
         id: _pl
         required property bool wantOpen
-        required property Component surface
+        property Component surface: null
+        // a type named in surface compiles with this file, opened or not. A file compiles when first
+        // wanted, off the GUI thread, and its type reads the latched screen from its own state
+        property string surfaceFile: ""
+        property Component _compiling: null
         property bool warm: false
         property ShellScreen requestedScreen: null
         readonly property ShellScreen latchedScreen: _latchedScreen
@@ -121,7 +125,33 @@ ShellRoot {
             Math.max(Motion.popOut, Motion.popOutFade) + 30)
         signal unloaded()
 
+        function _surfaceReady(): bool {
+            if (_pl.surface) return true
+            if (!_pl._compiling) {
+                _pl._compiling = Qt.createComponent(_pl.surfaceFile, Component.Asynchronous, _pl)
+                _pl._compiling.statusChanged.connect(_pl._onCompiled)
+                _pl._onCompiled()
+            }
+            return _pl.surface !== null
+        }
+
+        function _onCompiled(): void {
+            const status = _pl._compiling.status
+            if (status === Component.Error) {
+                // the wording is what scripts/update.sh rejects a candidate on
+                console.warn("Failed to load configuration: " + _pl._compiling.errorString())
+                // otherwise it just never opens, and the bar is still up to say why
+                if (!root.smokeTest) SystemAlerts.send("A Silere panel could not load",
+                    "The bar keeps working. silere log has the details, and silere update --rollback puts the last version back.", "critical")
+            } else if (status === Component.Ready && !_pl.surface) {
+                _pl.surface = _pl._compiling
+                if (_pl.wantOpen) _pl._ensureLoaded()
+                else if (_pl.warm) _pl._ensureWarm()
+            }
+        }
+
         function _ensureLoaded(): void {
+            if (!_pl._surfaceReady()) return
             _plUnload.stop()
             // a live layer-shell surface must stay on the screen it was
             // created for. A fast reopen on another output recreates it rather
@@ -146,7 +176,7 @@ ShellRoot {
         }
 
         function _ensureWarm(): void {
-            if (!_pl.warm || _pl.wantOpen) return
+            if (!_pl.warm || _pl.wantOpen || !_pl._surfaceReady()) return
             _plUnload.stop()
             // an asynchronously prepared layer surface is still tied to its
             // output. A hover that moves between bars must restart for the new
@@ -203,7 +233,9 @@ ShellRoot {
             id: _plLoader
             active: false
             Component.onCompleted: {
-                if (_pl.wantOpen) _pl._ensureLoaded()
+                // a smoke start judges an update candidate, and opens nothing: it still has to prove the file compiles
+                if (root.smokeTest && _pl.surfaceFile.length > 0) _pl._surfaceReady()
+                else if (_pl.wantOpen) _pl._ensureLoaded()
                 else if (_pl.warm) _pl._ensureWarm()
             }
             component: _pl.surface
@@ -235,11 +267,8 @@ ShellRoot {
             && !Notifications.screenShareSilenced
             && Notifications.activeCount > 0 && !OverlayCoordinator.notificationsHeld
         requestedScreen: root.activeOverlayScreen
-        surface: Component {
-            NotificationPopups {
-                targetScreen: _notificationPopup.latchedScreen
-            }
-        }
+        onLatchedScreenChanged: Notifications.surfaceScreen = latchedScreen
+        surfaceFile: "modules/notifications/NotificationPopups.qml"
     }
 
     PopupLoader {
@@ -250,7 +279,8 @@ ShellRoot {
         requestedScreen: root.smokeTest ? null : MenuState.triggerScreen
             ?? MenuState.warmScreen
             ?? root.anchoredPopupScreen
-        surface: Component { MenuWindow { targetScreen: _menuPopup.latchedScreen } }
+        onLatchedScreenChanged: MenuState.surfaceScreen = latchedScreen
+        surfaceFile: "modules/menu/MenuWindow.qml"
     }
 
     PopupLoader {
@@ -258,7 +288,8 @@ ShellRoot {
         onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && CalendarState.open
         requestedScreen: root.smokeTest ? null : CalendarState.triggerScreen ?? root.anchoredPopupScreen
-        surface: Component { CalendarPopup { targetScreen: _calendarPopup.latchedScreen } }
+        onLatchedScreenChanged: CalendarState.surfaceScreen = latchedScreen
+        surfaceFile: "modules/calendar/CalendarPopup.qml"
     }
 
     PopupLoader {
@@ -266,7 +297,8 @@ ShellRoot {
         onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && TrayMenuState.open
         requestedScreen: root.smokeTest ? null : TrayMenuState.triggerScreen ?? root.anchoredPopupScreen
-        surface: Component { TrayMenuPopup { targetScreen: _trayPopup.latchedScreen } }
+        onLatchedScreenChanged: TrayMenuState.surfaceScreen = latchedScreen
+        surfaceFile: "modules/traymenu/TrayMenuPopup.qml"
     }
 
     PopupLoader {
@@ -274,7 +306,8 @@ ShellRoot {
         onUnloaded: _collectAfterUnload.restart()
         wantOpen: !root.smokeTest && QuickActionsState.open
         requestedScreen: root.smokeTest ? null : QuickActionsState.triggerScreen ?? root.anchoredPopupScreen
-        surface: Component { QuickActionsPopup { targetScreen: _quickActionsPopup.latchedScreen } }
+        onLatchedScreenChanged: QuickActionsState.surfaceScreen = latchedScreen
+        surfaceFile: "modules/quickactions/QuickActionsPopup.qml"
     }
 
     // a closed surface frees its objects, but the JS heap keeps their pages until the next

@@ -642,6 +642,19 @@ if [ "$qs_usable" = 1 ]; then
     _history_move_case &
     smoke_pids="$smoke_pids $!"
 
+    # an update candidate is judged by a smoke start, and everywhere else the menu compiles only on first
+    # open. A candidate with a broken menu page has to fail that start, or the update installs a menu that never opens
+    _broken_menu_case() {
+      mkdir -p "$par_dir/broken/tree"
+      cp -a shell.qml config modules services "$par_dir/broken/tree/"
+      { printf '@broken\n'; cat modules/menu/HomePage.qml; } > "$par_dir/broken/tree/modules/menu/HomePage.qml"
+      XDG_CONFIG_HOME="$par_dir/broken" XDG_STATE_HOME="$par_dir/broken" XDG_CACHE_HOME="$par_dir/broken/cache" \
+        SILERE_SMOKE_TEST=1 SILERE_SANDBOX=1 timeout --kill-after=2s 5s "${smoke_bus[@]}" qs "${smoke_flags[@]}" \
+        -p "$par_dir/broken/tree/shell.qml" --no-color >"$par_dir/broken.log" 2>&1 || true
+    }
+    _broken_menu_case &
+    smoke_pids="$smoke_pids $!"
+
     # timeout above signals the whole group, which hides a helper that outlives the shell.
     # This one signals qs alone, as a crash or a manual restart does, then looks for
     # anything still carrying its tag.
@@ -726,6 +739,12 @@ if [ "$qs_usable" = 1 ]; then
       fail "startup" "Quickshell reported a QML compatibility error"
     else
       ok "startup" "Quickshell stayed alive for 5 seconds without load errors"
+      if grep -qE 'Failed to load configuration|Type [^ ]+ unavailable' "$par_dir/broken.log"; then
+        ok "update smoke" "a broken menu page fails the start an update is judged by"
+      else
+        cat "$par_dir/broken.log"
+        fail "update smoke" "a broken menu page passed the smoke start, so an update would install it"
+      fi
       if [ -z "$cov_keys" ]; then
         warn "off-path load" "no default-off settings found; coverage pass skipped"
       else

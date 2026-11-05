@@ -10,6 +10,7 @@ import "../common"
 FittedPopupWindow {
     id: win
 
+    targetScreen: TrayMenuState.surfaceScreen
     open: TrayMenuState.open
     layerNamespace: "silere-traymenu"
     popupCard: card

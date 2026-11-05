@@ -8,6 +8,7 @@ import "../common"
 FittedPopupWindow {
     id: win
 
+    targetScreen: CalendarState.surfaceScreen
     open: CalendarState.open
     layerNamespace: "silere-calendar"
     popupCard: card

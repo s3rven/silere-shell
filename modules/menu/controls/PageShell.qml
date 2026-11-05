@@ -5,14 +5,15 @@ import "../../../services"
 Item {
     id: root
 
-    required property bool active
-    required property bool powerOpen
+    readonly property PageLoader _pageLoader: root.parent as PageLoader
+    property bool active: root._pageLoader?.pageActive ?? false
+    property bool powerOpen: root._pageLoader?.powerOpen ?? false
 
-    property bool animateOnCreate: false
+    property bool animateOnCreate: root._pageLoader?.animateOnCreate ?? false
     // a page with an asynchronous body begins its reveal when that body is ready, so the fade does not finish over an empty header
     property bool revealReady: true
     // a widening panel can have its body ready before there is room to paint it
-    property bool viewportReady: true
+    property bool viewportReady: root._pageLoader?.viewportReady ?? true
     property bool _awaitingEnter: false
 
     signal pageShown()

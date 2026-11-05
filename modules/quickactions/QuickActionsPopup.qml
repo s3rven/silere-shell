@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -8,6 +9,7 @@ import "../common"
 FittedPopupWindow {
     id: win
 
+    targetScreen: QuickActionsState.surfaceScreen
     open: QuickActionsState.open
     layerNamespace: "silere-quickactions"
     popupCard: card

@@ -12,7 +12,7 @@ import "StackLayout.js" as StackLayout
 PanelWindow {
     id: win
 
-    required property ShellScreen targetScreen
+    property ShellScreen targetScreen: Notifications.surfaceScreen
 
     WlrLayershell.namespace: "silere-notifications"
     WlrLayershell.layer: WlrLayer.Overlay

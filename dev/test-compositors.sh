@@ -115,6 +115,11 @@ EOF
     test "$(qs ipc -p "$ROOT/shell.qml" call audio setMicVolume 101)" = 'error: volume must be between 0 and 100'
     test "$(qs ipc -p "$ROOT/shell.qml" call menu tab 0)" = ok
     sleep 0.5
+    # the menu compiles on this first open, off the GUI thread, so "ok" alone says nothing about the surface
+    if [ "$backend" = hyprland ] && ! hyprctl layers | grep -q 'namespace: silere-menu'; then
+        printf 'FAIL: the menu surface did not map on first open\n' >&2
+        exit 1
+    fi
     qs ipc -p "$ROOT/shell.qml" call menu close > /dev/null
     if [ -n "$benchmark" ]; then
         bash "$ROOT/scripts/bench.sh" 10 --warm --json --label "$backend-development-warm" > "$benchmark/$backend-warm.json"

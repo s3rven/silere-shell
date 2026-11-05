@@ -10,6 +10,7 @@ import "../config"
 Singleton {
     id: root
 
+    property var surfaceScreen: null
     property var list: []
     readonly property bool dnd: ShellSettings.dnd
     property alias missedCount: _persist.missedCount

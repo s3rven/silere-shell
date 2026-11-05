@@ -43,12 +43,15 @@ ShellRoot {
             }
 
             function _create(c): var {
-                // A PageShell subclass needs its required properties before it will
-                // build. Try bare first so ordinary sections never see stray
-                // properties, then retry with the page contract.
+                // Some surfaces need required properties before they will build. Try bare first
+                // so ordinary sections never see stray properties, then retry with the page
+                // contract. A PageShell subclass builds bare but stays inactive and unbuilt,
+                // so it has to reach the rung its own page needs.
                 let obj = c.createObject(host, { width: 400 })
+                if (obj !== null && "_pageLoader" in obj) { obj.destroy(); obj = null }
                 if (obj === null)
                     obj = c.createObject(host, { width: 400, active: true, powerOpen: false })
+                if (obj !== null && "_pageLoader" in obj && "viewportHeight" in obj) { obj.destroy(); obj = null }
                 if (obj === null)
                     obj = c.createObject(host, { width: 400, active: true, powerOpen: false,
                                                  viewportHeight: 600 })

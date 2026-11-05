@@ -11,9 +11,9 @@ import "controls"
 PageShell {
     id: root
 
-    required property int viewportHeight
+    property int viewportHeight: root._pageLoader?.viewportHeight ?? 0
     // the page padding beside the list; the thumb rides there, clear of the cards
-    property int thumbOutset: 0
+    property int thumbOutset: root._pageLoader?.thumbOutset ?? 0
 
     implicitHeight: viewportHeight
     // grouped runs, day sections and expanded rows all change a row's height, so only the laid-out list knows

@@ -5,11 +5,13 @@ import "../../config"
 import "../../services"
 import "../common"
 import "controls"
-import "settings"
+// loaded from a file, not named below; Quickshell only scans a directory it sees imported
+import "settings" // qmllint disable unused-imports
 
 FittedPopupWindow {
     id: win
 
+    targetScreen: MenuState.surfaceScreen
     open: MenuState.open
     layerNamespace: "silere-menu"
     popupCard: panel
@@ -707,17 +709,16 @@ FittedPopupWindow {
                         active: panel._loadedDeferred && panel._settingsRetained
                         asynchronous: true
                         onStatusChanged: panel._scheduleTabHeightRelease()
-                        sourceComponent: Component {
-                            SettingsPage {
-                                width: parent.width
-                                active: panel.activeTab === 1 && MenuState.open
-                                powerOpen: panel.powerOpen
-                                animateOnCreate: panel.fullyShown
-                                viewportReady: panel.pageViewportReady
-                                scroller: contentFlick
-                                onContentReadyChanged: panel._scheduleTabHeightRelease()
-                                onSectionSwapped: contentFlick.scrollToTop()
-                            }
+                        source: "settings/SettingsPage.qml"
+                        pageActive: panel.activeTab === 1 && MenuState.open
+                        powerOpen: panel.powerOpen
+                        animateOnCreate: panel.fullyShown
+                        viewportReady: panel.pageViewportReady
+                        scroller: contentFlick
+                        Connections {
+                            target: settingsLoader.item
+                            function onContentReadyChanged() { panel._scheduleTabHeightRelease() }
+                            function onSectionSwapped() { contentFlick.scrollToTop() }
                         }
                     }
 
@@ -729,17 +730,16 @@ FittedPopupWindow {
                         active: panel._loadedDeferred && panel._recentRetained
                         asynchronous: true
                         onStatusChanged: panel._scheduleTabHeightRelease()
-                        sourceComponent: Component {
-                            RecentPage {
-                                width: parent.width
-                                viewportHeight: panel.recentViewportH
-                                thumbOutset: Math.round(panel.contentPad)
-                                onContentReadyChanged: panel._scheduleTabHeightRelease()
-                                active: panel.activeTab === 2 && MenuState.open
-                                powerOpen: panel.powerOpen
-                                animateOnCreate: panel.fullyShown
-                                viewportReady: panel.pageViewportReady
-                            }
+                        source: "RecentPage.qml"
+                        pageActive: panel.activeTab === 2 && MenuState.open
+                        powerOpen: panel.powerOpen
+                        animateOnCreate: panel.fullyShown
+                        viewportReady: panel.pageViewportReady
+                        viewportHeight: panel.recentViewportH
+                        thumbOutset: Math.round(panel.contentPad)
+                        Connections {
+                            target: recentLoader.item
+                            function onContentReadyChanged() { panel._scheduleTabHeightRelease() }
                         }
                     }
 
@@ -751,15 +751,11 @@ FittedPopupWindow {
                         active: panel._mediaRetained
                         asynchronous: panel.fullyShown
                         onStatusChanged: panel._scheduleTabHeightRelease()
-                        sourceComponent: Component {
-                            MediaPage {
-                                width: parent.width
-                                active: panel.activeTab === MenuState.mediaTab && MenuState.open
-                                powerOpen: panel.powerOpen
-                                animateOnCreate: panel.fullyShown
-                                viewportReady: panel.pageViewportReady
-                            }
-                        }
+                        source: "MediaPage.qml"
+                        pageActive: panel.activeTab === MenuState.mediaTab && MenuState.open
+                        powerOpen: panel.powerOpen
+                        animateOnCreate: panel.fullyShown
+                        viewportReady: panel.pageViewportReady
                     }
                 }
             }

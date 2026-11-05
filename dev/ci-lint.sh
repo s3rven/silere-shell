@@ -879,6 +879,16 @@ else
   structural_skip "gates" "python3 or dev/check-gate-inheritance.py missing; gate check skipped"
 fi
 
+section "lazy compile"
+# a parent naming one of these compiles its whole tree at shell start, opened or not: ~15 bytes of heap per source byte
+if grep -qE '(^|[^A-Za-z0-9_])(MenuWindow|NotificationPopups|CalendarPopup|TrayMenuPopup|QuickActionsPopup)[[:space:]]*\{' shell.qml \
+    || grep -qE '(^|[^A-Za-z0-9_])(SettingsPage|RecentPage|MediaPage)[[:space:]]*\{' modules/menu/MenuWindow.qml \
+    || grep -qE 'setSource\(' modules/menu/MenuWindow.qml; then
+  fail "popups and large menu pages must load from files, and without setSource(), which leaks per open"
+else
+  ok "lazy compile" "popups and large menu pages compile when first wanted"
+fi
+
 section "installer environment defaults"
 if ! grep -qF '${MALLOC_CONF-' scripts/silere \
     && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \

@@ -7,6 +7,7 @@ AnchoredPopupState {
     id: root
 
     readonly property bool armed: true
+    property var surfaceScreen: null
 
     function toggleAt(x: real, screen, source): void {
         if (open) { close(); return }

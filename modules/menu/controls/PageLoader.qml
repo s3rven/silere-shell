@@ -6,6 +6,15 @@ Loader {
 
     required property real layoutWidth
     property bool shown: false
+    // a page named inline compiles with the menu; one set as source compiles when its tab is first wanted, and
+    // reads these through its parent, set before its bindings run. setSource() with properties leaks per open
+    property bool pageActive: false
+    property bool powerOpen: false
+    property bool animateOnCreate: false
+    property bool viewportReady: true
+    property Flickable scroller: null
+    property int viewportHeight: 0
+    property int thumbOutset: 0
     property real scrollOffset: 0
     property real _heldWidth: 0
     property real _heldScroll: 0

@@ -8,6 +8,7 @@ AnchoredPopupState {
     id: root
 
     readonly property bool armed: true
+    property var surfaceScreen: null
     controlSurface: true
     property bool barBottom: false
 
