@@ -2487,7 +2487,7 @@ unit_exec() {
 case "\$*" in
     *"-p LoadState"*) echo loaded ;;
     *"-p ExecStart"*) p="\$(unit_exec)"; echo "{ path=\$p ; argv[]=\$p run ; ignore_errors=no ; }" ;;
-    *is-active*|*is-enabled*) exit 0 ;;
+    *is-active*|*is-enabled*) [ "\${SILERE_TEST_USE_UNIT_ACTIVE:-1}" = 1 ]; exit \$? ;;
     *" restart "*) p="\$(unit_exec)"; echo "\${p%/scripts/silere}/shell.qml" > "$t/running" ;;
 esac
 exit 0
@@ -2499,7 +2499,8 @@ case "\$1" in
               printf '[\n    {\n        "config_path": "%s",\n        "pid": 9\n    }\n]\n' "\$(cat "$t/running")"
           elif [ "\$3" = "\$(cat "$t/running")" ]; then printf 'Instance t:\n  Process ID: 99\n'; fi ;;
     kill) echo "kill \$*" >> "$t/calls" ;;
-    --version|--no-detailed-logs) exit 0 ;;
+    --version) [ "\${SILERE_TEST_USE_BROKEN_QS:-0}" != 1 ] || { echo 'qs: symbol lookup error' >&2; exit 127; }; exit 0 ;;
+    --no-detailed-logs) exit 0 ;;
     *) echo "launch \$*" >> "$t/calls" ;;
 esac
 STUB
@@ -2509,7 +2510,7 @@ STUB
     cli() {
         env -u LC_ALL -u XDG_CONFIG_HOME HOME="$t/home" XDG_CONFIG_HOME="$t/config" PATH="$t/stubs:$PATH" \
             GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
-            WAYLAND_DISPLAY=wayland-test bash "$ROOT/scripts/silere" "$@"
+            WAYLAND_DISPLAY="${SILERE_TEST_USE_WAYLAND-wayland-test}" bash "$ROOT/scripts/silere" "$@"
     }
 
     echo "$t/other/shell.qml" > "$t/running"; : > "$t/calls"
@@ -2544,6 +2545,39 @@ STUB
     mkdir -p "${dropin%/*}"; printf '[Service]\nExecStart=\nExecStart=/x run\n' > "$dropin"
     if cli use >/dev/null 2>&1; then fail "use replaced a drop-in it did not write"; fi
     grep -qFx 'ExecStart=/x run' "$dropin" || fail "use changed a drop-in it did not write"
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
+        "use leaves the command link alone when an unmanaged drop-in blocks the switch"
+
+    rm -- "$dropin"
+    ln -s "$t/missing-dropin" "$dropin"
+    if cli use >/dev/null 2>&1; then fail "use replaced a dangling service drop-in link"; fi
+    assert_eq "$t/missing-dropin" "$(readlink "$dropin")" "use preserves an unmanaged drop-in link"
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
+        "a dangling drop-in does not redirect the command link"
+
+    rm -- "$dropin"
+    : > "$t/calls"
+    if out="$(SILERE_TEST_USE_BROKEN_QS=1 cli use 2>&1)"; then fail "use accepted a broken runtime"; fi
+    case "$out" in *"checkout switch was left unapplied"*) ;; *) fail "use did not explain the runtime failure: $out" ;; esac
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
+        "a failed runtime preflight leaves the command link alone"
+    [ ! -e "$dropin" ] || fail "a failed runtime preflight wrote a drop-in"
+    ! grep -q 'daemon-reload\|restart\|kill' "$t/calls" || fail "a failed runtime preflight changed the running shell"
+
+    : > "$t/calls"
+    if SILERE_TEST_USE_WAYLAND='' SILERE_TEST_USE_UNIT_ACTIVE=0 cli use >/dev/null 2>&1; then
+        fail "use without a session or active service claimed success"
+    fi
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
+        "a missing session leaves the command link alone"
+    [ ! -e "$dropin" ] || fail "use outside a session wrote a drop-in"
+    ! grep -q 'daemon-reload\|restart\|kill' "$t/calls" || fail "use outside a session changed the running shell"
+    SILERE_TEST_USE_WAYLAND='' SILERE_TEST_USE_UNIT_ACTIVE=0 cli use --dry-run >/dev/null \
+        || fail "use --dry-run requires a live session"
+
+    if cli use "$ROOT" "$t/other" >/dev/null 2>&1; then fail "use accepted two checkout arguments"; fi
+    assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
+        "an extra checkout argument cannot redirect the command link"
 )
 
 test_pooled_motion_scope() (
