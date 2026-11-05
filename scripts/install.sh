@@ -39,7 +39,7 @@ DEFAULT_DIR="$(readlink -m -- "$CONFIG_HOME/silere-shell")" || {
 }
 
 source "$SCRIPT_DIR/lib/ui.sh"
-TTY_HINT="interactive install requires a TTY — run it from a terminal, or set SILERE_ASSUME_YES=1 to accept the defaults"
+TTY_HINT="interactive install requires a TTY — run it from a terminal, or pass --yes to accept the defaults"
 
 _reject_unsafe_path() {
     if printf '%s' "$1" | LC_ALL=C grep -q '[[:cntrl:]]'; then
@@ -607,10 +607,13 @@ _replace_owned_block() {
 # a dry run reports the plan the assumed-yes answers would produce, so the two
 # share one answer path and only the writes are gated
 _dry_run=0
+_cli_yes=0
+_no_start=0
+_install_path_override=""
 _dry() { [ "$_dry_run" = "1" ]; }
 # shellcheck disable=SC2059
 _would() { printf "    ${CYAN}dry${R}     %s\n" "$*"; }
-_assume_yes() { [ "${SILERE_ASSUME_YES:-0}" = "1" ] || _dry; }
+_assume_yes() { [ "$_cli_yes" = 1 ] || [ "${SILERE_ASSUME_YES:-0}" = "1" ] || _dry; }
 
 _ask() {
     local reply
@@ -638,6 +641,10 @@ _ask_no() {
 
 _ask_path() {
     local reply
+    if [ -n "$_install_path_override" ]; then
+        printf '%s' "$_install_path_override"
+        return 0
+    fi
     if _assume_yes; then
         printf '%s' "$DEFAULT_DIR"
         return 0
@@ -672,8 +679,16 @@ fi
 _usage() {
     cat <<'EOF'
 Usage:
-  bash scripts/install.sh        Install Silere Shell (interactive)
+  bash scripts/install.sh [options]
+                                Install Silere Shell (interactive by default)
   bash scripts/install.sh --help Show this message
+
+  --yes, -y                     Accept the default answers without a terminal
+  --dir PATH                    Choose the install directory (spaces are supported)
+  --no-start                    Install without offering to start or restart Silere
+
+  Combine these options, for example:
+    bash scripts/install.sh --yes --dir "$HOME/.config/silere-shell" --no-start
 
   bash scripts/install.sh --dry-run
         Report every file the install would create or edit, and the autostart
@@ -708,28 +723,46 @@ Environment:
 EOF
 }
 
-# Anything the helper case above recognises has already exited, so a surviving
-# argument is a typo. Left unhandled it used to start a real install, and
-# --help is the first thing a careful reader types before running a script.
+# parse every option before touching files; preview and install share the same path
 _repair_matugen=0
 _check_only=0
-case "${1:-}" in
-    "") ;;
-    -h|--help) _usage; exit 0 ;;
-    --repair-matugen) _repair_matugen=1 ;;
-    --dry-run) _dry_run=1 ;;
-    --check) _check_only=1 ;;
-    *)
-        _err "unknown option: $1"
-        _usage >&2
-        exit 2
-        ;;
-esac
-# the case above only reads $1, so a trailing typo would otherwise be dropped
-if [ "$#" -gt 1 ]; then
-    _err "unexpected argument: $2"
+install_option_count=$#
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -h|--help) _usage; exit 0 ;;
+        -y|--yes) _cli_yes=1 ;;
+        --no-start) _no_start=1 ;;
+        --repair-matugen) _repair_matugen=1 ;;
+        --dry-run) _dry_run=1 ;;
+        --check) _check_only=1 ;;
+        --dir|--dir=*)
+            if [ -n "$_install_path_override" ]; then
+                _err "--dir may only be specified once"
+                exit 2
+            fi
+            if [ "$1" = --dir ]; then
+                if [ "$#" -lt 2 ] || [ -z "$2" ] || [[ "$2" = -* ]]; then
+                    _err "--dir needs an install directory"
+                    exit 2
+                fi
+                _install_path_override="$2"
+                shift
+            else
+                _install_path_override="${1#--dir=}"
+                [ -n "$_install_path_override" ] || { _err "--dir needs an install directory"; exit 2; }
+            fi
+            ;;
+        *) _err "unknown option: $1"; _usage >&2; exit 2 ;;
+    esac
+    shift
+done
+if [ "$install_option_count" -gt 1 ] && { [ "$_repair_matugen" = 1 ] || [ "$_check_only" = 1 ]; }; then
+    _err "--check and --repair-matugen must be used alone"
     _usage >&2
     exit 2
+fi
+if [ -n "$_install_path_override" ]; then
+    _install_path_override="$(_normalized_install_path "$_install_path_override")"
 fi
 
 if [ "$_check_only" = "1" ]; then
@@ -1111,7 +1144,7 @@ fi
 # ── clone ────────────────────────────────────────────────────────────────────────
 _section "silere-shell"
 
-printf "  ${CYAN}::${R}  Install to: ${CYAN}%s${R}\n" "$DEFAULT_DIR"
+printf "  ${CYAN}::${R}  Install to: ${CYAN}%s${R}\n" "${_install_path_override:-$DEFAULT_DIR}"
 INSTALL_DIR="$(_ask_path)"
 INSTALL_DIR="$(_normalized_install_path "$INSTALL_DIR")"
 fresh_clone=false
@@ -1654,7 +1687,7 @@ elif ! $qs_modules_ok; then
 fi
 started=false
 if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scripts/silere" ] \
-        && [ "${SILERE_ASSUME_YES:-0}" != "1" ] && [ "${SILERE_SANDBOX:-0}" != "1" ]; then
+        && [ "$_no_start" = 0 ] && ! _assume_yes && [ "${SILERE_SANDBOX:-0}" != "1" ]; then
     # another quickshell config (an older silere elsewhere, or another shell) would end up beside this one
     qs_configs="$(env -u LC_ALL qs list --all 2>/dev/null | sed -n 's/^  Config path: //p')" || qs_configs=""
     other_configs="$(printf '%s\n' "$qs_configs" | grep -Fxv -e "$ROOT/shell.qml" -e '')" || other_configs=""

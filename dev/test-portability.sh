@@ -504,6 +504,61 @@ test_dry_run_writes_nothing() (
     esac
 )
 
+test_installer_options() (
+    local home="$TMP/installer-options" conf target out code args stubs
+    mkdir -p "$home/config/hypr"
+    conf="$home/config/hypr/hyprland.conf"
+    target="$home/custom copy"
+    printf 'monitor=,preferred,auto,1\n' > "$conf"
+    installer() {
+        HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" \
+            XDG_CACHE_HOME="$home/cache" XDG_DATA_HOME="$home/data" SILERE_HYPR_CONFIG="$conf" \
+            SILERE_SANDBOX=1 bash "$ROOT/scripts/install.sh" "$@" </dev/null
+    }
+    out="$(installer --yes --no-start --dir "$target" --dry-run 2>&1)" \
+        || fail "installer options cannot preview a custom path without a terminal"
+    [[ "$out" == *"clone "*"$target"* ]] || fail "custom install path is missing from the preview"
+    [[ "$out" == *"$target/scripts/silere"* ]] || fail "the custom preview did not carry its path into integrations"
+    [ ! -e "$target" ] && [ ! -e "$home/state" ] || fail "an installer preview wrote files"
+    out="$(installer --dry-run --dir="$target" -y --no-start 2>&1)" \
+        || fail "installer options depend on argument order"
+    [[ "$out" == *"$target/scripts/silere"* ]] || fail "--dir= lost the custom install path"
+    for args in missing-dir empty-dir unknown duplicate-dir mixed-check unsafe-dir; do
+        code=0
+        case "$args" in
+            missing-dir) installer --dir >/dev/null 2>&1 || code=$? ;;
+            empty-dir) installer --dir= >/dev/null 2>&1 || code=$? ;;
+            unknown) installer --dry-run --unknown >/dev/null 2>&1 || code=$? ;;
+            duplicate-dir) installer --dir "$target" --dir "$target" >/dev/null 2>&1 || code=$? ;;
+            mixed-check) installer --check --yes >/dev/null 2>&1 || code=$? ;;
+            unsafe-dir) installer --yes --dir "$home/config" >/dev/null 2>&1 || code=$? ;;
+        esac
+        [ "$code" -ne 0 ] || fail "installer accepted invalid options: $args"
+        [ ! -e "$target" ] && [ ! -e "$home/state" ] || fail "invalid installer options wrote files: $args"
+    done
+
+    # Run the complete unattended path against a private checkout and helpers.
+    stubs="$home/bin"
+    mkdir -p "$stubs" "$target/.git" "$target/services" "$target/scripts" "$target/assets"
+    : > "$target/shell.qml"
+    : > "$target/services/qmldir"
+    printf '#!/bin/sh\nexit 0\n' > "$target/scripts/update.sh"
+    printf '#!/bin/sh\ntouch "$HOME/unexpected-launch"\n' > "$target/scripts/silere"
+    chmod +x "$target/scripts/silere"
+    cp "$ROOT/assets/matugen-theme.json" "$target/assets/"
+    printf '#!/bin/sh\n[ "$1" = -C ] && [ "$3" = status ]\n' > "$stubs/git"
+    printf '#!/bin/sh\nprintf "JetBrainsMono Nerd Font\\n"\n' > "$stubs/fc-list"
+    chmod +x "$stubs/git" "$stubs/fc-list"
+    out="$(PATH="$stubs:$PATH" SILERE_ASSUME_YES=0 installer --yes --dir "$target" --no-start 2>&1)" \
+        || fail "the unattended custom install failed: $out"
+    assert_eq "$target/scripts/silere" "$(readlink "$home/.local/bin/silere")" \
+        "an unattended custom install links its selected checkout"
+    [ -f "$home/state/silere-shell/install-receipt" ] || fail "the unattended install wrote no receipt"
+    [ ! -e "$home/unexpected-launch" ] || fail "the unattended installer launched the shell"
+    grep -qF '# silere-shell begin' "$conf" || fail "the unattended install omitted autostart"
+    [ ! -e "$home/config/systemd/user/silere-update.timer" ] || fail "--yes opted into an update timer"
+)
+
 test_piped_installer_bootstraps() (
     local src="$TMP/bootstrap-src" stubs="$TMP/bootstrap-stubs" tmp="$TMP/bootstrap-tmp" out
     mkdir -p "$src/scripts" "$stubs" "$tmp"
@@ -524,6 +579,20 @@ test_piped_installer_bootstraps() (
     esac
     [ -z "$(find "$tmp" -mindepth 1 -maxdepth 1 -name 'silere-install.*')" ] \
         || fail "piped installer left its download behind"
+
+    mkdir -p "$tmp/home/config/hypr"
+    printf 'monitor=,preferred,auto,1\n' > "$tmp/home/config/hypr/hyprland.conf"
+    out="$(cd "$tmp" && env HOME="$tmp/home" XDG_CONFIG_HOME="$tmp/home/config" \
+        XDG_STATE_HOME="$tmp/home/state" XDG_CACHE_HOME="$tmp/home/cache" \
+        XDG_DATA_HOME="$tmp/home/data" SILERE_HYPR_CONFIG="$tmp/home/config/hypr/hyprland.conf" \
+        TMPDIR="$tmp" PATH="$stubs:$PATH" SILERE_TEST_SRC="$src" SILERE_SANDBOX=1 \
+        bash -s -- --yes --dir "$tmp/chosen copy" --no-start --dry-run < "$ROOT/scripts/install.sh" 2>&1)" \
+        || fail "piped installer lost combined options"
+    [[ "$out" == *"$tmp/chosen copy/scripts/silere"* ]] \
+        || fail "piped installer did not preserve a custom path containing spaces"
+    [ ! -e "$tmp/chosen copy" ] || fail "a piped preview created its install directory"
+    [ -z "$(find "$tmp" -mindepth 1 -maxdepth 1 -name 'silere-install.*')" ] \
+        || fail "a piped preview left its download behind"
 
     # curl reports whatever part of the script it could not hand over, so the bootstrap reads the pipe to its end;
     # the rest arrives after the block has run, as it does over a network
@@ -2556,6 +2625,7 @@ test_piped_installer_bootstraps
 test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing
+test_installer_options
 test_autostart_line_runs
 test_menu_keybind_plan
 test_plain_copy_is_not_package_managed
