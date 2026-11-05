@@ -463,8 +463,8 @@ PageShell {
             // compilation; hold the outgoing height so the pane cannot collapse to 0
             // while the replacement incubates
             height: item ? item.implicitHeight : _heldH
-            // no animation covers the incubation under reduce motion, so stay synchronous there
-            asynchronous: !ShellSettings.reduceMotion
+            // yield while building sections even with reduced motion, so input stays responsive
+            asynchronous: true
             sourceComponent: root._sectionComponents[root._shownSection] ?? _secTheme
         }
 
