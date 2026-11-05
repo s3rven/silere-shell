@@ -648,6 +648,10 @@ Singleton {
         "channels = mono\n" +
         "\n[smoothing]\n" +
         "noise_reduction = " + _cavaNoiseReduction + "\n"
+    // cava asks PipeWire for 512 frames and the graph runs at its smallest request, so the visualizer halved a
+    // stock 1024 or a browser's 900 quantum while it ran and switched it as cava came and went, a click on some
+    // outputs. The stock quantum's ~47 reads a second still feed nearly every frame of Smooth's 50 fps
+    readonly property var cavaEnvironment: ({ "PIPEWIRE_LATENCY": "1024/48000" })
     // runtime-owned path avoids symlink attacks through /tmp
     readonly property string _cavaConfigPath: XdgPaths.runtimeDir.length > 0
         ? XdgPaths.runtimeDir + "/silere-shell-cava-" + Quickshell.processId + ".conf"
@@ -735,6 +739,7 @@ Singleton {
     SupervisedProcess {
         id: _cavaProc
         command: ["cava", "-p", root._cavaConfigPath]
+        environment: root.cavaEnvironment
         superviseWhen: root._cavaConfigReady && root.cavaReady
             && (root._visualizerClients > 0 || _visualizerStopGrace.running || _cavaPauseHold.running)
             && root._cavaPlaying && root.available && !Idle.isQuiet && !root._fsBlocked

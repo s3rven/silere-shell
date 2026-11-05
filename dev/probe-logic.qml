@@ -4216,6 +4216,13 @@ ShellRoot {
         root._check(vizLowOk, "low power overrides the shape for every style")
         root._check(Media.vizProfile("nonsense", "nonsense", false).bars === 16,
             "an unknown style and preset land on the balanced wave profile")
+        // 1024 frames at 48 kHz is about 47 reads a second: fresh audio for nearly every frame of Smooth's 50 fps
+        let fastestViz = 0
+        for (const style of ["wave", "bars", "pulse"])
+            for (const preset of ["eco", "balanced", "smooth"])
+                fastestViz = Math.max(fastestViz, Media.vizProfile(style, preset, false).fps)
+        root._check(Media.cavaEnvironment.PIPEWIRE_LATENCY === "1024/48000" && 48000 / 1024 >= 0.9 * fastestViz,
+            "cava asks PipeWire for its stock quantum, not 512 frames, and that still feeds the fastest preset")
 
         // history is restored from JSON an older release wrote, so entry shape is not given
         root._check(Notifications._normalizeEntry(null) === null,
