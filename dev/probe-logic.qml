@@ -5171,6 +5171,13 @@ ShellRoot {
                     && hypr._workspaceId({ id: -1, name: "" }) === -1
                     && hypr._workspaceId(null) === -1,
                 "a 0.57 named workspace reads as named, and only a missing one as no data")
+            const specialMons = [
+                { name: "DP-1", lastIpcObject: { specialWorkspace: { id: -98, name: "special:magic" } } },
+                { name: "DP-2", lastIpcObject: { specialWorkspace: { id: 0, name: "" } } },
+                { name: "DP-3", lastIpcObject: { specialWorkspace: { id: -97, name: "special:term" } } },
+                { name: "DP-4", lastIpcObject: {} }, null]
+            root._check(JSON.stringify(hypr.specialFromMonitors(specialMons, { "DP-3": true })) === '{"DP-1":true}',
+                "the first monitor read marks a special workspace shown before startup, unless an event spoke since")
             const onNamed = { ref: "0xa", wsId: hypr.namedWorkspaceId, wsRef: hypr.namedWorkspaceId, focusRank: 2 }
             const noWorkspace = { ref: "0xb", wsId: -1, wsRef: -1, focusRank: 0 }
             root._check(WindowActions._chooseSource([noWorkspace, onNamed]) === onNamed

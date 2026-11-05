@@ -522,6 +522,7 @@ QtObject {
         Qt.callLater(function() {
             root._syncLiveTitles()
             root._syncActiveTitle()
+            root._seedSpecial()
         })
     }
 
@@ -543,10 +544,39 @@ QtObject {
         const parts = String(data ?? "").split(",")
         const output = parts.length >= 2 ? String(parts[parts.length - 1]) : ""
         if (output.length === 0) return
+        root._specialHeard[output] = true
         const next = Object.assign({}, root._specialOn)
         if (String(parts[parts.length - 2]).length > 0) next[output] = true
         else delete next[output]
         root._specialOn = next
+    }
+
+    // a special workspace already shown when the shell starts sent its activespecial before anyone listened.
+    // The first monitor read names it; later reads can trail the events and are not refreshed by them, so
+    // only that first read counts, and only for an output no event has spoken for since
+    readonly property var _specialHeard: ({})
+    property bool _specialSeeded: false
+    function specialFromMonitors(mons, heard): var {
+        const on = {}
+        for (let i = 0; i < mons.length; i++) {
+            const m = mons[i]
+            const name = m && m.lastIpcObject && m.lastIpcObject.specialWorkspace
+                ? m.lastIpcObject.specialWorkspace.name : ""
+            if (m && m.name && !heard[m.name] && typeof name === "string" && name.length > 0) on[m.name] = true
+        }
+        return on
+    }
+    function _seedSpecial(): void {
+        if (root._specialSeeded) return
+        const mons = Hyprland.monitors ? (Hyprland.monitors.values ?? []) : []
+        if (!mons.some(m => m && m.lastIpcObject && m.lastIpcObject.name)) return
+        root._specialSeeded = true
+        const seeded = root.specialFromMonitors(mons, root._specialHeard)
+        if (Object.keys(seeded).length > 0) root._specialOn = Object.assign({}, root._specialOn, seeded)
+    }
+    property Connections _monitorsConn: Connections {
+        target: Hyprland.monitors
+        function onValuesChanged() { root._seedSpecial() }
     }
 
     readonly property var _inertEvents: ({
@@ -609,6 +639,8 @@ QtObject {
                 _titleSync.start()
             if (n === "activespecial" || n === "activespecialv2")
                 root._updateSpecial(event.data)
+            // a monitor an event named before its first read had no IPC object when the list changed
+            else root._seedSpecial()
             if (n === "scrolloverview")
                 root.overviewRaw(event.data === "1")
             if (n === "changeworkspaceid")
