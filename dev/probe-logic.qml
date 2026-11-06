@@ -4280,6 +4280,22 @@ ShellRoot {
         ShellSettings.barFloating = savedFloating
         ShellSettings.dotStyle = savedDots
 
+        const savedNeutral = ShellSettings.neutralTheme
+        ShellSettings.neutralTheme = true
+        const neutralBase = ShellSettings._dotHidden("theme", "matugenDepth") && !ShellSettings._dotHidden("theme", "baseTone")
+        ShellSettings.neutralTheme = false
+        root._check(neutralBase && ShellSettings._dotHidden("theme", "baseTone")
+                && !ShellSettings._dotHidden("theme", "matugenDepth"),
+            "the Base row of the other source stays out of the Theme page's dot and Reset")
+        ShellSettings.neutralTheme = savedNeutral
+        const savedBarOpacity = ShellSettings.barOpacity
+        ShellSettings.barOpacity = 1
+        const opaqueHides = ShellSettings._dotHidden("theme", "surfaceBlur")
+        ShellSettings.barOpacity = 0.9
+        root._check(opaqueHides && !ShellSettings._dotHidden("theme", "surfaceBlur"),
+            "an opaque bar keeps the folded blur rows out of the Theme page's dot and Reset")
+        ShellSettings.barOpacity = savedBarOpacity
+
         const opaqueA = Qt.rgba(0.1, 0.2, 0.3, 1), opaqueB = Qt.rgba(0.9, 0.5, 0.1, 1)
         const mixed = Theme.mix(opaqueA, opaqueB, 0.3), blended = Theme.blend(opaqueA, opaqueB, 0.3)
         const tinted = Theme.blend(Qt.rgba(1, 1, 1, 0.04), opaqueB, 0.25)

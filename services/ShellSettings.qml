@@ -694,9 +694,12 @@ Singleton {
             { master: "dotStyle", off: "none", hides: ["barSeparatorMode"] }
         ],
         theme: [
-            { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto"] },
-            { master: "neutralTheme", negate: true, hides: ["matugenAccentRole"] },
-            { master: "barShadow", hides: ["barShadowStrength"] }
+            // the Base row edits baseTone under Neutral and matugenDepth under Wallpaper
+            { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto", "baseTone"] },
+            { master: "neutralTheme", negate: true, hides: ["matugenAccentRole", "matugenDepth"] },
+            { master: "barShadow", hides: ["barShadowStrength"] },
+            // an opaque bar has no glass for these to act on
+            { master: "barOpacity", off: 1, hides: ["surfaceBlur", "popupMatchBarOpacity"] }
         ],
         clock: [
             { master: "clockShowDate", hides: ["compactDate"] }
