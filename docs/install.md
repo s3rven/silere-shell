@@ -230,10 +230,11 @@ is missing.
 ## Try it without installing
 
 ```bash
-silere try
+git clone --depth 1 https://github.com/s3rven/silere-shell
+bash silere-shell/scripts/silere try
 ```
 
-This opens Hyprland or niri in a window, on a private session bus with private settings, state,
+Once Silere is installed, the same preview is `silere try`. This opens Hyprland or niri in a window, on a private session bus with private settings, state,
 cache and runtime directories, and runs the shell in there. Alt+1 to Alt+5 change workspace,
 Alt+Return opens a terminal and Alt+/ opens the menu. Sound, network and Bluetooth are your real
 ones, so their controls work. It can't lock or suspend your session. Closing the window ends it
