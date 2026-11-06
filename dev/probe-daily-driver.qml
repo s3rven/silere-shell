@@ -233,6 +233,15 @@ Scope {
         Battery.onBattery = false
         PowerProfiles._sourceSettleTimer.stop()
 
+        // a test shell shares the system bus with the desktop it runs on: a charger edge must not write the real mode
+        const restoreWas = ShellSettings.powerProfileAc
+        ShellSettings.powerProfileAc = PowerProfiles.profile === "balanced" ? "power-saver" : "balanced"
+        PowerProfiles._sandboxed = true
+        PowerProfiles._sourceSettleTimer.triggered()
+        root.check(!PowerProfiles._setter.running, "a sandboxed shell leaves the desktop's power mode alone on a charger edge")
+        PowerProfiles._sandboxed = false
+        ShellSettings.powerProfileAc = restoreWas
+
         // a mode key changes the mode outside the menu; it is the latest choice for the source it lands on
         PowerProfiles._startSettleTimer.stop()
         ShellSettings.powerProfileAc = "balanced"

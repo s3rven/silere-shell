@@ -144,6 +144,8 @@ Singleton {
         target: Battery
         function onOnBatteryChanged() { _sourceSettle.restart() }
     }
+    // a test shell shares the system bus with the desktop it runs on, and a charger edge reaches both
+    property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     property Timer _sourceSettleTimer: Timer {
         id: _sourceSettle
         interval: 2000
@@ -152,7 +154,7 @@ Singleton {
             // a charger edge can land during a slow write. Keep the restore queued,
             // then read the current source and preferences once the writer is free
             if (_set.running) { restart(); return }
-            if (!Battery.available) return
+            if (!Battery.available || root._sandboxed) return
             const want = root.profileForSource(Battery.onBattery, ShellSettings.powerProfileAc,
                 ShellSettings.powerProfileBattery, root.profile)
             if (root._cycleOrder.indexOf(want) >= 0) root._apply(want, "")
