@@ -23,6 +23,7 @@ test_update_refuses_dirty_apply
 test_interrupted_update_recovery
 test_fresh_install_pins_release
 test_update_rejects_broken_stage
+test_update_restarts_running_shell
 test_update_reporting
 test_update_apply_binds_to_confirmed_release
 

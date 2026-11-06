@@ -18,8 +18,8 @@ The first command checks; the second installs. Silere verifies the release signa
 and validates the new version before replacing the installed files. Applying an
 update needs an internet connection to confirm the release is still published.
 
-If the shell runs through its user service, the updater restarts it. Otherwise,
-run `silere restart` after installing. `silere version` shows the installed version;
+The updater restarts the running shell, so a new release never runs beside the old one.
+If no shell is running, the next start uses it. `silere version` shows the installed version;
 `silere status` shows which checkout is running and the updater state.
 
 ## Restore the previous version
@@ -30,9 +30,8 @@ If an update breaks something, run:
 silere update --rollback
 ```
 
-This restores the revision the update replaced. Run `silere restart` afterwards
-if you do not use the user service. You can run rollback from a terminal even when
-the bar and menu will not open.
+This restores the revision the update replaced and restarts the running shell. You can run
+rollback from a terminal even when the bar and menu will not open.
 
 ## Local edits or development checkouts
 

@@ -1839,6 +1839,100 @@ EOF
         || fail "staging race cleared the pending release"
 )
 
+# panels compile when first opened, so a shell left running would read a new release's panels against old services
+test_update_restarts_running_shell() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
+    local remote="$TMP/restart-remote.git"
+    local seed="$TMP/restart-seed"
+    local client="$TMP/restart-client"
+    local test_home="$TMP/restart-home"
+    local stub_dir="$TMP/restart-stubs"
+    local restarts="$TMP/restart-calls"
+    local notices="$TMP/restart-notices"
+    local tag_n=1
+
+    git init --bare -q "$remote"
+    git --git-dir="$remote" symbolic-ref HEAD refs/heads/main
+    git init -q "$seed"
+    git -C "$seed" config user.name "Silere test"
+    git -C "$seed" config user.email "test@example.invalid"
+    _prepare_release_signer "$seed"
+    mkdir -p "$seed/scripts/lib"
+    cp "$ROOT/scripts/update.sh" "$seed/scripts/update.sh"
+    cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
+    cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
+    cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
+    # the shell it starts outlives the updater: holding the updater's lock would block every later check
+    cat > "$seed/scripts/silere" <<'EOF'
+#!/bin/sh
+[ -e /proc/$$/fd/9 ] && printf 'holds the update lock\n' >> "$SILERE_RESTART_LOG"
+printf '%s\n' "$*" >> "$SILERE_RESTART_LOG"
+EOF
+    printf 'upstream v1\n' > "$seed/tracked.qml"
+    git -C "$seed" add scripts security tracked.qml
+    git -C "$seed" commit -qm "initial"
+    git -C "$seed" branch -M main
+    _sign_release "$seed" v1.0.0
+    git -C "$seed" remote add origin "$remote"
+    git -C "$seed" push -q -u origin main --tags
+    git clone -q "$remote" "$client"
+    git -C "$client" config user.name "Silere test"
+    git -C "$client" config user.email "test@example.invalid"
+
+    mkdir -p "$test_home" "$stub_dir"
+    printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
+    printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s"\n' "$notices" > "$stub_dir/notify-send"
+    cat > "$stub_dir/qs" <<'EOF'
+#!/bin/sh
+[ "$1" = list ] && [ -n "${SILERE_FAKE_SHELL:-}" ] && printf '  Process ID: 4242\n'
+exit 0
+EOF
+    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send" "$stub_dir/qs"
+
+    apply_release() { # "$@" = extra environment for the apply
+        tag_n=$((tag_n + 1))
+        printf 'upstream v%s\n' "$tag_n" > "$seed/tracked.qml"
+        git -C "$seed" commit -qam "release $tag_n"
+        _sign_release "$seed" "v1.0.$((tag_n - 1))"
+        git -C "$seed" push -q origin main --tags
+        : > "$restarts"; : > "$notices"
+        HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" >/dev/null
+        env "$@" HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            SILERE_RESTART_LOG="$restarts" bash "$client/scripts/update.sh" --apply >"$TMP/apply.out" 2>&1 \
+            || { cat "$TMP/apply.out" >&2; fail "the release did not apply"; }
+    }
+    await_restart() { # the restart is detached, so it lands a moment after the updater exits
+        local _
+        for _ in $(seq 1 50); do [ -s "$restarts" ] && return 0; sleep 0.1; done
+        return 1
+    }
+
+    apply_release WAYLAND_DISPLAY=lab SILERE_FAKE_SHELL=1
+    await_restart || fail "an update left a running shell on the old release"
+    assert_eq "restart" "$(cat "$restarts")" "update restarts through the checkout's own command"
+    if grep -qF 'restart the shell' "$notices"; then fail "an update that restarted the shell still asked for a restart"; fi
+
+    apply_release WAYLAND_DISPLAY=lab
+    sleep 0.3
+    if [ -s "$restarts" ]; then fail "an update started a shell that was not running"; fi
+    grep -qF 'restart the shell' "$notices" || fail "the update notice lost its restart hint with no shell to restart"
+
+    # outside the session there is nothing to bring a shell back onto
+    apply_release -u WAYLAND_DISPLAY SILERE_FAKE_SHELL=1
+    sleep 0.3
+    if [ -s "$restarts" ]; then fail "an update restarted a shell from outside the Wayland session"; fi
+    grep -qF 'restart the shell' "$notices" || fail "an update it could not restart after did not ask for one"
+
+    : > "$restarts"
+    env HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" SILERE_RESTART_LOG="$restarts" \
+        WAYLAND_DISPLAY=lab SILERE_FAKE_SHELL=1 bash "$client/scripts/update.sh" --rollback >/dev/null 2>&1 \
+        || fail "the rollback failed"
+    await_restart || fail "a rollback left a running shell on the replaced release"
+)
+
 test_fresh_install_pins_release() (
     export GIT_CONFIG_GLOBAL=/dev/null
     export GIT_CONFIG_NOSYSTEM=1

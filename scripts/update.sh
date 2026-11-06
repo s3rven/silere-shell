@@ -239,6 +239,18 @@ _service_in_use() {
     return 1
 }
 
+# Panels compile when first opened, so a shell left running would read this release's panels against the last
+# one's services. Detached: this script can be the shell's own child, and the restart ends the shell. The lock
+# stays behind, or the shell it starts would hold it for good and refuse every later check
+_restart_unsupervised_shell() {
+    [ -n "${WAYLAND_DISPLAY:-}" ] || return 1
+    command -v qs >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 || return 1
+    local instances
+    instances="$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null || true)"
+    case "$instances" in *"Process ID: "[0-9]*) ;; *) return 1 ;; esac
+    setsid -f bash "$ROOT/scripts/silere" restart </dev/null >/dev/null 2>&1 9>&-
+}
+
 # A completed update is only known-good once the shell is up on it. With no unit
 # in use there is nothing this script can watch, so absence counts as running.
 _updated_shell_is_running() {
@@ -283,7 +295,7 @@ _recover_interrupted_apply() {
         if _updated_shell_is_running; then
             _clear_apply_transaction \
                 || _quiet_fail "could not clear the completed update recovery journal"
-            echo "silere-update: retained the signed update that completed validation before interruption" >&2
+            echo "silere-update: kept the signed update that last completed validation" >&2
         else
             echo "silere-update: the updated shell is not running; run --rollback to restore $JOURNAL_FROM" >&2
         fi
@@ -323,6 +335,8 @@ _rollback_applied_update() {
     # reach whatever shell is live.
     if _service_in_use && _unit_runs_this_checkout; then
         systemctl --user --no-block restart silere-shell.service || true
+    else
+        _restart_unsupervised_shell || true
     fi
     _notify "Silere Shell rolled back" "restored $JOURNAL_FROM"
     printf 'silere-update: rolled back to %s\n' "$JOURNAL_FROM"
@@ -974,7 +988,6 @@ if [ "${1:-}" = "--apply" ]; then
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
     note_suffix=""
     [ -n "$CANDIDATE_GATE_NOTE" ] && note_suffix=" (${CANDIDATE_GATE_NOTE})"
-    # systemd unit only exists on dev installs; exec-once users restart by hand
     if systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
             && _unit_runs_this_checkout; then
         # Do not wait inside the shell's own process tree for systemd to stop that tree.
@@ -987,9 +1000,13 @@ if [ "${1:-}" = "--apply" ]; then
             _clear_apply_transaction || true
             _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
         fi
+    # no unit: the journal stays here too, or a release that fails to start could never be rolled back. The next
+    # run of this script clears it
+    elif _restart_unsupervised_shell; then
+        printf 'silere-update: the shell is restarting; if it does not come back, run: bash %s --rollback\n' \
+            "$ROOT/scripts/update.sh" >&2
+        _notify "Silere Shell updated" "$count new $plural$note_suffix"
     else
-        _clear_apply_transaction \
-            || echo "silere-update: could not clear the completed update recovery journal" >&2
         _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
     fi
     exit 0
