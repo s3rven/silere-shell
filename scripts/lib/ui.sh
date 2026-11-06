@@ -53,10 +53,24 @@ _silere_marker_pair_valid() {
 
 # another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
 _silere_other_bars() {
-    command -v pgrep >/dev/null 2>&1 || return 0
-    local bar
-    for bar in waybar ironbar yambar nwg-panel hyprpanel; do
-        pgrep -x "$bar" >/dev/null 2>&1 && printf '%s\n' "$bar"
-    done
+    local bar line config="" qs_bin
+    if command -v pgrep >/dev/null 2>&1; then
+        for bar in waybar ironbar yambar nwg-panel hyprpanel; do
+            pgrep -x "$bar" >/dev/null 2>&1 && printf '%s\n' "$bar"
+        done
+    fi
+    # another Quickshell shell on this display, such as Noctalia or DankMaterialShell, named by its config folder.
+    # Another Silere checkout is for silere use to name
+    qs_bin="$(command -v qs || command -v quickshell)" || return 0
+    while IFS= read -r line; do
+        case "$line" in
+            *"Config path: "*) config="${line#*Config path: }" ;;
+            *"Display connection: "*)
+                [ "${config##*/}" = shell.qml ] && [ ! -e "${config%/*}/scripts/silere" ] || continue
+                [ -z "${WAYLAND_DISPLAY:-}" ] || [ "${line##*/}" = "${WAYLAND_DISPLAY##*/}" ] || continue
+                config="${config%/*}"
+                printf '%s\n' "${config##*/}" ;;
+        esac
+    done < <(env -u LC_ALL "$qs_bin" list --all 2>/dev/null)
     return 0
 }

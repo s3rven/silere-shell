@@ -2542,13 +2542,26 @@ test_other_bars_are_named() (
     local stubs="$TMP/bars-stubs" out
     mkdir -p "$stubs"
     printf '#!/bin/sh\n[ "$2" = waybar ]\n' > "$stubs/pgrep"
-    chmod +x "$stubs/pgrep"
+    printf '#!/bin/sh\n[ -f "$SILERE_TEST_QS_LIST" ] && cat "$SILERE_TEST_QS_LIST"\nexit 0\n' > "$stubs/qs"
+    chmod +x "$stubs/pgrep" "$stubs/qs"
     source "$ROOT/scripts/lib/ui.sh"
     out="$(PATH="$stubs:$PATH" _silere_other_bars)"
     assert_eq "waybar" "$out" "a bar still running is named"
     printf '#!/bin/sh\nexit 1\n' > "$stubs/pgrep"
     out="$(PATH="$stubs:$PATH" _silere_other_bars)"
     assert_eq "" "$out" "no other bar, nothing to say"
+
+    # another Quickshell shell on this display is named; Silere checkouts, probes and nested sessions are not
+    mkdir -p "$TMP/bars-silere/scripts" && : > "$TMP/bars-silere/scripts/silere"
+    instance() { printf 'Instance x:\n  Process ID: 1\n  Config path: %s\n  Display connection: wayland/%s\n\n' "$1" "$2"; }
+    {
+        instance "$TMP/bars-silere/shell.qml" wayland-test
+        instance "$HOME/.config/quickshell/noctalia-shell/shell.qml" wayland-test
+        instance "$TMP/bars-silere/dev/probe-logic.qml" wayland-test
+        instance "/usr/share/quickshell/dms/shell.qml" wayland-9
+    } > "$TMP/bars-qs-list"
+    out="$(PATH="$stubs:$PATH" WAYLAND_DISPLAY=wayland-test SILERE_TEST_QS_LIST="$TMP/bars-qs-list" _silere_other_bars)"
+    assert_eq "noctalia-shell" "$out" "another Quickshell shell on this display is named by its folder"
 )
 
 test_launcher_uses_real_name() (

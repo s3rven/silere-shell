@@ -39,7 +39,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - The installer sets up autostart and the menu shortcut on a stock Hyprland config. On Hyprland's Lua configs it looked only for an `execs.lua` that a stock install does not have, so the shell installed and then never started at login. It checks the result with `Hyprland --verify-config` and puts the file back if Hyprland rejects it, and `silere uninstall` takes both back out.
-- `silere doctor` and `silere run` name another bar still running, which would otherwise draw beside Silere's and read as Silere being broken.
+- `silere doctor` and `silere run` name another bar still running, including another Quickshell shell such as Noctalia on the same display, which would otherwise draw beside Silere's and read as Silere being broken.
 - A light Matugen palette no longer leaves the shell unreadable. Its base stays light instead of sinking toward black under dark text, and high contrast, the accent, warnings and glass all follow it. As the accent source for the neutral base, its dark accent is lifted to stay readable.
 - `silere update --apply` and `--rollback` restart a shell that does not run as a service, so a new release never runs beside the old one. Panels compile when first opened, so a shell left running could load the new release's panels against the old one's services.
 - `silere update --rollback` works for a shell that does not run as a service. The record of what to restore was removed as soon as the update finished.
