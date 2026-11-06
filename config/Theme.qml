@@ -11,6 +11,9 @@ Singleton {
     readonly property bool _hc: ShellSettings.highContrast
     // the one colour depth sinks toward; the theme preview mixes against it too
     readonly property color depthSink: "#000000"
+    // matugen in light mode: dark ink on a light base. Whatever below assumes the opposite has to turn around
+    readonly property bool _matugenLight: luminance(MatugenTheme.background) > luminance(MatugenTheme.text)
+    readonly property bool paletteLight: !_n && _matugenLight
 
     readonly property var _tones: ({
         black:    { background: "#030405", surface: "#121214", subtext: "#9296a1" },
@@ -25,7 +28,8 @@ Singleton {
 
     // matugen's own base lands near the graphite tone; these sink it to charcoal and to black
     readonly property var _depths: ({ none: 0.0, deep: 0.38, deeper: 0.80 })
-    readonly property real _depthK: _depths[ShellSettings.matugenDepth] ?? 0.0
+    // sinking a light base under dark ink would leave nothing readable, so it keeps its own
+    readonly property real _depthK: paletteLight ? 0.0 : (_depths[ShellSettings.matugenDepth] ?? 0.0)
     // surface sinks slower than background, or the elevation separation flattens out
     readonly property color _matuBg:      mix(MatugenTheme.background, depthSink, _depthK)
     readonly property color _matuSurface: mix(MatugenTheme.surface,    depthSink, _depthK * 0.6)
@@ -35,10 +39,10 @@ Singleton {
     // on_surface_variant sits only 1.31:1 from on_surface, so secondary text reads as loud as
     // primary; sinking it toward the base restores the neutral palette's 2.2:1 split
     readonly property color _subtextBase: _n ? _pal.subtext
-                                             : mix(MatugenTheme.subtext, _matuBg, 0.25)
+                                             : mix(MatugenTheme.subtext, _matuBg, paletteLight ? 0.10 : 0.25)
 
     readonly property color _tBackground: _n ? _pal.background : _matuBg
-    readonly property color _tText:       _hc ? "#ffffff" : _textBase
+    readonly property color _tText:       _hc ? (paletteLight ? "#000000" : "#ffffff") : _textBase
     readonly property color _tSubtextSolid: _hc ? mix(_subtextBase, _tText, 0.32) : _subtextBase
     readonly property color _tSubtext:    popupOpacity < 1
         ? root.readableText(_tSubtextSolid, _glassWorst, 3.0) : _tSubtextSolid
@@ -56,14 +60,20 @@ Singleton {
     PaletteFade on subtext    { gate: root._paletteReady }
     PaletteFade on surface    { gate: root._paletteReady }
     // the presets below are solved at this L*; matugen's dark primary lands near 80, so the
-    // same hue reads hotter under Wallpaper than under Custom until it is walked back
-    readonly property real _accentPresetL: 70.8
+    // same hue reads hotter under Wallpaper than under Custom until it is walked back. A light
+    // base needs it from the other side, where matugen's own primary sits near 40
+    readonly property real _accentPresetL: paletteLight ? 42 : 70.8
     function balancedAccent(c: color): color {
         const l = lchOf(c)
         if (l.C < 4) return c
         return lchColor(_accentPresetL, Math.max(20, Math.min(38, l.C)), l.h)
     }
+    // a light scheme's accent is dark, made for its light base; neutral's dark base has to walk it up
     function sourcedAccent(c: color): color {
+        if (_n && _matugenLight) {
+            const l = lchOf(c)
+            return l.C < 4 ? lchColor(_accentPresetL, l.C, l.h) : balancedAccent(c)
+        }
         return ShellSettings.matugenAccentBalance ? balancedAccent(c) : c
     }
     readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : sourcedAccent(_matuAccent)
@@ -89,8 +99,13 @@ Singleton {
     readonly property color _warnAnchor: "#d4ad77"
     readonly property color _okAnchor:   "#94bd8b"
     readonly property color _tError:    _n ? "#dd92a2" : MatugenTheme.error
-    readonly property color _tWarning:  _n ? _warnAnchor : tintKeepingChroma(_warnAnchor, MatugenTheme.warning, 0.30)
-    readonly property color _tSuccess:  _n ? _okAnchor   : tintKeepingChroma(_okAnchor,   MatugenTheme.success, 0.30)
+    readonly property color _tWarning:  _n ? _warnAnchor : _semanticInk(_warnAnchor, MatugenTheme.warning)
+    readonly property color _tSuccess:  _n ? _okAnchor   : _semanticInk(_okAnchor,   MatugenTheme.success)
+    // both anchors are pale, which only reads on a dark base
+    function _semanticInk(anchor: color, tint: color): color {
+        const ink = tintKeepingChroma(anchor, tint, 0.30)
+        return paletteLight ? readableText(ink, mix(_tBackground, _tText, _controlK), 4.5) : ink
+    }
     property color error:   root._tError
     property color warning: root._tWarning
     property color success: root._tSuccess
@@ -164,22 +179,23 @@ Singleton {
     readonly property real popupOpacity: ShellSettings.popupMatchBarOpacity && frosted
         ? Math.max(panelOpacity, glassFloor) : 1
     readonly property color popup: withAlpha(background, popupOpacity)
-    // the lightest glass layer, a control, over a white backdrop: what text on glass has to survive
+    // the lightest glass layer, a control, over the backdrop furthest from the base: what text on glass has to survive
     function _controlOverBackdrop(base: color, ink: color, alpha: real, backdrop: color): color {
         return mix(mix(backdrop, base, alpha), ink,
             root._elevationForLightness(_labOf(base).L) * _controlMix)
     }
-    function _controlOverWhite(base: color, ink: color, alpha: real): color {
-        return root._controlOverBackdrop(base, ink, alpha, Qt.rgba(1, 1, 1, 1))
+    function _controlOverWorst(base: color, ink: color, alpha: real): color {
+        return root._controlOverBackdrop(base, ink, alpha,
+            paletteLight ? Qt.rgba(0, 0, 0, 1) : Qt.rgba(1, 1, 1, 1))
     }
-    readonly property color _glassWorst: root._controlOverWhite(_tBackground, _tText, popupOpacity)
+    readonly property color _glassWorst: root._controlOverWorst(_tBackground, _tText, popupOpacity)
     readonly property color _glassDark: root._controlOverBackdrop(_tBackground, _tText,
         popupOpacity, Qt.rgba(0, 0, 0, 1))
     function _solveGlassFloor(base: color, ink: color, minimum: real): real {
         let low = 0, high = 1
         for (let i = 0; i < 10; i++) {
             const middle = (low + high) / 2
-            if (root.contrastRatio(ink, root._controlOverWhite(base, ink, middle)) >= minimum) high = middle
+            if (root.contrastRatio(ink, root._controlOverWorst(base, ink, middle)) >= minimum) high = middle
             else low = middle
         }
         return Math.ceil(high * 100) / 100

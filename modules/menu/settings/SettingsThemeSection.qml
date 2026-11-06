@@ -353,32 +353,38 @@ Column {
             }
         }
 
-        // outside both groups on purpose: a Source switch recolours this row, never collapses it
-        SwatchPickerRow {
-            readonly property bool _neutral: ShellSettings.neutralTheme
-            glyph: "󰏘"; label: "Base"
-            options: _neutral
-                ? [{ value: "black",  name: "Black" },
-                   { value: "charcoal", name: "Charcoal" },
-                   { value: "graphite", name: "Graphite" }]
-                : [{ value: "deeper", name: "Black" },
-                   { value: "deep",   name: "Charcoal" },
-                   { value: "none",   name: "Graphite" }]
-            // preview Theme.background exactly: the elevated surface read lighter than the applied color
-            colors: _neutral
-                ? [Theme._tones.black.background,
-                   Theme._tones.charcoal.background,
-                   Theme._tones.graphite.background]
-                : [Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deeper),
-                   Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deep),
-                   Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.none)]
-            activeIndex: options.findIndex(o => o.value ===
-                (_neutral ? ShellSettings.baseTone : ShellSettings.matugenDepth))
-            outlined: true
-            ringColor: Theme.accent
-            onPicked: (i) => {
-                if (_neutral) ShellSettings.baseTone = options[i].value
-                else ShellSettings.matugenDepth = options[i].value
+        // outside both groups on purpose: a Source switch recolours this row, never collapses it. A light palette
+        // keeps its own base, so there is nothing here to choose
+        CollapsibleSection {
+            expanded: !Theme.paletteLight
+            symmetric: true
+
+            SwatchPickerRow {
+                readonly property bool _neutral: ShellSettings.neutralTheme
+                glyph: "󰏘"; label: "Base"
+                options: _neutral
+                    ? [{ value: "black",  name: "Black" },
+                       { value: "charcoal", name: "Charcoal" },
+                       { value: "graphite", name: "Graphite" }]
+                    : [{ value: "deeper", name: "Black" },
+                       { value: "deep",   name: "Charcoal" },
+                       { value: "none",   name: "Graphite" }]
+                // preview Theme.background exactly: the elevated surface read lighter than the applied color
+                colors: _neutral
+                    ? [Theme._tones.black.background,
+                       Theme._tones.charcoal.background,
+                       Theme._tones.graphite.background]
+                    : [Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deeper),
+                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deep),
+                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.none)]
+                activeIndex: options.findIndex(o => o.value ===
+                    (_neutral ? ShellSettings.baseTone : ShellSettings.matugenDepth))
+                outlined: true
+                ringColor: Theme.accent
+                onPicked: (i) => {
+                    if (_neutral) ShellSettings.baseTone = options[i].value
+                    else ShellSettings.matugenDepth = options[i].value
+                }
             }
         }
 

@@ -1295,6 +1295,70 @@ ShellRoot {
         for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
     }
 
+    // matugen in light mode. Depth used to sink the base under dark ink, and high contrast forced white onto it
+    function _checkLightPalette(): void {
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "highContrast", "baseTone", "barOpacity",
+            "popupMatchBarOpacity", "matugenAccentBalance", "matugenAccentRole", "matugenDepth"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = true
+        ShellSettings.popupMatchBarOpacity = false
+        ShellSettings.barOpacity = 1
+        ShellSettings.neutralTheme = false
+        const palettes = [
+            { background: "#fbf8ff", surface: "#efedf4", text: "#1b1b21", subtext: "#46464f", accent: "#525a92",
+              error: "#ba1a1a", warning: "#77536d", success: "#5b5d72" },
+            { background: "#fff8f6", surface: "#fceae6", text: "#231918", subtext: "#534341", accent: "#904a40",
+              error: "#ba1a1a", warning: "#725b2e", success: "#775651" },
+            { background: "#fdf8f8", surface: "#f1eded", text: "#1c1b1b", subtext: "#444748", accent: "#5f5e5e",
+              error: "#ba1a1a", warning: "#5f5e5e", success: "#5f5e5e" }
+        ]
+        for (const palette of palettes) for (const depth of ["none", "deep", "deeper"]) for (const hc of [false, true])
+        for (const balance of [false, true]) {
+            MatugenTheme._palette = palette
+            ShellSettings.matugenDepth = depth
+            ShellSettings.highContrast = hc
+            ShellSettings.matugenAccentBalance = balance
+            const context = [palette.accent, depth, hc, balance].join("/")
+            root._check(Theme.paletteLight && Theme._depthK === 0, "a light palette keeps its own base: " + context)
+            let lowest = Infinity
+            for (const surface of [Theme.menuCardSolid, Theme.menuControlSolid])
+                for (const ink of [Theme.text, Theme.subtext, Theme.menuTextDetail, Theme.accent, Theme.error,
+                    Theme.warning, Theme.success, Theme.barText, Theme.barAccent])
+                    lowest = Math.min(lowest, Theme.contrastRatio(ink, surface))
+            root._check(lowest >= 3.99, "text stays readable on a light palette: " + context + " contrast " + lowest)
+        }
+        const light = palettes[0]
+        MatugenTheme._palette = light
+        ShellSettings.highContrast = false
+        ShellSettings.matugenAccentBalance = false
+        const floor = Theme._solveGlassFloor(light.background, light.text, 4.5)
+        root._check(Theme.contrastRatio(light.text,
+                Theme._controlOverBackdrop(light.background, light.text, floor, Qt.rgba(0, 0, 0, 1))) >= 4.49,
+            "light glass holds its text over a dark window, its worst backdrop")
+        // the same palette as the neutral base's accent source: its accent was made for a light base
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = true
+        for (const palette of palettes) for (const tone of ["black", "charcoal", "graphite"]) {
+            MatugenTheme._palette = palette
+            ShellSettings.baseTone = tone
+            root._check(!Theme.paletteLight && Theme.contrastRatio(Theme.accent, Theme.menuCardSolid) >= 4.5,
+                "a light palette's accent stays readable on the neutral base: " + palette.accent + "/" + tone)
+        }
+        // and a dark palette is left exactly as it was
+        const dark = { background: "#1a1110", surface: "#271d1c", text: "#f1dfdc", subtext: "#d8c2be", accent: "#ffb4a8",
+            error: "#ffb4ab", warning: "#dec48c", success: "#e7bdb6" }
+        MatugenTheme._palette = dark
+        ShellSettings.neutralTheme = false
+        ShellSettings.matugenDepth = "deeper"
+        ShellSettings.matugenAccentBalance = false
+        root._check(!Theme.paletteLight && Theme._depthK === 0.80 && Qt.colorEqual(Theme.accent, dark.accent)
+                && Theme._accentPresetL === 70.8,
+            "a dark palette keeps its depth, accent and balance target")
+        MatugenTheme._palette = paletteWas
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
     function _checkConnectivityBarActions(): void {
         const was = { open: MenuState.open, tab: MenuState.activeTab, previous: MenuState.previousTab,
             anchor: MenuState.anchorSource, x: MenuState.anchorX, screen: MenuState.triggerScreen }
@@ -2439,6 +2503,7 @@ ShellRoot {
         root._checkConnectivityConfirmations()
         root._checkMenuContrast()
         root._checkAccentContrast()
+        root._checkLightPalette()
         root._checkConnectivityBarActions()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)
@@ -4249,7 +4314,7 @@ ShellRoot {
         ShellSettings.surfaceBlur = true
         ShellSettings.barOpacity = 0.4
         const heldAt = Theme.popupOpacity
-        const heldWorst = Theme._controlOverWhite(Theme._tBackground, Theme._tText, heldAt)
+        const heldWorst = Theme._controlOverWorst(Theme._tBackground, Theme._tText, heldAt)
         const labelHolds = Theme.contrastRatio(Theme._tText, heldWorst) >= 4.5
         const subtextLifted = Theme.contrastRatio(Theme._tSubtext, heldWorst) >= 2.99
             && !Qt.colorEqual(Theme._tSubtext, Theme._tSubtextSolid)
