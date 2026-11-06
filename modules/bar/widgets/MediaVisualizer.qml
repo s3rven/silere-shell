@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../../../config"
 import "../../../services"
 
@@ -145,6 +146,7 @@ Canvas {
     }
 
     readonly property real _rimEdge: 0.75
+    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
     function _rimR(): real {
         return Math.max(0, Math.min(rimRadius, (width - rimInset * 2) / 2))
     }
@@ -313,12 +315,33 @@ Canvas {
         ctx.fillStyle   = _fill
 
         if (rim) {
-            // the arcs only carry the stroke; the fill sits between the wave and the straight run
-            ctx.beginPath()
-            _rimArcLeft(ctx, x0, rr)
-            _traceWave(ctx, cy, x0, slot, n, x1, base)
-            _rimArcRight(ctx, x1, rr)
-            ctx.stroke()
+            // the arcs only carry the stroke; the fill sits between the wave and the straight run.
+            // QPainter outlines any pen wider than a device pixel, ~2 ms a frame along a bar-wide wave,
+            // so the 1.5 px line is stacked from opaque hairlines, which take its fast path, and takes
+            // the stroke's fade after. A hairline blends rather than adds the two halves of the pixel
+            // where curves meet, a column a tenth light; a twin one device pixel along covers it
+            var px = 1 / _dpr
+            // their own pixels and the gaps between span a little under the pen's 1.5 px, since the outer
+            // hairlines' soft edges add the rest: ink per column within 6% of the old stroke at scale 1, 1.25, 2
+            var lines = Math.max(1, Math.ceil(1.5 * _dpr))
+            var step = lines > 1 ? Math.max(0, 1.5 - 0.3 * px - px) / (lines - 1) : 0
+            ctx.lineWidth = 0.999 * px
+            ctx.strokeStyle = Qt.rgba(ac.r, ac.g, ac.b, 1)
+            for (var s = 0; s < lines * 2; s++) {
+                ctx.save()
+                ctx.translate((s % 2) * px, (Math.floor(s / 2) - (lines - 1) / 2) * step)
+                ctx.beginPath()
+                _rimArcLeft(ctx, x0, rr)
+                _traceWave(ctx, cy, x0, slot, n, x1, base)
+                _rimArcRight(ctx, x1, rr)
+                ctx.stroke()
+                ctx.restore()
+            }
+            ctx.globalCompositeOperation = "destination-in"
+            ctx.fillStyle = _stroke
+            ctx.fillRect(0, 0, width, height)
+            ctx.globalCompositeOperation = "source-over"
+            ctx.fillStyle = _fill
             ctx.beginPath()
             ctx.moveTo(x0, base)
             _traceWave(ctx, cy, x0, slot, n, x1, base)

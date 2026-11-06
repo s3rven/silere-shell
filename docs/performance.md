@@ -80,10 +80,25 @@ animations to a roughly 16 ms timer when the bar and a popup are visible as sepa
 windows, making a high-refresh display look like 60 Hz. Launch with
 `QSG_USE_SIMPLE_ANIMATION_DRIVER=0` to compare or work around a driver-specific issue.
 
-## Cava
+## Visualizer and Cava
 
-Cava is the main optional CPU cost, and only while the visualizer is on screen. Silere
-creates its own temporary Cava profile at runtime, so it does not alter or depend on your
+The visualizer is the main optional CPU cost, and only while it is on screen and music plays.
+Drawing it costs the shell more than Cava costs to listen. Measured in a nested 1920x1200 session at
+scale 1.25 with audio playing, as percent of one core for the shell plus Cava:
+
+| Visualizer | Shell | Cava |
+|---|---|---|
+| Off | 0.1 | 0 |
+| Media position, Wave: Eco / Balanced / Smooth | 3.0 / 4.6 / 5.1 | 0.8 / 1.1 / 1.1 |
+| Media position, Balanced: Bars / Pulse | 3.5 / 2.3 | 0.7 / 0.6 |
+| Center position, Wave, Balanced | 5.3 | 1.1 |
+| Underline position, Wave, Balanced | 8.2 | 1.2 |
+
+The underline position traces a curve across the whole bar each frame, so it costs about twice
+the others. A larger display or a higher scale raises every row. Pulse at Eco is the
+lightest choice that still moves.
+
+Silere creates its own temporary Cava profile at runtime, so it does not alter or depend on your
 personal Cava configuration.
 
 Cava stays asleep through a pause of up to eight seconds, so resuming does not restart it
