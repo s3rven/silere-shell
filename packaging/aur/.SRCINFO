@@ -8,9 +8,9 @@ pkgbase = silere-shell-git
 	license = MIT
 	makedepends = git
 	depends = quickshell>=0.3.1
+	depends = ttf-jetbrains-mono-nerd
 	optdepends = hyprland: compositor support
 	optdepends = niri: compositor support
-	optdepends = ttf-jetbrains-mono-nerd: the default bar font and every glyph in the UI
 	optdepends = fontconfig: detect installed text and icon fonts
 	optdepends = systemd: session locking, optional shell supervision and update timer
 	optdepends = matugen: colours generated from your wallpaper

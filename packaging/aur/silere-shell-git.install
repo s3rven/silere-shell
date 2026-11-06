@@ -3,12 +3,14 @@ post_install() {
 
   silere is installed at /usr/share/silere-shell
 
+  try it first:  silere try     (in a window, changing nothing)
   start it:      silere-shell
   check it:      silere doctor
-  autostart:     add `exec-once = silere-shell` to your Hyprland config,
+  autostart:     add this to your ~/.config/hypr/hyprland.lua:
+                   hl.on("hyprland.start", function() hl.exec_cmd("silere-shell") end)
                  or `spawn-at-startup "silere-shell"` to your niri config
 
-  click the active workspace diamond to open the menu and settings,
+  click the active workspace to open the menu and settings,
   or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
   wallpaper colours need a one-time matugen setup:
@@ -33,8 +35,10 @@ post_upgrade() {
     cat <<'EOF'
 
   silere was updated. restart it to pick up the new version:
-    systemctl --user restart silere-shell.service   # if you run it as a unit
-    or restart your compositor
+    silere restart
+
+  panels load when first opened, so one opened before that restart can
+  fail against the old version still running.
 
 EOF
 }
@@ -46,7 +50,7 @@ post_remove() {
   directory, because pacman does not own them:
 
     the autostart line you added to your compositor config
-      (`exec-once = silere-shell`, or niri's `spawn-at-startup`)
+      (the hl.exec_cmd line in hyprland.lua, or niri's `spawn-at-startup`)
 
     matugen, if you ran --repair-matugen: the block marked
       `# silere-shell begin` in ~/.config/matugen/config.toml, plus

@@ -8,12 +8,11 @@ pkgdesc="Quickshell desktop shell for Hyprland and niri: bar, notifications, OSD
 arch=('any')
 url="https://github.com/s3rven/silere-shell"
 license=('MIT')
-depends=('quickshell>=0.3.1')
+depends=('quickshell>=0.3.1' 'ttf-jetbrains-mono-nerd')
 makedepends=('git')
 optdepends=(
     'hyprland: compositor support'
     'niri: compositor support'
-    'ttf-jetbrains-mono-nerd: the default bar font and every glyph in the UI'
     'fontconfig: detect installed text and icon fonts'
     'systemd: session locking, optional shell supervision and update timer'
     'matugen: colours generated from your wallpaper'

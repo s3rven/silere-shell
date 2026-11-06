@@ -39,14 +39,18 @@ tags — signature checks complement access control rather than replacing it.
 `packaging/aur/` is the source of truth for `silere-shell-git`, and lint keeps
 `.SRCINFO` in step with the `PKGBUILD`. **The package is not on the AUR yet**, so
 these files are ready rather than live, and the README deliberately does not point
-at a package that would fail to install. Publishing needs an AUR account; once one
+at a package that would fail to install. It tracks `main`, so what is pushed to `main`
+reaches its users on their next rebuild. Publishing needs an AUR account; once one
 exists it is a manual push, and only the first one really matters:
 
 ```bash
-git clone ssh://aur@aur.archlinux.org/silere-shell-git.git /tmp/silere-aur
-cp packaging/aur/{PKGBUILD,.SRCINFO,silere-shell-git.install} /tmp/silere-aur/
-cd /tmp/silere-aur && git commit -am "<version>" && git push
+git -c init.defaultBranch=master clone ssh://aur@aur.archlinux.org/silere-shell-git.git /tmp/silere-aur
+cp packaging/aur/{PKGBUILD,.SRCINFO,silere-shell-git.install,LICENSE} /tmp/silere-aur/
+cd /tmp/silere-aur && git add . && git commit -m "<version>" && git push
 ```
+
+`LICENSE` is 0BSD and covers the package files only. Arch does not promote a package to its official
+repositories without it.
 
 Because the package tracks `git`, it rebuilds from `main` on the user's machine
 and does not need a push per release — but the AUR copy still has to exist, and

@@ -973,7 +973,7 @@ section "aur metadata"
 aur_dir="packaging/aur"
 if [ ! -f "$aur_dir/PKGBUILD" ] || [ ! -f "$aur_dir/.SRCINFO" ]; then
   fail "AUR packaging must include PKGBUILD and .SRCINFO"
-elif ! grep -qF "depends=('quickshell>=$SILERE_MIN_QUICKSHELL')" "$aur_dir/PKGBUILD" \
+elif ! grep -qF "depends=('quickshell>=$SILERE_MIN_QUICKSHELL'" "$aur_dir/PKGBUILD" \
     || ! grep -qF "$(printf '\tdepends = quickshell>=%s' "$SILERE_MIN_QUICKSHELL")" "$aur_dir/.SRCINFO"; then
   fail "AUR package must enforce the documented Quickshell $SILERE_MIN_QUICKSHELL minimum"
 elif command -v makepkg >/dev/null 2>&1; then
