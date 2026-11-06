@@ -1049,7 +1049,7 @@ else
 
   # allowlist, not a denylist of known dev tools: a new dev script only this check
   # doesn't yet know the name of must still fail, not pass silently
-  allowed_scripts="install.sh update.sh repair.sh doctor.sh session.sh display-brightness.sh service.sh silere silere-update.service silere-update.timer silere-shell.service lib completions"
+  allowed_scripts="install.sh update.sh repair.sh reset.sh try.sh doctor.sh session.sh display-brightness.sh service.sh silere silere-update.service silere-update.timer silere-shell.service lib completions"
   payload_extra=""
   while IFS= read -r ref; do
     [ -n "$ref" ] || continue

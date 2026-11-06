@@ -184,7 +184,9 @@ Appearance › Interface.
 
 ## A shell update is blocked by local edits
 
-Preview them with `bash scripts/repair.sh`. Running it with `--apply` saves the edits in a
+`silere reset` covers this and the rest of what can go wrong at once: settings, edited files,
+leftovers and caches, with `silere reset --undo` to put them back. To deal with the files alone,
+preview them with `bash scripts/repair.sh`. Running it with `--apply` saves the edits in a
 reversible Git stash and restores the shipped files; `--undo` restores the latest saved
 repair.
 

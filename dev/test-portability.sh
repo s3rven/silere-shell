@@ -2353,6 +2353,149 @@ test_unit_identity() (
     return 0
 )
 
+test_reset_workflow() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
+    local repo="$TMP/reset-repo" home="$TMP/reset-home" stubs="$TMP/reset-stubs" state="$TMP/reset-shell" out before
+    local config="$home/config/silere-shell" saved="$home/state/silere-shell" cache="$home/cache/silere-shell"
+    mkdir -p "$repo/scripts" "$stubs" "$config/hooks" "$saved" "$cache/art"
+    cp -a "$ROOT/scripts/." "$repo/scripts/"
+    cp "$ROOT/release.json" "$repo/release.json"
+    printf 'shipped\n' > "$repo/shell.qml"
+    git -C "$repo" init -q
+    git -C "$repo" config user.name "Silere test"
+    git -C "$repo" config user.email "test@example.invalid"
+    git -C "$repo" add .
+    git -C "$repo" commit -qm initial
+
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'case "$1" in' \
+        '    list) [ -s "$SILERE_TEST_STATE" ] && printf "Instance t:\n  Process ID: %s\n" "$(cat "$SILERE_TEST_STATE")"; exit 0 ;;' \
+        '    kill) : > "$SILERE_TEST_STATE"; echo kill >> "$SILERE_TEST_STATE.calls"; exit 0 ;;' \
+        '    --no-detailed-logs|--version) exit 0 ;;' \
+        '    *) echo launch >> "$SILERE_TEST_STATE.calls"; echo 777 > "$SILERE_TEST_STATE" ;;' \
+        'esac' > "$stubs/qs"
+    # never the real systemctl: it would restart the live shell of whoever runs the tests
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
+    chmod +x "$stubs/qs" "$stubs/systemctl"
+    run_reset() {
+        env -u LC_ALL -u SILERE_TEST_ROOT PATH="$stubs:$PATH" HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" \
+            XDG_CACHE_HOME="$home/cache" SILERE_TEST_STATE="$state" WAYLAND_DISPLAY=wayland-test bash "$repo/scripts/silere" reset "$@"
+    }
+    fill() {
+        printf '{\n  "__version": 2,\n  "barHeight": 40,\n  "dnd": true\n}\n' > "$config/settings.json"
+        printf '{"__version":1,"marks":[]}\n' > "$config/calendar-marks.json"
+        printf '{"__version":1,"history":[]}\n' > "$config/notifications.json"
+        printf '{"__version":1}\n' > "$config/settings.pre-v1.bak.json"
+        printf '#!/bin/sh\n' > "$config/hooks/on-notify"
+        mkdir -p "$cache/art"
+        printf 'cover\n' > "$cache/art/one"
+        printf 'stamp\n' > "$cache/update-checked"
+        : > "$cache/update.lock"
+        printf '{"history":[{"id":1}]}\n' > "$saved/notifications.json"
+        printf 'edited\n' > "$repo/shell.qml"
+        printf 'new\n' > "$repo/untracked.qml"
+    }
+    fill
+    before="$(find "$home" "$repo/shell.qml" -type f | sort | xargs sha256sum)"
+
+    out="$(run_reset)" || fail "the reset preview failed"
+    case "$out" in
+        *"2 back to defaults: barHeight, dnd"*) ;;
+        *) fail "the preview did not list the changed settings: $out" ;;
+    esac
+    case "$out" in
+        *"Files"*"Leftovers"*"Caches"*"Nothing was changed"*) ;;
+        *) fail "the preview left out what it would change: $out" ;;
+    esac
+    assert_eq "$before" "$(find "$home" "$repo/shell.qml" -type f | sort | xargs sha256sum)" "a preview changes nothing"
+
+    if run_reset --apply </dev/null >/dev/null 2>&1; then
+        case "$(sed -n 's/.*"barHeight".*/kept/p' "$config/settings.json")" in
+            kept) ;;
+            *) fail "reset --apply went ahead with no terminal to confirm on" ;;
+        esac
+    fi
+    assert_eq "$before" "$(find "$home" "$repo/shell.qml" -type f | sort | xargs sha256sum)" "no confirmation changes nothing"
+
+    echo 4242 > "$state"; : > "$state.calls"
+    run_reset --apply --yes >/dev/null || fail "reset --apply failed"
+    assert_eq $'{\n  "__version": 2\n}' "$(cat "$config/settings.json")" "settings back to defaults"
+    assert_eq "shipped" "$(cat "$repo/shell.qml")" "an edited file back to the installed revision"
+    [ ! -e "$repo/untracked.qml" ] || fail "reset left a file the installed revision does not have"
+    [ ! -e "$config/calendar-marks.json" ] && [ ! -e "$config/notifications.json" ] && [ ! -e "$config/settings.pre-v1.bak.json" ] \
+        || fail "reset left files from older versions behind"
+    [ ! -e "$cache/art" ] && [ ! -e "$cache/update-checked" ] || fail "reset left caches behind"
+    [ -e "$cache/update.lock" ] || fail "reset removed a lock another update could hold"
+    [ -e "$config/hooks/on-notify" ] || fail "reset removed the user's hooks"
+    [ -e "$saved/notifications.json" ] || fail "reset cleared history without being asked"
+    assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "reset stops the shell first and starts it again"
+    assert_eq "777" "$(cat "$state")" "the shell is running again"
+
+    : > "$state.calls"
+    run_reset --undo --yes >/dev/null || fail "reset --undo failed"
+    assert_eq $'{\n  "__version": 2,\n  "barHeight": 40,\n  "dnd": true\n}' "$(cat "$config/settings.json")" "undo restores the settings"
+    assert_eq "edited" "$(cat "$repo/shell.qml")" "undo restores the edited file"
+    [ -e "$repo/untracked.qml" ] || fail "undo left out a new file"
+    [ -e "$config/calendar-marks.json" ] || fail "undo left out a file set aside"
+    assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "undo restarts the shell too"
+    if run_reset --undo --yes >/dev/null 2>&1; then fail "a second undo found something to restore"; fi
+
+    # a file that will not parse is reported, replaced and still saved
+    git -C "$repo" checkout -q -- shell.qml; rm -f "$repo/untracked.qml"
+    printf '{ "barHeight": 40,' > "$config/settings.json"
+    out="$(run_reset)"
+    case "$out" in
+        *"cannot be read"*) ;;
+        *) fail "the preview did not report an unreadable settings file: $out" ;;
+    esac
+    run_reset --apply --yes >/dev/null || fail "reset could not replace an unreadable settings file"
+    assert_eq '{ "barHeight": 40,' "$(cat "$saved/settings.pre-reset.json")" "the unreadable file is saved word for word"
+
+    # a settings file in a dotfiles repo stays where it is, and history goes only when asked for
+    printf '{\n  "barHeight": 40\n}\n' > "$home/dotfile.json"
+    rm -f "$config/settings.json"; ln -s "$home/dotfile.json" "$config/settings.json"
+    run_reset --apply --yes --history >/dev/null || fail "reset --history failed"
+    [ -L "$config/settings.json" ] || fail "reset replaced a linked settings file with a plain one"
+    assert_eq $'{\n  "__version": 2\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
+    [ ! -e "$saved/notifications.json" ] || fail "--history left the history"
+
+    # a settings file written by hand or another tool need not be laid out the way Silere writes it
+    printf '{"__version":2,"barHeight":40,"dnd":true}' > "$config/settings.json"
+    out="$(run_reset)"
+    case "$out" in
+        *"2 back to defaults: barHeight, dnd"*) ;;
+        *) fail "the preview missed settings on one line: $out" ;;
+    esac
+    run_reset --apply --yes >/dev/null || fail "reset failed on a one-line settings file"
+
+    # a reset with no settings file drops the copy an earlier one kept, or its undo would bring that back
+    rm -f "$config/settings.json"; printf 'cover\n' > "$cache/art-stale"
+    run_reset --apply --yes >/dev/null || fail "reset failed with no settings file"
+    [ ! -e "$saved/settings.pre-reset.json" ] || fail "a reset kept an earlier reset's copy of the settings"
+
+    # a clean install has nothing to do, and the shell stays as it is
+    : > "$state.calls"
+    out="$(run_reset --apply --yes)"
+    case "$out" in
+        *"Nothing to reset"*) ;;
+        *) fail "a fresh install was reset anyway: $out" ;;
+    esac
+    assert_eq "" "$(cat "$state.calls")" "nothing to reset leaves the shell running"
+
+    # from a text console the shell could not come back, so nothing is touched
+    fill
+    echo 4242 > "$state"; : > "$state.calls"
+    before="$(sha256sum "$config/settings.json")"
+    if env -u LC_ALL -u WAYLAND_DISPLAY PATH="$stubs:$PATH" HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" \
+            XDG_CACHE_HOME="$home/cache" SILERE_TEST_STATE="$state" bash "$repo/scripts/silere" reset --apply --yes >/dev/null 2>&1; then
+        fail "reset stopped a shell it could not bring back"
+    fi
+    assert_eq "$before" "$(sha256sum "$config/settings.json")" "a refused reset changes nothing"
+    assert_eq "" "$(cat "$state.calls")" "a refused reset leaves the shell running"
+)
+
 test_lua_block_is_checked() (
     local dir="$TMP/lua-block" stubs="$TMP/lua-block-stubs" before
     mkdir -p "$dir" "$stubs"
@@ -2899,6 +3042,7 @@ test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
+test_reset_workflow
 test_lua_block_is_checked
 test_other_bars_are_named
 test_launcher_uses_real_name

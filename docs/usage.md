@@ -146,10 +146,23 @@ disables the lock action.
 If locking fails or times out, sleep is cancelled. Configure your idle daemon's
 lock-before-sleep action separately for lid-close and other suspend requests.
 
-To reset one setting, delete its key from `settings.json`. To reset preferences together,
-use Restore defaults in Overview; it keeps notification history and wallpaper colours.
-For a manual reset when the menu cannot open, stop Silere, back up `settings.json`,
-replace its contents with `{ "__version": 2 }`, then start Silere again.
+To reset one setting, delete its key from `settings.json`. To reset them all, use Restore
+defaults in Overview, which covers every setting, Do Not Disturb and night light included, and
+keeps notification history and wallpaper colours. Undo restore, right below it, puts them back.
+
+When the menu won't open, or you want more than settings back to normal:
+
+```bash
+silere reset                    # shows what it would change, and changes nothing
+silere reset --apply            # settings, edited files, leftovers and caches, then a restart
+silere reset --apply --history  # also clears notification history; this part can't be undone
+silere reset --undo             # puts back what the last reset replaced
+```
+
+It saves a settings file that won't parse rather than discarding it, and writes through a link
+if you keep `settings.json` in a dotfiles repo. Hooks, the Matugen palette, autostart and the
+service stay as they are. To do it by hand, stop Silere, back up `settings.json`, replace its
+contents with `{ "__version": 2 }`, then start Silere again.
 
 On Hyprland and niri versions providing cast events, popups wait in history while
 you share your screen or record it, and a red share mark sits beside the clock.

@@ -48,6 +48,9 @@ Usage: silere <command> [options]
   repair                 Preview local checkout changes
   repair --apply [--yes] Save local changes and restore shipped files
   repair --undo [--yes]  Restore the latest repair stash
+  reset                  Preview a reset to a fresh install
+  reset --apply [--yes]  Reset settings, edited files and caches; --history clears history
+  reset --undo [--yes]   Put back what the last reset replaced
   version                Print the installed Silere version
   -V, --version          Print the installed Silere version
   uninstall              Remove integrations created by the installer
@@ -660,6 +663,10 @@ case "$command_name" in
     try)
         restore_locale
         exec bash "$ROOT/scripts/try.sh" "$@"
+        ;;
+    reset)
+        restore_locale
+        exec bash "$ROOT/scripts/reset.sh" "$@"
         ;;
     repair)
         if is_packaged; then
