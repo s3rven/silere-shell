@@ -10932,12 +10932,24 @@ ShellRoot {
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()
-        ShellSettings.dnd = true
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
-        ShellSettings.resetToDefaults()
-        root._check(ShellSettings.dnd === true
+        ShellSettings.dnd = true
+        ShellSettings.nightLightTemp = ShellSettings._defaults.nightLightTemp - 500
+        ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
+        root._check(ShellSettings.modifiedTotal >= 3 && ShellSettings.modifiedTotal > ShellSettings.modifiedCount,
+            "the restore row counts settings no page lists, or it could not be pressed for them")
+        root._check(ShellSettings.resetToDefaults() === true, "a restore with room for its copy goes ahead")
+        root._check(ShellSettings.dnd === false && ShellSettings.modifiedTotal === 0
+                && ShellSettings.nightLightTemp === ShellSettings._defaults.nightLightTemp
                 && ShellSettings.showSeconds === ShellSettings._defaults.showSeconds,
-            "restoring settings keeps the live Do Not Disturb choice")
+            "restoring settings resets every one of them, Do Not Disturb and night light too")
+        root._check(ShellSettings.canUndoReset, "a restore keeps a way back")
+        ShellSettings.undoReset()
+        root._check(ShellSettings.dnd === true && ShellSettings.showSeconds !== ShellSettings._defaults.showSeconds
+                && ShellSettings.nightLightTemp === ShellSettings._defaults.nightLightTemp - 500
+                && !ShellSettings.canUndoReset,
+            "undoing a restore puts every setting back")
+        ShellSettings.resetToDefaults()
         if (root._failures === 0)
             console.warn("PROBE-LOGIC passed " + root._checks + " checks")
         else

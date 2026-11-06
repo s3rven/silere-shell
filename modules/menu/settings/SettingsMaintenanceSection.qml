@@ -223,15 +223,15 @@ Column {
         ControlRow {
             glyph: "󰦛"
             title: root._armed ? "Confirm restore" : "Restore default settings"
-            status: ShellSettings.modifiedCount > 0
-                ? ShellSettings.modifiedCount + (ShellSettings.modifiedCount === 1
+            status: ShellSettings.modifiedTotal > 0
+                ? ShellSettings.modifiedTotal + (ShellSettings.modifiedTotal === 1
                     ? " setting will be reset" : " settings will be reset")
                 : "No changed settings to restore"
             valueText: root._armed ? "Tap again" : ""
             accentColor: root._armed ? Theme.error : Theme.accent
             statusColor: root._armed ? Theme.error : "transparent"
             active: root._armed
-            available: ShellSettings.modifiedCount > 0
+            available: ShellSettings.modifiedTotal > 0
             onActivated: {
                 const now = Date.now()
                 const age = now - root._armedAtMs
@@ -248,8 +248,17 @@ Column {
                 }
             }
         }
+        CollapsibleSection {
+            expanded: ShellSettings.canUndoReset
+            ControlRow {
+                glyph: "󰕌"
+                title: "Undo restore"
+                status: "Puts back the settings you had"
+                onActivated: ShellSettings.undoReset()
+            }
+        }
         HintText {
-            text: "Wallpaper colors and notification history are kept."
+            text: "Wallpaper colors and notification history are kept. In a terminal, silere reset also repairs edited files and clears caches."
         }
     }
     SectionLabel {

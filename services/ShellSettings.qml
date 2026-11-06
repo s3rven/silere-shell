@@ -624,6 +624,9 @@ Singleton {
     }
 
     property int _modifiedCount: 0
+    // the pages' dots count what a page shows; a reset also covers what no page lists, such as Do Not Disturb
+    property int _modifiedTotal: 0
+    readonly property int modifiedTotal: _modifiedTotal
     property var _modifiedKeys: Object.create(null)
     // Quickshell exits hard on SIGTERM: neither Component.onDestruction nor
     // Qt.application.aboutToQuit runs, so anything still inside PersistedFile's
@@ -743,6 +746,7 @@ Singleton {
         }
         root._modifiedKeys = keys
         root._modifiedCount = n
+        root._modifiedTotal = Object.keys(keys).length
         root._rebuildModifiedSections()
     }
 
@@ -755,18 +759,60 @@ Singleton {
         else _store.flush(false)
     }
 
-    function resetToDefaults(): void {
+    // what a reset replaced, for undoReset and for silere reset --undo. Outside the config folder, which a
+    // dotfiles repo may hold. A reset with no copy of what it replaces is refused
+    readonly property string _resetBackupPath: ConfigStore.stateDirectory.length > 0
+        ? ConfigStore.stateDirectory + "/settings.pre-reset.json" : ""
+    property string _resetBackupText: ""
+    readonly property bool canUndoReset: _resetBackupText.length > 0
+    property bool _resetBackupFailed: false
+
+    FileView {
+        id: _resetBackup
+        path: root._resetBackupPath
+        atomicWrites: true
+        blockWrites: true
+        printErrors: false
+        onSaveFailed: root._resetBackupFailed = true
+    }
+
+    function resetToDefaults(): bool {
+        // a settings file that will not parse is why many people land here: it blocks every save until replaced
+        const unreadable = !_store.writeAllowed
+        const previous = root._serialize()
+        root._resetBackupFailed = root._resetBackupPath.length === 0
+        if (!root._resetBackupFailed) _resetBackup.setText(previous)
+        if (root._resetBackupFailed) {
+            console.warn("silere-shell: could not save a copy of the settings, so they were not reset")
+            return false
+        }
+        root._resetBackupText = previous
+        if (unreadable) {
+            _store.writePaused = true
+            _store.writeAllowed = true
+            root._readError = ""
+        }
         root.batch(function() {
             for (let i = 0; i < _schema.length; i++) {
-                const entry = _schema[i]
-                const k = entry.k
-                if (entry.sec !== "-" && k !== "barWidgetOrderLeft"
-                        && k !== "barWidgetOrderCenter" && k !== "barWidgetOrderRight")
+                const k = _schema[i].k
+                if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter" && k !== "barWidgetOrderRight")
                     root[k] = _defaults[k]
             }
             // the order keys go through the normalising setter, not a raw assignment
             root.resetBarWidgets()
         })
+        root._recountModified()
+        // the broken file is the only copy of whatever it still holds: saved beside it before the defaults replace it
+        if (unreadable) root._backupThenFlush(ConfigStore.settingsPath, root._settingsVersion)
+        return true
+    }
+
+    function undoReset(): void {
+        const saved = root._resetBackupText
+        if (saved.length === 0) return
+        root._resetBackupText = ""
+        root._applyText(saved)
+        _store.flush(false)
         root._recountModified()
     }
 
@@ -798,6 +844,7 @@ Singleton {
             if (modified) root._modifiedKeys[key] = true
             else delete root._modifiedKeys[key]
             if (root._sectionOf[key] !== "-") root._modifiedCount += modified ? 1 : -1
+            root._modifiedTotal += modified ? 1 : -1
             // only when a key crosses its default, not on every slider tick
             root._rebuildModifiedSections()
         }
@@ -1007,6 +1054,7 @@ Singleton {
         }
         root._modifiedKeys = modifiedKeys
         root._modifiedCount = changed
+        root._modifiedTotal = Object.keys(modifiedKeys).length
         root._rebuildModifiedSections()
         if (preserveFuture) _futureSettings = out
         return JSON.stringify(out, null, 2)
