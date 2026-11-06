@@ -55,8 +55,9 @@ _silere_marker_pair_valid() {
 _silere_other_bars() {
     local bar line config="" qs_bin
     if command -v pgrep >/dev/null 2>&1; then
-        for bar in waybar ironbar yambar nwg-panel hyprpanel; do
-            pgrep -x "$bar" >/dev/null 2>&1 && printf '%s\n' "$bar"
+        # HyprPanel execs its bundled app, so its process is hyprpanel-app
+        for bar in waybar hyprpanel-app ashell ironbar yambar nwg-panel; do
+            pgrep -x "$bar" >/dev/null 2>&1 && printf '%s\n' "${bar%-app}"
         done
     fi
     # another Quickshell shell on this display, such as Noctalia or DankMaterialShell, named by its config folder.
