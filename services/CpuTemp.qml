@@ -14,7 +14,8 @@ Singleton {
     readonly property bool needed: MenuState.homeActive
         || (MenuState.settingsActive
             && (MenuState.settingsSection === "warnings"
-                || MenuState.settingsSection === "underline"))
+                || MenuState.settingsSection === "underline"
+                || MenuState.settingsSection === "indicators"))
     function temperatureDemand(backgroundAlert: bool, underlineAlert: bool,
             overview: bool, surfaceNeed: bool): bool {
         return backgroundAlert || surfaceNeed || (underlineAlert && !overview)

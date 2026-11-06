@@ -72,6 +72,8 @@ Column {
             ToggleRow {
                 glyph: "󰔏"; label: "CPU temperature"
                 key: "systemShowTemp"
+                available: !CpuTemp.sensorMissing
+                dependsNote: "No sensor"
             }
         }
     }
