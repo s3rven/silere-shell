@@ -57,15 +57,16 @@ Singleton {
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
 
-    // hyprland fires a start per shared frame but also a 250 ms start/stop burst per screenshot
+    // hyprland fires a start per shared frame (20 ms apart at most, measured) but also a 250 ms start/stop burst per screenshot
     readonly property int castArmMs: 1500
     readonly property int castReleaseMs: 2000
-    readonly property int castForgetMs: 1000
+    readonly property int castForgetMs: 600
     function castStep(state, kind: string, nowMs: real): var {
         let casts = state.casts, since = state.since, last = state.last, sharing = state.sharing
         if (kind === "start") {
+            // judged here, not on the next tick: screenshots a second apart must not chain into one long capture
+            if (since === 0 || (casts === 0 && !sharing && nowMs - last >= root.castForgetMs)) since = nowMs
             casts++
-            if (since === 0) since = nowMs
             last = nowMs
         } else if (kind === "stop") {
             casts = Math.max(0, casts - 1)

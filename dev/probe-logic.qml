@@ -7480,6 +7480,15 @@ ShellRoot {
         shot = Compositor.castStep(shot, "tick", 4000)
         root._check(!shotHeld.sharing && shotHeld.since === 1000 && !shot.sharing && shot.since === 0,
             "a screenshot's single capture burst never reads as sharing the screen")
+        // the ticks run every 500 ms, so a shot can land before the last one is forgotten
+        let shots = castIdle
+        for (let at = 1000; at <= 5000; at += 700) {
+            shots = Compositor.castStep(shots, "start", at)
+            shots = Compositor.castStep(shots, "stop", at + 30)
+            if (shots.sharing) break
+        }
+        root._check(!shots.sharing,
+            "screenshots taken a moment apart never add up to sharing the screen")
         let cast = castIdle
         let castAt = 16
         for (; castAt <= 1600; castAt += 16) {
