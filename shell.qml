@@ -283,6 +283,15 @@ ShellRoot {
         surfaceFile: "modules/menu/MenuWindow.qml"
     }
 
+    // a hover prepares the menu for a click, but a keybind gives no warning: compiled off the GUI thread once startup has
+    // settled, the first open is as quick as the rest (~160 to ~90 ms) for 1-2 MB nearly every session spends anyway.
+    // It also fixes the menu to the release this shell started on, before an update can change the files underneath
+    Timer {
+        interval: 3000
+        running: !root.smokeTest
+        onTriggered: _menuPopup._surfaceReady()
+    }
+
     PopupLoader {
         id: _calendarPopup
         onUnloaded: _collectAfterUnload.restart()

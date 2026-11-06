@@ -14,8 +14,9 @@ These are the 1.5.0 release measurements on reference machine A in
 | warm | ~101 MB | The same session after the menu has been opened once. |
 
 Popups and the menu's large pages compile the first time they are wanted, off the GUI thread,
-which starts the bar about 120 ms sooner with about 7 MB less memory and adds about 55 ms to the
-first menu open of a session. A popup that fails to compile leaves the bar running and shows an alert. Menu and popup instances unload after closing. The first open also loads code, font and
+which starts the bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles
+three seconds after startup, so its first open is as quick as later ones. A popup that fails to
+compile leaves the bar running and shows an alert. Menu and popup instances unload after closing. The first open also loads code, font and
 driver caches that can remain warm, so closing a menu does not return the process to its
 startup footprint. An earlier empty Quickshell panel measurement was about 57 MB on the same machine.
 
