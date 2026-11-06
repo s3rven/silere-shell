@@ -2243,10 +2243,42 @@ test_menu_keybind_plan() (
         bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
         || fail "keybind dry run with a Lua config exited non-zero"
     case "$out" in
-        *"Lua config"*'hl.bind("SUPER + slash", hl.dsp.exec_cmd("qs ipc -p '*'call menu toggle"))'*) ;;
-        *) fail "a Lua config was not offered a Lua bind to add" ;;
+        *"append to $dir/hyprland.lua: "'hl.bind("SUPER + slash", hl.dsp.exec_cmd("qs ipc -p '*'call menu toggle"))'*) ;;
+        *) fail "a stock Lua config was not offered the bind: $out" ;;
     esac
-    assert_eq "$before" "$(<"$dir/hyprland.lua")" "Lua config left unchanged"
+    case "$out" in
+        *"append to $dir/hyprland.lua: hl.exec_cmd("*) ;;
+        *) fail "a stock Lua config with no execs.lua was not offered autostart: $out" ;;
+    esac
+    assert_eq "$before" "$(<"$dir/hyprland.lua")" "a dry run leaves a Lua config unchanged"
+
+    # data-driven binds in another file count, and a comment naming the key does not
+    printf -- '-- SUPER + slash used to open the launcher\n' > "$dir/binds.lua"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)"
+    case "$out" in
+        *"looks taken"*) fail "a comment was read as a bind: $out" ;;
+    esac
+    printf 'return { { mods = "SUPER", key = "slash", run = "launcher" } }\n' > "$dir/binds.lua"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)"
+    case "$out" in
+        *"looks taken"*) ;;
+        *) fail "a bind held as data in another file was not reported as taken: $out" ;;
+    esac
+    rm -f "$dir/binds.lua"
+
+    # a config ending in a return cannot take a block after it, so nothing is planned for it
+    printf 'return {}\n' > "$dir/hyprland.lua"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)"
+    case "$out" in
+        *"append to $dir/hyprland.lua"*) fail "a block was planned after a return: $out" ;;
+    esac
+    case "$out" in
+        *"ends in a return"*'hl.exec_cmd('*) ;;
+        *) fail "a config ending in a return was not told what to add: $out" ;;
+    esac
 )
 
 test_plain_copy_is_not_package_managed() (
@@ -2319,6 +2351,48 @@ test_unit_identity() (
             && fail "environment '$exec_start' was diagnosed as transient images"
     done
     return 0
+)
+
+test_lua_block_is_checked() (
+    local dir="$TMP/lua-block" stubs="$TMP/lua-block-stubs" before
+    mkdir -p "$dir" "$stubs"
+    # stands in for Hyprland --verify-config: anything marked BROKEN is rejected
+    printf '#!/bin/sh\n! grep -q BROKEN "$3"\n' > "$stubs/Hyprland"
+    chmod +x "$stubs/Hyprland"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    HYPR_CONFIG="$dir/hyprland.lua"
+    export PATH="$stubs:$PATH"
+
+    printf 'hl.config({})\n' > "$HYPR_CONFIG"
+    _append_lua_block "$HYPR_CONFIG" '-- begin' '-- end' 'hl.bind()' || fail "a block a working config accepts was refused"
+    assert_eq $'hl.config({})\n\n-- begin\nhl.bind()\n-- end' "$(<"$HYPR_CONFIG")" "the block goes at the end, between its markers"
+
+    before="$(<"$HYPR_CONFIG")"
+    if _append_lua_block "$HYPR_CONFIG" '-- begin2' '-- end2' 'BROKEN'; then
+        fail "a block that breaks the config was reported as added"
+    fi
+    assert_eq "$before" "$(<"$HYPR_CONFIG")" "a block Hyprland rejects comes back out"
+
+    # a dotfiles link stays a link, whichever way it goes
+    mv "$HYPR_CONFIG" "$dir/real.lua"
+    ln -s "$dir/real.lua" "$HYPR_CONFIG"
+    _append_lua_block "$HYPR_CONFIG" '-- begin3' '-- end3' 'BROKEN' || true
+    [ -L "$HYPR_CONFIG" ] || fail "putting a rejected block back replaced a linked config with a plain file"
+    assert_eq "$before" "$(<"$dir/real.lua")" "the rejected block came out through the link"
+    rm -f "$HYPR_CONFIG"; mv "$dir/real.lua" "$HYPR_CONFIG"
+
+    # a config already failing says nothing about the block, so it is not blamed
+    printf 'BROKEN\n' > "$HYPR_CONFIG"
+    _append_lua_block "$HYPR_CONFIG" '-- begin' '-- end' 'hl.bind()' || fail "a config that was already failing refused the block"
+    grep -qF 'hl.bind()' "$HYPR_CONFIG" || fail "a config that was already failing lost the block"
+
+    # no Hyprland on PATH, as when installing before the compositor is set up
+    local bare="$TMP/lua-block-bare" tool
+    mkdir -p "$bare"
+    for tool in cp mktemp cat rm; do ln -s "$(command -v "$tool")" "$bare/$tool"; done
+    printf 'hl.config({})\n' > "$HYPR_CONFIG"
+    PATH="$bare" _append_lua_block "$HYPR_CONFIG" '-- begin' '-- end' 'hl.bind()' \
+        || fail "no Hyprland to ask refused the block"
 )
 
 test_launcher_uses_real_name() (
@@ -2812,6 +2886,7 @@ test_hypr_discovery
 test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
+test_lua_block_is_checked
 test_launcher_uses_real_name
 test_startup_failure_report
 test_cli_restart_and_log

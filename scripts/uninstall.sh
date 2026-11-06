@@ -304,8 +304,13 @@ for f in "${AUTOSTART_FILES[@]}"; do
     if $has_keybind; then
         _info "silere-shell keybind found in $f"
         if _ask "Remove the menu keybind from $(basename "$f")?"; then
-            _remove_block "$f" '# silere-shell keybind begin' \
-                '# silere-shell keybind end' && _ok "removed the keybind from $f"
+            if [[ "$f" == *.lua ]]; then
+                _remove_block "$f" '-- silere-shell keybind begin' \
+                    '-- silere-shell keybind end' && _ok "removed the keybind from $f"
+            else
+                _remove_block "$f" '# silere-shell keybind begin' \
+                    '# silere-shell keybind end' && _ok "removed the keybind from $f"
+            fi
         else
             _skip "kept"
         fi

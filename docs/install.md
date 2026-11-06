@@ -33,7 +33,8 @@ The installer:
 - puts a checkout in your XDG config directory, or another path you choose
 - backs up files before editing them, and asks before touching compositor autostart
 - offers a key that opens the menu in a Hyprland `.conf`, and leaves a combination already in use alone;
-  for niri and a Lua config it prints the line to add
+  a Hyprland Lua config gets autostart and a shortcut at its end, checked with `Hyprland --verify-config` and
+  put back if rejected. For niri, or a Lua config ending in a `return`, it prints the line to add
 - offers to leave the checkout on the latest signed release
 - prints the final install path when it's done
 - offers to start Silere right away in a Wayland session

@@ -6,8 +6,8 @@ Click the active workspace to open the menu. Right-click it for quick actions, o
 click the clock for the calendar. Escape steps back through an open picker or search,
 then closes the popup. Clicking outside also closes it.
 
-The installer offers **Super + /** as a menu shortcut on Hyprland. For niri or a
-Hyprland configuration written in Lua, it prints the line to add. You can also use:
+The installer offers **Super + /** as a menu shortcut on Hyprland. For niri, it prints
+the line to add. You can also use:
 
 ```bash
 silere ipc menu toggle

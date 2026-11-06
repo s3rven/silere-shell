@@ -35,10 +35,18 @@ if you installed elsewhere. To create the command link, run that same script wit
 ## It installed but nothing appears
 
 Silere runs on Hyprland and niri only. On either of those it is nearly always the autostart
-line — run `~/.config/silere-shell/scripts/silere run` to check. If the bar comes up, add
-`~/.config/silere-shell/scripts/silere run --startup` to your compositor's startup
-(`exec-once` on Hyprland, `spawn-at-startup` on niri) and restart it. Use the full path:
-the compositor's `PATH` often lacks `~/.local/bin`.
+line — run `~/.config/silere-shell/scripts/silere run` to check. If the bar comes up, run the
+installer again, which adds it to a Hyprland config, or add this to your compositor's startup and
+restart it. Use the full path: the compositor's `PATH` often lacks `~/.local/bin`.
+
+```lua
+-- ~/.config/hypr/hyprland.lua
+hl.on("hyprland.start", function()
+    hl.exec_cmd("$HOME/.config/silere-shell/scripts/silere run --startup")
+end)
+```
+
+On niri it is `spawn-at-startup "sh" "-c" "$HOME/.config/silere-shell/scripts/silere run --startup"`.
 
 ## It stopped working after a system update
 

@@ -515,6 +515,53 @@ _lua_ends_in_return() {
     grep -qE '^return([^A-Za-z0-9_]|$)' "$1" 2>/dev/null
 }
 
+# a config Hyprland rejects starts it in emergency mode, with none of the user's settings, so a block that breaks a
+# working config comes straight back out. A config already failing, or no Hyprland to ask, gets no verdict either way
+_hypr_config_verifies() {
+    command -v Hyprland >/dev/null 2>&1 || return 2
+    env -u LC_ALL timeout 10 Hyprland --verify-config --config "$HYPR_CONFIG" >/dev/null 2>&1
+}
+
+_append_lua_block() { # $1 = file, $2 = begin marker, $3 = end marker, $4 = body
+    local file="$1" saved checked=false
+    saved="$(mktemp)" || return 1
+    cp -p -- "$file" "$saved" || { rm -f "$saved"; return 1; }
+    _hypr_config_verifies && checked=true
+    if ! printf '\n%s\n%s\n%s\n' "$2" "$4" "$3" >> "$file"; then
+        rm -f "$saved"
+        return 1
+    fi
+    if $checked && ! _hypr_config_verifies; then
+        # through a link when it is one, as the append went
+        cat -- "$saved" > "$file"
+        rm -f "$saved"
+        return 1
+    fi
+    rm -f "$saved"
+}
+
+# binds in Lua are often data in another file, so a line naming both the modifiers and the key counts as taken
+_lua_bind_taken() {
+    local dir f
+    dir="$(dirname -- "$HYPR_CONFIG")"
+    [ -d "$dir" ] || return 1
+    while IFS= read -r -d '' f; do
+        awk -v mods="$MENU_BIND_MODS" -v key="$MENU_BIND_KEY" '
+            BEGIN { n = split(tolower(mods), m, /[ +_-]+/); key = tolower(key) }
+            /^[ \t]*--/ { next }
+            {
+                line = tolower($0)
+                if (!index(line, key)) next
+                hit = 1
+                for (i = 1; i <= n; i++) if (m[i] != "" && !index(line, m[i])) hit = 0
+                if (hit) { found = 1; exit }
+            }
+            END { exit !found }
+        ' "$f" && return 0
+    done < <(find "$dir" -type f -name '*.lua' -print0 2>/dev/null)
+    return 1
+}
+
 _owned_block_contains() {
     local file="$1" begin="$2" end="$3" needle="$4"
     [ -f "$file" ] || return 1
@@ -1489,10 +1536,12 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
     do
         [ -f "$candidate" ] && { LUA_EXEC_FILE="$candidate"; break; }
     done
+    # a stock config has no execs.lua, so the main file takes the block; one ending in a return is refused below
+    [ -n "$LUA_EXEC_FILE" ] || LUA_EXEC_FILE="$HYPR_CONFIG"
 
     _ok "found Hyprland Lua config at $(_tilde "$HYPR_CONFIG")"
 
-    if [ -n "$LUA_EXEC_FILE" ] && _already_present "$LUA_EXEC_FILE"; then
+    if _already_present "$LUA_EXEC_FILE"; then
         receipt_autostart="$LUA_EXEC_FILE"
         LUA_AUTOSTART_BODY="$(printf 'hl.on(\"hyprland.start\", function()\n    hl.exec_cmd(%s)\nend)' "$LAUNCH_CMD_LUA")"
         if _owned_block_contains "$LUA_EXEC_FILE" '-- silere-shell begin' \
@@ -1512,40 +1561,35 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
             _skip "kept the existing Silere autostart command"
         fi
         autostart_ready=true
-    elif [ -n "$LUA_EXEC_FILE" ] && _lua_ends_in_return "$LUA_EXEC_FILE"; then
+    elif _lua_ends_in_return "$LUA_EXEC_FILE"; then
         _warn "$(_tilde "$LUA_EXEC_FILE") ends in a return, so a block appended after it would break the config"
         _warn "add this before its return:"
         _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
-    elif [ -n "$LUA_EXEC_FILE" ] && _dry; then
+    elif _dry; then
         _would "append to $LUA_EXEC_FILE: hl.exec_cmd($LAUNCH_CMD_LUA)"
-    elif [ -n "$LUA_EXEC_FILE" ]; then
+    else
         receipt_autostart="$LUA_EXEC_FILE"
         if _ask "Add autostart to $(_tilde "$LUA_EXEC_FILE")?"; then
             _backup "$LUA_EXEC_FILE"
-            cat >> "$LUA_EXEC_FILE" <<EOF
-
--- silere-shell begin
-hl.on("hyprland.start", function()
-    hl.exec_cmd($LAUNCH_CMD_LUA)
-end)
--- silere-shell end
-EOF
-            _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true autostart_ready=true
+            if _append_lua_block "$LUA_EXEC_FILE" '-- silere-shell begin' '-- silere-shell end' \
+                    "$(printf 'hl.on("hyprland.start", function()\n    hl.exec_cmd(%s)\nend)' "$LAUNCH_CMD_LUA")"; then
+                _ok "added to $(_tilde "$LUA_EXEC_FILE")"; did_autostart=true autostart_ready=true
+            else
+                _warn "Hyprland rejected $(_tilde "$LUA_EXEC_FILE") with this added, so it was put back. Add it where it fits:"
+                _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
+            fi
         else
             _skip "skipped — add manually: hl.exec_cmd($LAUNCH_SHOWN_LUA)"
         fi
-    else
-        # appending to hyprland.lua itself is not safe: Lua requires `return` to end
-        # a block, so a snippet after it is a syntax error that breaks the whole config
-        _warn "Lua config detected but no execs.lua found — looked in:"
-        _warn "  $(_tilde "$HYPR_DIR")/{custom,hyprland}/execs.lua and $(_tilde "$HYPR_DIR")/execs.lua"
-        _warn "create one of those and re-run, or add manually:"
-        _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
     fi
 
 elif [[ "$HYPR_CONFIG" == *.conf ]]; then
     receipt_autostart="$HYPR_CONFIG"
     _ok "found Hyprland config at $(_tilde "$HYPR_CONFIG")"
+    # 0.57 dropped hyprlang: this file does nothing until the config moves to hyprland.lua
+    if [[ "$(Hyprland --version 2>/dev/null | head -n 1)" =~ ^Hyprland\ 0\.(5[7-9]|[6-9][0-9]) ]]; then
+        _warn "this Hyprland only reads hyprland.lua, so a line added here takes effect only on an older one"
+    fi
     if _already_present "$HYPR_CONFIG"; then
         if _owned_block_contains "$HYPR_CONFIG" '# silere-shell begin' \
                 '# silere-shell end' '/scripts/silere' \
@@ -1607,9 +1651,33 @@ if [ "$receipt_compositor" = niri ]; then
     # config error rather than a merge
     _skip "niri keeps every bind in one block — add inside yours:"
     _info "  $NIRI_BIND_SHOWN"
-elif [[ "$HYPR_CONFIG" == *.lua ]]; then
-    _skip "Lua config — add this where your config declares its binds:"
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _owned_block_contains "$HYPR_CONFIG" '-- silere-shell keybind begin' \
+        '-- silere-shell keybind end' 'call menu toggle'; then
+    _ok "already present in $(_tilde "$HYPR_CONFIG")"
+    did_keybind=true
+    receipt_keybind="$HYPR_CONFIG"
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _lua_ends_in_return "$HYPR_CONFIG"; then
+    _skip "$(_tilde "$HYPR_CONFIG") ends in a return — add this where your config declares its binds:"
     _info "  $LUA_BIND_SHOWN"
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _lua_bind_taken; then
+    _warn "$MENU_BIND_MODS + $MENU_BIND_KEY looks taken in your Hyprland config"
+    _warn "re-run with SILERE_MENU_BIND_KEY set to a free key, or add manually:"
+    _warn "  $LUA_BIND_SHOWN"
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _dry; then
+    _would "append to $HYPR_CONFIG: $LUA_BIND_SHOWN"
+elif [[ "$HYPR_CONFIG" == *.lua ]]; then
+    if _ask "Bind $MENU_BIND_MODS + $MENU_BIND_KEY to open the Silere menu?"; then
+        _backup "$HYPR_CONFIG"
+        if _append_lua_block "$HYPR_CONFIG" '-- silere-shell keybind begin' '-- silere-shell keybind end' "$LUA_BIND_SHOWN"; then
+            _ok "$MENU_BIND_MODS + $MENU_BIND_KEY opens the menu"
+            did_keybind=true
+            receipt_keybind="$HYPR_CONFIG"
+        else
+            _warn "Hyprland rejected the config with this added, so it was put back: $LUA_BIND_SHOWN"
+        fi
+    else
+        _skip "skipped — add manually: $LUA_BIND_SHOWN"
+    fi
 elif [ -z "$HYPR_CONFIG" ]; then
     _skip "no Hyprland config found — add manually:"
     _info "  $HYPR_BIND_SHOWN"
@@ -1700,7 +1768,7 @@ if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scr
     fi
 fi
 if $autostart_ready; then
-    $started || printf "  restart your compositor to launch silere\n"
+    $started || printf "  silere starts at your next login, or now with: ${DIM}%s/scripts/silere run${R}\n" "$ROOT"
 elif $started; then
     printf "  ${YELLOW}autostart is not set up${R} — add the line above to your Hyprland or niri config so silere starts at login\n"
 else
@@ -1710,10 +1778,10 @@ else
 fi
 printf "  if a surface does not appear: ${DIM}%s/scripts/silere doctor${R}\n" "$ROOT"
 if $did_keybind; then
-    printf "  press ${DIM}%s + %s${R} or click the active workspace diamond to open the menu\n" \
+    printf "  press ${DIM}%s + %s${R} or click the active workspace to open the menu\n" \
         "$MENU_BIND_MODS" "$MENU_BIND_KEY"
 else
-    printf "  click the active workspace diamond to open the menu and settings\n"
+    printf "  click the active workspace to open the menu and settings\n"
     printf "  or bind it: ${DIM}%s${R}\n" "$MENU_BIND_SHOWN"
 fi
 # a packaged install ships no uninstall.sh: pointing at it there sends the user
