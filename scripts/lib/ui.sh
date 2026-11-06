@@ -50,3 +50,13 @@ _silere_marker_pair_valid() {
         END { exit !(begins == 1 && ends == 1 && begin_line < end_line) }
     ' "$1"
 }
+
+# another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
+_silere_other_bars() {
+    command -v pgrep >/dev/null 2>&1 || return 0
+    local bar
+    for bar in waybar ironbar yambar nwg-panel hyprpanel; do
+        pgrep -x "$bar" >/dev/null 2>&1 && printf '%s\n' "$bar"
+    done
+    return 0
+}

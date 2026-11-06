@@ -2395,6 +2395,19 @@ test_lua_block_is_checked() (
         || fail "no Hyprland to ask refused the block"
 )
 
+test_other_bars_are_named() (
+    local stubs="$TMP/bars-stubs" out
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\n[ "$2" = waybar ]\n' > "$stubs/pgrep"
+    chmod +x "$stubs/pgrep"
+    source "$ROOT/scripts/lib/ui.sh"
+    out="$(PATH="$stubs:$PATH" _silere_other_bars)"
+    assert_eq "waybar" "$out" "a bar still running is named"
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/pgrep"
+    out="$(PATH="$stubs:$PATH" _silere_other_bars)"
+    assert_eq "" "$out" "no other bar, nothing to say"
+)
+
 test_launcher_uses_real_name() (
     local stubs="$TMP/name-stubs" calls="$TMP/name-calls"
     mkdir -p "$stubs"
@@ -2887,6 +2900,7 @@ test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
 test_lua_block_is_checked
+test_other_bars_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
 test_cli_restart_and_log

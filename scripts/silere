@@ -94,6 +94,10 @@ run_shell() {
         die "Silere is already running from $(dirname "$other"); silere use switches to this checkout"
     fi
 
+    if [ "$startup" -eq 0 ]; then
+        other_bars="$(_silere_other_bars | paste -sd ' ')"
+        [ -z "$other_bars" ] || printf '%snote:%s %s still running, and will draw beside this bar\n' "$YELLOW" "$R" "$other_bars" >&2
+    fi
     restore_locale
     # Qt discards the cached image after its first texture upload with this set.
     # A second window (or a rebuilt tray) can then receive an empty texture.

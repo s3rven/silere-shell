@@ -210,6 +210,11 @@ else
     warn "compositor" "no live Hyprland or niri session detected"
 fi
 
+other_bars="$(_silere_other_bars | paste -sd ' ')"
+if [ -n "$other_bars" ]; then
+    warn "other bars" "$other_bars still running, and will draw beside Silere's; stop it and remove it from autostart"
+fi
+
 missing_modules=0
 for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
     if ! _qml_module_available "$module"; then
