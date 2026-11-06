@@ -38,6 +38,7 @@ Column {
             expanded: !ShellSettings.barCompact
             ToggleRow {
                 glyph: "󰡌"; label: "Auto tighten"
+                description: "Compact widgets only when the bar is full"
                 key: "barAutoCompact"
             }
         }

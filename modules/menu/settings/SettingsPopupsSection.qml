@@ -25,6 +25,7 @@ Column {
             }
             ToggleRow {
                 glyph: "󰠢"; label: "Group conversations"
+                description: "Same app and title share one card"
                 key: "notifGroupThreads"
             }
             SliderRow {
