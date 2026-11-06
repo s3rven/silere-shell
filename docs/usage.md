@@ -113,8 +113,8 @@ pressed twice, puts back what that page shows. Rows folded away behind a switch 
 Click the **search icon** beside the section heading, or press **Ctrl+F**, to expand
 **Find a setting…** and find the section for a feature.
 Try `font`, `history retention`, `night light`, or `reset defaults`; configuration
-names such as `notifHistoryDays` also work. Click a result to open its section.
-When exactly one section matches, Enter opens it. The clear-query button keeps
+names such as `notifHistoryDays` also work, as does any row's name. Click a result to open its section,
+or press Enter for the top one, which the line above the results names; Down and Up walk the results. The clear-query button keeps
 search open for another query; the close button folds it away. Hover the compact
 icon to see its label and Ctrl+F shortcut.
 Escape collapses search first, then closes the menu. Search resets when you leave Settings.

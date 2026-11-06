@@ -19,8 +19,10 @@ Column {
         ? MenuState.searchSettings(root.query) : []
     readonly property int fieldHeight: Metrics.rowHeightFor(36)
     readonly property int toggleHeight: Metrics.rowHeightFor(28)
-    readonly property string resultSummary: root.results.length === 1 ? "1 section · Enter to open"
-        : root.results.length + " sections" + (root.results.length > 4 ? " · Scroll for more" : "")
+    readonly property string resultSummary: root.results.length === 0 ? "No matching settings"
+        : root.results.length === 1 ? "1 section · Enter to open"
+        : root.results.length + " sections · Enter opens " + root.results[0].label
+            + (root.results.length > 4 ? " · Scroll for more" : "")
     property bool _hintReady: false
     signal expanding()
     signal sectionChosen(string section, string key)
@@ -59,8 +61,18 @@ Column {
         root.closeSearch()
         root.sectionChosen(section, key)
     }
+    // the Down key in the field lands on the first result; Up from the first result comes back
+    function _focusResult(index: int): bool {
+        if (!root.searching || index >= _results.count) return false
+        _results.currentIndex = index
+        _results.positionViewAtIndex(index, ListView.Contain)
+        _results.forceLayout()
+        const row = _results.itemAtIndex(index)
+        if (row) row.forceActiveFocus(Qt.TabFocusReason)
+        return row !== null
+    }
     function submit(): void {
-        if (root._canSearch && root.results.length === 1) root.choose(root.results[0].section)
+        if (root._canSearch && root.results.length > 0) root.choose(root.results[0].section)
     }
     onShownChanged: if (!shown) root.closeSearch()
     onEnabledChanged: if (!enabled) root.closeSearch()
@@ -221,6 +233,7 @@ Column {
                         FocusScroll { revealTarget: root }
                         Accessible.description: root.searching ? root.resultSummary : "Search by feature name or setting key"
                         onAccepted: root.submit()
+                        Keys.onDownPressed: event => { event.accepted = root._focusResult(0) }
                         Keys.onEscapePressed: event => {
                             event.accepted = root.dismissInline()
                             if (!event.accepted) _input.focus = false
@@ -304,8 +317,15 @@ Column {
             height: Math.max(0, parent.height - 8)
             model: root.results
             interactive: contentHeight > height
+            // follows interactive by default, which would leave a short list without arrow keys
+            keyNavigationEnabled: true
             delegate: ControlRow {
                 required property var modelData
+                required property int index
+                Keys.onUpPressed: event => {
+                    event.accepted = index === 0
+                    if (event.accepted) _input.forceActiveFocus(Qt.BacktabFocusReason)
+                }
                 width: _results.width
                 topRadius: Theme.radiusInline
                 bottomRadius: Theme.radiusInline

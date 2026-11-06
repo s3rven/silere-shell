@@ -5110,6 +5110,21 @@ ShellRoot {
                 && labelHit("track package updates", "widgets")?.key === "updatesWidget"
                 && labelHit("underlineTempGlow", "warnings")?.key === "underlineTempGlow",
             "a setting shared by two sections is searchable from both")
+        const top = query => MenuState.searchSettings(query)[0] ?? {}
+        root._check(top("format").section === "clock" && top("format").key === "clock12h"
+                && top("mode").section === "underline"
+                && top("notification pulse").section === "workspaces"
+                && top("app icon").key === "showWindowTitleIcon"
+                && top("low battery warning").key === "osdBatteryWarn"
+                && top("source").section === "theme",
+            "a row titled exactly like the query outranks pages that only share its words")
+        root._check(top("keyboard layout").section === "widgets" && top("keyboard").key === "barShowKeyboard"
+                && top("update").section === "updates" && top("reset").section === "updates"
+                && top("dark mode").section === "theme" && top("blue light").section === "interface",
+            "settings search answers everyday words and the widget names on Show & order")
+        root._check(ShellSettings._schema.every(e => !e.l || e.sec.split(",").every(sec =>
+                MenuState.searchSettings(e.l).some(row => row.section === sec && row.key === e.k))),
+            "every labelled setting is found on each of its pages by the label it shows")
         MenuState.setSettingsSection("popups")
         root._check(MenuState.settingsSection === "popups",
             "a known settings page is selected by name")
@@ -9968,10 +9983,6 @@ ShellRoot {
                 search.choose("clock")
                 root._check(search.searching && MenuState.settingsSection === "interface",
                     "a section outside the current results cannot be selected through search")
-                search.focusSearch()
-                f.input.keyClick(Qt.Key_Return)
-                root._check(search.searching && MenuState.settingsSection === "interface",
-                    "Enter leaves an ambiguous settings query open instead of choosing an arbitrary section")
                 f.input.wait(Motion.fast + 20)
                 if (clear) f.input.mouseClick(clear)
                 root._check(clear && search.expanded && search.query.length === 0
@@ -9987,6 +9998,30 @@ ShellRoot {
                 f.input.keyClick(Qt.Key_Return)
                 root._check(MenuState.settingsSection === "clock" && !search.expanded && !input.activeFocus,
                     "Enter opens a unique settings match and folds search away")
+                search.query = "dismiss after"
+                search.focusSearch()
+                const focusedTitle = () => {
+                    const it = input.Window.window ? input.Window.window.activeFocusItem : null
+                    return it && it.title !== undefined ? it.title : ""
+                }
+                f.input.keyClick(Qt.Key_Down)
+                f.input.wait(40)
+                const downOne = focusedTitle() === search.results[0].label
+                f.input.keyClick(Qt.Key_Down)
+                f.input.wait(40)
+                const downTwo = focusedTitle() === search.results[1].label
+                f.input.keyClick(Qt.Key_Up)
+                f.input.wait(40)
+                f.input.keyClick(Qt.Key_Up)
+                f.input.wait(40)
+                root._check(search.results.length === 3 && downOne && downTwo && input.activeFocus && search.expanded,
+                    "arrow keys walk from the settings search field through its results and back")
+                search.query = "bar"
+                root._check(search.resultSummary.indexOf("Enter opens Layout") >= 0,
+                    "a broad settings query names the section Enter will open")
+                f.input.keyClick(Qt.Key_Return)
+                root._check(MenuState.settingsSection === "surface" && !search.expanded && !input.activeFocus,
+                    "Enter opens the top match of a broad settings query")
                 MenuState.setSettingsSection("interface")
                 search.query = "qzx nonexistent"
                 root._check(search.results.length === 0

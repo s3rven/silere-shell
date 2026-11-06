@@ -144,20 +144,20 @@ AnchoredPopupState {
     }
 
     readonly property var _settingsSearchAliases: ({
-        theme: "accent wallpaper palette colors transparency frosted matugen dark black base border outline",
-        interface: "font typeface text icons scale accessibility animations display monitor brightness lock command hyprlock swaylock gtklock night light hyprsunset wlsunset",
+        theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
+        interface: "font typeface text size icons scale accessibility animations display monitor brightness lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset",
         surface: "bar position top bottom size shape corners rounded floating",
         underline: "underline glow screenshot pulse activity",
-        separators: "spacing gaps dividers compact",
-        widgets: "widgets show hide arrange reorder left center right tray",
+        separators: "spacing gaps padding dividers compact",
+        widgets: "widgets show hide arrange reorder left center right tray all apps layout",
         workspaces: "workspaces desktops markers numbers apps icons",
         clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm",
-        media: "music playback player tracks artwork spectrum visualizer cava audio",
-        indicators: "window title battery wifi wi-fi network vpn bluetooth microphone status",
+        media: "music now playing playback player tracks artwork album cover art spectrum visualizer cava audio",
+        indicators: "window title battery wifi wi-fi network vpn bluetooth microphone status ram",
         popups: "notifications popup history retention quiet hours do not disturb dnd critical",
-        osd: "on screen display volume sound audio brightness feedback integrated floating",
-        warnings: "battery cpu temperature hot critical alerts threshold",
-        updates: "updates version release install diagnostics health repair tools dependencies recovery reset defaults maintenance"
+        osd: "on screen display volume sound audio brightness feedback popup integrated floating",
+        warnings: "battery cpu temperature hot overheating critical alerts threshold",
+        updates: "updates version release install diagnostics health repair tools dependencies recovery reset defaults maintenance daily shell check doctor fix problems"
     })
 
     function _searchWords(text: string): string {
@@ -171,9 +171,17 @@ AnchoredPopupState {
         const labels = Object.create(null)
         const keyWords = Object.create(null)
         const schema = ShellSettings._schema
+        // the bar's widget toggles show the widget's own name
+        const widgetLabels = Object.create(null)
+        for (const id in ShellSettings.barWidgetMeta) {
+            const meta = ShellSettings.barWidgetMeta[id]
+            if (meta.setting) widgetLabels[meta.setting] = meta.label
+        }
+        // a leading space lets a term match only where a word starts: "lock" must not find clock
+        const spaced = text => " " + root._searchWords(text)
         for (let i = 0; i < schema.length; i++) {
             const entry = schema[i]
-            const label = entry.l || ""
+            const label = entry.l || widgetLabels[entry.k] || ""
             const words = " " + root._searchWords(entry.k + " " + label) + " "
             const sections = String(entry.sec).split(",")
             for (let j = 0; j < sections.length; j++) {
@@ -181,12 +189,10 @@ AnchoredPopupState {
                 keys[sec] = (keys[sec] || "") + " " + entry.k
                 labels[sec] = (labels[sec] || "") + " " + label
                 if (!keyWords[sec]) keyWords[sec] = []
-                keyWords[sec].push({ key: entry.k, label: label, words: words })
+                keyWords[sec].push({ key: entry.k, label: label, words: words, labelWords: spaced(label) })
             }
         }
         const rows = []
-        // a leading space lets a term match only where a word starts: "lock" must not find clock
-        const spaced = text => " " + root._searchWords(text)
         for (let g = 0; g < root.settingsTree.length; g++) {
             const group = root.settingsTree[g]
             const children = group.children || [group]
@@ -198,6 +204,7 @@ AnchoredPopupState {
                     keys: keyWords[child.section] || [],
                     labelWords: spaced(child.label),
                     groupWords: spaced(group.label),
+                    descriptionWords: spaced(child.description || ""),
                     featureWords: spaced((child.description || "") + " "
                         + (labels[child.section] || "") + " "
                         + (root._settingsSearchAliases[child.section] || "")),
@@ -214,13 +221,19 @@ AnchoredPopupState {
         const words = root._searchWords(query.slice(0, 256))
         if (words.length === 0) return []
         const terms = words.split(" ").map(term => " " + term)
-        const rank = row => terms.every(term => row.labelWords.indexOf(term) >= 0) ? 0
-            : terms.every(term => row.groupWords.indexOf(term) >= 0) ? 1
-            : terms.every(term => row.featureWords.indexOf(term) >= 0) ? 2 : 3
+        const phrase = " " + words
+        const within = text => terms.every(term => text.indexOf(term) >= 0)
+        // a page, its group, a row titled exactly this ("App icon" is not "App icons"), the page's own summary, any row title
+        const rank = row => within(row.labelWords) ? 0
+            : within(row.groupWords) ? 1
+            : row.keys.some(k => k.labelWords === phrase) ? 2
+            : within(row.descriptionWords) ? 3
+            : row.keys.some(k => within(k.labelWords)) ? 4
+            : within(row.featureWords) ? 5 : 6
         return root._settingsSearchEntries.filter(row => terms.every(term => row.words.indexOf(term) >= 0))
             .sort((a, b) => rank(a) - rank(b) || a.order - b.order)
             .map(row => {
-                const hit = root._matchedKey(row.keys, terms)
+                const hit = row.keys.find(k => k.labelWords === phrase) ?? root._matchedKey(row.keys, terms)
                 return Object.assign({}, row, { key: hit ? hit.key : "", keyLabel: hit ? hit.label : "" })
             })
     }
