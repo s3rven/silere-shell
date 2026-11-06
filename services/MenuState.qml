@@ -278,6 +278,13 @@ AnchoredPopupState {
         return 2
     }
 
+    // the next tab in the rail's order, around the ends; Now Playing is only there while something plays
+    function adjacentTab(index: int, mediaShown: bool, step: int): int {
+        const order = mediaShown ? [homeTab, recentTab, settingsTab, mediaTab] : [homeTab, recentTab, settingsTab]
+        const at = Math.max(0, order.indexOf(index))
+        return order[(at + step + order.length) % order.length]
+    }
+
     function selectTab(index: int): int {
         const tab = root._validTab(index)
         if (tab !== settingsTab) root.closeSettingsSelect()

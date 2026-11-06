@@ -30,6 +30,19 @@ FittedPopupWindow {
 
     PopupShadow { card: panel }
 
+    Shortcut {
+        sequence: "Ctrl+Tab"
+        context: Qt.ApplicationShortcut
+        enabled: MenuState.open
+        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.shown, 1))
+    }
+    Shortcut {
+        sequences: ["Ctrl+Shift+Tab", "Ctrl+Backtab"]
+        context: Qt.ApplicationShortcut
+        enabled: MenuState.open
+        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.shown, -1))
+    }
+
     FloatingPopupCard {
         id: panel
 

@@ -2504,6 +2504,14 @@ ShellRoot {
         root._checkMenuContrast()
         root._checkAccentContrast()
         root._checkLightPalette()
+        root._check(MenuState.adjacentTab(MenuState.homeTab, false, 1) === MenuState.recentTab
+                && MenuState.adjacentTab(MenuState.recentTab, false, 1) === MenuState.settingsTab
+                && MenuState.adjacentTab(MenuState.settingsTab, false, 1) === MenuState.homeTab
+                && MenuState.adjacentTab(MenuState.homeTab, false, -1) === MenuState.settingsTab
+                && MenuState.adjacentTab(MenuState.settingsTab, true, 1) === MenuState.mediaTab
+                && MenuState.adjacentTab(MenuState.homeTab, true, -1) === MenuState.mediaTab
+                && MenuState.adjacentTab(MenuState.mediaTab, false, 1) === MenuState.recentTab,
+            "Ctrl+Tab walks the rail's order, around the ends, past Now Playing when nothing plays")
         root._checkConnectivityBarActions()
         const pageMovedWas = Scroll._page.movedAt
         const scrollList = scrollListFactory.createObject(root)

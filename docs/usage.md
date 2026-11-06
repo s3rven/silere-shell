@@ -29,8 +29,8 @@ silere ipc menu toggle
 
 Use **Tab / Shift+Tab** to move between controls, **Enter / Space** to activate them,
 and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
-Page Up/Down. **Ctrl+F** searches notification history and Settings. Escape steps
-back or closes the popup. Controls expose the same actions to accessibility tools.
+Page Up/Down. **Ctrl+Tab / Ctrl+Shift+Tab** move between the menu's pages. **Ctrl+F**
+searches notification history and Settings. Escape steps back or closes the popup. Controls expose the same actions to accessibility tools.
 The mouse back button also steps back through the menu before closing it.
 
 In an open dropdown, repeat an initial to cycle matches; Backspace corrects the search.
