@@ -50,6 +50,8 @@ Hardware not already listed takes a new letter.
 | 1.4.4 | 2026-10-22 | A | warm | — | — | — | — | — |
 | 1.5.0 | 2026-11-03 | A | cold | 93 MB | 192 MB | 0.2% | 26 | 55 |
 | 1.5.0 | 2026-11-03 | A | warm | 101 MB | 202 MB | 0.3% | 26 | 55 |
+| 1.6.0 | 2026-11-06 | A | cold | 78 MB | 172 MB | 0.2% | 24 | 58 |
+| 1.6.0 | 2026-11-06 | A | warm | 86 MB | 181 MB | 0.2% | 25 | 58 |
 
 A dash means that release was not measured.
 
@@ -107,3 +109,15 @@ instance was running.
 
 Raw reports: [cold](perf/1.5.0-cold.json) · [warm](perf/1.5.0-warm.json). They were collected
 from runtime commit `03d2653` while the release metadata and notes were being prepared.
+
+The 1.6.0 runs use reference-A hardware with kernel `7.3.1-1-cachyos`, Quickshell 0.3.2 and
+Qt 6.12.0, with the display at 60 Hz / 125% scale (240 Hz for 1.5.0). The user service also
+gained `QT_QPA_PLATFORMTHEME=` and `QT_QUICK_CONTROLS_STYLE=` on 2026-11-05, worth about 4 MB, so
+this is not a controlled comparison of code changes alone. Most of the rest is popups and the
+menu's large pages compiling when first wanted instead of at startup. Both samples come from one
+restart and were steady, with a per-second CPU median of 0.0% of one core, and both descriptor
+counts stayed flat. Each sample started just after a minute boundary, with the session locked,
+the visualizer stopped and no second Quickshell instance running.
+
+Raw reports: [cold](perf/1.6.0-cold.json) · [warm](perf/1.6.0-warm.json). They were collected
+from runtime commit `d4d6d47` while the release metadata and notes were being prepared.
