@@ -107,7 +107,8 @@ For Bluetooth devices needing a PIN or confirmation, **Pair with a passkey** ope
 Open **Settings** in the menu. Most changes apply immediately and are saved to
 `~/.config/silere-shell/settings.json`, or the corresponding `$XDG_CONFIG_HOME` path.
 The file stores only values changed from the defaults.
-A dot beside a Settings page means it has changes from the defaults.
+A dot beside a Settings page means it has changes from the defaults, and **Reset** in its header,
+pressed twice, puts back what that page shows. Rows folded away behind a switch that is off keep their values.
 
 Click the **search icon** beside the section heading, or press **Ctrl+F**, to expand
 **Find a setting…** and find the section for a feature.

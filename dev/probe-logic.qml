@@ -10932,7 +10932,16 @@ ShellRoot {
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()
+        ShellSettings.barHeight = ShellSettings._defaults.barHeight + 4
+        ShellSettings.barFloating = false
+        ShellSettings.barWidth = 0.7
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
+        const pageDotted = ShellSettings.modifiedSections.surface === true
+        ShellSettings.resetSection("surface")
+        root._check(pageDotted && ShellSettings.barHeight === ShellSettings._defaults.barHeight
+                && Math.abs(ShellSettings.barWidth - 0.7) < 0.001
+                && ShellSettings.showSeconds !== ShellSettings._defaults.showSeconds,
+            "a page's Reset clears what the page shows, and keeps rows folded behind an off switch and other pages")
         ShellSettings.dnd = true
         ShellSettings.nightLightTemp = ShellSettings._defaults.nightLightTemp - 500
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds

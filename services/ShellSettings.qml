@@ -230,6 +230,16 @@ Singleton {
         if (root.barWidgetOrderRight !== right) root.barWidgetOrderRight = right
     }
 
+    // a page's Reset: what that page shows, in one write. A row folded behind an off master is not
+    // shown, so it keeps its value for when the master comes back on
+    function resetSection(section: string): void {
+        const keys = Object.keys(root._modifiedKeys).filter(key => {
+            const sec = root._sectionOf[key]
+            return !!sec && sec.split(",").indexOf(section) >= 0 && !root._dotHidden(section, key)
+        })
+        root.batch(() => keys.forEach(key => root.setValue(key, root._defaults[key])))
+    }
+
     function resetBarWidgets(): void {
         root.setBarWidgetLayout(_defaults.barWidgetOrderLeft,
             _defaults.barWidgetOrderCenter,

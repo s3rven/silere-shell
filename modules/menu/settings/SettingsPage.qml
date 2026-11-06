@@ -396,7 +396,7 @@ PageShell {
                 anchors.left: _hdrIconSlot.right
                 anchors.leftMargin: 7
                 anchors.right: parent.right
-                anchors.rightMargin: _search.toggleHeight + 8
+                anchors.rightMargin: _search.toggleHeight + 8 + (_hdrReset.visible ? _hdrReset.width + 8 : 0)
                 y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
                 height: implicitHeight
                 spacing: 1
@@ -411,6 +411,26 @@ PageShell {
                     elide: Text.ElideRight
                 }
 
+            }
+
+            // the Show & order page keeps its own Reset beside the list, which also handles the tray's hidden apps
+            ConfirmButton {
+                id: _hdrReset
+                anchors.right: parent.right
+                anchors.rightMargin: _search.toggleHeight + 8
+                y: Math.round((_detailHeader._mainH - height) / 2)
+                designHeight: 24
+                glyph: "󰦛"
+                label: "Reset"
+                tint: Theme.warning
+                enabled: !_search.expanded
+                shown: !_search.expanded && root._shownSection !== "widgets"
+                    && ShellSettings.modifiedSections[root._shownSection] === true
+                Accessible.name: "Reset " + _detailHeader._meta.label
+                onConfirmed: ShellSettings.resetSection(root._shownSection)
+                // armed on one page, it must not reset the next when both have changes and it stays shown
+                readonly property string _section: root._shownSection
+                on_SectionChanged: disarm()
             }
 
             Rectangle {
