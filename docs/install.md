@@ -45,7 +45,8 @@ you set an absolute config root. The interactive installer lets you choose anoth
 ## First start
 
 Inside your Hyprland or niri session, stop your old bar and notification daemon,
-such as waybar and mako or dunst, then run:
+such as waybar and mako or dunst, or another Quickshell shell, then run the line below.
+It names any other bar it finds still running.
 
 ```bash
 silere run
