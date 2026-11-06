@@ -111,6 +111,7 @@ if [ "$qs_usable" = 1 ]; then
   if command -v Hyprland >/dev/null 2>&1 && command -v kwin_wayland >/dev/null 2>&1 \
       && command -v dbus-run-session >/dev/null 2>&1 && compgen -G '/dev/dri/renderD*' >/dev/null; then
     _start hyprland dev/test-compositors.sh hyprland
+    _start try dev/test-try.sh
     _start first_login dev/test-first-login.sh
   fi
   if command -v pipewire >/dev/null 2>&1 && command -v wireplumber >/dev/null 2>&1; then
@@ -854,6 +855,13 @@ if [ -n "${_pid_hyprland:-}" ]; then
   _report hyprland "nested hypr" "the shell failed against a nested Hyprland" 'passed \(hyprland[^)]*\)'
 else
   info "nested hypr" "not run: needs Hyprland, KWin and a GPU render node"
+fi
+
+section "preview"
+if [ -n "${_pid_try:-}" ]; then
+  _report try "preview" "silere try failed, or reached past its private session" 'preview passed \([^)]*\)'
+else
+  info "preview" "not run: needs Hyprland, KWin and a GPU render node"
 fi
 
 section "first login"

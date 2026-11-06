@@ -28,6 +28,7 @@ _usage_text() {
     cat <<'EOF'
 Usage: silere <command> [options]
 
+  try                    Preview Silere in a window, changing nothing on this desktop
   run [--startup]        Start Silere once; --startup waits for the compositor
   run --supervised       Start through the optional user service
   service install        Install the optional service; --dry-run previews it
@@ -655,6 +656,10 @@ case "$command_name" in
                 exec bash "$ROOT/scripts/update.sh" --rollback ;;
             *) usage >&2; exit 2 ;;
         esac
+        ;;
+    try)
+        restore_locale
+        exec bash "$ROOT/scripts/try.sh" "$@"
         ;;
     repair)
         if is_packaged; then

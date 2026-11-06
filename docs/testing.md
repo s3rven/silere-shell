@@ -92,6 +92,34 @@ adds them, to see whether a fix has landed upstream:
 
 Quickshell restarts the shell within about a second after a crash, with notification history intact.
 
+## Preview
+
+```bash
+bash dev/test-try.sh
+```
+
+Runs `silere try` inside a virtual KWin, so no window reaches your desktop. The shell has to start,
+a settings change in it must not reach the desktop's own files, and stopping it or closing its
+window has to leave nothing behind. `dev/check.sh` runs it when the compositors are installed.
+
+## First login
+
+```bash
+bash dev/test-first-login.sh
+```
+
+The whole path a new user takes: Hyprland's own example config, the real installer on a throwaway home,
+then a login. The bar has to come up with nobody starting it, the installed shortcut has to open the menu,
+running the installer again must change nothing, and uninstalling has to leave the config clean.
+`dev/check.sh` runs it when the compositors are installed.
+
+## Measurements
+
+`dev/bench-lab.sh` compares checkouts in a private nested session: startup, the latency of every panel, memory
+over repeated menu opens, the optional service settings, and a long soak.
+[Performance](performance.md#measuring-a-whole-session) has the commands. It needs a GPU render node and is not
+part of `dev/check.sh`.
+
 ## What CI runs
 
 | Job | Coverage |
