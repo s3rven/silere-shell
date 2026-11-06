@@ -150,6 +150,14 @@ ShellRoot {
             }
         }
 
+        // Quickshell deletes a LazyLoader's running incubator without clearing it, and Qt can then resume a freed
+        // parent once the nested loads under it land (SIGSEGV in QQmlIncubatorPrivate::incubate). A load in flight
+        // is finished the way Qt supports instead, then dropped
+        function _dropLoad(): void {
+            if (_plLoader.loading) _plLoader.active = true
+            _plLoader.active = false
+        }
+
         function _ensureLoaded(): void {
             if (!_pl._surfaceReady()) return
             _plUnload.stop()
@@ -159,8 +167,7 @@ ShellRoot {
             if ((_plLoader.loading || _plLoader.active) && _pl._latchedScreen
                     && _pl.requestedScreen
                     && _pl._latchedScreen !== _pl.requestedScreen) {
-                _plLoader.loading = false
-                _plLoader.active = false
+                _pl._dropLoad()
                 _pl._latchedScreen = _pl.requestedScreen
                 Qt.callLater(function() {
                     if (_pl.wantOpen) {
@@ -185,8 +192,7 @@ ShellRoot {
                     && _pl._latchedScreen
                     && _pl.requestedScreen
                     && _pl._latchedScreen !== _pl.requestedScreen) {
-                _plLoader.loading = false
-                _plLoader.active = false
+                _pl._dropLoad()
             }
             if (!_plLoader.loading && !_plLoader.active) {
                 _pl._latchedScreen = _pl.requestedScreen
@@ -201,10 +207,7 @@ ShellRoot {
         }
         onWarmChanged: {
             if (warm) _pl._ensureWarm()
-            else {
-                _plLoader.loading = false
-                if (!wantOpen) _plUnload.restart()
-            }
+            else if (!wantOpen) _plUnload.restart()
         }
         // the compositor closes a layer surface for good when its output goes
         // away, and the latched screen reads null from then on. A popup that is
@@ -220,7 +223,7 @@ ShellRoot {
                     else if (_pl.warm) _pl._ensureWarm()
                 })
             } else if (_plLoader.loading) {
-                _plLoader.loading = false
+                _pl._dropLoad()
                 _pl._ensureWarm()
             }
         }
@@ -245,7 +248,8 @@ ShellRoot {
             interval: _pl.unloadDelay
             onTriggered: {
                 if (_pl.wantOpen || _pl.warm) return
-                _plLoader.loading = false
+                // a hover that ended mid-load lets it land, which costs no frame, rather than cancel it
+                if (_plLoader.loading) { restart(); return }
                 _plLoader.active = false
                 _pl.unloaded()
             }

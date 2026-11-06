@@ -898,6 +898,15 @@ else
   fail "services/SafeText.qml must clip through the Grapheme.js library, not a loop over root"
 fi
 
+section "lazy loader cancel"
+# Quickshell deletes a running LazyLoader incubator without clearing it, and Qt can then resume a freed parent (11-06 core dump)
+if ! grep -qE 'Loader\.loading[[:space:]]*=[[:space:]]*false' shell.qml \
+    && grep -qF 'if (_plLoader.loading) _plLoader.active = true' shell.qml; then
+  ok "lazy loader" "a popup load in flight is finished and dropped, never cancelled mid-incubation"
+else
+  fail "shell.qml must not set a LazyLoader's loading to false; finish the load with active = true, then drop it"
+fi
+
 section "installer environment defaults"
 if ! grep -qF '${MALLOC_CONF-' scripts/silere \
     && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \

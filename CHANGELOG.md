@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- The shell no longer crashes when the pointer leaves the active workspace while the menu is still being prepared for a click. Quickshell dropped that preparation part way through, which Qt cannot always survive while lists inside it are still loading.
 - The installer sets up autostart and the menu shortcut on a stock Hyprland config. On Hyprland's Lua configs it looked only for an `execs.lua` that a stock install does not have, so the shell installed and then never started at login. It checks the result with `Hyprland --verify-config` and puts the file back if Hyprland rejects it, and `silere uninstall` takes both back out.
 - `silere doctor` and `silere run` name another bar still running, including another Quickshell shell such as Noctalia on the same display, which would otherwise draw beside Silere's and read as Silere being broken.
 - A light Matugen palette no longer leaves the shell unreadable. Its base stays light instead of sinking toward black under dark text, and high contrast, the accent, warnings and glass all follow it. As the accent source for the neutral base, its dark accent is lifted to stay readable.
