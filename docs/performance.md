@@ -70,6 +70,24 @@ Environment=QS_ICON_THEME=your-icon-theme
 | Allocator | No difference above noise in 25 menu cycles. It suits one small process, not a heavy multithreaded one. |
 | KDE theme off | The shell draws its own UI, and apps it opens go through the compositor and keep their theme. The icon theme becomes a fixed name here, so change it if you change your theme. |
 
+## Measuring a whole session
+
+`scripts/bench.sh` reads the shell you are running. To compare checkouts, or ask what a change does over
+time, `dev/bench-lab.sh` runs a whole shell in a private nested session with its own bus and PipeWire:
+
+```bash
+bash dev/bench-lab.sh startup --arm old=../old-checkout --arm new=.   # bar and first open, memory, 20 trials each
+bash dev/bench-lab.sh latency                                         # every panel's first and later opens
+bash dev/bench-lab.sh cycles --cycles 50                              # does memory settle over repeated opens
+bash dev/bench-lab.sh settings                                        # what each setting above saves and costs
+bash dev/bench-lab.sh soak --hours 6                                  # memory over a long session
+```
+
+Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
+IPC client, as a keybind does, to the surface's first frame in the compositor. A `cycles` or `soak` run judges
+growth on `Pss_Anon`, the shell's own heap, because another Quickshell running at the same time moves shared
+pages out of its PSS. Run one at a time on a quiet machine, and compare numbers only within one machine.
+
 ## Animation driver
 
 Keep Awake uses an input-free overlay window so it keeps receiving frame callbacks
