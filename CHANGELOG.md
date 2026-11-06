@@ -22,8 +22,34 @@ settings file carries its own `__version` and migrates separately.
 - A documentation index and a separate updates and recovery guide, with simpler setup, controls and scripting examples.
 - The OSD shows the new power mode when it changes outside the menu, such as from a laptop's power mode key, or a remembered mode applying when the charger is plugged in or out.
 
+- `silere try` opens the whole shell in a window on a private session, to see it before switching. The bar, notifications and settings already on the desktop are not touched, and closing the window removes it.
+- `silere reset` goes back to a fresh install when the menu won't open or a change can't be found: settings, edited files, leftovers from older versions and caches. It previews first, and `silere reset --undo` puts everything but caches back.
+- **Ctrl+Tab** and **Ctrl+Shift+Tab** move between the menu's pages.
+- Each Settings page with changes has **Reset** in its header, pressed twice, which puts back what that page shows. Rows folded away behind a switch that is off keep their values.
+- Down and Up walk the Settings search results from the search field, and Up from the first result goes back to it.
+- `dev/bench-lab.sh` measures startup, the latency of every panel, memory over repeated menu opens, the optional service settings and a long soak in a private nested session, and compares checkouts.
+
+### Changed
+
+- The menu compiles in the background a few seconds after startup, so opening it from a keybind for the first time takes about 90 ms instead of 160 ms, the same as every later open.
+- Restore default settings covers every setting, including Do Not Disturb, night light and remembered power modes. It could not even be pressed when those were all that had changed. It now keeps a copy, with an Undo restore row beneath it, and replaces a settings file that cannot be read instead of leaving saving blocked.
+- The AUR package depends on JetBrainsMono Nerd Font, which the default bar and every icon in the UI need.
+- The visualizer along the bar's underline takes about half the CPU it did, 8% of a core instead of 15% in a 1920x1200 session. Its line is drawn as stacked hairlines instead of outlining the whole curve every frame, and looks the same. `docs/performance.md` lists what each visualizer setting costs.
+
 ### Fixed
 
+- The installer sets up autostart and the menu shortcut on a stock Hyprland config. On Hyprland's Lua configs it looked only for an `execs.lua` that a stock install does not have, so the shell installed and then never started at login. It checks the result with `Hyprland --verify-config` and puts the file back if Hyprland rejects it, and `silere uninstall` takes both back out.
+- `silere doctor` and `silere run` name another bar still running, which would otherwise draw beside Silere's and read as Silere being broken.
+- A light Matugen palette no longer leaves the shell unreadable. Its base stays light instead of sinking toward black under dark text, and high contrast, the accent, warnings and glass all follow it. As the accent source for the neutral base, its dark accent is lifted to stay readable.
+- `silere update --apply` and `--rollback` restart a shell that does not run as a service, so a new release never runs beside the old one. Panels compile when first opened, so a shell left running could load the new release's panels against the old one's services.
+- `silere update --rollback` works for a shell that does not run as a service. The record of what to restore was removed as soon as the update finished.
+- A panel that fails to load suggests `silere restart` first.
+- A test shell started with `SILERE_SANDBOX=1` no longer changes the desktop's power mode when the charger is plugged in or out.
+- Settings search finds every row by the name it shows. "Format", "Mode", "Low battery warning" and others found nothing or opened another page first, and a row named exactly like the query now comes before pages that only share its words. Enter opens the top result, which the result count names, instead of doing nothing when more than one page matches. Search also knows the widget names on Show & order and everyday words such as "dark mode", "blue light", "padding" or "now playing".
+- Auto tighten and Group conversations say what they do, since neither shows anything the moment it is turned on.
+- The system monitor drops the temperature reading on a machine with no temperature sensor instead of showing a dash for good, and its setting says why it cannot be turned on.
+- Screenshots taken about a second apart no longer add up to a screen share and flash the sharing indicator for two seconds.
+- The power mode controls appear only when the power profiles daemon answers. With `powerprofilesctl` left installed beside a masked daemon, as with TLP or tuned, they showed a mode that could not be changed.
 - Volume controls keep working when a default audio device is replaced under its own name, as a Bluetooth reconnect can do. They went dead until a restart (quickshell#1301).
 - An audio output that goes away no longer shows a "Muted" OSD.
 - A shell that starts before PipeWire connects when PipeWire arrives, instead of having no audio until a restart.

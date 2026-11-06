@@ -18,14 +18,14 @@
 </p>
 
 <p align="center">
-  <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
+  <img src="assets/shot-surfaces.webp" alt="Silere's Home, Now Playing and Settings panels" width="960"/>
 </p>
 
 Silere is the bar, notifications, OSD, tray and quick settings I use every day, in one
 process. It replaces waybar, mako or dunst and the small scripts around them. Your
 compositor config, launcher, wallpaper tool and lock screen stay as they are.
 
-[Install](#install) · [Controls](docs/usage.md) · [Fix a problem](docs/troubleshooting.md) · [All docs](docs/README.md)
+[Try it](#try-it-first) · [Install](#install) · [Controls](docs/usage.md) · [Fix a problem](docs/troubleshooting.md) · [All docs](docs/README.md)
 
 ## Philosophy
 
@@ -41,6 +41,18 @@ compositor configuration and dotfiles, and choose the tools that run alongside S
 **Over-engineered.** Silere looks simple on purpose. The work is in what you never see:
 what happens when a tool hangs, an app misbehaves or a session runs for days.
 [Under the hood](#under-the-hood) shows it.
+
+## Try it first
+
+See the whole shell in a window before you change anything:
+
+```bash
+git clone --depth 1 https://github.com/s3rven/silere-shell
+bash silere-shell/scripts/silere try
+```
+
+It runs on a private session beside your current setup. Your bar, notifications and settings
+aren't touched, and closing the window removes it. You need Quickshell, and Hyprland or niri.
 
 ## Install
 
@@ -78,11 +90,13 @@ recovery. If `silere` is not on your `PATH`, run
 | **Notifications** | Actions, inline replies and searchable history. A conversation stays on one card, and you can mute any app. Volume scripts written for dunst or mako replace their card instead of stacking. |
 | **Now Playing** | Cover art, seeking, player switching and an optional visualizer. |
 | **OSD** | Volume, brightness, power mode changes and battery warnings, floating or built into the bar. |
-| **Colours** | Taken from your wallpaper through Matugen, or an accent you pick. |
+| **Colours** | Taken from your wallpaper through Matugen, in its dark or light mode, or an accent you pick. |
 | **Updates** | Signed releases, installed from the menu. `silere update --rollback` puts the last version back. |
 
+The menu stays out of the way until you ask for it. Most of the time, this is all you see:
+
 <p align="center">
-  <img src="assets/shot-surfaces.webp" alt="Silere's Home, Now Playing and Settings panels" width="960"/>
+  <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
 </p>
 
 ## What it leaves to you
@@ -120,7 +134,7 @@ through the controls, and an open dropdown takes typing to find a row.
 
 Everything is in the menu under **Settings** and applies as you change it. A page you've
 changed shows a dot in the sidebar, and **Settings › System › Overview** restores the
-defaults. Press **Ctrl+F** in Settings to find an option by name or feature.
+defaults, or `silere reset` if the menu won't open. Press **Ctrl+F** in Settings to find an option by name or feature.
 
 <p align="center">
   <img src="assets/shot-themes.png" alt="Silere with a custom accent and colours taken from the wallpaper" width="720"/>
@@ -139,6 +153,7 @@ See [everyday use](docs/usage.md#settings) for customisation and
 | `silere stop` | Stop the shell and its user service, when installed. |
 | `silere restart` | Restart the shell after an update or config change. |
 | `silere doctor` | Check the setup without changing it. |
+| `silere reset` | Go back to a fresh install, with a way back. It previews first. |
 | `silere log --follow` | Follow the running shell's log. |
 | `silere update` | Check for a signed release. |
 | `silere help` | List all commands. |
