@@ -5,7 +5,7 @@ _silere() {
     local cur="${COMP_WORDS[COMP_CWORD]}" words=() line target current=""
     COMPREPLY=()
     if [ "$COMP_CWORD" -eq 1 ]; then
-        words=(run stop restart use status log doctor ipc link update repair service version uninstall help)
+        words=(try reset run stop restart use status log doctor ipc link update repair service version uninstall help)
     else
         case "${COMP_WORDS[1]}" in
             run) [ "$COMP_CWORD" -eq 2 ] && words=(--startup --supervised) ;;
@@ -17,6 +17,7 @@ _silere() {
             log) [ "$COMP_CWORD" -eq 2 ] && words=(--follow) ;;
             update) [ "$COMP_CWORD" -eq 2 ] && words=(--apply --rollback) ;;
             repair) words=(--apply --undo --yes) ;;
+            reset) words=(--apply --undo --history --yes) ;;
             service) words=(install status remove --dry-run) ;;
             ipc)
                 if [ "$COMP_CWORD" -eq 2 ]; then

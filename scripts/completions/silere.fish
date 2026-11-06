@@ -47,7 +47,7 @@ function __silere_setting_values
         | string replace -rf "^$key=.*  \[([^/].*\|.*)\]\$" '$1' | string split '|'
 end
 
-set -l commands run stop restart use status log doctor ipc link update repair service version uninstall help
+set -l commands try reset run stop restart use status log doctor ipc link update repair service version uninstall help
 
 complete -c silere -f
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a run -d 'Start Silere once'
@@ -71,6 +71,12 @@ complete -c silere -n '__fish_seen_subcommand_from run' -l startup -d 'Wait for 
 complete -c silere -n '__fish_seen_subcommand_from log' -s f -l follow -d 'Keep printing new lines'
 complete -c silere -n '__fish_seen_subcommand_from update' -l apply -d 'Install the confirmed release'
 complete -c silere -n '__fish_seen_subcommand_from update' -l rollback -d 'Restore the replaced revision'
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a try -d 'Preview Silere in a window, changing nothing'
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a reset -d 'Reset settings, edited files and caches'
+complete -c silere -n '__fish_seen_subcommand_from reset' -l apply -d 'Do the reset'
+complete -c silere -n '__fish_seen_subcommand_from reset' -l undo -d 'Put back what the last reset replaced'
+complete -c silere -n '__fish_seen_subcommand_from reset' -l history -d 'Also clear notification history'
+complete -c silere -n '__fish_seen_subcommand_from reset' -l yes -d 'Skip the confirmation'
 complete -c silere -n '__fish_seen_subcommand_from repair' -l apply -d 'Save local changes, restore shipped files'
 complete -c silere -n '__fish_seen_subcommand_from repair' -l undo -d 'Restore the latest repair stash'
 complete -c silere -n '__fish_seen_subcommand_from repair' -l yes -d 'Skip the confirmation'

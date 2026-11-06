@@ -712,7 +712,7 @@ case "$command_name" in
     *)
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
         # within two edits of a real command is a typo, not a guess
-        near="$(printf '%s\n' run stop restart use status log doctor ipc link update repair service version uninstall help \
+        near="$(printf '%s\n' try reset run stop restart use status log doctor ipc link update repair service version uninstall help \
             | awk -v w="$command_name" '
                 function dist(a, b,   i, j, m, n, d, c) {
                     m = length(a); n = length(b)
