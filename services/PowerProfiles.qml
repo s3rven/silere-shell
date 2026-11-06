@@ -11,9 +11,11 @@ Singleton {
 
     readonly property bool armed: true
 
-    // the service pushes reads; writes run a command on either backend so a refusal reports stderr
-    readonly property bool available: SystemTools.hasPowerProfilesCtl
-        || (SystemTools.hasPowerProfilesService && SystemTools.hasBusctl)
+    // the service pushes reads; writes run a command on either backend so a refusal reports stderr.
+    // The daemon has to answer: a CLI left beside a masked daemon (TLP, tuned) changes nothing.
+    // Without busctl nothing can ask it, so the CLI alone is trusted
+    readonly property bool available: SystemTools.hasBusctl
+        ? SystemTools.hasPowerProfilesService : SystemTools.hasPowerProfilesCtl
     // a set returns in ~85ms, so only a daemon slow enough to notice shows an in-between state
     readonly property bool changing: _set.running && root._setIsSlow
     property bool _setIsSlow: false

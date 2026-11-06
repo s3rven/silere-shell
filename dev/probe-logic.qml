@@ -7236,6 +7236,8 @@ ShellRoot {
         root._check(PowerProfiles.lastError === "", "a successful power change clears its previous error")
         SystemTools._tools = { "@powerprofiles": true }
         root._check(!PowerProfiles.available, "a detected daemon without a write tool does not advertise a usable control")
+        SystemTools._tools = { busctl: true, powerprofilesctl: true }
+        root._check(!PowerProfiles.available, "a power CLI beside a daemon that does not answer offers no control")
         PowerProfiles._acceptSetResult(1, false, "late failure")
         root._check(PowerProfiles.lastError === "", "a retired power service ignores a late command result")
         SystemTools._tools = profileToolsWas
