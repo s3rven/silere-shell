@@ -683,7 +683,10 @@ Singleton {
             { master: "dndSchedule", hides: ["dndFrom", "dndTo"] }
         ],
         warnings: [
-            { master: "osdEnabled", hides: ["osdChargedNotify"] }
+            { master: "osdEnabled", hides: ["osdChargedNotify"] },
+            // without the glow mode the alert chips offer no Glow, so these two choices are not on the page
+            { master: "underlineGlow", hides: ["underlineBattGlow", "underlineTempGlow"] },
+            { any: [{ master: "osdBatteryWarn" }, { master: "osdTempWarn" }], hides: ["sysAlertTimeout"] }
         ],
         surface: [
             { master: "barFloating", hides: ["barWidth", "barGap"] },
@@ -697,6 +700,8 @@ Singleton {
             // the Base row edits baseTone under Neutral and matugenDepth under Wallpaper
             { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto", "baseTone"] },
             { master: "neutralTheme", negate: true, hides: ["matugenAccentRole", "matugenDepth"] },
+            // a picked accent has nothing to balance; wallpaper or auto accent shows the row
+            { any: [{ master: "neutralTheme", negate: true }, { master: "neutralAccentAuto" }], hides: ["matugenAccentBalance"] },
             { master: "barShadow", hides: ["barShadowStrength"] },
             // an opaque bar has no glass for these to act on
             { master: "barOpacity", off: 1, hides: ["surfaceBlur", "popupMatchBarOpacity"] }
@@ -721,10 +726,11 @@ Singleton {
     function _dotHidden(section: string, key: string): bool {
         const rules = root._sectionGates[section]
         if (!rules) return false
+        // an any rule folds only while every one of its conditions would fold
+        const folds = r => r.off !== undefined ? root[r.master] === r.off : r.negate ? !!root[r.master] : !root[r.master]
         for (let i = 0; i < rules.length; i++) {
             const rule = rules[i]
-            const collapsed = rule.off !== undefined ? root[rule.master] === rule.off
-                : rule.negate ? !!root[rule.master] : !root[rule.master]
+            const collapsed = rule.any ? rule.any.every(folds) : folds(rule)
             if (collapsed && rule.hides.indexOf(key) >= 0) return true
         }
         return false

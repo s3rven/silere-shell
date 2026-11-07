@@ -4216,15 +4216,17 @@ ShellRoot {
         root._check(ShellSettings.modifiedSections.underline === true
                 && ShellSettings.modifiedSections.warnings === true,
             "a setting owned by two pages marks both")
-        // the event rows collapse behind the glow master, so a changed value behind that
-        // gate would dot a page with nothing on it to clear
+        // the event rows collapse behind the glow master, and Alerts offers no Glow choice without it,
+        // so a changed value behind that gate would dot a page with nothing on it to clear
         ShellSettings.underlineGlow = savedGlow
-        root._check(ShellSettings.modifiedSections.warnings === true
+        root._check(ShellSettings.modifiedSections.warnings === undefined
                 && ShellSettings.modifiedSections.underline === undefined,
-            "a value hidden behind a page's master toggle stops dotting that page")
+            "a value hidden behind the glow master stops dotting both pages that fold it")
+        ShellSettings.underlineGlow = true
         ShellSettings.underlineBattGlow = savedBattGlow
         root._check(ShellSettings.modifiedSections.warnings === undefined,
             "clearing the shared setting clears the page that still showed it")
+        ShellSettings.underlineGlow = savedGlow
 
         // the masters on one page are independent. Asserted on the gate rather than the
         // aggregate because flipping a master makes that master itself non-default, and a
@@ -4295,6 +4297,30 @@ ShellRoot {
         root._check(opaqueHides && !ShellSettings._dotHidden("theme", "surfaceBlur"),
             "an opaque bar keeps the folded blur rows out of the Theme page's dot and Reset")
         ShellSettings.barOpacity = savedBarOpacity
+
+        const savedAccentAuto = ShellSettings.neutralAccentAuto
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = false
+        const pickedHides = ShellSettings._dotHidden("theme", "matugenAccentBalance")
+        ShellSettings.neutralAccentAuto = true
+        const autoShows = !ShellSettings._dotHidden("theme", "matugenAccentBalance")
+        ShellSettings.neutralTheme = false
+        ShellSettings.neutralAccentAuto = false
+        root._check(pickedHides && autoShows && !ShellSettings._dotHidden("theme", "matugenAccentBalance"),
+            "Balance accent counts on the Theme page only where the page shows it: wallpaper or auto accent")
+        ShellSettings.neutralTheme = savedNeutral
+        ShellSettings.neutralAccentAuto = savedAccentAuto
+
+        const savedBattWarn = ShellSettings.osdBatteryWarn, savedTempWarn = ShellSettings.osdTempWarn
+        ShellSettings.osdBatteryWarn = false
+        ShellSettings.osdTempWarn = false
+        const bothOffHides = ShellSettings._dotHidden("warnings", "sysAlertTimeout")
+        ShellSettings.osdTempWarn = true
+        root._check(bothOffHides && !ShellSettings._dotHidden("warnings", "sysAlertTimeout")
+                && ShellSettings._dotHidden("warnings", "osdChargedNotify") === !ShellSettings.osdEnabled,
+            "Dismiss after leaves the Alerts page's dot and Reset while both desktop alerts are off, and only then")
+        ShellSettings.osdBatteryWarn = savedBattWarn
+        ShellSettings.osdTempWarn = savedTempWarn
 
         const opaqueA = Qt.rgba(0.1, 0.2, 0.3, 1), opaqueB = Qt.rgba(0.9, 0.5, 0.1, 1)
         const mixed = Theme.mix(opaqueA, opaqueB, 0.3), blended = Theme.blend(opaqueA, opaqueB, 0.3)
