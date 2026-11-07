@@ -2633,7 +2633,8 @@ ShellRoot {
             "wlsunset holds one temperature by pairing it with a lower night value")
         ShellSettings.nightLightProvider = "hyprsunset"
         const hs = Settings.nightLightCommand(3400)
-        root._check(SystemTools.hasHyprsunset
+        // hyprsunset talks to Hyprland, so outside a Hyprland session it stays off even when installed
+        root._check(SystemTools.hasHyprsunset && Compositor.isHyprland
                 ? hs.length === 3 && hs[0] === "hyprsunset" && hs[2] === "3400"
                 : hs.length === 0,
             "a named night light provider resolves only when that program is installed")
