@@ -104,16 +104,12 @@ _shell_is_up() {
     case "$instances" in *"Process ID: "[0-9]*) return 0 ;; *) return 1 ;; esac
 }
 
-_unit_owns_shell() {
-    command -v systemctl >/dev/null 2>&1 && _silere_unit_runs_checkout "$ROOT"
-}
-
 # stopped first: a shell left running could write its old settings over the reset. Refused before anything changes
 # if the shell could not be brought back afterwards, as from a text console
 _stop_shell() {
     RESTART=0
     SUPERVISED=0
-    if _unit_owns_shell; then
+    if _silere_unit_owns_shell "$ROOT"; then
         RESTART=1
         # silere restart only goes through systemd for a unit that is active or enabled, and a stopped unit
         # started by silere run --supervised is neither: it would come back with nothing to restart it after a crash

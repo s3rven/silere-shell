@@ -24,6 +24,21 @@ _silere_unit_runs_checkout() {
     [ "$prog" = "$root/scripts/silere" ]
 }
 
+# the user unit is in use and starts this checkout, so it owns the shell. In use: active, enabled, or failed, since the
+# optional supervised service is started by the compositor rather than enabled, and a crash loop leaves a disabled
+# unit neither active nor enabled. An installed unit that is none of these owns nothing
+_silere_unit_owns_shell() {
+    command -v systemctl >/dev/null 2>&1 || return 1
+    local state
+    for state in is-active is-enabled is-failed; do
+        if systemctl --user "$state" --quiet silere-shell.service 2>/dev/null; then
+            _silere_unit_runs_checkout "$1"
+            return
+        fi
+    done
+    return 1
+}
+
 # the checkout the user unit starts: a silere launcher (or a link to one), or qs -p <dir|shell.qml>
 _silere_unit_checkout() {
     local exec_start argv prog root=""

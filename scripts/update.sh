@@ -237,17 +237,6 @@ _journal_release_is_trusted() {
     git -C "$ROOT" merge-base --is-ancestor "$JOURNAL_FROM" "$JOURNAL_TO"
 }
 
-# The optional supervised service is started by the compositor rather than enabled, so
-# enablement alone misses it; a unit that is up or has failed is in use either way.
-_service_in_use() {
-    command -v systemctl >/dev/null 2>&1 || return 1
-    local state
-    for state in is-enabled is-active is-failed; do
-        systemctl --user "$state" --quiet silere-shell.service 2>/dev/null && return 0
-    done
-    return 1
-}
-
 # Panels compile when first opened, so a shell left running would read this release's panels against the last
 # one's services. Detached: this script can be the shell's own child, and the restart ends the shell. The lock
 # stays behind, or the shell it starts would hold it for good and refuse every later check
@@ -265,11 +254,11 @@ _unsupervised_shell_runs() {
     return 1
 }
 
-# A completed update is only known-good once the shell is up on it: the unit when one is in use,
-# otherwise a shell running this checkout. A daily check after a login whose shell never came back
+# A completed update is only known-good once the shell is up on it: the unit when it owns this checkout's shell,
+# otherwise a shell running this checkout; a unit for another checkout says nothing about this one. A daily check after a login whose shell never came back
 # cleared the journal, and --rollback with it. Without qs there is nothing to ask, so absence counts as running
 _updated_shell_is_running() {
-    if _service_in_use; then
+    if _silere_unit_owns_shell "$ROOT"; then
         systemctl --user is-active --quiet silere-shell.service 2>/dev/null
         return
     fi
@@ -352,7 +341,7 @@ _rollback_applied_update() {
     # Only restart a unit that actually runs this checkout; the test suite and a
     # throwaway checkout share one user manager, where being in use alone would
     # reach whatever shell is live.
-    if _service_in_use && _unit_runs_this_checkout; then
+    if _silere_unit_owns_shell "$ROOT"; then
         systemctl --user --no-block restart silere-shell.service || true
     else
         _restart_unsupervised_shell || true

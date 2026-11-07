@@ -21,6 +21,8 @@ settings file carries its own `__version` and migrates separately.
 - An update stops instead of replacing an ignored file in the checkout, such as settings or notification history, if a release ever ships a file at the same path.
 - Recovery from a silent Hyprland event socket restarts the service only while it is still running.
 - Installing an update right after changing a setting no longer fails with "Settings could not be saved before the update" while the settings file is being read back.
+- `silere reset` no longer starts a shell that was not running, or stops one it cannot bring back, because a service for the checkout is installed but stopped and disabled.
+- An update keeps its rollback until this checkout's shell is seen running, even while a service for another checkout is up.
 
 ## Releases
 

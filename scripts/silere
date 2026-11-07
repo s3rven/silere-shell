@@ -187,7 +187,7 @@ ipc_shell() {
     if [ "$rc" -ne 0 ] && grep -q '^No running instances' "$IPC_ERR" <(printf '%s\n' "$out"); then
         if ! other="$(other_shell)"; then
             rm -f "$IPC_ERR"
-            unit_runs_shell \
+            _silere_unit_owns_shell "$ROOT" \
                 && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
             die "Silere is not running; start it with silere run"
         fi
@@ -198,17 +198,6 @@ ipc_shell() {
     cat "$IPC_ERR" >&2; rm -f "$IPC_ERR"
     printf '%s' "$out"
     return "$rc"
-}
-
-unit_runs_shell() {
-    command -v systemctl >/dev/null 2>&1 || return 1
-    # failed too, as update.sh counts it: a crash loop leaves a disabled unit neither active nor enabled, and only a
-    # restart through systemd clears it and puts the shell back under supervision
-    systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
-        || systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null \
-        || systemctl --user is-failed --quiet silere-shell.service 2>/dev/null \
-        || return 1
-    _silere_unit_runs_checkout "$ROOT"
 }
 
 await_exit() {
@@ -272,10 +261,10 @@ restart_shell() {
         || die "Quickshell cannot start, so the running shell was left alone: ${qs_error%%$'\n'*}"
     old_pid="$(running_pid)" || old_pid=""
     # restarting here would leave the other copy on screen and start a second bar beside it
-    if [ -z "$old_pid" ] && ! unit_runs_shell && other="$(other_shell)"; then
+    if [ -z "$old_pid" ] && ! _silere_unit_owns_shell "$ROOT" && other="$(other_shell)"; then
         die "the shell on screen runs from $(dirname "$other"), not $ROOT; silere use switches to this checkout"
     fi
-    if unit_runs_shell; then
+    if _silere_unit_owns_shell "$ROOT"; then
         systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
             || stop_stray_shell "$old_pid"
         # a crash loop leaves the unit refusing starts until this clears
@@ -555,7 +544,7 @@ case "$command_name" in
                 printf '%ssilere:%s using the shell running from %s\n' "$EYELLOW" "$ER" "$(dirname "$other")" >&2
                 log_qml="$other"
             else
-                unit_runs_shell \
+                _silere_unit_owns_shell "$ROOT" \
                     && die "Silere is not running; its last run is in journalctl --user -u silere-shell.service"
                 die "Silere is not running"
             fi

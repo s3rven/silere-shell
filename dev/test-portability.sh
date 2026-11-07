@@ -1120,7 +1120,8 @@ test_interrupted_update_recovery() (
     local stub_dir="$TMP/update-rollback-stub"
     local calls="$TMP/update-rollback-calls"
     mkdir -p "$stub_dir"
-    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/systemctl"
+    printf '#!/bin/sh\ncase "$*" in *" show "*) echo "{ path=%s/scripts/silere ; argv[]=%s/scripts/silere run ; }" ;; esac\nexit 0\n' \
+        "$repo" "$repo" > "$stub_dir/systemctl"
     chmod +x "$stub_dir/systemctl"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
@@ -1164,6 +1165,7 @@ EOF
     cat > "$stub_dir/systemctl" <<EOF
 #!/bin/sh
 case "\$*" in
+    *" show "*) echo "{ path=$repo/scripts/silere ; argv[]=$repo/scripts/silere run ; }" ;;
     *is-failed*) exit 0 ;;
     *) exit 1 ;;
 esac
@@ -1204,6 +1206,24 @@ EOF
     printf '#!/bin/sh\nprintf "Instance probe:\\n  Process ID: 4242\\n"\n' > "$stub_dir/qs"
     PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
     [ ! -e "$APPLY_JOURNAL" ] || fail "an update whose unsupervised shell came back kept its recovery journal"
+
+    # a unit that is up for another checkout says nothing about this one: only this checkout's shell counts
+    cat > "$stub_dir/systemctl" <<EOF
+#!/bin/sh
+case "\$*" in
+    *" show "*) printf '{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -p /elsewhere/shell.qml ; }\n' ;;
+esac
+exit 0
+EOF
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
+    _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" merge --ff-only -q "$new_rev"
+    _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "a unit running another checkout counted as this update's shell coming back"
+    printf '#!/bin/sh\nprintf "Instance probe:\\n  Process ID: 4242\\n"\n' > "$stub_dir/qs"
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    [ ! -e "$APPLY_JOURNAL" ] || fail "this checkout's shell beside another checkout's unit kept the recovery journal"
     rm -f "$stub_dir/qs"
 
     # Never turn a user-editable or damaged state file into a reset instruction.
@@ -2601,6 +2621,16 @@ test_reset_workflow() (
     echo 4242 > "$state"; : > "$state.calls"
     run_reset --apply --yes >/dev/null || fail "reset failed with a supervised shell"
     assert_eq $'unit-stop\nunit-start' "$(cat "$state.calls")" "a reset brings a supervised shell back through its service"
+
+    # the same unit stopped and disabled owns nothing: with no shell running, the reset starts none
+    fill
+    : > "$state"; : > "$state.calls"
+    out="$(run_reset --apply --yes)" || fail "reset failed with a stopped, disabled unit"
+    assert_eq "" "$(cat "$state.calls")" "a reset with a stopped unit and no shell running starts nothing"
+    case "$out" in
+        *"Silere is not running"*) ;;
+        *) fail "a reset with no shell running did not say so: $out" ;;
+    esac
 )
 
 # a checkout path with quotes, a backslash and spaces still gives the preview a menu shortcut that names it
