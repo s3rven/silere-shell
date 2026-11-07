@@ -2557,6 +2557,31 @@ test_reset_workflow() (
 )
 
 # a checkout path with quotes, a backslash and spaces still gives the preview a menu shortcut that names it
+test_try_config_quotes_paths() (
+    command -v lua >/dev/null 2>&1 || return 0
+    local fixture="$TMP/try it's \"odd\" \\here" stubs="$TMP/try-stubs" out="$TMP/try-out" cmd kdl
+    mkdir -p "$fixture/scripts/lib" "$stubs" "$out"
+    cp "$ROOT/scripts/try.sh" "$fixture/scripts/try.sh"
+    cp "$ROOT/scripts/lib/ui.sh" "$fixture/scripts/lib/ui.sh"
+    printf '#!/bin/sh\necho "Hyprland 0.57.1"\n' > "$stubs/Hyprland"
+    printf '#!/bin/sh\nprintf "%%s" "$3"\n' > "$stubs/qs"
+    chmod +x "$stubs/Hyprland" "$stubs/qs"
+    PATH="$stubs:$PATH"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$fixture/scripts/try.sh"
+    _write_hyprland_config "$out" kitty >/dev/null
+    _write_niri_config "$out" kitty >/dev/null
+    printf '%s\n' 'local cmds = {}' \
+        'hl = { monitor = function() end, config = function() end, bind = function(k, a) cmds[k] = a end,' \
+        '  dsp = { focus = function() return "" end, exec_cmd = function(c) return c end,' \
+        '    window = { close = function() return "" end } } }' \
+        'dofile(arg[1])' 'io.write(cmds["ALT + slash"])' > "$out/hl.lua"
+    cmd="$(lua "$out/hl.lua" "$out/hyprland.lua")" || fail "the preview's Lua config does not load for a path with quotes"
+    assert_eq "$fixture/shell.qml" "$(sh -c "$cmd")" "the preview's menu shortcut names a checkout path with quotes"
+    kdl="$(sed -n 's/.*"-p" \(".*"\) "call".*/\1/p' "$out/niri.kdl")"
+    assert_eq "$fixture/shell.qml" "$(lua - "$kdl" <<< 'io.write(load("return " .. arg[1])())')" \
+        "niri's menu shortcut names a checkout path with quotes"
+)
+
 test_lua_block_is_checked() (
     local dir="$TMP/lua-block" stubs="$TMP/lua-block-stubs" before
     mkdir -p "$dir" "$stubs"
@@ -3131,6 +3156,7 @@ test_niri_config_discovery
 test_atomic_units
 test_shared_launcher
 test_reset_workflow
+test_try_config_quotes_paths
 test_lua_block_is_checked
 test_other_bars_are_named
 test_launcher_uses_real_name

@@ -32,12 +32,16 @@ _terminal() {
     printf 'true\n'
 }
 
+# a checkout path may hold quotes or backslashes: one shell word, and a double-quoted Lua or KDL string
+_sh_word() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
+_quoted_text() { local s="${1//\\/\\\\}"; printf '"%s"' "${s//\"/\\\"}"; }
+
 # Lua configs arrived in 0.55 and 0.57 dropped hyprlang; a rejected config still starts, in emergency mode
 _write_hyprland_config() { # $1 = scratch, $2 = terminal; prints the path
     local version major minor toggle n
     version="$(Hyprland --version 2>/dev/null | sed -n 's/^Hyprland \([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1 \2/p' | head -n 1)"
     read -r major minor <<< "${version:-0 0}"
-    toggle="qs ipc -p '$ROOT/shell.qml' call menu toggle"
+    toggle="qs ipc -p $(_sh_word "$ROOT/shell.qml") call menu toggle"
     if [ "$major" -gt 0 ] || [ "$minor" -ge 55 ]; then
         {
             printf 'hl.monitor({ output = "", mode = "1600x1000@60", position = "auto", scale = 1 })\n'
@@ -45,9 +49,9 @@ _write_hyprland_config() { # $1 = scratch, $2 = terminal; prints the path
             for n in 1 2 3 4 5; do
                 printf 'hl.bind("ALT + %s", hl.dsp.focus({ workspace = %s }))\n' "$n" "$n"
             done
-            printf 'hl.bind("ALT + Return", hl.dsp.exec_cmd("%s"))\n' "$2"
+            printf 'hl.bind("ALT + Return", hl.dsp.exec_cmd(%s))\n' "$(_quoted_text "$2")"
             printf 'hl.bind("ALT + Q", hl.dsp.window.close())\n'
-            printf 'hl.bind("ALT + slash", hl.dsp.exec_cmd("%s"))\n' "$toggle"
+            printf 'hl.bind("ALT + slash", hl.dsp.exec_cmd(%s))\n' "$(_quoted_text "$toggle")"
         } > "$1/hyprland.lua"
         printf '%s/hyprland.lua\n' "$1"
     else
@@ -76,7 +80,7 @@ _write_niri_config() { # $1 = scratch, $2 = terminal; prints the path
         done
         printf '    Alt+Return { spawn "%s"; }\n' "$2"
         printf '    Alt+Q { close-window; }\n'
-        printf '    Alt+Slash { spawn "qs" "ipc" "-p" "%s/shell.qml" "call" "menu" "toggle"; }\n' "$ROOT"
+        printf '    Alt+Slash { spawn "qs" "ipc" "-p" %s "call" "menu" "toggle"; }\n' "$(_quoted_text "$ROOT/shell.qml")"
         printf '}\n'
     } > "$1/niri.kdl"
     printf '%s/niri.kdl\n' "$1"
@@ -158,6 +162,10 @@ _inner() {
         sleep 1
     done
 }
+
+if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 if [ "${1:-}" = --inner ]; then
     COMPOSITOR="$2"
