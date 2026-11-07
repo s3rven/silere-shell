@@ -110,7 +110,7 @@ QtObject {
     }
     property BoundedProcess _socketRestart: BoundedProcess {
         timeoutMs: 5000
-        command: ["systemctl", "--user", "--no-block", "restart", "silere-shell.service"]
+        command: ["systemctl", "--user", "--no-block", "try-restart", "silere-shell.service"]
     }
     function _eventSocketDead(): void {
         root._socketDead = true
