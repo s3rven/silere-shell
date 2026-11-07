@@ -39,6 +39,9 @@ ROOT_KEY="$(printf '%s' "$ROOT" | cksum | awk '{ print $1 "-" $2 }')"
 STATE_DIR="$STATE_HOME/silere-shell"
 APPLY_JOURNAL="$STATE_DIR/update-transaction-$ROOT_KEY"
 APPLY_TRUSTED_SIGNERS="$STATE_DIR/update-transaction-$ROOT_KEY.signers"
+# an update check prunes a tag withdrawn upstream and replaces a moved one; this pins the
+# journal's own signed tag in the checkout so --rollback can still prove the release
+APPLY_RELEASE_REF="refs/silere/update-transaction"
 INSTALL_RECEIPT="$STATE_DIR/install-receipt"
 STAGE_PARENT=""
 STAGE_DIR=""
@@ -141,8 +144,9 @@ _write_apply_journal() {
 _start_apply_transaction() {
     local old_rev="$1" new_rev="$2" tag="$3"
     _snapshot_trusted_signers || return 1
-    if ! _write_apply_journal prepared "$old_rev" "$new_rev" "$tag"; then
-        rm -f -- "$APPLY_TRUSTED_SIGNERS"
+    if ! _write_apply_journal prepared "$old_rev" "$new_rev" "$tag" \
+            || ! git -C "$ROOT" update-ref "$APPLY_RELEASE_REF" "refs/tags/$tag" 2>/dev/null; then
+        rm -f -- "$APPLY_JOURNAL" "$APPLY_TRUSTED_SIGNERS"
         return 1
     fi
 }
@@ -152,6 +156,8 @@ _clear_apply_transaction() {
     # fails, retaining the key keeps the next recovery attempt authenticatable.
     rm -f -- "$APPLY_JOURNAL" || return 1
     rm -f -- "$APPLY_TRUSTED_SIGNERS" || return 1
+    # a pin left behind proves nothing without its journal, and the next transaction replaces it
+    git -C "$ROOT" update-ref -d "$APPLY_RELEASE_REF" >/dev/null 2>&1 || true
     sync -f -- "$STATE_DIR" 2>/dev/null
 }
 
@@ -213,17 +219,20 @@ _read_apply_journal() {
         && [[ "$JOURNAL_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
-_journal_release_is_trusted() {
-    local kind resolved
-    [ "$JOURNAL_ROOT_HEX" = "$ROOT_HEX" ] || return 1
-    [ -r "$APPLY_TRUSTED_SIGNERS" ] || return 1
-    kind="$(git -C "$ROOT" cat-file -t "$JOURNAL_TAG" 2>/dev/null || true)"
-    [ "$kind" = tag ] || return 1
+# $1 = a ref; true when it holds a tag signed by the snapshot's keys that peels to the journal's target
+_journal_tag_proves() {
+    [ "$(git -C "$ROOT" cat-file -t "$1" 2>/dev/null || true)" = tag ] || return 1
     git -C "$ROOT" -c gpg.format=ssh -c gpg.program=false -c gpg.x509.program=false \
         -c gpg.ssh.allowedSignersFile="$APPLY_TRUSTED_SIGNERS" \
-        verify-tag "$JOURNAL_TAG" >/dev/null 2>&1 || return 1
-    resolved="$(git -C "$ROOT" rev-parse "$JOURNAL_TAG^{}" 2>/dev/null || true)"
-    [ "$resolved" = "$JOURNAL_TO" ] || return 1
+        verify-tag "$1" >/dev/null 2>&1 || return 1
+    [ "$(git -C "$ROOT" rev-parse "$1^{}" 2>/dev/null || true)" = "$JOURNAL_TO" ]
+}
+
+_journal_release_is_trusted() {
+    [ "$JOURNAL_ROOT_HEX" = "$ROOT_HEX" ] || return 1
+    [ -r "$APPLY_TRUSTED_SIGNERS" ] || return 1
+    # the pin first: the tag itself can be gone or moved by now; a journal written before pins existed names only the tag
+    _journal_tag_proves "$APPLY_RELEASE_REF" || _journal_tag_proves "refs/tags/$JOURNAL_TAG" || return 1
     git -C "$ROOT" cat-file -e "$JOURNAL_FROM^{commit}" 2>/dev/null || return 1
     git -C "$ROOT" merge-base --is-ancestor "$JOURNAL_FROM" "$JOURNAL_TO"
 }
@@ -245,17 +254,27 @@ _service_in_use() {
 _restart_unsupervised_shell() {
     [ -n "${WAYLAND_DISPLAY:-}" ] || return 1
     command -v qs >/dev/null 2>&1 && command -v setsid >/dev/null 2>&1 || return 1
-    local instances
-    instances="$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null || true)"
-    case "$instances" in *"Process ID: "[0-9]*) ;; *) return 1 ;; esac
+    _unsupervised_shell_runs || return 1
     setsid -f bash "$ROOT/scripts/silere" restart </dev/null >/dev/null 2>&1 9>&-
 }
 
-# A completed update is only known-good once the shell is up on it. With no unit
-# in use there is nothing this script can watch, so absence counts as running.
+_unsupervised_shell_runs() {
+    case "$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null || true)" in
+        *"Process ID: "[0-9]*) return 0 ;;
+    esac
+    return 1
+}
+
+# A completed update is only known-good once the shell is up on it: the unit when one is in use,
+# otherwise a shell running this checkout. A daily check after a login whose shell never came back
+# cleared the journal, and --rollback with it. Without qs there is nothing to ask, so absence counts as running
 _updated_shell_is_running() {
-    _service_in_use || return 0
-    systemctl --user is-active --quiet silere-shell.service 2>/dev/null
+    if _service_in_use; then
+        systemctl --user is-active --quiet silere-shell.service 2>/dev/null
+        return
+    fi
+    command -v qs >/dev/null 2>&1 || return 0
+    _unsupervised_shell_runs
 }
 
 # A SIGKILL or power loss can land after the fast-forward but before validation.

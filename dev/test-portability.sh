@@ -1117,20 +1117,26 @@ test_interrupted_update_recovery() (
 
     # A durable validated phase is the commit point. Recovery keeps it even if
     # the updater lost power before deleting the journal or restarting Silere.
+    local stub_dir="$TMP/update-rollback-stub"
+    local calls="$TMP/update-rollback-calls"
+    mkdir -p "$stub_dir"
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/systemctl"
+    chmod +x "$stub_dir/systemctl"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
+        || fail "an apply transaction did not pin its release tag"
     git -C "$repo" merge --ff-only -q "$new_rev"
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
-    _recover_interrupted_apply 2>/dev/null
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
     assert_eq "$new_rev" "$(git -C "$repo" rev-parse HEAD)" \
         "validated interrupted update retained"
     [ ! -e "$APPLY_JOURNAL" ] || fail "validated transaction journal was not cleared"
+    git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
+        && fail "a cleared transaction left its release pin behind"
 
     # --rollback consumes a retained validated journal to undo a release that
     # never came up in the live session. The stub answers as a unit running a
     # different checkout: the rollback must not restart whatever shell is live.
-    local stub_dir="$TMP/update-rollback-stub"
-    local calls="$TMP/update-rollback-calls"
-    mkdir -p "$stub_dir"
     cat > "$stub_dir/systemctl" <<EOF
 #!/bin/sh
 printf '%s\n' "\$*" >> "$calls"
@@ -1170,6 +1176,35 @@ EOF
     PATH="$stub_dir:$PATH" _rollback_applied_update >/dev/null 2>&1
     assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
         "rollback restores an update whose service failed without being enabled"
+
+    # An update check prunes a tag withdrawn upstream. A release pulled because it broke is the one
+    # that most needs --rollback, so the journal's own pin has to prove it once the tag is gone
+    _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" merge --ff-only -q "$new_rev"
+    _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" tag -d v1.0.1 >/dev/null
+    ( PATH="$stub_dir:$PATH" _rollback_applied_update >/dev/null 2>&1 ) \
+        || fail "rollback could not prove a release whose tag an update check pruned"
+    assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" \
+        "rollback restores a release whose tag an update check pruned"
+    git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
+        && fail "rollback left its release pin behind"
+    git -C "$repo" tag -s -m v1.0.1 v1.0.1 "$new_rev"
+
+    # With no unit in use, a shell running this checkout is what shows the update came up;
+    # a daily check after a login whose shell never returned must not take --rollback away
+    printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
+    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
+    chmod +x "$stub_dir/systemctl" "$stub_dir/qs"
+    _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
+    git -C "$repo" merge --ff-only -q "$new_rev"
+    _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "an update whose unsupervised shell never came back lost its recovery journal"
+    printf '#!/bin/sh\nprintf "Instance probe:\\n  Process ID: 4242\\n"\n' > "$stub_dir/qs"
+    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    [ ! -e "$APPLY_JOURNAL" ] || fail "an update whose unsupervised shell came back kept its recovery journal"
+    rm -f "$stub_dir/qs"
 
     # Never turn a user-editable or damaged state file into a reset instruction.
     git -C "$repo" reset --hard -q "$old_rev"

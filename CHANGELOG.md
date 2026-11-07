@@ -16,6 +16,8 @@ settings file carries its own `__version` and migrates separately.
 - A notification still sliding out when a newer one took the last visible place no longer disappears mid-exit and comes back later.
 - The calendar takes keyboard focus the first time it opens, so Tab and the arrow keys work without a click.
 - The whole height of the bar opens the calendar from the clock, like every other widget.
+- `silere update --rollback` still works after the release it undoes was withdrawn upstream and a later check removed its tag.
+- A shell that does not run as a service keeps its rollback until the updated shell is seen running, instead of losing it to the next daily check.
 
 ## Releases
 
