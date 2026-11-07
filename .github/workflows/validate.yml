@@ -32,16 +32,25 @@ jobs:
         run: |
           # shellcheck disable=SC2016
           printf 'Server = https://archive.archlinux.org/repos/2026/02/15/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
+          # the archive is a single server that sometimes stalls a download and fails the whole
+          # transaction; pacman keeps what it already fetched, so a retry only gets the rest
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              [ "$attempt" = 3 ] && return 1
+              sleep 30
+            done
+          }
           # today's keyring has disabled keys that signed this snapshot, so rebuild it from
           # the snapshot's own. Only this one package skips the check; the rest are verified
           cp /etc/pacman.conf /tmp/pacman.conf.verified
           sed -i 's/^SigLevel.*/SigLevel = Never/' /etc/pacman.conf
-          pacman -Syy --noconfirm archlinux-keyring
+          retry pacman -Syy --noconfirm archlinux-keyring
           cp /tmp/pacman.conf.verified /etc/pacman.conf
           rm -rf /etc/pacman.d/gnupg
           pacman-key --init
           pacman-key --populate archlinux
-          pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
+          retry pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
           pacman -Q qt6-base | grep '^qt6-base 6\.10\.'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
