@@ -4421,7 +4421,9 @@ ShellRoot {
         root._check(ShellSettings._readError.length === 0
                 && ShellSettings.showSeconds === savedSeconds,
             "restoring the exact previous settings file clears its error and reapplies disk values")
-        root._check(ShellSettings.flushForUpdate(),
+        // a file-watch reload from an earlier write can still be in flight under load; flushForUpdate refuses until it lands
+        root._check(ShellSettings._persistence.writeAllowed && !ShellSettings._persistence.writePaused
+                && (ShellSettings._persistence._reloading || ShellSettings.flushForUpdate()),
             "restoring the exact previous settings file re-enables saving")
         const settingsStore = ShellSettings._persistence
         root._check(settingsStore !== undefined, "the settings store is available for persistence barrier checks")
