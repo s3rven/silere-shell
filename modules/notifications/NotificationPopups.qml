@@ -549,10 +549,9 @@ PanelWindow {
                             required property int index
 
                             // a slot being removed reads index -1; it has to keep its card for the gap to close over
-                            readonly property bool shouldLoad: win._showAll
-                                || ShellSettings.notifMaxVisible <= 0 || index < 0
-                                || index >= stack.count - ShellSettings.notifMaxVisible
-                                || win._isCritical(modelData)
+                            property bool exitHeld: false
+                            readonly property bool shouldLoad: StackLayout.slotLoads(index, stack.count,
+                                ShellSettings.notifMaxVisible, win._showAll, win._isCritical(modelData), exitHeld)
                             readonly property var cardItem: _cardLoader.item
                             // a swiped card leaves its slot sideways; the slot only bounds the blur vertically
                             Item {
@@ -633,7 +632,10 @@ PanelWindow {
                                     countdownClock: _countdownClock
                                     stackHovered: _stackHover.hovered
 
-                                    onLeaving: win._noteLeaving()
+                                    onLeaving: {
+                                        _slot.exitHeld = true
+                                        win._noteLeaving()
+                                    }
                                     onReplyFocusRequested: (owner, active) =>
                                         win._setReplyFocus(owner, active)
 

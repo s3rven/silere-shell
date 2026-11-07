@@ -9,6 +9,7 @@ import "services"
 import "modules/common"
 import "modules/menu/controls"
 import "modules/notifications"
+import "modules/notifications/StackLayout.js" as StackLayout
 
 // Real offscreen pointer input, repeated reflow and cancellation while animations
 // are in flight. Each cycle samples the transient layout, not just its final state.
@@ -208,13 +209,15 @@ ShellRoot {
         pillWindow.visible = false
     }
 
-    // a stack read from the service's popup list, as NotificationPopups reads it; its withdrawn handler is the
-    // popup's. The popup window itself needs layer shell, which this offscreen probe lacks
+    // a stack read from the service's popup list, as NotificationPopups reads it; its withdrawn handler and slot
+    // gate are the popup's. The popup window itself needs layer shell, which this offscreen probe lacks
     Window {
         id: notifWindow
         visible: true
         width: 460; height: 420
         color: Theme.panel
+        // the popup's "most visible" setting; 0 loads every card
+        property int maxVisible: 0
         Column {
             x: 20; y: 20; width: 400
             Repeater {
@@ -223,15 +226,25 @@ ShellRoot {
                 Item {
                     id: notifSlot
                     required property var modelData
-                    readonly property alias card: notifCard
-                    width: 400; height: notifCard.implicitHeight
-                    NotificationCard {
-                        id: notifCard
+                    required property int index
+                    property bool exitHeld: false
+                    readonly property bool shouldLoad: StackLayout.slotLoads(index, notifStack.count,
+                        notifWindow.maxVisible, false, false, exitHeld)
+                    readonly property var card: notifLoader.item
+                    width: 400; height: card ? card.implicitHeight : 0
+                    visible: shouldLoad
+                    Loader {
+                        id: notifLoader
                         width: 400
-                        notification: notifSlot.modelData
-                        notifId: notifSlot.modelData.id
-                        createdAt: Date.now()
-                        onDismissRequested: (id, n, expired) => Notifications.dismissObject(id, n, expired)
+                        active: notifSlot.shouldLoad
+                        sourceComponent: NotificationCard {
+                            width: 400
+                            notification: notifSlot.modelData
+                            notifId: notifSlot.modelData.id
+                            createdAt: Date.now()
+                            onLeaving: notifSlot.exitHeld = true
+                            onDismissRequested: (id, n, expired) => Notifications.dismissObject(id, n, expired)
+                        }
                     }
                 }
             }
@@ -323,6 +336,30 @@ ShellRoot {
             "with reduced motion a withdrawn card leaves at once, holding nothing")
         ShellSettings.reduceMotion = motionWas
         notifWindow.visible = false
+    }
+
+    // with a "most visible" limit, a newer card takes the last slot while an older one is still sliding out
+    function checkExitOutlivesSlotLimit(): void {
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        notifWindow.visible = true
+        notifWindow.maxVisible = 1
+        const older = root.sendNotification("Leaving as a newer card arrives", "[]")
+        root.waitFor(() => notifStack.count === 1 && notifStack.itemAt(0).card !== null, 1000)
+        input.wait(400)
+        const leaving = notifStack.count === 1 ? notifStack.itemAt(0).card : null
+        if (leaving) leaving.dismiss(false)
+        const newer = root.sendNotification("Arrives during that exit", "[]")
+        root.check(leaving !== null && older > 0 && newer > 0
+                && root.waitFor(() => notifStack.count === 1, 1500)
+                && notifStack.itemAt(0).modelData.summary === "Arrives during that exit",
+            "a card still leaving when a newer one takes the last visible slot finishes its exit and leaves the stack, "
+            + "instead of being unloaded mid-exit and coming back once the stack shrinks")
+        root.closeNotification(newer)
+        root.waitFor(() => notifStack.count === 0, 2000)
+        notifWindow.maxVisible = 0
+        notifWindow.visible = false
+        ShellSettings.reduceMotion = motionWas
     }
 
     // the shape of a menu page with a slider on it, driven with real wheel events
@@ -542,6 +579,7 @@ ShellRoot {
             root.checkWheelLatch()
             root.checkHoverRelease()
             root.checkWithdrawnExit()
+            root.checkExitOutlivesSlotLimit()
             root.checkScrollThumb()
             cycleTimer.start()
         }

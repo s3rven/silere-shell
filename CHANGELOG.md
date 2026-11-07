@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Fixed
+
+- A notification still sliding out when a newer one took the last visible place no longer disappears mid-exit and comes back later.
+
 ## Releases
 
 - [1.6.0](docs/releases/1.6.0.md) — 2026-11-07

@@ -13,3 +13,9 @@ function measure(stack, newestFirst) {
     }
     return { tops: tops, height: height }
 }
+
+// a leaving card keeps its slot until its exit ends: unloading it then destroys the card before it can ask
+// to be dismissed, so the notification stayed in the stack and came back once the stack shrank
+function slotLoads(index, count, maxVisible, showAll, critical, leaving) {
+    return leaving || showAll || maxVisible <= 0 || index < 0 || index >= count - maxVisible || critical
+}
