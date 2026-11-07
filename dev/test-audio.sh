@@ -103,8 +103,14 @@ replace_node() { # $1 = name, $2 = media class
     fail "the old $1 did not go away"
 }
 set_default() { # $1 = name
-    wait_node "$1"
-    timeout 4 wpctl set-default "$id"
+    # WirePlumber can still refuse a node it has only just started to track, more often under load
+    local _
+    for _ in $(seq 1 20); do
+        wait_node "$1"
+        timeout 4 wpctl set-default "$id" 2>/dev/null && return 0
+        sleep 0.2
+    done
+    fail "$1 could not be made the default"
 }
 set_volume() { # $1 = name, $2 = linear volume
     wait_node "$1"
