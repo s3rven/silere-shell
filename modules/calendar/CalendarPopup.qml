@@ -130,9 +130,10 @@ FittedPopupWindow {
                 card._requestWeather()
             }
         }
-        // the popup loads on its first open, after that open edge has passed
+        // the popup loads on its first open, after that open edge has passed: it takes the keys here instead
         Component.onCompleted: {
             card._snapToday()
+            if (CalendarState.open) card.forceActiveFocus()
             card._requestWeather()
         }
         function _requestWeather(): void {

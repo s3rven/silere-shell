@@ -26,6 +26,8 @@ Item {
     OsdWindow { id: osd; targetScreen: root.targetScreen; visible: false }
     Bar { id: bar; targetScreen: root.targetScreen; visible: false }
     TestCase { id: input; when: false }
+    // the shell builds the calendar on its first open, after the open edge its focus handler waits for
+    Component { id: lateCalendar; CalendarPopup { targetScreen: root.targetScreen; visible: false } }
     QtObject { id: traySource; property string id: "popup-probe-tray" }
     QtObject { id: anonymousTraySource; property string id: "" }
 
@@ -187,6 +189,16 @@ Item {
             "a first weather failure still offers retry without inventing a temperature")
         ShellSettings.weatherEnabled = false
         CalendarState.close()
+    }
+
+    function _checkCalendarFirstOpen(): void {
+        const wasOpen = CalendarState.open
+        CalendarState.open = true
+        const late = lateCalendar.createObject(root)
+        root._check(late !== null && late.popupCard !== null && late.popupCard.focus,
+            "a calendar built by its first open takes the keys, as every later open does")
+        if (late) late.destroy()
+        CalendarState.open = wasOpen
     }
 
     function _checkActions(): void {
@@ -529,6 +541,7 @@ Item {
 
     function _run(): void {
         root._checkCalendar()
+        root._checkCalendarFirstOpen()
         root._checkActions()
         root._checkTray()
         root._checkOriginRightClick()
