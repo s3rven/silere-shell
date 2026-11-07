@@ -1635,6 +1635,34 @@ EOF
     _run >/dev/null 2>&1 \
         || fail "a renamed release withdrawn upstream still blocked the update check"
 
+    # git picks the checker from the signature, so a PGP key in the user's own keyring must not stand in for the
+    # release key. Every other gate passes here, which is what makes the signature the one being tested
+    if command -v gpg >/dev/null 2>&1; then
+        local fpr accepted=0
+        mkdir -m 700 "$test_home/.gnupg"
+        GNUPGHOME="$test_home/.gnupg" gpg --batch --quiet --pinentry-mode loopback --passphrase '' \
+            --quick-gen-key 'Not Silere <pgp@example.invalid>' ed25519 sign never 2>/dev/null
+        fpr="$(GNUPGHOME="$test_home/.gnupg" gpg --batch --with-colons --list-keys 2>/dev/null \
+            | awk -F: '/^fpr/ { print $10; exit }')"
+        sed -i 's/"quickshellMin": "99.0.0"/"quickshellMin": "0.3.1"/; s/"version": "9.9.3"/"version": "9.9.6"/' \
+            "$seed/release.json"
+        printf 'pgp v5\n' > "$seed/tracked.qml"
+        git -C "$seed" commit -qam "pgp-signed upstream"
+        GNUPGHOME="$test_home/.gnupg" git -C "$seed" -c gpg.format=openpgp -c user.signingkey="$fpr" \
+            tag -s -m v9.9.6 v9.9.6
+        git -C "$seed" push -q --tags origin main
+        _run >/dev/null 2>&1 && accepted=1
+        # the agent this started outlives the fixture otherwise
+        GNUPGHOME="$test_home/.gnupg" gpgconf --kill all 2>/dev/null || true
+        [ "$accepted" = 0 ] || fail "update check accepted a release signed by a PGP key in the user's keyring"
+        grep -qF 'v9.9.6 is not signed by the trusted Silere release key' "$cache/update-error" \
+            || fail "a PGP-signed release did not record why it was refused"
+        [ ! -e "$cache/update-pending" ] \
+            || fail "a PGP-signed release left an installable update flag"
+        git -C "$seed" push -q origin :refs/tags/v9.9.6
+        git -C "$seed" tag -d v9.9.6 >/dev/null
+    fi
+
     printf '4242\n' > "$cache/update-checked"
     git -C "$client" remote set-url origin "$TMP/unavailable-report-origin.git"
     if _run >/dev/null 2>&1; then

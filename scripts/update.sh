@@ -219,7 +219,7 @@ _journal_release_is_trusted() {
     [ -r "$APPLY_TRUSTED_SIGNERS" ] || return 1
     kind="$(git -C "$ROOT" cat-file -t "$JOURNAL_TAG" 2>/dev/null || true)"
     [ "$kind" = tag ] || return 1
-    git -C "$ROOT" -c gpg.format=ssh \
+    git -C "$ROOT" -c gpg.format=ssh -c gpg.program=false -c gpg.x509.program=false \
         -c gpg.ssh.allowedSignersFile="$APPLY_TRUSTED_SIGNERS" \
         verify-tag "$JOURNAL_TAG" >/dev/null 2>&1 || return 1
     resolved="$(git -C "$ROOT" rev-parse "$JOURNAL_TAG^{}" 2>/dev/null || true)"
@@ -530,7 +530,9 @@ _resolve_trusted_release() {
         || _release_fail "$mode" "the Silere release trust key is missing"
     command -v ssh-keygen >/dev/null 2>&1 \
         || _release_fail "$mode" "ssh-keygen is required to verify Silere releases"
-    git -C "$ROOT" -c gpg.format=ssh \
+    # gpg.format only picks how to sign: verify-tag follows the signature's own header, and gpg or gpgsm would
+    # vouch for a tag from any key in the user's keyrings. Only ssh-keygen and the shipped key may answer here
+    git -C "$ROOT" -c gpg.format=ssh -c gpg.program=false -c gpg.x509.program=false \
         -c gpg.ssh.allowedSignersFile="$TRUSTED_SIGNERS" \
         verify-tag "$release_tag" >/dev/null 2>&1 \
         || _release_fail "$mode" "$release_tag is not signed by the trusted Silere release key"

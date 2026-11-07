@@ -34,7 +34,9 @@ root can write to. Any other filesystem path supplied by the sender is refused.
 
 Updates are verified: `scripts/update.sh` fast-forwards to an annotated tag signed by
 a key in `security/update-signers`, using the copy of that key already in the installed
-checkout, and only when the tag belongs to `origin/main`. Rolling back a completed
+checkout, and only when the tag belongs to `origin/main`. Only an SSH signature counts:
+gpg and gpgsm are switched off for the check, so no key in your own keyrings can stand in
+for the release key. Rolling back a completed
 update (`--rollback`) and recovering an interrupted one also reset to a revision the
 signed transaction journal names.
 After signature verification and confirmation, the update gate runs the candidate
