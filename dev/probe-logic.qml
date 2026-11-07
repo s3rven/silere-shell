@@ -4458,7 +4458,7 @@ ShellRoot {
         root._check(ShellSettings._readError.length === 0
                 && ShellSettings.showSeconds === savedSeconds,
             "restoring the exact previous settings file clears its error and reapplies disk values")
-        // a file-watch reload from an earlier write can still be in flight under load; flushForUpdate refuses until it lands
+        // a file-watch reload from an earlier write can still be in flight under load, and unsaved text waits for it
         root._check(ShellSettings._persistence.writeAllowed && !ShellSettings._persistence.writePaused
                 && (ShellSettings._persistence._reloading || ShellSettings.flushForUpdate()),
             "restoring the exact previous settings file re-enables saving")
@@ -4472,8 +4472,14 @@ ShellRoot {
                 "a pending migration backup cannot report settings safely saved for an update")
             settingsStore.writePaused = false
             settingsStore._reloading = true
+            const savedWas = settingsStore.lastSavedText
+            settingsStore.lastSavedText = ""
             root._check(!ShellSettings.flushForUpdate(),
-                "an unresolved external settings reload cannot report a successful update flush")
+                "unsaved settings wait for an unresolved settings reload before an update")
+            settingsStore.lastSavedText = settingsStore.serialize()
+            root._check(ShellSettings.flushForUpdate(),
+                "a settings reload echoing the last write does not block an update")
+            settingsStore.lastSavedText = savedWas
             settingsStore.writePaused = pausedWas
             settingsStore._reloading = reloadingWas
         }

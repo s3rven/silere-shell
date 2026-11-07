@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
 - A shell that does not run as a service keeps its rollback until the updated shell is seen running, instead of losing it to the next daily check.
 - An update stops instead of replacing an ignored file in the checkout, such as settings or notification history, if a release ever ships a file at the same path.
 - Recovery from a silent Hyprland event socket restarts the service only while it is still running.
+- Installing an update right after changing a setting no longer fails with "Settings could not be saved before the update" while the settings file is being read back.
 
 ## Releases
 

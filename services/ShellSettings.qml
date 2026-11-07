@@ -828,7 +828,11 @@ Singleton {
     }
 
     function flushForUpdate(): bool {
-        if (!root._loaded || !_store.writeAllowed || _store.writePaused || _store._reloading) return false
+        if (!root._loaded || !_store.writeAllowed || _store.writePaused) return false
+        // the watcher echoes every write back as a reload: with nothing unsaved there is nothing to lose, and an
+        // external edit landing in the same instant is on disk for the restarted shell. Unsaved changes still wait,
+        // since writing them now could overwrite that unread edit
+        if (_store._reloading) return _store.serialize() === _store.lastSavedText
         root._writeError = ""
         _store.flush(true)
         return root._writeError.length === 0
