@@ -73,7 +73,7 @@ Singleton {
             root.conflict = name
             if (name.length === 0) return
             console.warn("silere-shell: notifications are owned by '" + name +
-                "', not silere — its notification server is inactive. Stop the other daemon to use silere's notifications.")
+                "', not Silere — its notification server is inactive. Stop the other daemon to use Silere's notifications.")
         }
     }
 }
