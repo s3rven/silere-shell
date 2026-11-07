@@ -202,8 +202,11 @@ ipc_shell() {
 
 unit_runs_shell() {
     command -v systemctl >/dev/null 2>&1 || return 1
+    # failed too, as update.sh counts it: a crash loop leaves a disabled unit neither active nor enabled, and only a
+    # restart through systemd clears it and puts the shell back under supervision
     systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
         || systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null \
+        || systemctl --user is-failed --quiet silere-shell.service 2>/dev/null \
         || return 1
     _silere_unit_runs_checkout "$ROOT"
 }

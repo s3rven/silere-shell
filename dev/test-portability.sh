@@ -2698,6 +2698,7 @@ test_cli_restart_and_log() (
         '#!/bin/sh' \
         'echo "systemctl $*" >> "$SILERE_TEST_STATE.calls"' \
         'case "$*" in' \
+        '    *is-failed*) [ -n "${SILERE_TEST_UNIT_FAILED-}" ]; exit $? ;;' \
         '    *is-active*|*is-enabled*) [ -n "${SILERE_TEST_UNIT-}" ] && [ -z "${SILERE_TEST_UNIT_INACTIVE-}" ]; exit $? ;;' \
         '    *show*) [ -n "${SILERE_TEST_UNIT-}" ] || exit 1; printf "{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -n -p %s/shell.qml ; }\n" "${SILERE_TEST_UNIT_ROOT:-$SILERE_TEST_ROOT}" ;;' \
         '    *" restart "*) echo 888 > "$SILERE_TEST_STATE" ;;' \
@@ -2728,6 +2729,16 @@ test_cli_restart_and_log() (
     grep -qFx 'systemctl --user restart silere-shell.service' "$state.calls" \
         || fail "restart did not go through the user unit"
     ! grep -qx 'kill' "$state.calls" || fail "restart killed the unit's shell behind systemd"
+
+    # a crash loop leaves a disabled unit failed: neither active nor enabled, and still the shell's owner
+    : > "$state"; : > "$state.calls"
+    out="$(SILERE_TEST_UNIT=1 SILERE_TEST_UNIT_INACTIVE=1 SILERE_TEST_UNIT_FAILED=1 cli restart)" \
+        || fail "restart of a failed unit failed"
+    assert_eq "Silere started (pid 888)" "$out" "restart of a failed unit"
+    grep -qFx 'systemctl --user reset-failed silere-shell.service' "$state.calls" \
+        && grep -qFx 'systemctl --user restart silere-shell.service' "$state.calls" \
+        || fail "restart of a failed unit did not clear it and go through systemd"
+    ! grep -q '^launch' "$state.calls" || fail "restart of a failed unit started a shell outside it"
 
     echo 4242 > "$state"; : > "$state.calls"
     if out="$(SILERE_TEST_UNIT=1 SILERE_TEST_QS_BROKEN=1 cli restart 2>&1)"; then
