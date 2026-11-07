@@ -133,8 +133,24 @@ Singleton {
         root._autoLat = c.lat
         root._autoLon = c.lon
         root._geoResolved = true
+        root._geoOffset = new Date().getTimezoneOffset()
         return true
     }
+
+    // travelling with the shell running moves the sun: a new time zone offset looks the place up again,
+    // and the old place stays in use until the new one lands
+    property int _geoOffset: 0
+    function zoneMoved(resolved: bool, lookupOffset: int, nowOffset: int): bool {
+        return resolved && lookupOffset !== nowOffset
+    }
+    function _followZone(): void {
+        const now = new Date().getTimezoneOffset()
+        if (!root.zoneMoved(root._geoResolved, root._geoOffset, now) || _geoProc.running) return
+        // once per change: a lookup that fails keeps the old place instead of retrying every minute
+        root._geoOffset = now
+        _geoProc.running = true
+    }
+    on_SolarTickChanged: root._followZone()
 
     BoundedProcess {
         id: _geoProc

@@ -1984,6 +1984,16 @@ ShellRoot {
             "the time zone lookup yields coordinates and a readable city name")
         root._check(!Weather.enabled && !Weather.loading && !Weather.hasData,
             "weather stays idle while it is switched off")
+        const movedPlaceWas = Weather._place
+        const movedFetchedWas = Weather._fetchedAt
+        Weather._place = { lat: 1, lon: 2, name: "Here", offset: 120 }
+        Weather._fetchedAt = 42
+        const placeKept = !Weather.forgetMovedPlace(120) && Weather._place !== null && Weather._fetchedAt === 42
+        const placeDropped = Weather.forgetMovedPlace(60) && Weather._place === null && Weather._fetchedAt === 0
+        Weather._place = movedPlaceWas
+        Weather._fetchedAt = movedFetchedWas
+        root._check(placeKept && placeDropped,
+            "weather drops a place found under another time zone offset, and keeps one found under this one")
         const lookup = Weather._zoneLookup
         if (lookup) {
             const commandWas = lookup.command.slice()
@@ -7936,6 +7946,10 @@ ShellRoot {
                 && Math.abs(NightLight._autoLat - 56.95) < 0.0001
                 && Math.abs(NightLight._autoLon - 24.1) < 0.0001,
             "night light parses a valid zone-table coordinate")
+        root._check(NightLight._geoOffset === new Date().getTimezoneOffset()
+                && NightLight.zoneMoved(true, 120, 60) && !NightLight.zoneMoved(true, 120, 120)
+                && !NightLight.zoneMoved(false, 120, 60),
+            "night light notes the time zone a place was found under, and looks again only once that changes")
         const validLat = NightLight._autoLat
         const validLon = NightLight._autoLon
         root._check(!NightLight._parseCoord("+9060+02406")

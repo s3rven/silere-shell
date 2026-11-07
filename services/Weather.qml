@@ -32,7 +32,7 @@ Singleton {
 
     property real _fetchedAt: 0
     property string _fetchedFor: ""
-    // the time zone's principal city is resolved once per session
+    // the time zone's principal city, looked up again only when the zone offset moves
     property var _place: null
     property var _xhr: null
 
@@ -116,8 +116,17 @@ Singleton {
             && fetchedFor === root._key(nowMs)
     }
 
+    // a time zone change while the shell runs moves the place, and the old city's forecast is no answer
+    function forgetMovedPlace(nowOffset: int): bool {
+        if (!root._place || root._place.offset === nowOffset) return false
+        root._place = null
+        root._fetchedAt = 0
+        return true
+    }
+
     function request(force: bool): void {
         if (!root.enabled || root.loading) return
+        root.forgetMovedPlace(new Date().getTimezoneOffset())
         if (!force && !root.failed && root.cacheFresh(root._fetchedAt, root._fetchedFor, Date.now())) return
         root.loading = true
         if (root._place) root._fetchForecast()
@@ -195,7 +204,7 @@ Singleton {
                 ? TimeZonePlace.parseLine(_zoneOut.text) : null
             if (!found) { root._fail("Can't tell where you are from the time zone"); return }
             root._place = { lat: found.lat, lon: found.lon,
-                name: TimeZonePlace.placeName(found.zone) }
+                name: TimeZonePlace.placeName(found.zone), offset: new Date().getTimezoneOffset() }
             root._fetchForecast()
         }
     }
