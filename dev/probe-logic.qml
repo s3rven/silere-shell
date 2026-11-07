@@ -7905,6 +7905,13 @@ ShellRoot {
                 && ShellSettings.nightLightOn === nightOnWas
                 && NightLight._runningTool === "" && !NightLight._probedOnce,
             "a test copy of the shell never adopts, starts or stops the live night light")
+        const nightRestoreWas = NightLight._restoreDone
+        NightLight._restoreDone = true
+        ShellSettings.nightLightOn = !ShellSettings.nightLightOn
+        root._check(!NightLight.enabled && NightLight._runningTool === "" && !NightLight._toggling,
+            "a restore that flips night light in a test copy still leaves the live one alone")
+        ShellSettings.nightLightOn = nightOnWas
+        NightLight._restoreDone = nightRestoreWas
         const nightErrorWas = NightLight.lastError
         for (const result of [
             { code: 127, status: 0, timedOut: false },

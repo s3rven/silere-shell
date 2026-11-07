@@ -195,6 +195,10 @@ Singleton {
         function onNightLightAutoChanged() {
             if (ShellSettings.nightLightAuto && root.enabled) root._solarTick++
         }
+        // restoring defaults, and undoing that, set it without going through toggle()
+        function onNightLightOnChanged() {
+            if (root._restoreDone && !root._toggling && ShellSettings.nightLightOn !== root.enabled) root.toggle()
+        }
     }
 
     function _startSunset(): void {
@@ -301,7 +305,9 @@ Singleton {
         // any pgrep in flight describes the state before this action
         root._stateGeneration++
         root._restoreDone = true
+        root._toggling = true
         ShellSettings.nightLightOn = !enabled
+        root._toggling = false
         if (enabled) {
             _pendingEnable = false
             if (_killProc.running) { enabled = false; return }
@@ -438,6 +444,7 @@ Singleton {
     // a restart kills the tool: bring back a hand-chosen state once, never a tool that died later
     property bool _probedOnce: false
     property bool _restoreDone: false
+    property bool _toggling: false
     function _maybeRestore(): void {
         if (root._restoreDone || !root._probedOnce || !ShellSettings.ready) return
         root._restoreDone = true
