@@ -121,3 +121,10 @@ the visualizer stopped and no second Quickshell instance running.
 
 Raw reports: [cold](perf/1.6.0-cold.json) · [warm](perf/1.6.0-warm.json). They were collected
 from runtime commit `d4d6d47` while the release metadata and notes were being prepared.
+
+The tagged commit came after another round of fixes, so it was checked against that tree in
+`dev/bench-lab.sh startup`, with both trees copied to the same filesystem and 8 trials per state.
+Cold and warm PSS matched within 1 to 2 MB, and the bar started no later. Live on the tagged
+commit with the session unlocked and in use, cold read 82 MB (steady). Warm read 95 to 96 MB but
+never steady, so it is not recorded. A locked session pauses readings and animations, so these
+two live numbers do not compare with the row above.
