@@ -56,35 +56,21 @@ Singleton {
     // a negative age is a run stamped before the wall clock stepped back, not a recent one
     function _recent(ageMs: real): bool { return ageMs >= 0 && ageMs < 1000 }
 
-    // a notification flood or a workspace event storm reaches here once per event; without a ceiling each one is another spawn
-    function _budgetAllows(): bool {
+    // one rolling second of run times per allowance: a full second refuses and keeps its times
+    function _allows(times: string, limit: int): bool {
         const now = Date.now()
-        const recent = []
-        for (let i = 0; i < root._runTimes.length; i++)
-            if (root._recent(now - root._runTimes[i])) recent.push(root._runTimes[i])
-        if (recent.length >= root.maxRunsPerSecond) {
-            root._runTimes = recent
-            return false
-        }
-        recent.push(now)
-        root._runTimes = recent
-        return true
+        const recent = root[times].filter(t => root._recent(now - t))
+        const allowed = recent.length < limit
+        if (allowed) recent.push(now)
+        root[times] = recent
+        return allowed
     }
 
+    // a notification flood or a workspace event storm reaches here once per event; without a ceiling each one is another spawn
+    function _budgetAllows(): bool { return root._allows("_runTimes", root.maxRunsPerSecond) }
+
     // a flood must not swallow a critical battery crossing, so it draws on a small separate allowance when the shared bucket is spent
-    function _criticalAllows(): bool {
-        const now = Date.now()
-        const recent = []
-        for (let i = 0; i < root._criticalTimes.length; i++)
-            if (root._recent(now - root._criticalTimes[i])) recent.push(root._criticalTimes[i])
-        if (recent.length >= root.maxCriticalRunsPerSecond) {
-            root._criticalTimes = recent
-            return false
-        }
-        recent.push(now)
-        root._criticalTimes = recent
-        return true
-    }
+    function _criticalAllows(): bool { return root._allows("_criticalTimes", root.maxCriticalRunsPerSecond) }
 
     function fire(event: string, args): void {
         if (root._present[event] !== true) return
