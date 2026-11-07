@@ -13,7 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ## Releases
 
-- [1.6.0](docs/releases/1.6.0.md) — 2026-11-06
+- [1.6.0](docs/releases/1.6.0.md) — 2026-11-07
 - [1.5.0](docs/releases/1.5.0.md) — 2026-11-03
 - [1.4.4](docs/releases/1.4.4.md) — 2026-10-22
 - [1.4.3](docs/releases/1.4.3.md) — 2026-10-18
