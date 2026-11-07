@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - A notification still sliding out when a newer one took the last visible place no longer disappears mid-exit and comes back later.
 - The calendar takes keyboard focus the first time it opens, so Tab and the arrow keys work without a click.
+- The whole height of the bar opens the calendar from the clock, like every other widget.
 
 ## Releases
 
