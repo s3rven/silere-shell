@@ -11045,7 +11045,12 @@ ShellRoot {
                 && ShellSettings.showSeconds === ShellSettings._defaults.showSeconds,
             "restoring settings resets every one of them, Do Not Disturb and night light too")
         root._check(ShellSettings.canUndoReset, "a restore keeps a way back")
+        // held, so the probe sees whether the undo left a write owed: the file on disk still holds the defaults
+        ShellSettings._persistence.writePaused = true
         ShellSettings.undoReset()
+        root._check(ShellSettings._persistence.lastSavedText !== ShellSettings._serialize(),
+            "undoing a restore saves what it put back")
+        ShellSettings._persistence.writePaused = false
         root._check(ShellSettings.dnd === true && ShellSettings.showSeconds !== ShellSettings._defaults.showSeconds
                 && ShellSettings.nightLightTemp === ShellSettings._defaults.nightLightTemp - 500
                 && !ShellSettings.canUndoReset,

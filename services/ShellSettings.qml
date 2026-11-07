@@ -821,6 +821,8 @@ Singleton {
         if (saved.length === 0) return
         root._resetBackupText = ""
         root._applyText(saved)
+        // _applyText takes its text as what is on disk, which still holds the defaults: without this the flush skips
+        _store.lastSavedText = ""
         _store.flush(false)
         root._recountModified()
     }
