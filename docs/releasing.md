@@ -78,7 +78,8 @@ under Fixed. Archived notes nest one level higher, under `###`.
 
 ## Performance numbers
 
-Record a row in [`perf-history.md`](perf-history.md) as part of tagging. The README quotes
+Record a row in [`perf-history.md`](perf-history.md) as part of tagging, and quote both in the
+reference table of [`performance.md`](performance.md) (ci-lint checks it). The README quotes
 figures, and a per-release measurement on a known machine is what keeps them true.
 
 ```bash

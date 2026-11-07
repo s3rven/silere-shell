@@ -1822,6 +1822,18 @@ while IFS='|' read -r version archive; do
 done < <(sed -nE \
   's#^- \[([0-9]+\.[0-9]+\.[0-9]+)\]\((docs/releases/[^)]+)\).*#\1|\2#p' \
   CHANGELOG.md)
+# the bench step writes only the history, so the summary table was left a release behind once
+for perf_state in cold warm; do
+  perf_pss="$(awk -F '|' -v wanted="$manifest_version" -v state="$perf_state" '
+    { v = $2; m = $5; p = $6
+      gsub(/[[:space:]]/, "", v); gsub(/[[:space:]]/, "", m); gsub(/[^0-9]/, "", p)
+      if (v == wanted && m == state && p != "") print p }' docs/perf-history.md </dev/null)"
+  [ -n "$perf_pss" ] || continue
+  if ! grep -qF "These are the $manifest_version release measurements" docs/performance.md \
+      || ! grep -qF "| $perf_state | ~$perf_pss MB |" docs/performance.md; then
+    fail "docs/performance.md must quote the $manifest_version $perf_state reference (~$perf_pss MB)"
+  fi
+done
 
 archive_paths="$(find docs/releases -maxdepth 1 -type f -name '*.md' | sort)"
 orphaned_release_paths="$(comm -13 \
