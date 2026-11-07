@@ -2530,8 +2530,33 @@ test_reset_workflow() (
     fi
     assert_eq "$before" "$(sha256sum "$config/settings.json")" "a refused reset changes nothing"
     assert_eq "" "$(cat "$state.calls")" "a refused reset leaves the shell running"
+
+    # a reset that fails after stopping the shell still brings it back
+    fill
+    rm -f "$config/settings.json"; ln -s "$home/missing/settings.json" "$config/settings.json"
+    echo 4242 > "$state"; : > "$state.calls"
+    if run_reset --apply --yes >/dev/null 2>&1; then fail "a reset that could not write the settings reported success"; fi
+    assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "a failed reset starts the shell it stopped"
+    rm -f "$config/settings.json"
+
+    # the shipped unit has an [Install] section, so a supervised shell stopped by the reset is neither active nor
+    # enabled, and silere restart would bring it back outside its service: the reset has to start the service itself
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'case "$*" in' \
+        "    *'-p ExecStart --value'*) echo '{ path=$repo/scripts/silere ; argv[]=$repo/scripts/silere run ; ignore_errors=no }' ;;" \
+        '    *"is-active --quiet silere-shell.service"*) [ -s "$SILERE_TEST_STATE" ] ;;' \
+        '    *" stop silere-shell.service"*) : > "$SILERE_TEST_STATE"; echo unit-stop >> "$SILERE_TEST_STATE.calls" ;;' \
+        '    *" start silere-shell.service"*) echo 888 > "$SILERE_TEST_STATE"; echo unit-start >> "$SILERE_TEST_STATE.calls" ;;' \
+        '    *) exit 1 ;;' \
+        'esac' > "$stubs/systemctl"
+    fill
+    echo 4242 > "$state"; : > "$state.calls"
+    run_reset --apply --yes >/dev/null || fail "reset failed with a supervised shell"
+    assert_eq $'unit-stop\nunit-start' "$(cat "$state.calls")" "a reset brings a supervised shell back through its service"
 )
 
+# a checkout path with quotes, a backslash and spaces still gives the preview a menu shortcut that names it
 test_lua_block_is_checked() (
     local dir="$TMP/lua-block" stubs="$TMP/lua-block-stubs" before
     mkdir -p "$dir" "$stubs"

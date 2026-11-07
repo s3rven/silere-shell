@@ -112,8 +112,12 @@ _unit_owns_shell() {
 # if the shell could not be brought back afterwards, as from a text console
 _stop_shell() {
     RESTART=0
+    SUPERVISED=0
     if _unit_owns_shell; then
         RESTART=1
+        # silere restart only goes through systemd for a unit that is active or enabled, and a stopped unit
+        # started by silere run --supervised is neither: it would come back with nothing to restart it after a crash
+        if systemctl --user is-active --quiet silere-shell.service 2>/dev/null; then SUPERVISED=1; fi
     elif _shell_is_up; then
         [ -n "${WAYLAND_DISPLAY:-}" ] || _die "run this from inside your Wayland session, or the shell could not come back"
         RESTART=1
@@ -121,10 +125,16 @@ _stop_shell() {
     [ "$RESTART" = 1 ] || return 0
     local out
     out="$(bash "$ROOT/scripts/silere" stop 2>&1)" || _die "${out:-could not stop the shell}"
+    # a failure from here on must not leave the desktop without its shell
+    trap '[ $? = 0 ] || _start_shell' EXIT
 }
 
 _start_shell() {
-    if [ "$RESTART" = 1 ]; then
+    trap - EXIT
+    if [ "$SUPERVISED" = 1 ]; then
+        systemctl --user start silere-shell.service \
+            || _die "systemd could not start silere-shell.service again; silere doctor shows what is wrong"
+    elif [ "$RESTART" = 1 ]; then
         bash "$ROOT/scripts/silere" restart \
             || _die "the shell did not come back; silere doctor shows what is wrong"
     else
@@ -136,8 +146,9 @@ _start_shell() {
 _write_settings() {
     local schema
     schema="$(sed -n 's/^[[:space:]]*"settingsSchema"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$ROOT/release.json" 2>/dev/null)"
-    (umask 077 && mkdir -p -- "$CONFIG_DIR")
-    printf '{\n  "__version": %s\n}\n' "${schema:-2}" > "$SETTINGS"
+    # called under ||, which turns set -e off in here: every step has to report its own failure
+    (umask 077 && mkdir -p -- "$CONFIG_DIR") || return 1
+    printf '{\n  "__version": %s\n}\n' "${schema:-2}" > "$SETTINGS" || return 1
     [ -L "$SETTINGS" ] || chmod 0600 -- "$SETTINGS"
 }
 
