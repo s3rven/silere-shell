@@ -27,6 +27,11 @@ compositor config, launcher, wallpaper tool and lock screen stay as they are.
 
 [Try it](#try-it-first) · [Install](#install) · [Controls](docs/usage.md) · [Fix a problem](docs/troubleshooting.md) · [All docs](docs/README.md)
 
+<p align="center">
+  <a href="https://github.com/s3rven/silere-shell/releases/download/v1.6.0/silere-demo.mp4"><img src="assets/demo-poster.webp" alt="Play the tour: 86 seconds of Silere's bar, notifications, menu, Now Playing, calendar, settings and colours" width="720"/></a><br/>
+  <sub>The 86-second tour, with real pointer input on a private session. No sound.</sub>
+</p>
+
 ## Philosophy
 
 **Quiet.** Keep everyday information easy to glance at. Bring controls and detail
