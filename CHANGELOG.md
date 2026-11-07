@@ -18,6 +18,7 @@ settings file carries its own `__version` and migrates separately.
 - The whole height of the bar opens the calendar from the clock, like every other widget.
 - `silere update --rollback` still works after the release it undoes was withdrawn upstream and a later check removed its tag.
 - A shell that does not run as a service keeps its rollback until the updated shell is seen running, instead of losing it to the next daily check.
+- An update stops instead of replacing an ignored file in the checkout, such as settings or notification history, if a release ever ships a file at the same path.
 
 ## Releases
 

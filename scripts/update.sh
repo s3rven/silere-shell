@@ -983,7 +983,9 @@ if [ "${1:-}" = "--apply" ]; then
         _fail "could not record staged validation; the checkout was not changed"
     fi
     # git names the real reason here; "diverged" would point at the wrong thing
-    if ! merge_err="$(git -C "$ROOT" merge --ff-only "$remote_rev" 2>&1)"; then
+    # --no-overwrite-ignore: settings, history and hooks sit ignored in this checkout, and a release adding a
+    # file at one of their paths must stop here rather than replace it, as the rollback already refuses to
+    if ! merge_err="$(git -C "$ROOT" merge --ff-only --no-overwrite-ignore "$remote_rev" 2>&1)"; then
         # A normal fast-forward refusal leaves HEAD unchanged. Clear the journal
         # only when that is actually true; an unusual partial failure is safer
         # with recovery state retained.

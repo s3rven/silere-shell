@@ -1375,6 +1375,8 @@ test_update_refuses_dirty_apply() (
     assert_eq "ahead=0" "$(printf '%s\n' "$version_out" | grep '^ahead=')" \
         "--version no-tag commit count"
     printf 'upstream v2\n' > "$seed/tracked.qml"
+    printf 'shipped\n' > "$seed/notes.json"
+    git -C "$seed" add notes.json
     git -C "$seed" commit -qam "upstream update"
     _sign_release "$seed" v1.0.1
     git -C "$seed" push -q origin main --tags
@@ -1470,6 +1472,16 @@ test_update_refuses_dirty_apply() (
         || fail "offline update apply cleared the pending update flag"
 
     git -C "$client" remote set-url origin "$remote"
+    # settings and history live ignored in the checkout; a release shipping a file at one of their paths stops
+    printf 'notes.json\n' >> "$client/.git/info/exclude"
+    printf 'personal\n' > "$client/notes.json"
+    if HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply >/dev/null 2>&1; then
+        fail "update apply replaced an ignored file the release ships"
+    fi
+    assert_eq "personal" "$(cat "$client/notes.json")" "an ignored file survives a blocked update"
+    assert_eq "$old_head" "$(git -C "$client" rev-parse HEAD)" "ignored collision apply HEAD"
+    rm -f "$client/notes.json"
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" --apply >/dev/null 2>&1 \
         || fail "apply did not recover after the origin returned"
