@@ -222,8 +222,11 @@ Column {
     SettingsCard {
         ControlRow {
             glyph: "󰦛"
+            // a file that will not load blocks every save, and its values never arrived to count as changed
+            readonly property bool _unreadable: ShellSettings._readError.length > 0
             title: root._armed ? "Confirm restore" : "Restore default settings"
-            status: ShellSettings.modifiedTotal > 0
+            status: _unreadable ? "Replaces the settings file that cannot be read"
+                : ShellSettings.modifiedTotal > 0
                 ? ShellSettings.modifiedTotal + (ShellSettings.modifiedTotal === 1
                     ? " setting will be reset" : " settings will be reset")
                 : "No changed settings to restore"
@@ -231,7 +234,7 @@ Column {
             accentColor: root._armed ? Theme.error : Theme.accent
             statusColor: root._armed ? Theme.error : "transparent"
             active: root._armed
-            available: ShellSettings.modifiedTotal > 0
+            available: _unreadable || ShellSettings.modifiedTotal > 0
             onActivated: {
                 const now = Date.now()
                 const age = now - root._armedAtMs
