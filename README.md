@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/shot-surfaces.webp" alt="Silere's Home, Now Playing and Settings panels" width="960"/>
+  <img src="assets/shot-hero.webp" alt="Silere's menu open on Home beside a notification, on a dark KISS Linux wallpaper" width="960"/>
 </p>
 
 Silere is the bar, notifications, OSD, tray and quick settings I use every day, in one
@@ -93,10 +93,14 @@ recovery. If `silere` is not on your `PATH`, run
 | **Colours** | Taken from your wallpaper through Matugen, in its dark or light mode, or an accent you pick. |
 | **Updates** | Signed releases, installed from the menu. `silere update --rollback` puts the last version back. |
 
+<p align="center">
+  <img src="assets/shot-surfaces.webp" alt="The Now Playing panel with cover art and seeking, and the calendar opened from the clock" width="820"/>
+</p>
+
 The menu stays out of the way until you ask for it. Most of the time, this is all you see:
 
 <p align="center">
-  <img src="assets/shot-desktop.webp" alt="Silere's floating bar on the desktop" width="960"/>
+  <img src="assets/shot-bar.webp" alt="Silere's floating bar: workspaces and the playing track on the left; system readings, network, volume, brightness, battery and the clock on the right" width="960"/>
 </p>
 
 ## What it leaves to you
@@ -137,7 +141,13 @@ changed shows a dot in the sidebar, and **Settings › System › Overview** res
 defaults, or `silere reset` if the menu won't open. Press **Ctrl+F** in Settings to find an option by name or feature.
 
 <p align="center">
-  <img src="assets/shot-themes.png" alt="Silere with a custom accent and colours taken from the wallpaper" width="720"/>
+  <img src="assets/shot-settings.webp" alt="The Theme page in Settings: colour source, accent, base tone and bar surfaces" width="720"/>
+</p>
+
+Colours come from your wallpaper through Matugen, in its dark or light mode, or from one accent you pick:
+
+<p align="center">
+  <img src="assets/shot-themes.webp" alt="The Home panel twice: amber colours taken from an amber wallpaper, and Matugen's light mode" width="820"/>
 </p>
 
 Preferences live in `~/.config/silere-shell/settings.json`, which only stores what differs
@@ -169,11 +179,11 @@ rather ship a reliable shell than a fragile small one.
 
 ### Tested
 
-About 22,000 lines of test tooling sit next to 42,000 lines of shell. Every change has to pass:
+About 24,000 lines of test tooling sit next to 43,000 lines of shell. Every change has to pass:
 
 | Check | What it does |
 |---|---|
-| Logic | 2,400+ checks on services, parsers and state machines. |
+| Logic | 2,500+ checks on services, parsers and state machines. |
 | UI stress | 1,300+ checks with real pointer and wheel events, over 120 cycles. |
 | Live settings | 192 settings states changed underneath 60 surfaces. |
 | Popups | 107 behaviours, such as the bar changing under an open popup. |
