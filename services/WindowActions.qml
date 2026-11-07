@@ -127,18 +127,9 @@ Singleton {
     }
 
     function _senderPid(notification): int {
-        const hints = notification?.hints ?? {}
-        const candidates = [
-            hints["sender-pid"],
-            hints["sender_pid"],
-            hints["senderPid"],
-            hints["process-id"],
-            hints["process_id"],
-            hints["pid"]
-        ]
-
-        for (let i = 0; i < candidates.length; i++) {
-            const pid = root._toPid(candidates[i])
+        const keys = ["sender-pid", "sender_pid", "senderPid", "process-id", "process_id", "pid"]
+        for (let i = 0; i < keys.length; i++) {
+            const pid = root._toPid(notification?.hints?.[keys[i]])
             if (pid > 0) return pid
         }
         return -1
@@ -217,9 +208,8 @@ Singleton {
         const clients = root._clients()
         if (clients.length === 0) return null
 
-        const hints   = notification.hints ?? {}
         const pidHint = root._senderPid(notification)
-        const deHint  = root._norm(notification.desktopEntry || hints["desktop-entry"] || "")
+        const deHint  = root._norm(notification.desktopEntry || notification.hints?.["desktop-entry"] || "")
 
         const pidMatch = root._clientFromPidChain(clients, pidHint, followPidParents)
         if (pidMatch && pidMatch.wsId !== -1) return pidMatch

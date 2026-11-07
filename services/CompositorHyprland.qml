@@ -379,12 +379,15 @@ QtObject {
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""
     property int _workspaceRefreshTries: 0
+    // a plain copy: a lastIpcObject kept in a variable makes Qt watch the toplevel, and Qt can free that watch mid-update
+    function _ipcOf(t): var { return t && t.lastIpcObject ? JSON.parse(JSON.stringify(t.lastIpcObject)) : null }
+
     function _missingWorkspaceId(workspaces, toplevels): int {
         const known = {}
         for (let i = 0; i < workspaces.length; i++)
             if (workspaces[i]) known[workspaces[i].id] = true
         for (let i = 0; i < toplevels.length; i++) {
-            const c = toplevels[i] ? toplevels[i].lastIpcObject : null
+            const c = root._ipcOf(toplevels[i])
             const id = root._wsNumber(c ? c.workspace : null)
             if (id > 0 && !known[id]) return id
         }
@@ -431,7 +434,7 @@ QtObject {
         const tops = root._liveToplevels()
         const winCount = {}
         for (let i = 0; i < tops.length; i++) {
-            const c = tops[i] ? tops[i].lastIpcObject : null
+            const c = root._ipcOf(tops[i])
             if (!c || !c.address) continue
             const id = root._wsNumber(c.workspace)
             if (id > 0) winCount[id] = (winCount[id] ?? 0) + 1
@@ -470,7 +473,7 @@ QtObject {
         const out = []
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
-            const c = t ? t.lastIpcObject : null
+            const c = root._ipcOf(t)
             if (!c || !c.address) continue
             const wsName = c.workspace ? String(c.workspace.name ?? "") : ""
             // -1 is reserved for a window with no workspace, which window matching skips

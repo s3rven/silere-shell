@@ -180,12 +180,10 @@ def media(bus, player):
         ("art that is an option", track(xesam__title=String("t3"), mpris__artUrl=String(f"--output={MARKER}"))),
         ("art of the wrong type", track(xesam__title=String("t5"), mpris__artUrl=Int32(3))),
         ("bad track id", dbus.Dictionary({"mpris:trackid": String("not a path"), "xesam:title": String("t6")}, signature="sv")),
+        # huge fields after the notification storm crashed 2 runs in 3 while Silere kept player.metadata in a variable
+        ("1 MB title", track(xesam__title=String("T" * 1000000), xesam__artist=artist("A" * 1000000))),
+        ("1 MB art url", track(xesam__title=String("t4"), mpris__artUrl=String("https://x/" + "y" * 1000000))),
     ]
-    if KNOWN:
-        # after a notification storm these end in Qt::endPropertyUpdateGroup in about 1 run in 8, the fault site of
-        # quickshell#1398. Ordinary metadata does not: 5400 track changes under 3000 notifications never crashed
-        tracks += [("1 MB title", track(xesam__title=String("T" * 1000000), xesam__artist=artist("A" * 1000000))),
-                   ("1 MB art url", track(xesam__title=String("t4"), mpris__artUrl=String("https://x/" + "y" * 1000000)))]
     ipc("menu", "tab", "3")
     time.sleep(1)
     for label, metadata in tracks:

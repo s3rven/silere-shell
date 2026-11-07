@@ -248,11 +248,9 @@ Singleton {
         return /(firefox|zen|librewolf|floorp|waterfox|chrome|chromium|brave|edge|opera|vivaldi|thorium)/.test(source)
     }
 
-    readonly property string trackUrl: {
-        const metadata = player ? player.metadata : null
-        return SafeText.singleLineText(metadata ? metadata["xesam:url"] : "",
-            root.maxArtSourceChars)
-    }
+    // one expression: a metadata map kept in a variable makes Qt watch the player, and Qt can free that watch mid-update
+    readonly property string trackUrl: SafeText.singleLineText(player?.metadata?.["xesam:url"] ?? "",
+        root.maxArtSourceChars)
     readonly property bool metadataPrivacyProtected: root.metadataIsPrivacyProtected(
         title, artist, trackUrl, identity, desktopEntry, player ? player.dbusName : "")
     // a browser calls itself "Mozilla zen" over MPRIS; its desktop entry has the name its launcher shows

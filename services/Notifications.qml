@@ -807,8 +807,8 @@ Singleton {
     // the dunst, mako and swaync convention: a sender replaces its earlier card by tag instead of by id, which
     // volume and brightness scripts rely on to show one card instead of one per keypress
     function stackTagOf(notification): string {
-        const hints = notification?.hints ?? {}
-        const tag = hints["x-canonical-private-synchronous"] ?? hints["x-dunst-stack-tag"] ?? hints["synchronous"]
+        const tag = notification?.hints?.["x-canonical-private-synchronous"] ?? notification?.hints?.["x-dunst-stack-tag"]
+            ?? notification?.hints?.["synchronous"]
         return tag === undefined || tag === null ? "" : String(tag)
     }
 
@@ -848,8 +848,8 @@ Singleton {
     function threadKeyOf(notification): string {
         if (!notification || notification.urgency === NotificationUrgency.Critical) return ""
         if (root.stackTagOf(notification).length > 0) return ""
-        const hints = notification.hints ?? {}
-        if (hints["value"] !== undefined && hints["value"] !== null) return ""
+        const progress = notification.hints?.["value"]
+        if (progress !== undefined && progress !== null) return ""
         const summary = root.plainText(notification.summary, 256)
         if (summary.length === 0) return ""
         return root.identityText(notification.appName) + "\n" + summary

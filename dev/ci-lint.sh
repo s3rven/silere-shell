@@ -907,6 +907,16 @@ else
   fail "shell.qml must not set a LazyLoader's loading to false; finish the load with active = true, then drop it"
 fi
 
+section "reference watch"
+# Qt watches a map property that JS keeps in a variable, and can free that watch inside a grouped update (11-06 cores)
+mapfile -t ref_files < <(find services modules config -name '*.qml'; printf '%s\n' shell.qml)
+if ref_hits="$(grep -nE '(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=.*\.(metadata|hints|lastIpcObject)[[:space:]]*(\?\?[[:space:]]*\{\}|:[[:space:]]*null)?[[:space:]]*$' \
+    "${ref_files[@]}" </dev/null)"; then
+  fail "read metadata, hints and lastIpcObject in one expression or copy them, never keep the map: $ref_hits"
+else
+  ok "reference watch" "Quickshell's map properties are never kept as a live reference in JS"
+fi
+
 section "installer environment defaults"
 if ! grep -qF '${MALLOC_CONF-' scripts/silere \
     && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \

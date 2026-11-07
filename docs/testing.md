@@ -78,7 +78,7 @@ combining marks on one character, wrong types in every field, cover art urls tha
 run commands, thousands of signals a second. The shell has to stay up and responsive, throw no
 script errors, keep `curl` to its https-only limits and leave no hung process behind.
 
-It takes about four minutes and needs Hyprland, KWin and a GPU render node. Hostile input also
+It takes about two minutes and needs Hyprland, KWin and a GPU render node. Hostile input also
 needs python-dbus and PyGObject. It is not part of `dev/check.sh`; run it before a release.
 
 A few inputs still crash the shell, and Silere can't stop them from QML. `SILERE_FUZZ_KNOWN=1`
@@ -86,9 +86,10 @@ adds them, to see whether a fix has landed upstream:
 
 - An `image-data` hint or a tray `IconPixmap` claiming a size larger than its data. Quickshell
   trusts the size. A config with no Silere code reproduces both.
-- A media player sending 1 MB metadata fields straight after a notification storm. This one is rare,
-  about 1 run in 8, and the cause isn't known. It ends in `Qt::endPropertyUpdateGroup`, as
-  quickshell#1398 does.
+
+Huge media metadata after a notification storm crashed in `Qt::endPropertyUpdateGroup` while Silere
+kept `player.metadata` in a JS variable: Qt watches a map kept that way and can free the watch in the
+middle of a grouped update. `dev/ci-lint.sh` ("reference watch") keeps those maps out of variables.
 
 Quickshell restarts the shell within about a second after a crash, with notification history intact.
 
