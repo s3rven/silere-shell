@@ -5552,6 +5552,20 @@ ShellRoot {
                 { name: "DP-4", lastIpcObject: {} }, null]
             root._check(JSON.stringify(hypr.specialFromMonitors(specialMons, { "DP-3": true })) === '{"DP-1":true}',
                 "the first monitor read marks a special workspace shown before startup, unless an event spoke since")
+            const specialWas = hypr._specialOn
+            const heardWas = Object.assign({}, hypr._specialHeard)
+            hypr._specialOn = { "DP-1": true, "DP-3": true }
+            hypr._eventConn.onRawEvent({ name: "monitorremoved", data: "DP-1" })
+            root._check(JSON.stringify(hypr._specialOn) === '{"DP-3":true}'
+                    && hypr.specialFromMonitors(specialMons, hypr._specialHeard)["DP-1"] === undefined,
+                "a disconnected output loses its special marker and a late startup snapshot cannot restore it")
+            hypr._eventConn.onRawEvent({ name: "monitorremovedv2", data: "2,DP-3,Screen, with comma" })
+            root._check(Object.keys(hypr._specialOn).length === 0,
+                "the v2 monitor removal clears the correct output even when its description contains commas")
+            hypr._specialOn = specialWas
+            for (const key of Object.keys(hypr._specialHeard)) delete hypr._specialHeard[key]
+            Object.assign(hypr._specialHeard, heardWas)
+            hypr._eventSeq = seqWas
             const onNamed = { ref: "0xa", wsId: hypr.namedWorkspaceId, wsRef: hypr.namedWorkspaceId, focusRank: 2 }
             const noWorkspace = { ref: "0xb", wsId: -1, wsRef: -1, focusRank: 0 }
             root._check(WindowActions._chooseSource([noWorkspace, onNamed]) === onNamed

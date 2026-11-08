@@ -579,6 +579,16 @@ QtObject {
         root._specialOn = next
     }
 
+    function _forgetSpecial(output: string): void {
+        if (output.length === 0) return
+        // a monitor snapshot already in flight can still name the disconnected output
+        root._specialHeard[output] = true
+        if (root._specialOn[output] !== true) return
+        const next = Object.assign({}, root._specialOn)
+        delete next[output]
+        root._specialOn = next
+    }
+
     // a special workspace already shown when the shell starts sent its activespecial before anyone listened.
     // The first monitor read names it; later reads can trail the events and are not refreshed by them, so
     // only that first read counts, and only for an output no event has spoken for since
@@ -666,6 +676,9 @@ QtObject {
                 _titleSync.start()
             if (n === "activespecial" || n === "activespecialv2")
                 root._updateSpecial(event.data)
+            else if (n === "monitorremoved" || n === "monitorremovedv2")
+                root._forgetSpecial(n === "monitorremoved" ? String(event.data ?? "")
+                    : String(event.data ?? "").split(",")[1] || "")
             // a monitor an event named before its first read had no IPC object when the list changed
             else root._seedSpecial()
             if (n === "scrolloverview")
