@@ -26,9 +26,12 @@ Pill {
     interactive: Audio.ready
     // two digits is the common case; reserving "100%" left a character of air after every reading
     reserveText: "00%"
+    readonly property string _level: Math.round(Audio.uiVolume * 100) + "%"
     text: !Audio.ready ? ""
+        : expanded && Audio.sinkName.length > 0 ? root._level + " · " + Audio.sinkName
         : (ShellSettings.valuesOnHover && !expanded) ? ""
-        : (Math.round(Audio.uiVolume * 100) + "%")
+        : root._level
+    maxTextWidth: compact ? 150 : 260
     levelValue: Audio.ready ? Audio.uiVolume : -1
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.muted ? Theme.barSubtext : Theme.barAccent

@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Click the brightness widget to open its slider in Home, with device choices on systems with multiple backlights.
 - Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
+- Hover the volume widget to see which output it controls alongside the volume.
 - Bar shortcuts scroll their controls into view when Home is taller than the screen.
 
 ### Fixed
