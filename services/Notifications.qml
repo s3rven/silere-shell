@@ -793,7 +793,8 @@ Singleton {
             id:      id,
             // _prependHistory bounds and normalizes this snapshot once
             appName: notification.appName,
-            appIcon: notification.appIcon,
+            // notify-send's -i arrives as an image, so the card showed an icon the history row lost
+            appIcon: notification.appIcon || IconResolver.hintedIconName(notification.image),
             desktopEntry: notification.desktopEntry,
             summary: notification.summary,
             body:    notification.body,

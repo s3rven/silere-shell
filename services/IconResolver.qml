@@ -94,12 +94,23 @@ Singleton {
         return root.localSource(Quickshell.iconPath(value, true))
     }
 
+    // notify-send sends -i as the image-path hint, which quickshell rewrites to image://icon/<value>
+    readonly property var _hintedIcon: /^image:(?:\/\/)?icon\/([^?]*)$/i
+
+    // that hint's icon, for a history entry, which keeps no image: a theme name, or a path senderIconSource
+    // still holds to the system icon folders
+    function hintedIconName(raw): string {
+        const value = String(raw ?? "").trim()
+        const hinted = value.length <= root.maxSourceChars ? root._hintedIcon.exec(value) : null
+        const name = hinted ? hinted[1] : ""
+        return name.startsWith("/") || name.indexOf("/") < 0 ? name : ""
+    }
+
     function senderImageSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length > root.maxSourceChars) return ""
         if (value.startsWith("/") || /^file:/i.test(value)) return root._systemIconFile(value)
-        // notify-send sends -i as the image-path hint, which quickshell rewrites to image://icon/<value>
-        const hinted = /^image:(?:\/\/)?icon\/([^?]*)$/i.exec(value)
+        const hinted = root._hintedIcon.exec(value)
         if (hinted) {
             const name = hinted[1]
             if (name.startsWith("/")) return root._systemIconFile(name)

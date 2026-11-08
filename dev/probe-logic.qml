@@ -5652,6 +5652,20 @@ ShellRoot {
                 && IconResolver.senderImageSource("image://icon/x?path=/etc") === ""
                 && IconResolver.senderImageSource("image://icon/") === "",
             "an image-path quickshell passes through the icon provider stays inside the same rules")
+        root._check(IconResolver.hintedIconName("image://icon/applets-screenshooter") === "applets-screenshooter"
+                && IconResolver.hintedIconName("image://icon//usr/share/pixmaps/app.png") === "/usr/share/pixmaps/app.png"
+                && IconResolver.hintedIconName("image://icon/a/../../x") === ""
+                && IconResolver.hintedIconName("image://icon/x?path=/etc") === ""
+                && IconResolver.hintedIconName("image://qsimage/1") === ""
+                && IconResolver.hintedIconName("/usr/share/pixmaps/app.png") === ""
+                && IconResolver.senderIconSource(IconResolver.hintedIconName("IMAGE://Icon//home/user/app.png")) === "",
+            "the icon notify-send names through image-path is kept by name, and a path still meets the icon folder rules")
+        const hintedEntry = n => Notifications._notificationHistoryEntry(Object.assign({ appName: "Screenshot",
+            summary: "Saved", body: "", urgency: 1, transient: false, desktopEntry: "" }, n), 1, 0)
+        root._check(hintedEntry({ appIcon: "", image: "image://icon/applets-screenshooter" }).appIcon === "applets-screenshooter"
+                && hintedEntry({ appIcon: "kitty", image: "image://icon/applets-screenshooter" }).appIcon === "kitty"
+                && hintedEntry({ appIcon: "", image: "image://qsimage/7" }).appIcon === "",
+            "history keeps the icon notify-send sent as an image when the app named none")
         root._check(IconResolver.senderIconSource("/usr/share/icons/../../../dev/zero") === ""
                 && IconResolver.senderIconSource("file:///usr/share/icons/%2e%2e/%2e%2e/%2e%2e/dev/zero") === ""
                 && IconResolver.senderIconSource("file://host/usr/share/icons/app.png") === ""
