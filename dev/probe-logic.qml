@@ -5475,8 +5475,8 @@ ShellRoot {
             "a nested submenu keeps opening the way its parent did and turns only at the screen edge")
 
         const weekStartWas = ShellSettings.calendarWeekStart
-        root._check(CalendarState.weekdayLabelFor(0, Qt.locale("en_US")).toLowerCase().indexOf("sun") === 0
-                && CalendarState.weekdayLabelFor(0, Qt.locale("fr_FR")).toLowerCase().indexOf("dim") === 0,
+        root._check(CalendarState.weekdayLabelFor(0, Qt.locale("en_US")).toUpperCase() === "S"
+                && CalendarState.weekdayLabelFor(0, Qt.locale("fr_FR")).toUpperCase() === "D",
             "calendar weekday captions follow the requested locale instead of fixed English initials")
         root._check(CalendarState.weekendFor(0, [1, 2, 3, 4, 5])
                 && CalendarState.weekendFor(6, [1, 2, 3, 4, 5])

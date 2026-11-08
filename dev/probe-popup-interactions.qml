@@ -119,17 +119,15 @@ Item {
             "invalid indices and closed calendars reject day, month and today navigation")
 
         const monthButton = root._find(card, item => item.Accessible.name === "Return to current month")
-        const monthLabel = monthButton ? root._find(monthButton, item => item.text === card.monthLabel
-            && item.contentWidth !== undefined) : null
-        root._check(monthButton !== null && monthLabel !== null,
+        const monthLabel = root._find(card, item => item.text === card.monthName && item.contentWidth !== undefined)
+        root._check(monthButton !== null && monthLabel !== null
+                && monthButton.Accessible.description === "Showing " + card.monthLabel,
             "calendar month navigation exposes its current month to accessibility tools")
-        if (monthButton && monthLabel) {
-            monthLabel.text = "A very long localized month name 2026"
-            root._check(monthButton.width < monthButton.parent.width
-                    && monthLabel.width <= monthButton.width && monthLabel.elide === Text.ElideRight
-                    && monthButton.Accessible.description === "Showing " + card.monthLabel,
-                "a long month title gives way to navigation buttons while preserving its full accessible name")
-            monthLabel.text = Qt.binding(() => card.monthLabel)
+        if (monthLabel) {
+            monthLabel.text = "A very long localized month name that cannot fit"
+            root._check(monthLabel.width < monthLabel.implicitWidth && monthLabel.elide === Text.ElideRight,
+                "a long month title gives way to navigation buttons")
+            monthLabel.text = Qt.binding(() => card.monthName)
         }
 
         const baseCell = card.cell

@@ -40,7 +40,7 @@ AnchoredPopupState {
     readonly property var workingDays: Qt.locale().weekDays
 
     function weekdayLabelFor(day: int, locale): string {
-        return locale.standaloneDayName(day, Locale.ShortFormat)
+        return locale.standaloneDayName(day, Locale.NarrowFormat)
     }
 
     // Locale.weekDays is a sequence, not a JS array

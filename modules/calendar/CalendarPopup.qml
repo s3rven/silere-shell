@@ -50,6 +50,12 @@ FittedPopupWindow {
         readonly property int _rowCount: Math.ceil((_lead + _daysThis) / 7)
         // the target month, not the drawn one: fast scrolling keeps the grid mid-swap, and the label must not freeze with it
         readonly property string monthLabel: Qt.formatDateTime(new Date(dispYear, dispMonth, 1), "MMMM yyyy")
+        // standalone, not the "MMMM" format form: some locales decline the month inside a date
+        readonly property string monthName: Qt.locale().standaloneMonthName(dispMonth, Locale.LongFormat)
+        readonly property bool onTodayMonth: dispYear === _todayY && dispMonth === _todayM
+        readonly property string todayCaption: _todayM < 0 ? ""
+            : Qt.locale().standaloneMonthName(_todayM, Locale.LongFormat)
+                + (ShellSettings.calendarWeekNumbers && _todayWeek > 0 ? " · Week " + _todayWeek : "")
 
         function _dateForCell(index: int): var {
             return new Date(card.shownYear, card.shownMonth, index - card._lead + 1)
@@ -186,14 +192,15 @@ FittedPopupWindow {
             spacing: 6
 
             Item {
-                id: _headerRow
                 width: parent.width
-                height: Metrics.rowHeightFor(36)
+                height: Metrics.rowHeightFor(48)
 
                 Item {
                     id: _todayButton
-                    // the pill, not the row: a full-width hit area lights the narrow fill from 200px away
-                    width: _todayRow.width + 20
+                    // the pill hangs into the margin so the numeral, not the fill, lines up with the grid;
+                    // and it is the pill, not the row: a full-width hit area lights the narrow fill from 200px away
+                    x: -8
+                    width: _todayContent.width + 16
                     height: parent.height
 
                     Accessible.role: Accessible.Button
@@ -201,26 +208,23 @@ FittedPopupWindow {
                     Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
                     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
-
-                    HoverHandler { id: _todayH; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { id: _todayTap; onTapped: card._goToday() }
+                    // pointer feedback only once there is a month to return from
+                    HoverHandler { id: _todayH; enabled: CalendarState.open && !card.onTodayMonth; cursorShape: Qt.PointingHandCursor }
+                    TapHandler   { id: _todayTap; enabled: CalendarState.open && !card.onTodayMonth; onTapped: card._goToday() }
 
                     Rectangle {
-                        id: _todayFill
                         anchors.fill: parent
                         radius: Theme.radiusControl
                         antialiasing: true
-                        color: _todayTap.pressed
-                            ? Theme.withAlpha(Theme.accent, 0.13)
-                            : _todayH.hovered
-                                ? Theme.withAlpha(Theme.subtext, 0.12)
-                                : "transparent"
+                        color: _todayTap.pressed ? Theme.withAlpha(Theme.accent, 0.13)
+                            : _todayH.hovered ? Theme.withAlpha(Theme.subtext, 0.12)
+                            : "transparent"
                         ColorFade on color {}
                     }
 
                     Row {
-                        id: _todayRow
-                        x: 10
+                        id: _todayContent
+                        x: 8
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 11
 
@@ -230,24 +234,22 @@ FittedPopupWindow {
                             color: Theme.accent
                             font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
                         }
-                        ShellText {
+                        Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: card.todayWeekday
-                            color: (_todayH.hovered) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
-                            font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                            ColorFade on color {}
+                            spacing: 1
+                            ShellText {
+                                text: card.todayWeekday
+                                color: _todayH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                                font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
+                                ColorFade on color {}
+                            }
+                            ShellText {
+                                text: card.todayCaption
+                                color: Theme.withAlpha(Theme.subtext, 0.78)
+                                font.pixelSize: Settings.fontCaption
+                            }
                         }
                     }
-                }
-
-                ShellText {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 2
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: ShellSettings.calendarWeekNumbers && card._todayWeek > 0
-                    text: "Week " + card._todayWeek
-                    color: Theme.withAlpha(Theme.subtext, 0.78)
-                    font.pixelSize: Settings.fontCaption
                 }
             }
 
@@ -258,12 +260,12 @@ FittedPopupWindow {
 
             Item {
                 width: parent.width
-                height: Metrics.rowHeightFor(30)
+                height: Metrics.rowHeightFor(34)
 
                 IconButton {
                     id: _prevButton
                     enabled: CalendarState.open
-                    buttonSize: Metrics.rowHeightFor(26)
+                    buttonSize: Metrics.rowHeightFor(28)
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅁"
@@ -276,52 +278,59 @@ FittedPopupWindow {
                     anchors.centerIn: parent
                     // the grid it names starts a week column in, so centring on the row leaves it visibly left of the days
                     anchors.horizontalCenterOffset: Math.round(card.weekCol / 2)
-                    width: Math.max(0, Math.min(_mLabel.implicitWidth + 16,
-                        parent.width - _prevButton.width - _nextButton.width - card.weekCol - 24))
-                    height: Metrics.rowHeightFor(26)
+                    width: _monthRow.width + 20
+                    height: Metrics.rowHeightFor(28)
+
                     Accessible.role: Accessible.Button
                     Accessible.name: "Return to current month"
                     Accessible.description: "Showing " + card.monthLabel
                     Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
                     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
-                    // distinct from the today pill's: two controls reading "Jump to today" are indistinguishable by voice
-                    HoverHandler { id: _mH; cursorShape: Qt.PointingHandCursor }
-                    TapHandler   { id: _mT; onTapped: card._goToday() }
+                    HoverHandler { id: _mH; enabled: CalendarState.open && !card.onTodayMonth; cursorShape: Qt.PointingHandCursor }
+                    TapHandler   { id: _mT; enabled: CalendarState.open && !card.onTodayMonth; onTapped: card._goToday() }
 
                     Rectangle {
-                        id: _monthFill
                         anchors.fill: parent
-                        // a capsule between the round arrows, so the three read as one control row
-                        radius: height / 2
+                        radius: Theme.radiusControl
                         antialiasing: true
-                        color: Theme.buttonFill(Theme.accent, _mH.hovered, _mT.pressed)
+                        color: _mT.pressed ? Theme.withAlpha(Theme.accent, 0.13)
+                            : _mH.hovered ? Theme.withAlpha(Theme.subtext, 0.12)
+                            : "transparent"
                         ColorFade on color {}
-
-                        OutlineBorder {
-                            radius: _monthFill.radius
-                            outlineColor: Theme.buttonLine(
-                                Theme.accent, _mH.hovered, _mT.pressed)
-                            ColorFade on outlineColor {}
-                        }
                     }
-                    ShellText {
-                        id: _mLabel
+
+                    Row {
+                        id: _monthRow
                         anchors.centerIn: parent
-                        width: Math.max(0, parent.width - 16)
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        text: card.monthLabel
-                        color: (_mH.hovered) ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
-                        font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
-                        ColorFade on color {}
+                        spacing: 6
+
+                        ShellText {
+                            id: _mLabel
+                            anchors.baseline: _yLabel.baseline
+                            // a long localized name gives way to the arrows rather than running under them
+                            width: Math.max(0, Math.min(implicitWidth,
+                                _monthButton.parent.width - _prevButton.width - _nextButton.width
+                                    - card.weekCol - 44 - _monthRow.spacing - _yLabel.implicitWidth))
+                            elide: Text.ElideRight
+                            text: card.monthName
+                            color: _mH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
+                            font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
+                            ColorFade on color {}
+                        }
+                        ShellText {
+                            id: _yLabel
+                            text: Qt.formatDateTime(new Date(card.dispYear, card.dispMonth, 1), "yyyy")
+                            color: Theme.withAlpha(Theme.subtext, 0.78)
+                            font.pixelSize: Settings.fontSize + 1
+                        }
                     }
                 }
 
                 IconButton {
                     id: _nextButton
                     enabled: CalendarState.open
-                    buttonSize: Metrics.rowHeightFor(26)
+                    buttonSize: Metrics.rowHeightFor(28)
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     glyph: "󰅂"
@@ -331,7 +340,7 @@ FittedPopupWindow {
             }
 
             // the header labels the grid, so it sits nearer to it than to the month row above
-            Item { width: parent.width; height: 3 }
+            Item { width: parent.width; height: 2 }
 
             Row {
                 width: parent.width
@@ -392,7 +401,8 @@ FittedPopupWindow {
                             ShellText {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
-                                color: Theme.withAlpha(Theme.subtext, 0.78)
+                                color: _weekRow.index === Math.floor(card._todayCell / 7)
+                                    ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontTiny
                                 font.weight: Font.Medium
                             }
@@ -443,7 +453,7 @@ FittedPopupWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: card.cell - 4; height: width; radius: width / 2
+                                width: card.cell - 4; height: width; radius: Theme.radiusInline
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                     : _dayTap.pressed
@@ -467,7 +477,7 @@ FittedPopupWindow {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum
                                     color: _dayCell.today ? Theme.background
-                                         : _dayCell.cur   ? Theme.withAlpha(Theme.text, _dayCell.weekend ? 0.82 : 0.9)
+                                         : _dayCell.cur   ? (_dayCell.weekend ? Theme.withAlpha(Theme.subtext, 0.86) : Theme.withAlpha(Theme.text, 0.9))
                                          :                  Theme.withAlpha(Theme.subtext, 0.64)
                                     font.pixelSize: Settings.fontSize
                                     font.weight: _dayCell.today ? Font.DemiBold : Font.Normal
