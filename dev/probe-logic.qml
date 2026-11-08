@@ -905,6 +905,54 @@ ShellRoot {
             "Delete dismisses a focused notification without running an action")
         reply.close()
         reply.destroy()
+
+        const hidden = notificationKeyboardFactory.createObject(root, { timeout: 0 })
+        let replyHeld = false
+        let sentReplies = 0
+        hidden.card.replyFocusRequested.connect((owner, active) => { replyHeld = active })
+        const hiddenNote = Object.assign({}, hidden.card.notification, {
+            resident: true, sendInlineReply: function(text) { sentReplies++ }
+        })
+        hidden.card.notification = hiddenNote
+        hidden.card.beginReply()
+        const hiddenField = root._findTrayNode(hidden.card, item => item.maximumLength === 2048)
+        if (hiddenField) hiddenField.text = "Unsent draft"
+        hidden.card.visible = false
+        root._check(!hidden.card._replyOpen && !replyHeld && hiddenField && hiddenField.text.length === 0,
+            "hiding a notification cancels its reply and releases keyboard ownership")
+        hidden.card.cancelReply()
+        hidden.card.beginReply()
+        root._check(!hidden.card._replyOpen && !replyHeld,
+            "a hidden notification cannot reopen its reply field")
+        hidden.card.cancelReply()
+        root._check(!hidden.card._sendInlineReply("Hidden reply") && sentReplies === 0,
+            "a retained reply action cannot send from a hidden notification")
+        hidden.card.invokeAction(hiddenNote.actions[0])
+        root._check(hidden.actions === 0,
+            "a retained notification action cannot run while its card is hidden")
+        const actionsBeforeReveal = hidden.actions
+        hidden.card.visible = true
+        hidden.card.invokeAction(hiddenNote.actions[0])
+        root._check(hidden.actions === actionsBeforeReveal + 1 && hidden.card.enabled,
+            "a visible resident notification still runs its action and stays open")
+        hidden.card.beginReply()
+        hidden.visible = false
+        hidden.input.wait(20)
+        root._check(!hidden.card._replyOpen && !replyHeld,
+            "unmapping a notification window releases reply ownership even when its card stays visible")
+        hidden.card.cancelReply()
+        const actionsBeforeUnmapped = hidden.actions
+        hidden.card.beginReply()
+        hidden.card.invokeAction(hiddenNote.actions[0])
+        root._check(!hidden.card._replyOpen && hidden.actions === actionsBeforeUnmapped,
+            "an unmapped notification window rejects retained reply and action callbacks")
+        hidden.visible = true
+        hidden.card.beginReply()
+        hidden.card.enabled = false
+        root._check(!hidden.card._replyOpen && !replyHeld,
+            "disabling a notification also cancels its reply ownership")
+        hidden.close()
+        hidden.destroy()
         ShellSettings.reduceMotion = motionWas
     }
 

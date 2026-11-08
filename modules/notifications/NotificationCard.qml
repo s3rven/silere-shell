@@ -29,6 +29,12 @@ Item {
 
     property bool _expired: false
     property bool _leaving: false
+    readonly property bool _canInteract: card.enabled && card.visible
+        && (!card.Window.window || card.Window.window.visible)
+    on_CanInteractChanged: if (!card._canInteract) {
+        card.cancelReply()
+        card._endSwipe(false)
+    }
     // null while opaque or gone: an empty region still overrides compositor blur rules
     readonly property Rectangle blurItem: Theme.frosted && cardRect.color.a < 1 && cardRect.opacity > 0
         ? cardRect : null
@@ -91,11 +97,11 @@ Item {
         ? card.appNameText + ": " + card.summaryText : card.summaryText
     Accessible.description: card.earlierCount > 0
         ? card.bodyText + ". " + card.earlierCount + " earlier" : card.bodyText
-    Accessible.focusable: card.enabled && card.visible
+    Accessible.focusable: card._canInteract
     Accessible.onPressAction: card.activatePrimary()
     KeyboardFocus { onActivated: card.activatePrimary() }
     Keys.onPressed: event => {
-        if (!card.enabled || !card.visible || card._replyOpen
+        if (!card._canInteract || card._replyOpen
                 || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return
         if (event.key === Qt.Key_Delete) {
             event.accepted = true
@@ -177,7 +183,7 @@ Item {
     }
 
     function _beginSwipe(x: real): void {
-        if (!card.enabled) return
+        if (!card._canInteract) return
         card._swiping = true
         card._swipeOrigin = x
         card._swipeDx = 0
@@ -214,7 +220,7 @@ Item {
     }
 
     function activatePrimary(): void {
-        if (!card.enabled) return
+        if (!card._canInteract) return
         if (card._defaultAction) {
             card._defaultAction.invoke()
             WindowActions.focusNotificationSourceAfterAction(card.notification)
@@ -226,7 +232,7 @@ Item {
     }
 
     function invokeAction(action): void {
-        if (!card.enabled || !action) return
+        if (!card._canInteract || !action) return
         action.invoke()
         if (!card.notification.resident) card.dismiss()
     }
@@ -249,14 +255,14 @@ Item {
     }
 
     function beginReply(): void {
-        if (!card.enabled || !card.hasInlineReply || card._replyOpen) return
+        if (!card._canInteract || !card.hasInlineReply || card._replyOpen) return
         card._replyOpen = true
         card._expanded = true
         card.replyFocusRequested(card, true)
     }
 
     function focusReplyInput(): void {
-        if (!card._replyOpen) return
+        if (!card._canInteract || !card._replyOpen) return
         _replyInput.forceActiveFocus()
     }
 
@@ -269,7 +275,7 @@ Item {
 
     function _sendInlineReply(text): bool {
         const reply = String(text || "").trim()
-        if (!card.enabled || !card.hasInlineReply || reply.length === 0
+        if (!card._canInteract || !card.hasInlineReply || reply.length === 0
                 || typeof card.notification.sendInlineReply !== "function") return false
         card.notification.sendInlineReply(reply)
         return true
