@@ -104,6 +104,13 @@ Item {
             "fast month scrolling names the month it is heading to before the grid catches up")
         ShellSettings.reduceMotion = true
 
+        card._go(2026, 0, 1)
+        const pagedDown = card._pageKey(Qt.Key_PageDown) && card.dispMonth === 1
+        const pagedUp = card._pageKey(Qt.Key_PageUp) && card._pageKey(Qt.Key_PageUp)
+            && card.dispYear === 2025 && card.dispMonth === 11
+        root._check(pagedDown && pagedUp && !card._pageKey(Qt.Key_Left),
+            "Page Up and Page Down turn the calendar month across a year and leave other keys alone")
+
         ShellSettings.calendarWeekStart = "sunday"
         card._go(2026, 0, 1)
         root._check(root._isDate(card._dateForCell(0), 2025, 11, 28),

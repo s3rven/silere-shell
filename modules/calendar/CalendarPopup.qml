@@ -176,6 +176,14 @@ FittedPopupWindow {
             duration: Motion.normal
         }
 
+        // the date-grid convention: Page Up and Page Down turn the month from wherever focus sits in the card
+        function _pageKey(key: int): bool {
+            if (key !== Qt.Key_PageUp && key !== Qt.Key_PageDown) return false
+            card._step(key === Qt.Key_PageUp ? -1 : 1)
+            return true
+        }
+        Keys.onPressed: (e) => { e.accepted = card._pageKey(e.key) }
+
         WheelHandler {
             enabled: CalendarState.open
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
