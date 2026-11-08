@@ -35,6 +35,7 @@ ShellRoot {
     property int _confirmActions: 0
     property PwVolumeControl _volumeCancelProbe: null
     property bool _volumeCancelDone: false
+    property bool _ignoredUpdatesDone: false
     property real _volumeCancelDeadline: 0
 
     QtObject {
@@ -6504,6 +6505,18 @@ ShellRoot {
                 && Updates.managerLabel === "pacman",
             "package updates honor the disabled AUR source")
         ShellSettings.updatesIncludeAur = true
+        // the generated check, run as written: paru tags a package held in IgnorePkg, in German unless LC_ALL=C
+        const ignoredStubs = "checkupdates() { printf 'core 1-1 -> 1-2\\n'; }; "
+            + "paru() { [ \"$LC_ALL\" = C ] && t='[ignored]' || t='[ignoriert]'; "
+            + "printf 'aurpkg 1-1 -> 1-2\\npinned 1-1 -> 1-2 %s\\n' \"$t\"; }; "
+        const ignoredRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "out=$(" + ignoredStubs + Updates._cmd() + "); [ \"$(printf '%s\\n' \"$out\" | sed -n 2p)\" = 'SPLIT 1 1' ]"] })
+        ignoredRun.exited.connect(function(code) {
+            root._check(code === 0, "an AUR package held back by IgnorePkg is not counted as an update")
+            root._ignoredUpdatesDone = true
+            ignoredRun.destroy()
+        })
+        ignoredRun.running = true
         Updates.count = 3
         Updates._parseDetail("3\nSPLIT 2 1\none 1 -> 2\ntwo 2 -> 3\naur 4 -> 5")
         root._check(Updates.repoCount === 2 && Updates.aurCount === 1
@@ -11107,6 +11120,7 @@ ShellRoot {
 
     function _finish(): void {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
+        root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()

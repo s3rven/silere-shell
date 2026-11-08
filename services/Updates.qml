@@ -99,6 +99,12 @@ Singleton {
             ? ("timeout -k 2 " + seconds + " " + command) : command
     }
 
+    // paru lists IgnorePkg packages too, tagged " [ignored]" (translated outside the C locale); checkupdates and
+    // yay leave them out. yay's own "[3d]" age tag is also bracketed, so only the exact tag is dropped
+    function _dropIgnored(variable: string): string {
+        return variable + "=$(printf '%s\\n' \"$" + variable + "\" | grep -v ' \\[ignored\\]$'); "
+    }
+
     function _countFrom(text: string): int {
         const first = String(text ?? "").split("\n")[0].trim()
         // the count line is emitted by our own wrapper. Reject partial parses, signs and implausibly large values before they reach geometry or AT
@@ -135,9 +141,10 @@ Singleton {
             // non-zero exit (especially timeout's 124) is a failed source, not
             // proof that the previously reported AUR updates disappeared
             const aur = aurTool.length > 0
-                ? "aurout=$(" + root._limit(60, aurTool + " -Qua") + " 2>/dev/null); aurrc=$?; "
+                ? "aurout=$(LC_ALL=C " + root._limit(60, aurTool + " -Qua") + " 2>/dev/null); aurrc=$?; "
                   + "if [ \"$aurrc\" -ne 0 ] && { [ \"$aurrc\" -ne 1 ] || [ -n \"$aurout\" ]; }; "
                   + "then echo \"ERR " + aurTool + " check failed (exit $aurrc)\"; exit 0; fi; "
+                  + root._dropIgnored("aurout")
                 : "aurout=''; "
             return "out=$(" + root._limit(90, "checkupdates") + " 2>/dev/null); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 2 ]; then echo \"ERR checkupdates failed (exit $rc)\"; exit 0; fi; " +
@@ -152,9 +159,10 @@ Singleton {
         }
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
-            return "out=$(" + root._limit(90, tool + " -Qu") + " 2>/dev/null); rc=$?; " +
+            return "out=$(LC_ALL=C " + root._limit(90, tool + " -Qu") + " 2>/dev/null); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && { [ \"$rc\" -ne 1 ] || [ -n \"$out\" ]; }; " +
                    "then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
+                   root._dropIgnored("out") +
                    "printf '%s' \"$out\" | grep -c .; " +
                    "printf '%s\\n' \"$out\" | head -n " + root._maxDetail
         }
