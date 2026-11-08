@@ -62,6 +62,12 @@ unset PIPEWIRE_REMOTE WAYLAND_DISPLAY
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
     [ ! -f "$scratch/probe.log" ] || tail -n 12 "$scratch/probe.log" >&2
+    # whether WirePlumber never chose a default or the shell missed the one it chose
+    if [ -n "$pw_pid" ]; then
+        printf -- '--- the session manager says:\n' >&2
+        timeout 2 pw-metadata -n default 2>&1 | grep -F 'default.' >&2 || true
+        timeout 2 wpctl status 2>&1 | sed -n '/Sinks:/,/Filters:/{p;/Filters:/q}' >&2 || true
+    fi
     exit 1
 }
 start_daemons() {
@@ -104,13 +110,14 @@ replace_node() { # $1 = name, $2 = media class
 }
 set_default() { # $1 = name
     # WirePlumber can still refuse a node it has only just started to track, more often under load
-    local _
+    local _ err=""
     for _ in $(seq 1 20); do
         wait_node "$1"
-        timeout 4 wpctl set-default "$id" 2>/dev/null && return 0
+        err="$(timeout 4 wpctl set-default "$id" 2>&1)" && return 0
         sleep 0.2
     done
-    fail "$1 could not be made the default"
+    tail -n 5 "$scratch/wireplumber.log" >&2
+    fail "$1 could not be made the default: ${err:-wpctl timed out}"
 }
 set_volume() { # $1 = name, $2 = linear volume
     wait_node "$1"
