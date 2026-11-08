@@ -61,6 +61,22 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
+    // the clock's hover cap: every other clickable bar widget shows one, so a bare title read as a label
+    Rectangle {
+        anchors.centerIn: parent
+        width: parent.width
+        height: Metrics.barRowHeight
+        radius: Metrics.hoverRadiusFor(height)
+        color: _tap.pressed ? Theme.barPressed : Theme.barHover
+        opacity: root._canInteract && (_tap.pressed || (_rootHover.hovered && ShellSettings.barHoverHighlight)) ? 1 : 0
+        visible: opacity > 0.001
+        MotionBehavior on opacity {
+            gate: root._animatable
+            NumberAnimation { duration: Motion.fast }
+        }
+        ColorFade on color { gate: root._animatable }
+    }
+
     Item {
         anchors.bottom: parent.bottom
         anchors.left:   parent.left
