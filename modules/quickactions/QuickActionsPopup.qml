@@ -124,7 +124,8 @@ FittedPopupWindow {
             width: Metrics.devicePx(Math.min(_row.width * 0.48, Math.max(30, _stateLabel.implicitWidth + 12)), _dpr)
             height: Metrics.devicePx(Math.max(20, _stateLabel.implicitHeight + 4), _dpr)
             transform: PixelSnap { item: _state; dpr: _state._dpr }
-            radius: 7
+            // the settings choice chips' corner, so Roundness reaches this chip too
+            radius: Theme.radiusField
             antialiasing: true
             color: _row.error || _row.warning || _row.highlighted
                 ? Theme.withAlpha(_row._statusColor, 0.13) : "transparent"

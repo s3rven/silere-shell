@@ -45,6 +45,7 @@ settings file carries its own `__version` and migrates separately.
 - The calendar always shows six weeks, so changing the month no longer resizes it. With the bar at the bottom, that resize moved the arrows away from the pointer.
 - The media title in the bar shows the same hover highlight as every other clickable widget.
 - Notification history shows the icon a `notify-send -i` notification had in its popup, instead of the app's first letter.
+- Quick Actions' state chips follow Roundness like the rest of the menu.
 
 ## Releases
 
