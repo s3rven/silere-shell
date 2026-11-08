@@ -1105,6 +1105,34 @@ ShellRoot {
         Network.wifiErrorReason = wifiReasonWas
     }
 
+    function _checkBrightnessOsdUnattended(): void {
+        const was = { device: Brightness._device, max: Brightness.maxBrightness,
+            level: Brightness.currentBrightness, ready: Brightness.ready, armed: OsdBarState._armed }
+        const shown = level => {
+            OsdBarState._clearEntries()
+            Brightness.currentBrightness = level
+            return OsdBarState._entryIndex("brightness") >= 0
+        }
+        OsdBarState._armed = true
+        Brightness._device = "__silere_osd_probe__"
+        Brightness.maxBrightness = 100
+        Brightness.currentBrightness = 50
+        Brightness.ready = true
+        Idle._returned.stop()
+        const attended = shown(60)
+        Idle._returned.restart()
+        const returning = shown(30)
+        Idle._returned.stop()
+        root._check(attended && !returning && shown(40),
+            "a backlight restored as the user comes back shows no OSD, one changed while they are here does")
+        OsdBarState._clearEntries()
+        Brightness._device = was.device
+        Brightness.maxBrightness = was.max
+        Brightness.currentBrightness = was.level
+        Brightness.ready = was.ready
+        OsdBarState._armed = was.armed
+    }
+
     function _checkOsdLifetime(): void {
         const timeoutWas = ShellSettings.osdTimeout
         for (const timeout of [500, 2000, 10000]) {
@@ -2591,6 +2619,7 @@ ShellRoot {
         root._checkWifiScanners()
         root._checkDiscoveryRequests()
         root._checkOsdLifetime()
+        root._checkBrightnessOsdUnattended()
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkPillTextBaseline()

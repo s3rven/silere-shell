@@ -351,7 +351,7 @@ Singleton {
         target: Brightness
         // the startup read lands before ready flips, so ready alone keeps it quiet
         function onPctChanged() {
-            if (Brightness.ready)
+            if (Brightness.ready && !Idle.unattended)
                 root.show("brightness", Brightness.icon, Brightness.pct, Brightness.label, false)
         }
     }

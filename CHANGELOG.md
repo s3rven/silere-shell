@@ -41,6 +41,7 @@ settings file carries its own `__version` and migrates separately.
 - A monitor plugged back in no longer shows its workspaces as if a special workspace were still open on it.
 - The updates widget no longer counts AUR packages that pacman.conf's IgnorePkg holds back when paru checks the AUR.
 - Brightness works on hybrid-graphics laptops in discrete GPU mode, and the GPU that isn't driving the screen is no longer offered as a brightness device.
+- The brightness OSD no longer appears when an idle daemon dims the screen while you're away, or restores it as you come back.
 
 ## Releases
 

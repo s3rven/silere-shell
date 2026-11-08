@@ -27,6 +27,16 @@ Singleton {
         respectInhibitors: true
     }
 
+    // a backlight that moves with nobody at the keyboard, or as they come back, is an idle daemon's dim or restore
+    readonly property bool unattended: _unattended.isIdle || root._returned.running
+    IdleMonitor {
+        id: _unattended
+        timeout: 30
+        respectInhibitors: false
+        onIsIdleChanged: if (!isIdle) root._returned.restart()
+    }
+    readonly property Timer _returned: Timer { interval: 1500 }
+
     // session only: a restart or a crash must never leave the screen awake; shell.qml holds the inhibitor
     property bool keepAwake: false
     function toggleKeepAwake(): void { root.setKeepAwake(!root.keepAwake, 0) }
