@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: root
 
+    property var screen: null
+
     readonly property bool canControl: Brightness.controllable
     readonly property bool show: ShellSettings.barShowBrightness && canControl
 
@@ -24,9 +26,16 @@ Pill {
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
                  : (canControl ? Brightness.label : "—")
     textColor:   Theme.barSubtext
-    // scroll controls brightness and a click does nothing, so it takes the pointer but is no button
-    interactive: false
+    interactive: root.show
     adjustable: canControl
+    pressed: _tap.pressed
+    onActivated: if (root.canActivate) MenuState.showHomeAt("brightness", root, root.screen)
+
+    TapHandler {
+        id: _tap
+        enabled: root.canActivate
+        onTapped: root.activated()
+    }
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Theme.barAccent

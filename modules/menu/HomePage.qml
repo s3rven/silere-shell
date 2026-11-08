@@ -23,6 +23,7 @@ PageShell {
     }
 
     property string _picker: ""
+    signal controlRequested(Item control, Item choices)
     readonly property bool _avShown: Audio.ready || _brightnessAvailable || DisplayBrightness.displays.length > 0
     readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
         || (SystemTools.hasNmcli && Network.toolAvailable)
@@ -49,15 +50,35 @@ PageShell {
         _picker = which
     }
 
-    // a picker the bar asked for opens only where its row would offer the chevron
+    // a bar shortcut reveals its control; device choices open only when available
     function _takePicker(): void {
         const want = MenuState.homePicker
         if (want.length === 0) return
         MenuState.homePicker = ""
+        if (want === "brightness") {
+            if (!root._brightnessAvailable) return
+            root._closePicker()
+            _volumeRow.closeInline()
+            _brightnessRow.open = Brightness.devices.length > 1
+            root.controlRequested(_brightnessRow, null)
+            return
+        }
         const allowed = want === "wifi" ? root._wifiAvailable && Network.wifiEnabled
             : want === "bt" ? root._btAvailable && Bluetooth.enabled
+            : want === "power" ? PowerProfiles.available && PowerProfiles.choices.length > 1
             : false
         if (allowed && root._picker !== want) root._togglePicker(want)
+        if (allowed) {
+            const row = want === "wifi" ? _wifiRow : want === "bt" ? _btRow : _powerRow
+            const choices = want === "wifi" ? (Metrics.barAtBottom ? _wifiAbove : _wifiPicker)
+                : want === "bt" ? (Metrics.barAtBottom ? _btAbove : _btPicker)
+                : Metrics.barAtBottom ? _powerAbove : _powerPicker
+            root.controlRequested(row, choices)
+        }
+        else if (want === "power") {
+            root.dismissInline()
+            root.controlRequested(_vitals, null)
+        }
     }
     Connections {
         target: MenuState
@@ -202,7 +223,7 @@ PageShell {
             SettingsCard {
                 dividerIndent: root._rowTextX
 
-                InlinePicker { mirror: _wifiPicker }
+                InlinePicker { id: _wifiAbove; mirror: _wifiPicker }
                 ControlRow {
                     id: _wifiRow
                     visible: root._wifiAvailable
@@ -294,7 +315,7 @@ PageShell {
                     content: Component { VpnList { open: root._picker === "vpn" } }
                 }
 
-                InlinePicker { mirror: _btPicker }
+                InlinePicker { id: _btAbove; mirror: _btPicker }
                 ControlRow {
                     id: _btRow
                     visible: root._btAvailable
@@ -494,7 +515,7 @@ PageShell {
                     }
                 }
 
-                InlinePicker { mirror: _powerPicker }
+                InlinePicker { id: _powerAbove; mirror: _powerPicker }
                 ControlRow {
                     id: _powerRow
                     visible: PowerProfiles.available
@@ -561,6 +582,7 @@ PageShell {
 
             SectionLabel { label: "System" }
             VitalsStrip {
+                id: _vitals
                 active: root.active
                 dividerIndent: root._rowTextX
                 width: parent.width

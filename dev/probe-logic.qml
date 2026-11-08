@@ -1366,25 +1366,26 @@ ShellRoot {
         const screen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
         const wifiWas = Network.wifiEnabled
         const btWas = Bluetooth.enabled
-        for (const name of ["NetworkWidget", "BluetoothWidget"]) {
+        const pickers = { NetworkWidget: "wifi", BluetoothWidget: "bt", BrightnessWidget: "brightness", BatteryWidget: "power" }
+        for (const name of Object.keys(pickers)) {
             const component = Qt.createComponent("modules/bar/widgets/" + name + ".qml")
             const widget = component.status === Component.Ready
                 ? component.createObject(barFixtureHost, { screen: screen }) : null
             root._check(widget !== null && widget.interactive === widget.show,
                 name + " offers its Home action whenever its status is shown")
             if (widget) {
-                // exercise routing without requiring a physical Bluetooth adapter in CI
+                // exercise routing without requiring physical devices in CI
                 widget.interactive = true
                 widget.collapsed = false
                 widget.visible = true
                 MenuState.close()
                 MenuState.selectTab(MenuState.settingsTab)
-                widget.activated()
+                widget.Accessible.pressAction()
                 root._check(MenuState.open && MenuState.homeActive
                         && MenuState.anchorSource === widget && MenuState.triggerScreen === screen
                         && Network.wifiEnabled === wifiWas && Bluetooth.enabled === btWas,
                     name + " opens Home on its own screen without changing either radio")
-                root._check(MenuState.homePicker === (name === "NetworkWidget" ? "wifi" : "bt"),
+                root._check(MenuState.homePicker === pickers[name],
                     name + " asks Home for its own picker")
                 MenuState.close()
                 root._check(MenuState.homePicker === "", name + "'s picker request goes with the menu")
@@ -1402,6 +1403,51 @@ ShellRoot {
         MenuState.selectTab(was.tab)
         MenuState._previousTab = was.previous
         if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
+    }
+
+    function _checkHomeWidgetPickers(home): void {
+        const toolsWas = SystemTools._tools
+        const brightnessWas = { device: Brightness._device, max: Brightness.maxBrightness,
+            level: Brightness.currentBrightness, pending: Brightness.pendingPercent,
+            ready: Brightness.ready, devices: Brightness.devices }
+        let requested = null
+        home.controlRequested.connect(control => requested = control)
+        SystemTools._tools = Object.assign({}, toolsWas, {
+            busctl: false, powerprofilesctl: true, brightnessctl: true
+        })
+        MenuState.homePicker = "power"
+        root._check(MenuState.homePicker === "" && home._picker === "power"
+                && requested && requested.title === "Power Mode",
+            "the battery shortcut consumes its request and reveals power choices without changing the profile")
+
+        Brightness._device = "__silere_widget_probe__"
+        Brightness.maxBrightness = 100
+        Brightness.currentBrightness = 50
+        Brightness.ready = true
+        Brightness.devices = [{ name: "__silere_widget_probe__" }]
+        requested = null
+        MenuState.homePicker = "brightness"
+        const slider = requested ? root._findTrayNode(requested, item => item.accessibleName === "Brightness") : null
+        root._check(home._picker === "" && requested && !requested.open && slider,
+            "the brightness shortcut closes the other picker and reveals its single-backlight slider")
+        Brightness.devices = [{ name: "__silere_widget_probe__" }, { name: "__silere_second_backlight__" }]
+        MenuState.homePicker = "brightness"
+        root._check(requested && requested.open && Brightness.currentBrightness === 50,
+            "multiple backlights open the device choices without changing the brightness")
+
+        SystemTools._tools = Object.assign({}, SystemTools._tools, { powerprofilesctl: false })
+        requested = null
+        MenuState.homePicker = "power"
+        root._check(home._picker === "" && requested && requested.sizeText !== undefined,
+            "without power profiles the battery shortcut closes inline controls and reveals system readings")
+
+        Brightness._device = brightnessWas.device
+        Brightness.maxBrightness = brightnessWas.max
+        Brightness.currentBrightness = brightnessWas.level
+        Brightness.pendingPercent = brightnessWas.pending
+        Brightness.ready = brightnessWas.ready
+        Brightness.devices = brightnessWas.devices
+        SystemTools._tools = toolsWas
     }
 
     function _checkMenuContrast(): void {
@@ -6013,6 +6059,7 @@ ShellRoot {
             }
             root._check(vpn && vpn._canTap && home._picker === "vpn",
                 "the disconnected VPN row opens its saved-profile picker through the normal action")
+            root._checkHomeWidgetPickers(home)
             Network.vpnAddress = addressWas
             home.destroy()
             host.close()

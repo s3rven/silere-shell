@@ -53,7 +53,8 @@ makes the handle wider.
 | media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player · **right-click** opens Now Playing |
 | volume | **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
-| brightness | **scroll** changes brightness |
+| brightness | **scroll** changes brightness · **click** opens its slider in Home, with the device choices when more than one backlight drives a screen |
+| battery | **hover** shows the time remaining or charging status · **click** opens Power Mode in Home, or system readings when power profiles are unavailable |
 | updates | **click** opens package details in Settings › System › Overview · **right-click** rechecks for packages |
 | shell update | **click** opens Settings › System › Overview |
 | tray | **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |

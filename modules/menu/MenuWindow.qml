@@ -529,16 +529,19 @@ FittedPopupWindow {
                     else if (contentY < 0) contentY = 0
                 }
 
-                function revealSettingsSelect(): void {
-                    const row = MenuState._settingsSelectOwner
-                    if (!row || !panel.open || panel.activeTab !== 1) return
+                function revealControl(row, choices): void {
+                    if (!row) return
+                    contentFlick.cancelFlick()
                     // a list taller than the viewport keeps its header in view, not its end
-                    const top = row.mapToItem(contentFlick.contentItem, 0, 0).y
-                    const bottom = top + row.height
+                    const rowTop = row.mapToItem(contentFlick.contentItem, 0, 0).y
+                    const choicesTop = choices && choices.height > 0
+                        ? choices.mapToItem(contentFlick.contentItem, 0, 0).y : rowTop
+                    const top = Math.min(rowTop, choicesTop)
+                    const bottom = Math.max(rowTop + row.height, choicesTop + (choices ? choices.height : 0))
                     const margin = 8
                     let target = contentY
-                    if (row.height + margin * 2 > height)
-                        target = top - margin
+                    if (bottom - top + margin * 2 > height)
+                        target = rowTop - margin
                     else if (top - margin < target)
                         target = top - margin
                     else if (bottom + margin > target + height)
@@ -550,11 +553,32 @@ FittedPopupWindow {
                 Timer {
                     id: _selectReveal
                     interval: Motion.medium + 24
-                    onTriggered: contentFlick.revealSettingsSelect()
+                    onTriggered: if (panel.open && panel.activeTab === 1)
+                        contentFlick.revealControl(MenuState._settingsSelectOwner, null)
+                }
+
+                Timer {
+                    id: _homeReveal
+                    property Item control: null
+                    property Item choices: null
+                    interval: Math.max(Motion.medium, Motion.panelResize) + 24
+                    onTriggered: {
+                        const row = control
+                        const extra = choices
+                        control = null
+                        choices = null
+                        if (panel.open && panel.activeTab === 0) contentFlick.revealControl(row, extra)
+                    }
                 }
 
                 Connections {
                     target: MenuState
+                    function onHomeActiveChanged() {
+                        if (MenuState.homeActive) return
+                        _homeReveal.stop()
+                        _homeReveal.control = null
+                        _homeReveal.choices = null
+                    }
                     function onSettingsSelectClaimed() {
                         if (panel.open && panel.activeTab === 1) {
                             panel._armOuterHeightMotion()
@@ -710,6 +734,11 @@ FittedPopupWindow {
                                 powerOpen: panel.powerOpen
                                 animateOnCreate: panel.fullyShown
                                 viewportReady: panel.pageViewportReady
+                                onControlRequested: (control, choices) => {
+                                    _homeReveal.control = control
+                                    _homeReveal.choices = choices
+                                    _homeReveal.restart()
+                                }
                             }
                         }
                     }

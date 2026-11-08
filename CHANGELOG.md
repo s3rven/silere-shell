@@ -11,6 +11,12 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Click the brightness widget to open its slider in Home, with device choices on systems with multiple backlights.
+- Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
+- Bar shortcuts scroll their controls into view when Home is taller than the screen.
+
 ### Fixed
 
 - A CPU holding at exactly 100% now triggers the sustained-load warning. The bar and Home share that warning across monitors, and separate spikes no longer add up to sustained load.

@@ -6,6 +6,8 @@ import "../../common"
 Pill {
     id: batteryPill
 
+    property var screen: null
+
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && !Battery.onBattery
     readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
     property real _baseOpacity: show ? 1.0 : 0.0
@@ -32,6 +34,15 @@ Pill {
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: layoutVisible
+    interactive: show
+    pressed: _tap.pressed
+    onActivated: if (batteryPill.canActivate) MenuState.showHomeAt("power", batteryPill, batteryPill.screen)
+
+    TapHandler {
+        id: _tap
+        enabled: batteryPill.canActivate
+        onTapped: batteryPill.activated()
+    }
 
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 

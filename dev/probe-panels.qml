@@ -44,6 +44,58 @@ ShellRoot {
             return state
         }
 
+        function _controlViewport(item): var {
+            if (!item) return null
+            if (typeof item.revealControl === "function") return item
+            for (const child of item.children || []) {
+                const found = host._controlViewport(child)
+                if (found) return found
+            }
+            return null
+        }
+
+        function _checkControlReveal(obj): void {
+            const view = host._controlViewport(obj.popupCard || obj.contentItem)
+            if (!view) {
+                console.warn("PROBE-FAIL MenuWindow :: control reveal viewport missing")
+                root._failed++
+                return
+            }
+            view.height = 160
+            const row = Qt.createQmlObject('import QtQuick\nItem { width: 100; height: 40 }', view.contentItem)
+            view.contentHeight = view.height * 3
+            view.contentY = 0
+            row.y = view.height + 80
+            view.revealControl(row)
+            const below = row.y >= view.contentY + 8
+                && row.y + row.height <= view.contentY + view.height - 8
+            view.flick(0, -1000)
+            row.y = 12
+            view.revealControl(row)
+            const above = !view.flicking && view.contentY === 4
+            row.y = view.height / 2
+            row.height = view.height + 40
+            view.revealControl(row)
+            const tall = Math.abs(view.contentY - (row.y - 8)) < 0.01
+            row.height = 40
+            row.y = view.height + 80
+            const choices = Qt.createQmlObject('import QtQuick\nItem { width: 100; height: 80 }', view.contentItem)
+            choices.y = row.y + row.height
+            view.revealControl(row, choices)
+            const choicesBelow = row.y >= view.contentY + 8
+                && choices.y + choices.height <= view.contentY + view.height - 8
+            choices.y = row.y - choices.height
+            view.revealControl(row, choices)
+            const choicesAbove = choices.y >= view.contentY + 8
+                && row.y + row.height <= view.contentY + view.height - 8
+            if (!below || !above || !tall || !choicesBelow || !choicesAbove) {
+                console.warn("PROBE-FAIL MenuWindow :: requested controls must scroll into view, stop a flick and retain tall rows' headers")
+                root._failed++
+            }
+            choices.destroy()
+            row.destroy()
+        }
+
         function _checkWarmMenuReopen(obj): void {
             const MenuState = host._service("MenuState")
             const settings = host._service("ShellSettings")
@@ -154,7 +206,10 @@ ShellRoot {
             }
             root._component = c
             root._object = obj
-            if (path === "modules/menu/MenuWindow.qml") host._checkWarmMenuReopen(obj)
+            if (path === "modules/menu/MenuWindow.qml") {
+                host._checkWarmMenuReopen(obj)
+                host._checkControlReveal(obj)
+            }
             root._settleTurn = 0
             Qt.callLater(host._settleCurrent)
         }
