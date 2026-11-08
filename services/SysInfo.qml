@@ -26,6 +26,8 @@ Singleton {
     readonly property int _diskRefreshMs: 60000
     property real cpuPct: 0
     property bool cpuReady: false
+    property bool cpuHigh: false
+    property int _cpuBusySamples: 0
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
 
@@ -83,9 +85,7 @@ Singleton {
         _cpuPrime.stop()
         _uptimePoll.stop()
         _active = false
-        cpuReady = false
-        _lastCpuTotal = 0
-        _lastCpuIdle = 0
+        root._clearCpuSample()
         if (_slowProc.running) _slowProc.running = false
     }
 
@@ -233,8 +233,22 @@ Singleton {
     function _clearCpuSample(): void {
         root.cpuReady = false
         root.cpuPct = 0
+        root.cpuHigh = false
+        root._cpuBusySamples = 0
         root._lastCpuTotal = 0
         root._lastCpuIdle = 0
+    }
+
+    function _updateCpuLoad(): void {
+        // count samples, including identical readings at 100%; property-change
+        // handlers miss those, and each monitor must see the same warning
+        if (root.cpuReady && root.cpuPct >= 0.90) {
+            root._cpuBusySamples = Math.min(2, root._cpuBusySamples + 1)
+            if (root._cpuBusySamples >= 2) root.cpuHigh = true
+        } else {
+            root._cpuBusySamples = 0
+            if (!root.cpuReady || root.cpuPct < 0.75) root.cpuHigh = false
+        }
     }
 
     function _applyCpuStat(_cpuRaw: string): void {
@@ -270,6 +284,7 @@ Singleton {
             }
             root._lastCpuTotal = total
             root._lastCpuIdle  = idle
+            root._updateCpuLoad()
         } else {
             root._clearCpuSample()
         }

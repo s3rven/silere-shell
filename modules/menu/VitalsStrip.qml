@@ -273,7 +273,7 @@ SettingsCard {
         sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
         progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
         activity: !SysInfo.cpuReady ? 0 : SysInfo.cpuPct >= 0.7 ? 1 : SysInfo.cpuPct >= 0.3 ? 0.5 : 0
-        status: CpuTemp.critical ? 2 : (CpuTemp.hot ? 1 : 0)
+        status: CpuTemp.critical ? 2 : (CpuTemp.hot || (SysInfo.cpuReady && SysInfo.cpuHigh) ? 1 : 0)
         pulse: CpuTemp.alertPulse
     }
 

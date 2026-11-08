@@ -1787,7 +1787,10 @@ ShellRoot {
         const was = {
             show: ShellSettings.barShowSystem, cpu: ShellSettings.systemShowCpu,
             mem: ShellSettings.systemShowMemory, temp: ShellSettings.systemShowTemp,
-            ready: SysInfo.cpuReady, pct: SysInfo.cpuPct, total: SysInfo.memTotalKb, avail: SysInfo.memAvailKb,
+            ready: SysInfo.cpuReady, pct: SysInfo.cpuPct, high: SysInfo.cpuHigh,
+            busy: SysInfo._cpuBusySamples, active: SysInfo._active,
+            cpuTotal: SysInfo._lastCpuTotal, cpuIdle: SysInfo._lastCpuIdle,
+            total: SysInfo.memTotalKb, avail: SysInfo.memAvailKb,
             hoverValues: ShellSettings.valuesOnHover
         }
         ShellSettings.valuesOnHover = false
@@ -1798,6 +1801,8 @@ ShellRoot {
         ShellSettings.systemShowTemp = false
         SysInfo.cpuReady = true
         SysInfo.cpuPct = 0.14
+        SysInfo.cpuHigh = false
+        SysInfo._cpuBusySamples = 0
         SysInfo.memTotalKb = 32 * 1048576
         SysInfo.memAvailKb = 32 * 1048576 * 0.68
         const w = systemWidgetFactory.createObject(barFixtureHost)
@@ -1814,15 +1819,32 @@ ShellRoot {
         wRow.forceLayout()
         root._check(w.text === "6%" && w.rowWidth === twoDigitW && twoDigitW > 0,
             "a one-digit reading fills its reserve and keeps to its own glyph")
-        SysInfo.cpuPct = 0.95
+        SysInfo._active = true
+        SysInfo._clearCpuSample()
+        SysInfo._applyCpuStat("cpu 100 0 0 100 0 0 0 0\n")
+        SysInfo._applyCpuStat("cpu 200 0 0 100 0 0 0 0\n")
         const single = w.severity === 0
-        SysInfo.cpuPct = 0.96
+        SysInfo._applyCpuStat("cpu 300 0 0 100 0 0 0 0\n")
         const rose = w.severity === 1
-        SysInfo.cpuPct = 0.80
+        const second = systemWidgetFactory.createObject(barFixtureHost)
+        root._check(single && rose && SysInfo.cpuPct === 1 && second.severity === 1,
+            "identical 100% CPU samples warn on every monitor, including a newly created widget")
+        second.destroy()
+        SysInfo._applyCpuStat("cpu 380 0 0 120 0 0 0 0\n")
         const held = w.severity === 1
-        SysInfo.cpuPct = 0.60
-        root._check(single && rose && held && w.severity === 0,
-            "a sustained busy CPU tints the monitor, one spike does not, and it lets go only well below")
+        SysInfo._applyCpuStat("cpu 440 0 0 160 0 0 0 0\n")
+        root._check(held && w.severity === 0,
+            "the CPU warning holds as load eases and lets go only well below its entry threshold")
+        SysInfo._applyCpuStat("cpu 540 0 0 160 0 0 0 0\n")
+        SysInfo._applyCpuStat("cpu 620 0 0 180 0 0 0 0\n")
+        SysInfo._applyCpuStat("cpu 720 0 0 180 0 0 0 0\n")
+        root._check(w.severity === 0,
+            "separate CPU spikes do not count as consecutive busy samples")
+        SysInfo._applyCpuStat("cpu 820 0 0 180 0 0 0 0\n")
+        SysInfo._applyCpuStat("cpu broken\n")
+        root._check(!SysInfo.cpuHigh && SysInfo._cpuBusySamples === 0 && w.severity === 0,
+            "a failed CPU read clears both the warning and its sample count")
+        SysInfo._active = was.active
         SysInfo.memAvailKb = 32 * 1048576 * 0.03
         root._check(w.severity === 2 && Qt.colorEqual(w.segments[0].color, Theme.error)
                 && Qt.colorEqual(w.glyphColor, Theme.barText),
@@ -1846,6 +1868,10 @@ ShellRoot {
         ShellSettings.systemShowTemp = was.temp
         SysInfo.cpuReady = was.ready
         SysInfo.cpuPct = was.pct
+        SysInfo.cpuHigh = was.high
+        SysInfo._cpuBusySamples = was.busy
+        SysInfo._lastCpuTotal = was.cpuTotal
+        SysInfo._lastCpuIdle = was.cpuIdle
         SysInfo.memTotalKb = was.total
         SysInfo.memAvailKb = was.avail
     }
@@ -6593,6 +6619,8 @@ ShellRoot {
         const cpuIdleWas = SysInfo._lastCpuIdle
         const cpuPctWas = SysInfo.cpuPct
         const cpuReadyWas = SysInfo.cpuReady
+        const cpuHighWas = SysInfo.cpuHigh
+        const cpuBusyWas = SysInfo._cpuBusySamples
         SysInfo._active = true
         SysInfo.cpuReady = false
         SysInfo._lastCpuTotal = 0
@@ -6630,6 +6658,8 @@ ShellRoot {
         SysInfo._lastCpuIdle = cpuIdleWas
         SysInfo.cpuPct = cpuPctWas
         SysInfo.cpuReady = cpuReadyWas
+        SysInfo.cpuHigh = cpuHighWas
+        SysInfo._cpuBusySamples = cpuBusyWas
         SysInfo._active = cpuActiveWas
 
         const memTotalWas = SysInfo.memTotalKb, memAvailWas = SysInfo.memAvailKb

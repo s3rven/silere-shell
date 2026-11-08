@@ -23,20 +23,7 @@ Pill {
     readonly property real _mem: root._memOn && SysInfo.memTotalKb > 0 ? SysInfo.memPct : -1
     readonly property real _temp: root._tempOn && CpuTemp.available ? CpuTemp.temp : -1
 
-    // a build pins the CPU for a while and a single busy tick is not news: the tint
-    // needs a sustained reading and lets go only well below it, so it never flickers
-    property bool _cpuHigh: false
-    property int _cpuBusySamples: 0
-    on_CpuChanged: {
-        if (root._cpu >= 0.90) {
-            root._cpuBusySamples++
-            if (root._cpuBusySamples >= 2) root._cpuHigh = true
-        } else if (root._cpu < 0.75) {
-            root._cpuBusySamples = 0
-            root._cpuHigh = false
-        }
-    }
-    readonly property int _cpuLevel: root._cpuHigh ? 1 : 0
+    readonly property int _cpuLevel: root._cpuOn && SysInfo.cpuReady && SysInfo.cpuHigh ? 1 : 0
     // memory uses Home's own bands, so the two never disagree about the same reading
     readonly property int _memLevel: root._mem > 0.9 ? 2 : root._mem > 0.75 ? 1 : 0
     readonly property int _tempLevel: root._temp < 0 ? 0 : CpuTemp.critical ? 2 : CpuTemp.hot ? 1 : 0
