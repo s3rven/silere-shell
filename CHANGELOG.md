@@ -40,6 +40,7 @@ settings file carries its own `__version` and migrates separately.
 - The keyboard widget labels every layout by its code, so Ukrainian reads UA and Estonian EE instead of UK and ES. English shows US or GB.
 - A monitor plugged back in no longer shows its workspaces as if a special workspace were still open on it.
 - The updates widget no longer counts AUR packages that pacman.conf's IgnorePkg holds back when paru checks the AUR.
+- Brightness works on hybrid-graphics laptops in discrete GPU mode, and the GPU that isn't driving the screen is no longer offered as a brightness device.
 
 ## Releases
 

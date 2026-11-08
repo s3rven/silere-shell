@@ -1676,6 +1676,12 @@ ShellRoot {
         root._check(labels(["acpi_video0", "acpi_video1", "intel_backlight"])
                 === "Automatic|acpi_video0|acpi_video1|Intel graphics",
             "two backlights of one kind keep their own names")
+        const names = raw => Brightness.parseDevices(raw).map(d => d.name).join("|")
+        root._check(names("amdgpu_bl2\traw\t65535\t0\nnvidia_0\traw\t100\t1\n") === "amdgpu_bl2"
+                && names("amdgpu_bl1\traw\t255\t1\nnvidia_0\traw\t100\t0\n") === "nvidia_0"
+                && names("amdgpu_bl2\traw\t65535\t1\nnvidia_0\traw\t100\t1\n") === "amdgpu_bl2|nvidia_0"
+                && names("acpi_video0\tfirmware\t15\nbad name\traw\t9\t0\nzero\traw\t0\t0\n") === "acpi_video0",
+            "a backlight whose panel is disconnected is not offered unless every backlight is")
     }
 
     function _checkBluetoothRowRelease(): void {

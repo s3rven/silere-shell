@@ -218,30 +218,45 @@ Singleton {
         if (next.length > 0) root.refresh()
     }
 
+    // a hybrid laptop's idle GPU keeps a backlight for a disconnected panel; dropped unless every one is dark
+    function parseDevices(raw: string): var {
+        const all = []
+        for (const line of String(raw || "").split(/\r?\n/)) {
+            const p = line.split("\t")
+            const max = p.length >= 3 ? Number(p[2]) : 0
+            if (p.length >= 3 && /^[A-Za-z0-9_.:+@-]+$/.test(p[0]) && isFinite(max) && max > 0)
+                all.push({ name: p[0], type: p[1], max: max, dark: p[3] === "1" })
+        }
+        const lit = all.filter(d => !d.dark)
+        return lit.length > 0 ? lit : all
+    }
+
     BoundedProcess {
         id: _listProc
         timeoutMs: 5000
         command: ["bash", "-c",
             "for d in /sys/class/backlight/*; do " +
             "  [ -d \"$d\" ] || continue; " +
-            "  n=${d##*/}; t=; m=; " +
+            "  n=${d##*/}; t=; m=; dark=0; " +
             "  IFS= read -r t < \"$d/type\" 2>/dev/null || t=; " +
             "  IFS= read -r m < \"$d/max_brightness\" 2>/dev/null || m=; " +
             "  case $m in ''|*[!0-9]*) continue;; esac; " +
-            "  [ \"$m\" -gt 0 ] && printf '%s\\t%s\\t%s\\n' \"$n\" \"$t\" \"$m\"; " +
+            "  [ \"$m\" -gt 0 ] || continue; " +
+            "  p=$(readlink -f \"$d/device\" 2>/dev/null); " +
+            "  case ${p##*/} in " +
+            "    card*-*) s=; IFS= read -r s < \"$p/status\" 2>/dev/null; [ \"$s\" = disconnected ] && dark=1;; " +
+            "    *) seen=0; on=0; " +
+            "      for s in \"$p\"/drm/card*/card*-eDP-*/status \"$p\"/drm/card*/card*-LVDS-*/status \"$p\"/drm/card*/card*-DSI-*/status; do " +
+            "        [ -r \"$s\" ] || continue; seen=1; v=; IFS= read -r v < \"$s\"; [ \"$v\" = disconnected ] || on=1; " +
+            "      done; " +
+            "      [ $seen = 1 ] && [ $on = 0 ] && dark=1;; " +
+            "  esac; " +
+            "  printf '%s\\t%s\\t%s\\t%s\\n' \"$n\" \"$t\" \"$m\" \"$dark\"; " +
             "done"]
         stdout: StdioCollector { id: _listOut }
         onExited: (code) => {
             if (!_listProc.completedSuccessfully(code)) { root.ready = false; root._listed = false; return }
-            const lines = (_listOut.text || "").split(/\r?\n/)
-            const devices = []
-            for (let i = 0; i < lines.length; i++) {
-                const p = lines[i].split("\t")
-                const max = p.length >= 3 ? Number(p[2]) : 0
-                if (p.length >= 3 && /^[A-Za-z0-9_.:+@-]+$/.test(p[0]) && isFinite(max) && max > 0)
-                    devices.push({ name: p[0], type: p[1], max: max })
-            }
-            root.devices = devices
+            root.devices = root.parseDevices(_listOut.text)
             root._selectDevice()
         }
     }
