@@ -83,6 +83,14 @@ Item {
         root._check(current !== null && current.Accessible.role === Accessible.StaticText,
             "current-month dates are announced as text rather than controls")
 
+        // February 2027 fills exactly four Monday-first weeks, November 2026 needs six
+        card._go(2027, 1, 1)
+        const fourWeekRows = card._rowCount
+        const fourWeekLast = card._dateForCell(card._rowCount * 7 - 1)
+        card._go(2026, 10, -1)
+        root._check(fourWeekRows === 6 && card._rowCount === 6 && root._isDate(fourWeekLast, 2027, 2, 14),
+            "every month shows six weeks, so turning the month never resizes the card under the pointer")
+
         ShellSettings.reduceMotion = false
         card._go(2024, 2, 1)
         card._activateDay(0)

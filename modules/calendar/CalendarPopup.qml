@@ -47,7 +47,9 @@ FittedPopupWindow {
         readonly property int _daysThis: new Date(shownYear, shownMonth + 1, 0).getDate()
         readonly property int _todayCell:
             (_todayY === shownYear && _todayM === shownMonth) ? _lead + _todayD - 1 : -1
-        readonly property int _rowCount: Math.ceil((_lead + _daysThis) / 7)
+        // six weeks for every month, as GtkCalendar and GNOME Shell do: a four or five week month resized the card,
+        // which under a bottom bar moved the arrows out from under the pointer
+        readonly property int _rowCount: 6
         // the target month, not the drawn one: fast scrolling keeps the grid mid-swap, and the label must not freeze with it
         readonly property string monthLabel: Qt.formatDateTime(new Date(dispYear, dispMonth, 1), "MMMM yyyy")
         // standalone, not the "MMMM" format form: some locales decline the month inside a date

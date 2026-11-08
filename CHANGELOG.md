@@ -42,6 +42,7 @@ settings file carries its own `__version` and migrates separately.
 - The updates widget no longer counts AUR packages that pacman.conf's IgnorePkg holds back when paru checks the AUR.
 - Brightness works on hybrid-graphics laptops in discrete GPU mode, and the GPU that isn't driving the screen is no longer offered as a brightness device.
 - The brightness OSD no longer appears when an idle daemon dims the screen while you're away, or restores it as you come back.
+- The calendar always shows six weeks, so changing the month no longer resizes it. With the bar at the bottom, that resize moved the arrows away from the pointer.
 
 ## Releases
 
