@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Now Playing seeks in five-second increments with the arrow keys or scroll wheel, with larger steps on Shift+arrow or Page Up/Down. Dragging remains continuous.
 - Click the brightness widget to open its slider in Home, with device choices on systems with multiple backlights.
 - Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
 - Hover the volume widget to see which output it controls alongside the volume.

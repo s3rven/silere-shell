@@ -191,6 +191,7 @@ ShellRoot {
         }
     }
     Component { id: quickSliderFactory; QuickSlider { width: 320; accessibleName: "Audio" } }
+    Component { id: mediaButtonFactory; MediaButton { available: true; accessibleName: "Media action" } }
     Component {
         id: bluetoothDeviceFixture
         QtObject {
@@ -562,7 +563,7 @@ ShellRoot {
     }
 
     function _checkAccessibleControls(): void {
-        for (const factory of [actionButtonFactory, iconButtonFactory]) {
+        for (const factory of [actionButtonFactory, iconButtonFactory, mediaButtonFactory]) {
             const visibilityHost = Qt.createQmlObject("import QtQuick; Item {}", barFixtureHost)
             const button = factory.createObject(visibilityHost)
             let buttonActions = 0
@@ -6317,6 +6318,17 @@ ShellRoot {
         root._check(track.stepSize === 2 && track.shownValue === 2 && trackChanged === 2,
             "continuous slider accessibility reports the effective nudge increment")
         track.Accessible.decreaseAction()
+        track.max = 1; track.value = 0.5
+        track.nudgeStep = 5 / 7200
+        track.Accessible.increaseAction()
+        root._check(near((track.shownValue - 0.5) * 7200, 5)
+                && near(track._posToVal(track._railInset + track._railWidth * 0.12345), 0.12345),
+            "continuous playback controls move five seconds on a long track while pointer seeking stays exact")
+        track.nudge(-1, 10)
+        root._check(near(track.shownValue * 7200, 3555),
+            "a larger continuous seek counts ten time increments rather than ten percent of the track")
+        track.nudgeStep = 0
+        track.value = 0
         track.max = 1; track.step = 0.1
         track.enabled = false
         trackChanged = -1

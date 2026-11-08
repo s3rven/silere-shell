@@ -82,6 +82,11 @@ In notification history:
 History search ignores case and accents: `cafe` finds `Café`. Words can match across
 the sender, title and message. Selecting an app in the rail further narrows the results.
 
+In **Now Playing**, drag the playback slider to seek precisely. After resting the
+pointer on it, scroll to seek in five-second increments; arrow keys do the same
+when it has keyboard focus. Shift+arrow or Page Up/Down seeks 50 seconds, and
+Home/End jumps to the start or end. Seeking is available when supported by the player.
+
 ## Connections
 
 | Connection | Actions |

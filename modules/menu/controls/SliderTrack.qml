@@ -11,11 +11,14 @@ Item {
     property real min:   0
     property real max:   1
     property real step:  0.05
+    // a continuous track can use a useful key/wheel increment without snapping pointer drags
+    property real nudgeStep: 0
     // qt's accessible value interface reads these exact names
     readonly property real minimumValue: root.min
     readonly property real maximumValue: root.max
     readonly property real stepSize: root.step > 0
-        ? root.step : Math.max(0.01, (root.max - root.min) / 100)
+        ? root.step : root.nudgeStep > 0 && isFinite(root.nudgeStep)
+            ? root.nudgeStep : Math.max(0.01, (root.max - root.min) / 100)
     property string wheelKey: ""
     property string _previousWheelKey: ""
     property bool wheelNeedsRest: false

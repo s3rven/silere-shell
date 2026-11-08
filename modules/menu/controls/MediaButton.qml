@@ -9,9 +9,13 @@ Item {
     property string accessibleName: ""
     property bool   available: false
     property bool   lit: false
-    readonly property bool interactive: root.enabled && root.available
+    readonly property bool interactive: root.enabled && root.visible && root.available
 
     signal triggered()
+
+    function activate(): void {
+        if (root.interactive) root.triggered()
+    }
 
     implicitWidth: 40
     implicitHeight: 44
@@ -27,7 +31,7 @@ Item {
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root.interactive
-    Accessible.onPressAction: if (root.interactive) root.triggered()
+    Accessible.onPressAction: root.activate()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler { id: _hover; enabled: root.interactive; cursorShape: Qt.PointingHandCursor }
@@ -35,7 +39,7 @@ Item {
         id: _tap
         enabled: root.interactive
         onTapped: {
-            root.triggered()
+            root.activate()
         }
     }
 

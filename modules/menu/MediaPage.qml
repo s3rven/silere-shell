@@ -393,6 +393,7 @@ PageShell {
                     verticalCenter: parent.verticalCenter
                 }
                 min: 0; max: 1; step: 0
+                nudgeStep: Media.lengthKnown ? Math.min(1, 5 / Media.length) : 0
                 value: Media.positionRatio
                 interactive: Media.canSeek && Media.lengthKnown
                 showThumb: interactive
@@ -404,6 +405,8 @@ PageShell {
                 hitPad: 8
                 commitOnRelease: true
                 interactionKey: String(Media.trackRevision)
+                wheelKey: "seek:" + Media.trackRevision
+                wheelNeedsRest: true
                 accessibleName: "Playback position"
                 accessibleValueText: Media.formatTime(Media.positionNow) + " of "
                     + (Media.lengthKnown ? Media.formatTime(Media.length)
@@ -451,7 +454,7 @@ PageShell {
 
                 Item {
                     id: _playBtn
-                    readonly property bool _on: Media.canTogglePlaying
+                    readonly property bool _on: _playBtn.enabled && _playBtn.visible && Media.canTogglePlaying
                     width: 52; height: 52
                     anchors.verticalCenter: parent.verticalCenter
                     opacity: _playBtn._on ? 1.0 : Theme.disabledOpacity
