@@ -469,7 +469,10 @@ print_transaction_status() {
     grep -q '^pending=1$' <<<"$out" || return 0
     phase="$(printf '%s\n' "$out" | sed -n 's/^phase=//p')"
     tag="$(printf '%s\n' "$out" | sed -n 's/^tag=//p')"
-    if [ "$phase" = validated ]; then
+    if [ "$phase" = restart-failed ]; then
+        printf 'Update transaction: %s installed, but the shell restart failed; run silere restart or silere update --rollback\n' \
+            "${tag:-release}"
+    elif [ "$phase" = validated ]; then
         printf 'Update transaction: %s validated; cleanup/restart was interrupted\n' "${tag:-release}"
     else
         printf 'Update transaction: %s interrupted during %s; the next update run will recover it\n' \

@@ -22,6 +22,12 @@ The updater restarts the running shell, so a new release never runs beside the o
 If no shell is running, the next start uses it. `silere version` shows the installed version;
 `silere status` shows which checkout is running and the updater state.
 
+If the release installs but the service manager rejects its restart, the updater
+reports the failure and keeps rollback available. Run `silere restart` to retry, or
+`silere update --rollback` to restore the previous revision.
+Later update checks keep that rollback too; the old shell still running does not
+prove the new release started.
+
 ## Restore the previous version
 
 If an update breaks something, run:
@@ -32,6 +38,9 @@ silere update --rollback
 
 This restores the revision the update replaced and restarts the running shell. You can run
 rollback from a terminal even when the bar and menu will not open.
+
+Rollback clears the previous release check. Run `silere update` when you're ready
+to review available releases again.
 
 ## Local edits or development checkouts
 

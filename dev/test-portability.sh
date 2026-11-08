@@ -1995,6 +1995,8 @@ EOF
     chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send" "$stub_dir/qs"
 
     apply_release() { # "$@" = extra environment for the apply
+        local expect_failure=0 code=0
+        if [ "${1:-}" = --expect-failure ]; then expect_failure=1; shift; fi
         tag_n=$((tag_n + 1))
         printf 'upstream v%s\n' "$tag_n" > "$seed/tracked.qml"
         git -C "$seed" commit -qam "release $tag_n"
@@ -2005,7 +2007,13 @@ EOF
             bash "$client/scripts/update.sh" >/dev/null
         env "$@" HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
             SILERE_RESTART_LOG="$restarts" bash "$client/scripts/update.sh" --apply >"$TMP/apply.out" 2>&1 \
-            || { cat "$TMP/apply.out" >&2; fail "the release did not apply"; }
+            || code=$?
+        if [ "$expect_failure" = 1 ]; then
+            [ "$code" -ne 0 ] || fail "an update with a failed restart was reported as successful"
+        elif [ "$code" -ne 0 ]; then
+            cat "$TMP/apply.out" >&2
+            fail "the release did not apply"
+        fi
     }
     await_restart() { # the restart is detached, so it lands a moment after the updater exits
         local _
@@ -2034,6 +2042,53 @@ EOF
         WAYLAND_DISPLAY=lab SILERE_FAKE_SHELL=1 bash "$client/scripts/update.sh" --rollback >/dev/null 2>&1 \
         || fail "the rollback failed"
     await_restart || fail "a rollback left a running shell on the replaced release"
+
+    # a rejected service restart leaves the files installed but the old shell running;
+    # report the failure and retain enough state to undo the update from a terminal
+    cat > "$stub_dir/systemctl" <<'EOF'
+#!/bin/sh
+case "$*" in
+    *"is-active --quiet silere-shell.service"*) exit 0 ;;
+    *" show silere-shell.service "*)
+        printf '{ path=%s/scripts/silere ; argv[]=%s/scripts/silere run ; }\n' \
+            "$SILERE_TEST_CHECKOUT" "$SILERE_TEST_CHECKOUT" ;;
+    *) exit 1 ;;
+esac
+EOF
+    export SILERE_TEST_CHECKOUT="$client"
+    local previous_rev status
+    previous_rev="$(git -C "$client" rev-parse HEAD)"
+    apply_release --expect-failure WAYLAND_DISPLAY=lab
+    grep -qF 'could not be restarted' "$TMP/apply.out" \
+        || fail "a rejected restart did not explain how to recover"
+    status="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --transaction-status)"
+    grep -qFx 'pending=1' <<<"$status" \
+        || fail "a rejected restart discarded the update recovery journal"
+    grep -qFx 'authenticated=1' <<<"$status" \
+        || fail "a rejected restart lost the authenticated rollback target"
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" >/dev/null 2>&1 \
+        || fail "an update check after a rejected restart failed"
+    status="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --transaction-status)"
+    grep -qFx 'pending=1' <<<"$status" \
+        || fail "a later check mistook the old running shell for a successful restart and discarded rollback"
+    printf '1\nrestart failed\n' > "$test_home/cache/silere-shell/update-error"
+    printf '1\nstale release\n' > "$test_home/cache/silere-shell/update-pending"
+    printf 'stale notes\n' > "$test_home/cache/silere-shell/release-notes"
+    HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+        bash "$client/scripts/update.sh" --rollback >/dev/null 2>&1 \
+        || fail "an update whose service restart failed could not be rolled back"
+    assert_eq "$previous_rev" "$(git -C "$client" rev-parse HEAD)" \
+        "rollback after a rejected service restart"
+    [ ! -e "$test_home/cache/silere-shell/update-error" ] \
+        || fail "a successful rollback left the failed update status behind"
+    [ ! -e "$test_home/cache/silere-shell/update-checked" ] \
+        || fail "a successful rollback kept a last-check time for the replaced revision"
+    [ ! -e "$test_home/cache/silere-shell/update-pending" ] \
+        && [ ! -e "$test_home/cache/silere-shell/release-notes" ] \
+        || fail "a successful rollback kept stale release details"
 )
 
 test_fresh_install_pins_release() (

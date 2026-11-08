@@ -129,7 +129,7 @@ _snapshot_trusted_signers() {
 
 _write_apply_journal() {
     local phase="$1" old_rev="$2" new_rev="$3" tag="$4"
-    [[ "$phase" =~ ^(prepared|merged|validated)$ ]] || return 1
+    [[ "$phase" =~ ^(prepared|merged|validated|restart-failed)$ ]] || return 1
     [[ "$old_rev" =~ ^[0-9a-f]{40,64}$ && "$new_rev" =~ ^[0-9a-f]{40,64}$ ]] || return 1
     [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
     _write_state_file "$APPLY_JOURNAL" \
@@ -212,7 +212,7 @@ _read_apply_journal() {
         && [ "${lines[3]}" = "from=$JOURNAL_FROM" ] \
         && [ "${lines[4]}" = "to=$JOURNAL_TO" ] \
         && [ "${lines[5]}" = "tag=$JOURNAL_TAG" ] \
-        && [[ "$JOURNAL_PHASE" =~ ^(prepared|merged|validated)$ ]] \
+        && [[ "$JOURNAL_PHASE" =~ ^(prepared|merged|validated|restart-failed)$ ]] \
         && [[ "$JOURNAL_ROOT_HEX" =~ ^[0-9a-f]+$ ]] \
         && [[ "$JOURNAL_FROM" =~ ^[0-9a-f]{40,64}$ ]] \
         && [[ "$JOURNAL_TO" =~ ^[0-9a-f]{40,64}$ ]] \
@@ -296,6 +296,11 @@ _recover_interrupted_apply() {
     fi
     [ "$head" = "$JOURNAL_TO" ] \
         || _quiet_fail "checkout moved during an interrupted update — inspect $APPLY_JOURNAL"
+    if [ "$JOURNAL_PHASE" = restart-failed ]; then
+        # the old service can still be active after rejecting a restart; it cannot prove the new release ran
+        echo "silere-update: the shell restart failed; rollback remains available with silere update --rollback" >&2
+        return 0
+    fi
     if [ "$JOURNAL_PHASE" = validated ]; then
         # The journal is kept until the shell is seen running on the new revision; a
         # release that passes the candidate gate can still fail in the live session,
@@ -328,7 +333,7 @@ _rollback_applied_update() {
         || _fail "the update journal is malformed — inspect $APPLY_JOURNAL"
     _journal_release_is_trusted \
         || _fail "the update journal could not be authenticated — inspect $APPLY_JOURNAL"
-    [ "$JOURNAL_PHASE" = validated ] \
+    [[ "$JOURNAL_PHASE" =~ ^(validated|restart-failed)$ ]] \
         || _fail "the last update did not reach a validated state"
     [ "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" = "$JOURNAL_TO" ] \
         || _fail "the checkout moved since the update — roll back manually"
@@ -338,6 +343,10 @@ _rollback_applied_update() {
         || _fail "could not restore $JOURNAL_FROM"
     _clear_apply_transaction \
         || _fail "the checkout was restored but the journal could not be cleared"
+    # the pending release, failure and last-check time describe the revision just replaced
+    _clear_flag
+    _clear_update_error
+    rm -f -- "$CHECKED"
     # Only restart a unit that actually runs this checkout; the test suite and a
     # throwaway checkout share one user manager, where being in use alone would
     # reach whatever shell is live.
@@ -1009,8 +1018,9 @@ if [ "${1:-}" = "--apply" ]; then
             printf 'silere-update: the shell was restarted; if it does not come back, run: bash %s --rollback\n' \
                 "$ROOT/scripts/update.sh" >&2
         else
-            _clear_apply_transaction || true
-            _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
+            _write_apply_journal restart-failed "$local_rev" "$remote_rev" "$release_tag" \
+                || _fail "$release_tag was installed, but the restart failed and its recovery state could not be updated — run silere update --rollback"
+            _fail "$release_tag was installed, but Silere could not be restarted — run silere restart or silere update --rollback"
         fi
     # no unit: the journal stays here too, or a release that fails to start could never be rolled back. The next
     # run of this script clears it
