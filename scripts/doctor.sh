@@ -254,6 +254,14 @@ if [ "$qs_usable" -eq 1 ]; then
         if [ "${shell_nice:-0}" -gt 0 ] 2>/dev/null; then
             warn "shell priority" "running at nice $shell_nice, so the bar and menus stutter under load; start it with silere run"
         fi
+        # Mesa names its CPU rasterizer threads llvmpipe-N; with a GPU present that is a fallback, not a choice,
+        # and the usual cause is an EGL vendor pinned to Mesa while an NVIDIA GPU drives the display
+        if [ -n "$shell_pid" ] && compgen -G '/dev/dri/renderD*' >/dev/null \
+                && grep -qsx 'llvmpipe-[0-9]*' /proc/"$shell_pid"/task/*/comm; then
+            egl_pin="$(tr '\0' '\n' < /proc/"$shell_pid"/environ 2>/dev/null \
+                | sed -n 's/^__EGL_VENDOR_LIBRARY_FILENAMES=//p')" || egl_pin=""
+            warn "rendering" "drawn on the CPU (llvmpipe), so every animation frame costs CPU${egl_pin:+; __EGL_VENDOR_LIBRARY_FILENAMES=$egl_pin in its environment may not support this GPU}"
+        fi
         # the stale build only says so in its own log, so read it while the shell runs
         qt_drift="$(_silere_quickshell_qt_drift "$ROOT/shell.qml" || true)"
         if [ -n "$qt_drift" ]; then
