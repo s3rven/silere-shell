@@ -105,7 +105,8 @@ Column {
                         || ShellUpdate.statusReadError.length > 0 ? "󰀦"
                     : ShellUpdate.development ? "󰊢"
                     : ShellUpdate.pending ? "󰚰"
-                    : !ShellUpdate.statusReady || ShellUpdate.neverChecked ? "󰓦" : "󰄬"
+                    : !ShellUpdate.statusReady || ShellUpdate.neverChecked
+                        || !ShellUpdate.versionReady || ShellUpdate.versionBusy ? "󰓦" : "󰄬"
                 title: "Silere Shell"
                 status: ShellUpdate.statusDetail
                 meta: ShellUpdate.updateVersionLabel
@@ -128,6 +129,7 @@ Column {
                     ? Theme.warning : ShellUpdate.checking || ShellUpdate.applying || ShellUpdate.pending
                         ? Theme.accent : ShellUpdate.development
                             ? Theme.accent : !ShellUpdate.statusReady || ShellUpdate.neverChecked
+                                || !ShellUpdate.versionReady || ShellUpdate.versionBusy
                                 ? Theme.subtext : Theme.success
                 busy: ShellUpdate.checking || ShellUpdate.applying
 

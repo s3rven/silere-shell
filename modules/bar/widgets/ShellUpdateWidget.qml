@@ -7,6 +7,7 @@ StatusActionPill {
     property var screen: null
 
     show: ShellSettings.barShowShellUpdate
+        && !ShellUpdate.packaged && !ShellUpdate.development
         && (ShellUpdate.pending || ShellUpdate.checking || ShellUpdate.applying)
     busy: ShellUpdate.checking || ShellUpdate.applying
     interactive: show

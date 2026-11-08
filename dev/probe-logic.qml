@@ -368,6 +368,7 @@ ShellRoot {
     Component { id: clockFactory; Clock { screen: null } }
     Component { id: mediaWidgetFactory; MediaWidget { screen: null; height: 36 } }
     Component { id: updatesWidgetFactory; UpdatesWidget { screen: null } }
+    Component { id: shellUpdateWidgetFactory; ShellUpdateWidget { screen: null } }
     Component {
         id: trayItemFactory
         QtObject {
@@ -7455,6 +7456,45 @@ ShellRoot {
         ShellUpdate._flagLoaded = flagLoadedWas
         ShellUpdate._checkedLoaded = checkedLoadedWas
         ShellUpdate._errorLoaded = errorLoadedWas
+
+        const checkoutStateWas = {
+            versionReady: ShellUpdate.versionReady, versionError: ShellUpdate.versionError,
+            installationMode: ShellUpdate.installationMode, packaged: ShellUpdate.packaged,
+            count: ShellUpdate.count,
+            lastCheckMs: ShellUpdate.lastCheckMs, _flagLoaded: ShellUpdate._flagLoaded,
+            _checkedLoaded: ShellUpdate._checkedLoaded, _errorLoaded: ShellUpdate._errorLoaded
+        }
+        ShellUpdate._flagLoaded = true
+        ShellUpdate._checkedLoaded = true
+        ShellUpdate._errorLoaded = true
+        ShellUpdate.lastCheckMs = 1234000
+        ShellUpdate.installationMode = "managed"
+        ShellUpdate.packaged = false
+        ShellUpdate.versionReady = false
+        ShellUpdate.versionError = ""
+        root._check(!ShellUpdate.upToDate && ShellUpdate.statusText === "Reading checkout",
+            "a cached successful check waits for the checkout state before claiming up to date")
+        ShellUpdate.versionError = "The checkout state check timed out"
+        root._check(!ShellUpdate.upToDate && ShellUpdate.statusText === "Status unavailable"
+                && ShellUpdate.statusReadError === ShellUpdate.versionError,
+            "a failed checkout verification is reported instead of a cached up-to-date result")
+        const shellUpdateShownWas = ShellSettings.barShowShellUpdate
+        ShellSettings.barShowShellUpdate = true
+        ShellUpdate.versionError = ""
+        ShellUpdate.count = 1
+        const shellUpdatePill = shellUpdateWidgetFactory.createObject(barFixtureHost)
+        root._check(shellUpdatePill !== null, "the shell update widget builds for installation-mode checks")
+        if (shellUpdatePill) {
+            root._check(shellUpdatePill.show, "a managed checkout shows its pending release in the bar")
+            ShellUpdate.packaged = true
+            root._check(!shellUpdatePill.show, "a package install hides stale self-update cache entries")
+            ShellUpdate.packaged = false
+            ShellUpdate.installationMode = "development"
+            root._check(!shellUpdatePill.show, "a development checkout hides stale self-update cache entries")
+            shellUpdatePill.destroy()
+        }
+        ShellSettings.barShowShellUpdate = shellUpdateShownWas
+        for (const key of Object.keys(checkoutStateWas)) ShellUpdate[key] = checkoutStateWas[key]
 
         root._check(PowerProfiles.profileName(0) === "power-saver"
                 && PowerProfiles.profileName(1) === "balanced"

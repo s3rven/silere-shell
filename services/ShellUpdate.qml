@@ -38,7 +38,7 @@ Singleton {
         : _flagMalformed ? "Pending update status is malformed"
         : _checkedReadError ? "Could not read the last-check time"
         : _errorReadError ? "Could not read the last update failure"
-        : _errorMalformed ? "The last update failure is malformed" : ""
+        : _errorMalformed ? "The last update failure is malformed" : root.versionError
     property string timerError: ""
     property bool   _timerStatusError: false
     property bool   timerSupported: false
@@ -84,10 +84,11 @@ Singleton {
         : persistedCheckError.length > 0 ? "Last check failed"
         : !statusReady ? "Reading status"
         : neverChecked ? "Not checked yet"
+        : !versionReady || versionBusy ? "Reading checkout"
         : "Up to date"
 
-    readonly property bool upToDate: statusReady && lastCheckMs > 0
-        && !development && !applying && !checking && !pending
+    readonly property bool upToDate: statusReady && lastCheckMs > 0 && versionReady && !versionBusy
+        && !packaged && !development && !applying && !checking && !pending
         && lastApplyError.length === 0 && root.checkError.length === 0
         && statusReadError.length === 0
 
