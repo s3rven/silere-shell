@@ -2547,6 +2547,10 @@ ShellRoot {
             const pendingWas = ShellUpdate.count
             const verifiedWas = ShellUpdate.targetVerified
             const applyErrorWas = ShellUpdate.lastApplyError
+            const targetStateWas = {
+                targetTag: ShellUpdate.targetTag, targetRevision: ShellUpdate.targetRevision,
+                summary: ShellUpdate.summary, pendingCommits: ShellUpdate.pendingCommits
+            }
             // keeps the backend unable to apply even if a guard regresses
             ShellUpdate.targetVerified = false
             ShellUpdate.count = 1
@@ -2564,6 +2568,15 @@ ShellRoot {
             root._check(updatesPage._installArmed && updatesPage._installArmedAtMs <= Date.now(),
                 "a backwards clock change restarts the update prompt")
             updatesPage._disarmInstall()
+            ShellUpdate._parse("1\ntarget " + "a".repeat(40) + " v7.8.9 verified\nabc1234 release")
+            root._check(ShellUpdate.targetRevision === "a".repeat(40),
+                "the update review retains its exact target revision")
+            updatesPage._installArmed = true
+            ShellUpdate._parse("1\ntarget " + "b".repeat(40) + " v7.8.9 verified\nabc1234 release")
+            root._check(!updatesPage._installArmed,
+                "changing a reviewed revision cancels confirmation even when its tag and count stay the same")
+            updatesPage._disarmInstall()
+            for (const key of Object.keys(targetStateWas)) ShellUpdate[key] = targetStateWas[key]
             ShellUpdate.count = pendingWas
             ShellUpdate.targetVerified = verifiedWas
             ShellUpdate.lastApplyError = applyErrorWas

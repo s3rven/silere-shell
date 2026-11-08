@@ -58,6 +58,7 @@ Singleton {
     readonly property bool plainCopy: installationMode === "copy"
     readonly property bool versionBusy: _versionProc.running
     property string targetTag: ""
+    property string targetRevision: ""
     property bool   targetVerified: false
     property var    pendingCommits: []
     property var    releaseNotes: []
@@ -167,11 +168,12 @@ Singleton {
     function apply(): void {
         // keep fetch/check and merge/apply out of the same checkout at the same time even when this API is called outside the guarded settings UI
         if (checking || applying || _applyProc.running || development
-                || !pending || !targetVerified
+                || !pending || !targetVerified || targetRevision.length === 0
                 || !versionReady || versionBusy || root.blockedReason.length > 0) return
+        const command = ["bash", root._script, "--apply", root.targetTag, root.targetRevision]
         applying = true
         lastApplyError = ""
-        _applyProc.exec(["bash", root._script, "--apply"])
+        _applyProc.exec(command)
     }
 
     function refreshTimer(): void {
@@ -430,6 +432,7 @@ Singleton {
         root.count = Math.max(0, parsedCount)
         let rest = lines.slice(1)
         let tag = ""
+        let revision = ""
         let verified = false
         if (root._flagMalformed) rest = []
         // a flag file written before this line existed carries commits here instead
@@ -438,12 +441,14 @@ Singleton {
             const target = /^target ([0-9a-f]{7,64}) (v[0-9]+\.[0-9]+\.[0-9]+) verified$/
                 .exec(rest[0].trim())
             if (target) {
+                revision = target[1]
                 tag = target[2]
                 verified = true
             }
             rest = rest.slice(1)
         }
         root.targetTag = SafeText.boundedText(tag, root.maxVersionTextChars)
+        root.targetRevision = revision
         root.targetVerified = verified
         root.summary = rest.slice(0, root.maxCommitDetail).map(function(line) {
             return SafeText.boundedText(line, root.maxCommitSubjectChars + 80)

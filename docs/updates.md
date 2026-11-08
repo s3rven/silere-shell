@@ -18,6 +18,9 @@ The first command checks; the second installs. Silere verifies the release signa
 and validates the new version before replacing the installed files. Applying an
 update needs an internet connection to confirm the release is still published.
 
+The menu installs the release you reviewed. If a background check changes the
+release before you confirm, review it again before installing.
+
 The updater restarts the running shell, so a new release never runs beside the old one.
 If no shell is running, the next start uses it. `silere version` shows the installed version;
 `silere status` shows which checkout is running and the updater state.

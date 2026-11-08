@@ -85,6 +85,7 @@ Column {
             root._notesOpen = true
         }
         function onTargetVerifiedChanged() { root._disarmInstall() }
+        function onTargetRevisionChanged() { root._disarmInstall() }
         function onCheckingChanged() { if (ShellUpdate.checking) root._disarmInstall() }
         function onApplyingChanged() { if (ShellUpdate.applying) root._disarmInstall() }
     }

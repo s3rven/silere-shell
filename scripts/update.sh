@@ -919,6 +919,9 @@ fi
 # withdrawn after the check; local tags alone cannot reveal that while offline.
 # Validate the signed release outside the live checkout, then fast-forward and restart.
 if [ "${1:-}" = "--apply" ]; then
+    # the menu supplies the target it displayed; the CLI can use the most recent check
+    [ "$#" -eq 1 ] || [ "$#" -eq 3 ] \
+        || _fail "the reviewed release requires both its tag and revision — check for updates again"
     apply_branch="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     [ -n "$apply_branch" ] \
         || _fail "checkout is on a detached HEAD — switch to main before applying"
@@ -934,6 +937,9 @@ if [ "${1:-}" = "--apply" ]; then
     fi
     cached_rev="${BASH_REMATCH[1]}"
     cached_tag="${BASH_REMATCH[2]}"
+    if [ "$#" -eq 3 ] && { [ "$2" != "$cached_tag" ] || [ "$3" != "$cached_rev" ]; }; then
+        _fail "the release changed since it was reviewed — check for updates again"
+    fi
     git -C "$ROOT" show-ref --verify --quiet "refs/tags/$cached_tag" \
         || _fail "$cached_tag was withdrawn upstream — check for updates again"
     _resolve_trusted_release apply

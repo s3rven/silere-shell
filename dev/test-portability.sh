@@ -2360,8 +2360,28 @@ test_update_apply_binds_to_confirmed_release() (
     # re-checking re-confirms the newest release, and then apply proceeds
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" >/dev/null
+    # the menu can still be displaying the previous review while a background check rewrites the cache
+    if out="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply v1.0.1 "$confirmed_rev" 2>&1)"; then
+        fail "apply replaced the release reviewed in the menu with the background check's newer target"
+    fi
+    grep -qF 'release changed since it was reviewed' <<<"$out" \
+        || fail "apply did not explain the stale menu confirmation: $out"
+    assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
+        "a stale menu confirmation leaves the checkout untouched"
+    if out="$(HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
+            bash "$client/scripts/update.sh" --apply v1.0.2 "$confirmed_rev" 2>&1)"; then
+        fail "apply accepted the right release tag with a different reviewed revision"
+    fi
+    grep -qF 'release changed since it was reviewed' <<<"$out" \
+        || fail "apply did not explain the stale reviewed revision: $out"
+    assert_eq "$head_before" "$(git -C "$client" rev-parse HEAD)" \
+        "a changed reviewed revision leaves the checkout untouched"
+    local current_target
+    current_target="$(git -C "$client" rev-parse 'v1.0.2^{}')"
     HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
-        bash "$client/scripts/update.sh" --apply >/dev/null 2>&1 || true
+        bash "$client/scripts/update.sh" --apply v1.0.2 "$current_target" >/dev/null 2>&1 \
+        || fail "apply rejected a freshly reviewed release and revision"
     assert_eq "upstream v3" "$(cat "$client/tracked.qml")" \
         "apply proceeds once the newest release has been confirmed"
 )
