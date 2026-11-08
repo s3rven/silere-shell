@@ -568,7 +568,8 @@ Item {
             visible: card.showIconSlot
             width: 24; height: 24
             radius: Theme.radiusField
-            color: "transparent"
+            // the initial gets a tile of its own; bare, a lone dim letter reads as a missing glyph
+            color: _headerIcon.status === Image.Ready ? "transparent" : Theme.withAlpha(Theme.subtext, 0.12)
             anchors.top:        parent.top
             anchors.left:       parent.left
             anchors.topMargin:  13
@@ -578,7 +579,7 @@ Item {
                 anchors.centerIn: parent
                 visible: _headerIcon.status !== Image.Ready
                 text: card.fallbackInitial
-                color: Theme.withAlpha(Theme.subtext, 0.70)
+                color: Theme.withAlpha(Theme.subtext, 0.86)
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.DemiBold
             }
