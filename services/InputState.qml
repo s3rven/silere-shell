@@ -13,11 +13,36 @@ Singleton {
     property string _capsPath: ""
     property int _capsFailures: 0
     readonly property bool _wanted: ShellSettings.barShowKeyboard && !Idle.isQuiet
-    readonly property string shortLayout: {
-        const name = root.layout.toLowerCase()
+    // compositors report xkb's description ("Ukrainian"); the registry beside the keymaps names its code ("ua")
+    property var _layoutCodes: ({})
+    function layoutCodesFrom(raw: string): var {
+        const codes = {}
+        let section = ""
+        for (const line of String(raw ?? "").split("\n")) {
+            if (line.startsWith("! ")) { section = line.slice(2).trim(); continue }
+            const m = section === "layout" ? /^\s+(\S+)\s+(.+)$/.exec(line)
+                : section === "variant" ? /^\s+\S+\s+(\S+):\s+(.+)$/.exec(line) : null
+            if (m && !Object.prototype.hasOwnProperty.call(codes, m[2])) codes[m[2]] = m[1]
+        }
+        return codes
+    }
+    FileView {
+        id: _registry
+        path: ShellSettings.barShowKeyboard
+            ? (Quickshell.env("XKB_CONFIG_ROOT") || "/usr/share/X11/xkb") + "/rules/evdev.lst" : ""
+        blockLoading: false
+        blockAllReads: false
+        printErrors: false
+        onLoaded: root._layoutCodes = root.layoutCodesFrom(_registry.text())
+    }
+    readonly property string shortLayout: root.shortLabel(root.layout)
+    function shortLabel(layout: string): string {
+        if (Object.prototype.hasOwnProperty.call(root._layoutCodes, layout))
+            return String(root._layoutCodes[layout]).toUpperCase()
+        const name = layout.toLowerCase()
         const labels = { english: "EN", latvian: "LV", russian: "RU", german: "DE", french: "FR", spanish: "ES" }
         for (const word in labels) if (name.indexOf(word) >= 0) return labels[word]
-        return root.layout.slice(0, 2).toUpperCase()
+        return layout.slice(0, 2).toUpperCase()
     }
     function refreshCaps(): void {
         if (!root._wanted) return

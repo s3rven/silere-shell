@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 - An update keeps its rollback until this checkout's shell is seen running, even while a service for another checkout is up.
 - The keyboard widget keeps showing your keyboard's layout while wtype, an emoji picker or remote input types, instead of "ER" or that tool's layout.
 - The keyboard widget no longer falls back to an older layout read while you switched, and follows a layout changed by a Hyprland config reload.
+- The keyboard widget labels every layout by its code, so Ukrainian reads UA and Estonian EE instead of UK and ES. English shows US or GB.
 - A monitor plugged back in no longer shows its workspaces as if a special workspace were still open on it.
 
 ## Releases

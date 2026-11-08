@@ -1910,6 +1910,22 @@ ShellRoot {
         InputState.capsLock = was.caps
         InputState._capsFailures = was.failures
         ShellSettings.barShowKeyboard = was.enabled
+
+        const codesWas = InputState._layoutCodes
+        InputState._layoutCodes = ({})
+        root._check(InputState.shortLabel("Latvian") === "LV" && InputState.shortLabel("Ukrainian") === "UK",
+            "without the xkb registry, layout labels come from the language name")
+        InputState._layoutCodes = InputState.layoutCodesFrom("! model\n  pc105           Generic 105-key PC\n\n"
+            + "! layout\n  us              English (US)\n  ee              Estonian\n  ua              Ukrainian\n\n"
+            + "! variant\n  intl            us: English (US, intl., with dead keys)\n  us              ba: Bosnian (US)\n\n"
+            + "! option\n  grp             Switching to another layout\n")
+        root._check(InputState.shortLabel("Ukrainian") === "UA" && InputState.shortLabel("Estonian") === "EE"
+                && InputState.shortLabel("English (US, intl., with dead keys)") === "US"
+                && InputState.shortLabel("Bosnian (US)") === "BA"
+                && InputState.shortLabel("Generic 105-key PC") === "GE"
+                && InputState.shortLabel("constructor") === "CO",
+            "layout labels use the xkb code of the layout or variant, never a model, option or prototype name")
+        InputState._layoutCodes = codesWas
     }
 
     function _checkWeather(): void {
