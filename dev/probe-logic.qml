@@ -9891,9 +9891,116 @@ ShellRoot {
     property var _historyPage: null
     property bool _historyReduceWas: false
 
+    function _checkHistoryKeyboard(): void {
+        const motionWas = ShellSettings.reduceMotion
+        MenuState.setRecentFilter("")
+        MenuState.selectTab(MenuState.recentTab)
+        MenuState.openAt(17, null, probeAnchor)
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 9201, appName: "Mail", summary: "First message", time: Date.now() - 1000 })
+        Notifications._prependHistory({ id: 9202, appName: "Chat", summary: "Second message", time: Date.now() })
+        const host = keyboardFixtureFactory.createObject(root, { width: 380, height: 560 })
+        const component = Qt.createComponent("modules/menu/RecentPage.qml")
+        const page = component.status === Component.Ready ? component.createObject(host.contentItem, {
+            width: 332, viewportHeight: 520, active: true, powerOpen: false
+        }) : null
+        root._check(page !== null, "history builds for keyboard navigation")
+        if (page) {
+            page.settleVisual(true)
+            host.requestActivate()
+            host.input.wait(40)
+            const field = root._findTrayNode(page, item => item.Accessible.name === "Search notifications")
+            const list = root._findTrayNode(page, item => typeof item.itemAtIndex === "function")
+            list.forceLayout()
+            const cardAt = index => root._findTrayNode(list.itemAtIndex(index), item => item.Accessible.role === Accessible.Notification)
+            field.forceActiveFocus(Qt.TabFocusReason)
+            host.input.keyClick(Qt.Key_Down)
+            host.input.wait(10)
+            root._check(cardAt(0).activeFocus, "Down from history search focuses the first message")
+            host.input.keyClick(Qt.Key_Down)
+            host.input.wait(10)
+            const second = cardAt(1).activeFocus
+            host.input.keyClick(Qt.Key_Up)
+            host.input.wait(10)
+            const first = cardAt(0).activeFocus
+            host.input.keyClick(Qt.Key_Up)
+            root._check(second && first && field.activeFocus,
+                "history arrows move between messages and Up from the first returns to search")
+            host.input.keyClick(Qt.Key_Down)
+            host.input.wait(10)
+            host.input.keyClick(Qt.Key_Down)
+            host.input.wait(10)
+            host.input.keyClick(Qt.Key_Delete)
+            host.input.wait(20)
+            root._check(Notifications.historyCount === 1 && cardAt(0).activeFocus,
+                "removing the last focused history row hands focus to the preceding message")
+            Notifications._prependHistory({ id: 9201, appName: "Mail", summary: "First message", time: Date.now() })
+            page.searchText = "Second"
+            field.forceActiveFocus(Qt.TabFocusReason)
+            field.cursorPosition = 0
+            host.input.keyClick(Qt.Key_Delete)
+            root._check(page.searchText === "econd" && Notifications.historyCount === 2,
+                "Delete edits history search without removing a notification")
+            page.searchText = "Second"
+            host.input.keyClick(Qt.Key_Return)
+            host.input.wait(10)
+            host.input.keyClick(Qt.Key_Delete)
+            host.input.wait(20)
+            root._check(Notifications.historyCount === 1 && page.rowCount === 0 && field.activeFocus,
+                "Delete removes the focused match and returns to search when other history remains")
+            const clear = root._findTrayNode(page, item => item.label === "Clear search")
+            clear.Accessible.pressAction()
+            host.input.wait(10)
+            root._check(page.rowCount === 1 && field.activeFocus && page.searchText === "",
+                "the empty-results action clears search and keeps the field ready for typing")
+            host.input.keyClick(Qt.Key_Down)
+            host.input.wait(10)
+            const remaining = list.itemAtIndex(0)
+            page.active = false
+            remaining.removeSelf()
+            root._check(Notifications.historyCount === 1,
+                "an inactive history row refuses a retained remove action")
+            page.active = true
+            page.settleVisual(true)
+            remaining.focusCard()
+            host.input.keyClick(Qt.Key_Tab)
+            host.input.wait(10)
+            const remove = root._findTrayNode(remaining, item => item.Accessible.name === "Remove notification")
+            root._check(remove.activeFocus && remove.visible && remove.opacity === 1,
+                "Tab reveals the focused history row's remove button without pointer hover")
+            remove.Accessible.pressAction()
+            host.input.wait(20)
+            root._check(Notifications.historyCount === 0,
+                "the focused history remove button deletes the final entry")
+            Notifications._prependHistory({ id: 9203, appName: "Mail", summary: "Still here", time: Date.now() })
+            MenuState.setRecentFilter("Missing app")
+            const showAll = root._findTrayNode(page, item => item.label === "Show all notifications")
+            showAll.Accessible.pressAction()
+            root._check(MenuState.recentFilter === "" && page.rowCount === 1 && Notifications.historyCount === 1,
+                "an empty app filter offers a route back to all notifications without deleting history")
+            Notifications._prependHistory({ id: 9204, appName: "Chat", summary: "Animated removal", time: Date.now() })
+            ShellSettings.reduceMotion = false
+            host.input.wait(220)
+            page._focusRow(0)
+            host.input.keyClick(Qt.Key_Delete)
+            host.input.wait(20)
+            root._check(Notifications.historyCount === 1 && cardAt(0).activeFocus,
+                "focus moves to the next message while the removed card is still animating out")
+            page.destroy()
+        }
+        host.close()
+        host.destroy()
+        component.destroy()
+        Notifications.clearHistory()
+        MenuState.close()
+        MenuState.setRecentFilter("")
+        ShellSettings.reduceMotion = motionWas
+    }
+
     function _startHistoryPageProbe(): void {
         root._historyReduceWas = ShellSettings.reduceMotion
         ShellSettings.reduceMotion = true
+        root._checkHistoryKeyboard()
         MenuState.setRecentFilter("")
         MenuState.openAt(17, null, probeAnchor)
         Notifications.clearHistory()

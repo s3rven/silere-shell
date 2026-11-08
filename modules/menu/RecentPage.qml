@@ -53,6 +53,7 @@ PageShell {
     Timer { id: _queryHold; interval: 180; onTriggered: root._querying = false }
 
     onSearchTextChanged: {
+        _focusRestore.stop()
         root._querying = true
         _queryHold.restart()
         _clearButton.disarm()
@@ -65,7 +66,40 @@ PageShell {
         return true
     }
 
+    function _focusRow(index: int): bool {
+        if (!root.active || !root.enabled || !root.visible || !MenuState.open || root._clearing || root._swapping
+                || index < 0 || index >= root.rowCount) return false
+        _historyList.cancelFlick()
+        _historyList.currentIndex = index
+        _historyList.positionViewAtIndex(index, ListView.Contain)
+        _historyList.forceLayout()
+        const row = _historyList.itemAtIndex(index)
+        if (row) row.focusCard()
+        return row !== null
+    }
+
+    function _removeEntry(entry, index: int, restoreFocus: bool): void {
+        Notifications.removeFromHistory(entry)
+        if (restoreFocus) {
+            _focusRestore.index = index
+            _focusRestore.restart()
+        }
+    }
+
+    // the page owns this handoff, so removing a delegate cannot cancel its successor's focus
+    Timer {
+        id: _focusRestore
+        property int index: 0
+        interval: 0
+        onTriggered: {
+            if (!root.active || !root.enabled || !root.visible || !MenuState.open) return
+            if (root.rowCount > 0) root._focusRow(Math.min(index, root.rowCount - 1))
+            else if (root.hasHistory) _searchInput.forceActiveFocus(Qt.TabFocusReason)
+        }
+    }
+
     onFilterChanged: {
+        _focusRestore.stop()
         _clearButton.disarm()
         // the clear fade already owns the list opacity; ride it rather than starting a second one
         if (root._clearing || ShellSettings.reduceMotion) {
@@ -135,6 +169,7 @@ PageShell {
     }
 
     onPageHidden: {
+        _focusRestore.stop()
         _clearButton.disarm()
         root._openRows = ({})
         _searchInput.focus = false
@@ -408,7 +443,10 @@ PageShell {
                 clip: true
                 inputMethodHints: Qt.ImhNoAutoUppercase
                 Accessible.name: "Search notifications"
+                Accessible.description: "Enter or Down reads the results"
                 FocusScroll { revealTarget: _searchBox }
+                onAccepted: root._focusRow(0)
+                Keys.onDownPressed: event => { event.accepted = root._focusRow(0) }
 
                 ShellText {
                     anchors.fill: parent
@@ -498,6 +536,18 @@ PageShell {
                         ShellSettings.highContrast ? 0.90 : 0.76)
                     font.pixelSize: Settings.fontCaption
                 }
+
+                ActionButton {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: root.hasHistory && (root.searching || root.filter.length > 0)
+                    label: root.searching ? "Clear search" : "Show all notifications"
+                    onTriggered: {
+                        if (root.searching) {
+                            root.searchText = ""
+                            _searchInput.forceActiveFocus()
+                        } else MenuState.setRecentFilter("")
+                    }
+                }
             }
         }
 
@@ -521,7 +571,11 @@ PageShell {
                     id: _entry
                     // a ListModel delegate gets roles, not modelData; alias so the rest of the entry reads the same
                     required property var model
+                    required property int index
                     readonly property var modelData: model
+                    readonly property bool _canInteract: root.active && root.enabled && root.visible
+                        && MenuState.open && _entry.enabled && _entry.visible
+                        && !root._clearing && !root._swapping && !_entry._removing
 
                     readonly property bool _critical: Number(modelData.urgency) === 2
                     readonly property bool _showSection: modelData.showSection === true
@@ -566,6 +620,7 @@ PageShell {
                     }
 
                     function _toggleExpand(): void {
+                        if (!_entry._canInteract) return
                         const open = _expanded ? false : _entry._expandable
                         if (open === _expanded) return
                         _entry._resizing = true
@@ -622,6 +677,7 @@ PageShell {
                     }
 
                     function jumpToSource(): void {
+                        if (!_entry._canInteract) return
                         const source = { appName: modelData.appName, desktopEntry: modelData.desktopEntry }
                         if (WindowActions.notificationSourceWorkspace(source) === -1) return
                         MenuState.close()
@@ -629,11 +685,16 @@ PageShell {
                     }
 
                     function removeSelf(): void {
-                        if (_removing || root._clearing) return
+                        if (!_entry._canInteract) return
+                        const restoreFocus = _card.activeFocus || _removeButton.activeFocus
                         // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
                         _removing = true
                         root.setRowOpen(_entry._rowKey, false)
-                        Notifications.removeFromHistory(modelData)
+                        root._removeEntry(modelData, _entry.index, restoreFocus)
+                    }
+
+                    function focusCard(): void {
+                        if (_entry._canInteract) _card.forceActiveFocus(Qt.TabFocusReason)
                     }
 
                     Item {
@@ -716,9 +777,30 @@ PageShell {
                         Accessible.name: String(_entry.modelData.appName || "").length > 0
                             ? _entry.modelData.appName + ": " + _summary.text : _summary.text
                         Accessible.description: _body.text
-                        Accessible.focusable: true
+                        Accessible.focusable: _entry._canInteract
                         Accessible.onPressAction: _entry._toggleExpand()
-                        KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+                        KeyboardFocus {
+                            id: _cardFocus
+                            interactive: _entry._canInteract
+                            listNavigation: true
+                            customNavigation: true
+                            onActivated: _entry._toggleExpand()
+                            onNavigated: direction => {
+                                if (direction < 0 && _entry.index === 0)
+                                    _searchInput.forceActiveFocus(Qt.BacktabFocusReason)
+                                else _cardFocus.moveFocus(direction)
+                            }
+                        }
+                        Keys.onPressed: event => {
+                            if (event.key !== Qt.Key_Delete) return
+                            if (!_entry._canInteract || (event.modifiers
+                                    & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+                                event.accepted = false
+                                return
+                            }
+                            event.accepted = true
+                            if (!event.isAutoRepeat) _entry.removeSelf()
+                        }
 
                         HoverHandler {
                             id: _entryHover
@@ -726,7 +808,7 @@ PageShell {
                         }
                         TapHandler {
                             id: _entryTap
-                            enabled: !root._clearing && !root._swapping && !_entry._removing
+                            enabled: _entry._canInteract
                             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             onTapped: (eventPoint, button) => {
                                 const p = _rightSlot.mapFromItem(_card, eventPoint.position.x, eventPoint.position.y)
@@ -854,7 +936,7 @@ PageShell {
                                 text: { void root._timeTick; return root.formatTime(_entry.modelData.time) }
                                 color: Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontMicro
-                                opacity: _entryHover.hovered ? 0 : 1
+                                opacity: _entryHover.hovered || _card.activeFocus || _removeButton.activeFocus ? 0 : 1
                                 MotionBehavior on opacity { gate: _entry._heightReady; NumberAnimation { duration: Motion.fast } }
                             }
 
@@ -870,8 +952,9 @@ PageShell {
                                 color: _removeTap.pressed
                                     ? Theme.withAlpha(Theme.error, 0.24)
                                     : _removeHover.hovered ? Theme.withAlpha(Theme.error, 0.17) : Theme.withAlpha(Theme.subtext, 0.08)
-                                opacity: _entryHover.hovered ? 1.0 : 0.0
-                                visible: opacity > 0.001
+                                opacity: _entryHover.hovered || _card.activeFocus || _removeButton.activeFocus ? 1.0 : 0.0
+                                // keep the tab stop present while focus moves from the card to this button
+                                visible: _entry._canInteract || opacity > 0.001
                                 scale: _removeTap.pressed ? 0.94 : 1.0
 
                                 ColorFade on color { gate: _entry._heightReady }
@@ -886,12 +969,17 @@ PageShell {
                                 MotionBehavior on scale { gate: _entry._heightReady; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
                                 Accessible.role: Accessible.Button
                                 Accessible.name: "Remove notification"
-                                Accessible.focusable: true
-                                Accessible.onPressAction: _entry.removeSelf()
+                                Accessible.focusable: _entry._canInteract
+                                Accessible.onPressAction: if (_removeButton.Accessible.focusable) _entry.removeSelf()
                                 KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                                 HoverHandler { id: _removeHover; cursorShape: Qt.PointingHandCursor }
-                                TapHandler { id: _removeTap; enabled: !root._clearing && !_entry._removing; onTapped: _entry.removeSelf() }
+                                TapHandler {
+                                    id: _removeTap
+                                    enabled: _entry._canInteract && (_entryHover.hovered
+                                        || _card.activeFocus || _removeButton.activeFocus)
+                                    onTapped: _entry.removeSelf()
+                                }
 
                                 ShellText {
                                     anchors.centerIn: parent

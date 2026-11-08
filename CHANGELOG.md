@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Notification history supports Enter or Down from search, arrows between messages, and Delete to remove the focused entry while keeping your place.
+- Empty notification searches and app filters offer a button to clear the query or return to all notifications.
 - Now Playing seeks in five-second increments with the arrow keys or scroll wheel, with larger steps on Shift+arrow or Page Up/Down. Dragging remains continuous.
 - Click the brightness widget to open its slider in Home, with device choices on systems with multiple backlights.
 - Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
@@ -21,6 +23,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Notification history shows the remove button on keyboard focus, and inactive rows and hidden media controls reject retained actions.
 - A CPU holding at exactly 100% now triggers the sustained-load warning. The bar and Home share that warning across monitors, and separate spikes no longer add up to sustained load.
 - A notification still sliding out when a newer one took the last visible place no longer disappears mid-exit and comes back later.
 - The calendar takes keyboard focus the first time it opens, so Tab and the arrow keys work without a click.

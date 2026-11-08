@@ -78,9 +78,14 @@ In notification history:
 | Click Clear twice | Remove the entries currently shown. |
 | Click Mute | Hold back the selected app's popups. |
 | Press Escape | Clear search, then close. |
+| Press Enter or Down in Search | Focus the first matching notification. |
+| Press Up or Down on a notification | Move between entries; Up from the first returns to Search. |
+| Press Delete on a notification | Remove it and keep focus on the next entry, or the preceding entry at the end. |
 
 History search ignores case and accents: `cafe` finds `Café`. Words can match across
 the sender, title and message. Selecting an app in the rail further narrows the results.
+When there are no results, **Clear search** keeps the field ready for another query;
+an empty app filter offers **Show all notifications**.
 
 In **Now Playing**, drag the playback slider to seek precisely. After resting the
 pointer on it, scroll to seek in five-second increments; arrow keys do the same
