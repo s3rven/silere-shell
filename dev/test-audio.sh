@@ -71,16 +71,35 @@ fail() {
     exit 1
 }
 start_daemons() {
+    local _ ready=0
     pipewire -c "$scratch/pipewire.conf" > "$scratch/pipewire.log" 2>&1 &
     pw_pid=$!
-    wireplumber > "$scratch/wireplumber.log" 2>&1 &
-    wp_pid=$!
-    # a client of a daemon still starting waits for ever, hence the deadline on each
+    # WirePlumber exits if PipeWire cannot accept its connection yet.
+    # A client of a daemon still starting can wait forever, hence each deadline.
     for _ in $(seq 1 50); do
-        timeout 2 wpctl status > /dev/null 2>&1 && return 0
+        if timeout 2 pw-cli info 0 > /dev/null 2>&1; then
+            ready=1
+            break
+        fi
+        kill -0 "$pw_pid" 2>/dev/null || break
         sleep 0.2
     done
-    fail "the private PipeWire did not start"
+    if [ "$ready" != 1 ]; then
+        tail -n 5 "$scratch/pipewire.log" >&2
+        fail "the private PipeWire did not start"
+    fi
+    wireplumber > "$scratch/wireplumber.log" 2>&1 &
+    wp_pid=$!
+    # wpctl status also succeeds without a session manager. Defaults need its metadata.
+    for _ in $(seq 1 50); do
+        if timeout 2 pw-cli ls Metadata 2>/dev/null | grep -F 'metadata.name = "default"' > /dev/null; then
+            return 0
+        fi
+        kill -0 "$wp_pid" 2>/dev/null || break
+        sleep 0.2
+    done
+    tail -n 5 "$scratch/wireplumber.log" >&2
+    fail "the private WirePlumber did not provide default-device metadata"
 }
 add_node() { # $1 = name, $2 = media class
     timeout 4 pw-cli create-node adapter "{ factory.name=support.null-audio-sink node.name=$1 node.description=$1 media.class=$2 object.linger=true audio.position=[FL,FR] monitor.channel-volumes=true }" > /dev/null
