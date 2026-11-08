@@ -14,7 +14,39 @@ QtObject {
         Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
     }
     property bool _keyboardWanted: ShellSettings.barShowKeyboard
-    on_KeyboardWantedChanged: if (root._keyboardWanted) _keyboardProbe.running = true
+    property int _keyboardRevision: 0
+    property int _keyboardProbeRevision: 0
+    on_KeyboardWantedChanged: root._refreshKeyboard()
+    function _refreshKeyboard(): void {
+        if (!root._keyboardWanted || _keyboardProbe.running) return
+        root._keyboardProbeRevision = root._keyboardRevision
+        _keyboardProbe.running = true
+    }
+    function _acceptKeyboardSnapshot(raw: string, revision: int): void {
+        // a devices reply can arrive after a layout switch; the newer socket event wins
+        if (revision !== root._keyboardRevision) return
+        try {
+            const keyboards = JSON.parse(raw).keyboards
+            if (!Array.isArray(keyboards)) return
+            const physical = keyboards.filter(k => k && !root._isVirtualKeyboard(k.name))
+            const pool = physical.length > 0 ? physical : keyboards.filter(k => !!k)
+            const main = pool.find(k => k.main) || pool[0]
+            root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
+        } catch (e) {}
+    }
+    // wtype, emoji pickers and remote input upload their own keymap, often nameless ("error"), and become main while typing
+    function _isVirtualKeyboard(name): bool {
+        return String(name ?? "").startsWith("hl-virtual-keyboard")
+    }
+    function _updateKeyboardLayout(data): void {
+        const value = String(data ?? "")
+        const comma = value.indexOf(",")
+        if (comma <= 0 || root._isVirtualKeyboard(value.slice(0, comma))) return
+        const layout = SafeText.singleLineText(value.slice(comma + 1), 128)
+        if (layout.length === 0) return
+        root._keyboardRevision++
+        root.keyboardLayout = layout
+    }
     property BoundedProcess _keyboardProbe: BoundedProcess {
         id: _keyboardProbe
         timeoutMs: 3000
@@ -22,12 +54,7 @@ QtObject {
         stdout: StdioCollector { id: _keyboardOut }
         onExited: code => {
             if (!_keyboardProbe.completedSuccessfully(code)) return
-            try {
-                const devices = JSON.parse(_keyboardOut.text)
-                const keyboards = devices.keyboards || []
-                const main = keyboards.find(k => k.main) || keyboards[0]
-                root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
-            } catch (e) { root.keyboardLayout = "" }
+            root._acceptKeyboardSnapshot(_keyboardOut.text, root._keyboardProbeRevision)
         }
     }
 
@@ -517,7 +544,7 @@ QtObject {
     }
 
     Component.onCompleted: {
-        if (root._keyboardWanted) _keyboardProbe.running = true
+        root._refreshKeyboard()
         root._probeUnit()
         root.checkBlur()
         Qt.callLater(function() {
@@ -593,8 +620,7 @@ QtObject {
             root._eventSeq++
             const n = event.name
             if (n === "activelayout") {
-                const value = String(event.data || "")
-                root.keyboardLayout = SafeText.singleLineText(value.slice(value.indexOf(",") + 1), 128)
+                root._updateKeyboardLayout(event.data)
                 return
             }
             // hyprland pairs each event with its v2 form; only v2 carries the title
@@ -646,8 +672,10 @@ QtObject {
                 root.overviewRaw(event.data === "1")
             if (n === "changeworkspaceid")
                 root._requestWorkspaceRefresh("id:" + String(event.data ?? ""))
-            if (n === "configreloaded")
+            if (n === "configreloaded") {
                 root.checkBlur()
+                root._refreshKeyboard()
+            }
             // quickshell 0.3.2 resolves focusedmon's workspace by name and drops a named numbered one (quickshell#1427)
             if (n === "focusedmon") Hyprland.refreshMonitors()
             if (n === "workspacev2" || n === "focusedmon"

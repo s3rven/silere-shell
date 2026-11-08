@@ -5476,6 +5476,38 @@ ShellRoot {
             "unsaved markers and a lone glyph stay in the window title")
         const hypr = Compositor.isHyprland ? Compositor._be : null
         if (hypr) {
+            const keyboardWas = { layout: hypr.keyboardLayout, revision: hypr._keyboardRevision }
+            const keyboardSnapshot = JSON.stringify({ keyboards: [null,
+                { main: false, active_keymap: "English (US)" },
+                { main: true, active_keymap: "Latvian" }] })
+            hypr._acceptKeyboardSnapshot(keyboardSnapshot, hypr._keyboardRevision)
+            root._check(hypr.keyboardLayout === "Latvian",
+                "the keyboard snapshot selects the main keyboard and tolerates a missing entry")
+            const beforeLayoutEvent = hypr._keyboardRevision
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard,English (US, intl.)" })
+            hypr._acceptKeyboardSnapshot(keyboardSnapshot, beforeLayoutEvent)
+            root._check(hypr.keyboardLayout === "English (US, intl.)",
+                "a layout event wins over an older in-flight devices snapshot and preserves commas in the layout")
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "missing delimiter" })
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard," })
+            hypr._acceptKeyboardSnapshot('{"keyboards":{}}', hypr._keyboardRevision)
+            hypr._acceptKeyboardSnapshot("not JSON", hypr._keyboardRevision)
+            root._check(hypr.keyboardLayout === "English (US, intl.)"
+                    && hypr._keyboardRevision === beforeLayoutEvent + 1,
+                "malformed keyboard events and snapshots preserve the last known layout")
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "hl-virtual-keyboard-wtype,error" })
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "hl-virtual-keyboard,English (US)" })
+            hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
+                { name: "hl-virtual-keyboard-wtype", main: true, active_keymap: "error" },
+                { name: "at-translated-set-2-keyboard", main: false, active_keymap: "Latvian" }] }),
+                hypr._keyboardRevision)
+            root._check(hypr.keyboardLayout === "Latvian" && hypr._keyboardRevision === beforeLayoutEvent + 1,
+                "a virtual keyboard's own keymap never replaces the physical keyboard's layout")
+            hypr._acceptKeyboardSnapshot('{"keyboards":[]}', hypr._keyboardRevision)
+            root._check(hypr.keyboardLayout === "",
+                "a valid snapshot with no keyboard clears its removed layout")
+            hypr.keyboardLayout = keyboardWas.layout
+            hypr._keyboardRevision = keyboardWas.revision
             root._check(hypr.blurBlockerFrom('{"version": "0.55.4"}{"bool": true}') === "Needs Hyprland 0.56"
                     && hypr.blurBlockerFrom('{"tag": "v0.54.0"}') === "Needs Hyprland 0.56",
                 "a Hyprland without the blur protocol is named on the blur row")

@@ -23,6 +23,8 @@ settings file carries its own `__version` and migrates separately.
 - Installing an update right after changing a setting no longer fails with "Settings could not be saved before the update" while the settings file is being read back.
 - `silere reset` no longer starts a shell that was not running, or stops one it cannot bring back, because a service for the checkout is installed but stopped and disabled.
 - An update keeps its rollback until this checkout's shell is seen running, even while a service for another checkout is up.
+- The keyboard widget keeps showing your keyboard's layout while wtype, an emoji picker or remote input types, instead of "ER" or that tool's layout.
+- The keyboard widget no longer falls back to an older layout read while you switched, and follows a layout changed by a Hyprland config reload.
 
 ## Releases
 
