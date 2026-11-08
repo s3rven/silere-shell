@@ -13,235 +13,240 @@
 
 <p align="center">
   A desktop shell for <b>Hyprland</b> and <b>niri</b>, built on
-  <a href="https://quickshell.org/">Quickshell</a>.<br/>
-  <i>Quiet on the surface. Over-engineered underneath.</i>
+  <a href="https://quickshell.org/">Quickshell</a>.
 </p>
+
+<p align="center">
+  <a href="#getting-started">Get started</a> ·
+  <a href="#getting-around">Controls</a> ·
+  <a href="docs/README.md">Documentation</a> ·
+  <a href="#when-somethings-wrong">Help</a>
+</p>
+
+Silere is the bar, notifications, tray and quick settings I use on my own desktop.
+It runs in one process and can take the place of Waybar and a notification daemon
+such as mako or dunst.
+
+You keep your compositor setup and dotfiles, and choose your own launcher, wallpaper
+tool and lock screen.
 
 <p align="center">
   <img src="assets/shot-hero.webp" alt="Silere's menu open on Home beside a notification, on a dark KISS Linux wallpaper" width="960"/>
 </p>
 
-Silere is the bar, notifications, OSD, tray and quick settings I use every day, in one
-process. It replaces waybar, mako or dunst and the small scripts around them. Your
-compositor config, launcher, wallpaper tool and lock screen stay as they are.
+## What's included
 
-[Try it](#try-it-first) · [Install](#install) · [Controls](docs/usage.md) · [Fix a problem](docs/troubleshooting.md) · [All docs](docs/README.md)
+| Feature | What you get |
+|---|---|
+| Bar | Workspaces with app icons, window title, media, system readings, tray and clock. Choose the widgets and their order. |
+| Quick settings | Output, microphone and per-app volume; brightness; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake. |
+| Notifications | Actions, inline replies, conversation grouping, searchable history, app muting and Do Not Disturb. |
+| Media | Album art, seeking, player switching and an optional Cava visualizer. |
+| On-screen display | Volume, brightness, power mode changes and battery warnings, floating or inside the bar. |
+| Appearance | Wallpaper colours through Matugen, dark and light modes, a custom accent and adjustable interface size. |
+| Updates | Signed releases from the menu, validation before installation and rollback to the previous version. |
 
-## Philosophy
+<p align="center">
+  <img src="assets/shot-bar.webp" alt="Silere's floating bar with workspaces, media, system readings, network, volume, brightness, battery and clock" width="960"/>
+</p>
 
-**Quiet.** Keep everyday information easy to glance at. Bring controls and detail
-forward when needed, then return attention to your work.
+<details>
+<summary>More screenshots: media, calendar, settings and colours</summary>
 
-**Efficient.** Do work when it serves the desktop. Avoid unnecessary polling,
-disk writes and animations, and pause activity when it is no longer useful.
+<p align="center">
+  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar" width="820"/>
+</p>
 
-**Independent.** Fit into the desktop you already have. Keep your distribution,
-compositor configuration and dotfiles, and choose the tools that run alongside Silere.
+<p align="center">
+  <img src="assets/shot-settings.webp" alt="Theme settings for colour source, accent, base tone and bar surfaces" width="720"/>
+</p>
 
-**Over-engineered.** Silere looks simple on purpose. The work is in what you never see:
-what happens when a tool hangs, an app misbehaves or a session runs for days.
-[Under the hood](#under-the-hood) shows it.
+<p align="center">
+  <img src="assets/shot-themes.webp" alt="The Home panel using amber wallpaper colours and Matugen's light mode" width="820"/>
+</p>
 
-## Try it first
+</details>
 
-See the whole shell in a window before you change anything:
+## Getting started
+
+You'll need a Linux desktop running **Hyprland or niri**, and **Quickshell 0.3.1 or newer**
+built against **at least Qt 6.10**. On Arch Linux:
+
+```bash
+sudo pacman -S --needed quickshell git curl ttf-jetbrains-mono-nerd
+```
+
+For other distributions, see [Quickshell's installation guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
+Icons need a Nerd Font; the installer can download JetBrainsMono Nerd Font, or you
+can [install it before the preview](docs/install.md#fonts).
+
+On Hyprland 0.57 or newer, use Quickshell 0.3.2 or newer for
+[named and special workspaces](docs/troubleshooting.md#special-or-named-workspaces-misbehave-after-a-hyprland-update).
+
+### Try it first
+
+From a Wayland session, open the shell in a window. The preview also needs
+`dbus-run-session` and `setsid`:
 
 ```bash
 git clone --depth 1 https://github.com/s3rven/silere-shell
-bash silere-shell/scripts/silere try
+cd silere-shell
+bash scripts/silere try
 ```
 
-It runs on a private session beside your current setup. Your bar, notifications and settings
-aren't touched, and closing the window removes it. You need Quickshell, and Hyprland or niri.
+The preview uses a separate session and temporary settings. Close the window to end
+it and remove its temporary files. Audio, network and Bluetooth controls use your
+real devices.
 
-## Install
+**Alt + /** opens the preview's menu. Once installed, you can open another preview
+with `silere try`.
 
-You need a Linux desktop running **Hyprland or niri**, and **Quickshell 0.3.1 or newer**
-built against **at least Qt 6.10**. On Arch:
+### Install
+
+Run the installer as your normal user. Before accepting its offer to start Silere,
+stop your current bar and notification daemon:
 
 ```bash
-sudo pacman -S --needed quickshell git curl
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
 ```
 
-Stop your old bar and notification daemon, then run this in a terminal inside your
-Wayland session:
+Or, from inside the clone used for the preview:
+
+```bash
+bash scripts/install.sh
+```
+
+The installer checks QML dependencies and offers autostart and a `silere` command
+in `~/.local/bin`. It asks before editing your compositor config and backs up what
+it changes. The default install directory is `~/.config/silere-shell`.
+
+If the installer hasn't already started it, run this inside your Hyprland or niri
+session:
 
 ```bash
 silere run
 ```
 
-The installer offers fonts, autostart, a menu shortcut and the `silere` command. It asks
-before editing your compositor config and backs up what it changes. `silere uninstall`
-removes all of that and keeps your settings.
+If `silere` isn't on your `PATH`, use `~/.config/silere-shell/scripts/silere run`,
+or substitute your install path.
 
-For other distributions, start with [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
-The [installation guide](docs/install.md) covers installing from a clone, previewing
-changes, choosing a directory with `--dir`, unattended setup with `--yes`, and crash
-recovery. If `silere` is not on your `PATH`, run
-`~/.config/silere-shell/scripts/silere run`, using your install path if it differs.
-
-## What's in it
-
-| | |
-|---|---|
-| **Bar** | Workspaces with app icons, window title, media, network, volume, brightness, battery, tray, clock and a system monitor. You choose what shows and in what order. |
-| **Menu** | Volume per output and per app, brightness, Wi-Fi, Bluetooth, VPN, power mode, night light, Keep Awake and Do Not Disturb. |
-| **Notifications** | Actions, inline replies and searchable history. A conversation stays on one card, and you can mute any app. Volume scripts written for dunst or mako replace their card instead of stacking. |
-| **Now Playing** | Cover art, seeking, player switching and an optional visualizer. |
-| **OSD** | Volume, brightness, power mode changes and battery warnings, floating or built into the bar. |
-| **Colours** | Taken from your wallpaper through Matugen, in its dark or light mode, or an accent you pick. |
-| **Updates** | Signed releases, installed from the menu. `silere update --rollback` puts the last version back. |
-
-<p align="center">
-  <img src="assets/shot-surfaces.webp" alt="The Now Playing panel with cover art and seeking, and the calendar opened from the clock" width="820"/>
-</p>
-
-The menu stays out of the way until you ask for it. Most of the time, this is all you see:
-
-<p align="center">
-  <img src="assets/shot-bar.webp" alt="Silere's floating bar: workspaces and the playing track on the left; system readings, network, volume, brightness, battery and the clock on the right" width="960"/>
-</p>
-
-## What it leaves to you
-
-Silere doesn't include an app launcher, wallpaper picker, lock screen, clipboard manager
-or AI assistant. It calls the tools you already use, and Settings is where you point it
-at them. It won't set up your system or replace your dotfiles either.
-
-This is what I run next to it. None of it is required, and any of it can be swapped.
-
-| For | I use |
-|---|---|
-| Launcher, clipboard history, file search, window switching | [Vicinae](https://github.com/vicinaehq/vicinae) |
-| Wallpaper | [awww](https://codeberg.org/LGFae/awww) |
-| Colours from the wallpaper | [Matugen](https://github.com/InioX/matugen) |
-| Lock screen and idle | [hyprlock](https://github.com/hyprwm/hyprlock) and [hypridle](https://github.com/hyprwm/hypridle) |
-| Night light | [hyprsunset](https://github.com/hyprwm/hyprsunset) |
-| Screenshots | [grim](https://gitlab.freedesktop.org/emersion/grim), [slurp](https://github.com/emersion/slurp) and [Satty](https://github.com/gabm/Satty) |
-| Audio visualizer | [cava](https://github.com/karlstav/cava) |
+See the [installation guide](docs/install.md) for a dry run, custom directories,
+unattended setup and crash recovery. `silere uninstall` removes the installer's
+integrations and keeps your settings.
 
 ## Getting around
 
-| To open | Do this |
+| Panel | How to open it |
 |---|---|
-| Menu | Click the active workspace, or Super + / if you took the shortcut |
+| Menu | Click the active workspace |
 | Quick actions | Right-click the active workspace |
 | Calendar | Click the clock |
 | Now Playing | Right-click the media widget |
 
-Escape steps back one level, then closes. Tab, Shift+Tab, Enter and the arrow keys work
-through the controls, and an open dropdown takes typing to find a row.
-[docs/usage.md](docs/usage.md) lists the rest.
+The installer offers **Super + /** as a menu shortcut on Hyprland. On niri, add the
+line it prints to your existing `binds` block.
+
+Use Tab and Shift+Tab to move between controls, Enter or Space to activate them,
+and the arrow keys for lists and sliders. Escape steps back, then closes the panel.
+Type in an open dropdown to find an option.
+
+The [usage guide](docs/usage.md) covers the other clicks, shortcuts and scroll
+actions. For a menu keybind of your own, use `silere ipc menu toggle`;
+the [scripting guide](docs/scripting.md) lists IPC commands and event hooks.
 
 ## Settings
 
-Everything is in the menu under **Settings** and applies as you change it. A page you've
-changed shows a dot in the sidebar, and **Settings › System › Overview** restores the
-defaults, or `silere reset` if the menu won't open. Press **Ctrl+F** in Settings to find an option by name or feature.
+Open **Settings** in the menu to change the bar layout, colours, interface size and
+behaviour. Most changes apply immediately. Press **Ctrl+F** to find an option by
+name or feature; a dot in the sidebar marks pages you've changed.
 
-<p align="center">
-  <img src="assets/shot-settings.webp" alt="The Theme page in Settings: colour source, accent, base tone and bar surfaces" width="720"/>
-</p>
+Choose an accent manually, or use your wallpaper's colours with
+[Matugen](docs/install.md#matugen). The installer offers to configure it when
+Matugen is installed.
 
-Colours come from your wallpaper through Matugen, in its dark or light mode, or from one accent you pick:
+Preferences live in `~/.config/silere-shell/settings.json`, or
+`$XDG_CONFIG_HOME/silere-shell/settings.json` when you've set an absolute config
+root. The file stores only values that differ from the defaults.
 
-<p align="center">
-  <img src="assets/shot-themes.webp" alt="The Home panel twice: amber colours taken from an amber wallpaper, and Matugen's light mode" width="820"/>
-</p>
+Restore defaults from **Settings › System › Overview**. If the menu won't open,
+`silere reset` previews a reset from the terminal. See
+[settings and resets](docs/usage.md#settings) for the details.
 
-Preferences live in `~/.config/silere-shell/settings.json`, which only stores what differs
-from the defaults. A custom `$XDG_CONFIG_HOME` changes that location.
-See [everyday use](docs/usage.md#settings) for customisation and
-[scripting](docs/scripting.md) for keybinds, IPC calls and event hooks.
+## Other desktop tools
+
+These are the tools I use alongside Silere. None are required to start the shell.
+
+| For | I use |
+|---|---|
+| Launcher, clipboard history, file search and window switching | [Vicinae](https://github.com/vicinaehq/vicinae) |
+| Wallpaper | [awww](https://codeberg.org/LGFae/awww) |
+| Colours from the wallpaper | [Matugen](https://github.com/InioX/matugen) |
+| Lock screen and idle | [hyprlock](https://github.com/hyprwm/hyprlock) and [hypridle](https://github.com/hyprwm/hypridle) |
+| Night light | [hyprsunset](https://github.com/hyprwm/hyprsunset) on Hyprland; [wlsunset](docs/troubleshooting.md#night-light-is-unavailable-on-niri) on niri |
+| Screenshots | [grim](https://gitlab.freedesktop.org/emersion/grim), [slurp](https://github.com/emersion/slurp) and [Satty](https://github.com/gabm/Satty) |
+| Audio visualizer | [Cava](https://github.com/karlstav/cava) |
+
+Silere detects helpers for its controls and lists missing ones in Settings. See the
+[optional tools table](docs/install.md#optional-tools) for packages that enable
+brightness, audio, VPN and other features.
 
 ## Useful commands
 
 | Command | What it does |
 |---|---|
-| `silere run` | Start the shell, or report that it is already running. |
-| `silere stop` | Stop the shell and its user service, when installed. |
-| `silere restart` | Restart the shell after an update or config change. |
-| `silere doctor` | Check the setup without changing it. |
-| `silere reset` | Go back to a fresh install, with a way back. It previews first. |
-| `silere log --follow` | Follow the running shell's log. |
-| `silere update` | Check for a signed release. |
-| `silere help` | List all commands. |
+| `silere run` | Start the shell |
+| `silere stop` | Stop the shell, including its optional user service |
+| `silere restart` | Restart the shell |
+| `silere status` | Show the running checkout and update state |
+| `silere doctor` | Check the setup without changing it |
+| `silere log --follow` | Follow the running shell's log |
+| `silere update` | Check for a signed release |
+| `silere update --apply` | Validate and install the release |
+| `silere update --rollback` | Restore the version an update replaced |
+| `silere reset` | Preview a reset of settings, local edits and caches |
 
-Installing a release uses `silere update --apply`; undoing it uses
-`silere update --rollback`. See [updates and recovery](docs/updates.md).
+Run `silere help` for all commands. Releases can also be installed from
+**Settings › System › Overview**. See [updates and recovery](docs/updates.md)
+for automatic checks, local edits and rollback.
 
 ## Under the hood
 
-**It doesn't look like much. That's the point.** Silere is the bar, notifications and menus
-on the machine I use all day, so it has to keep working when things around it don't. I'd
-rather ship a reliable shell than a fragile small one.
+Animations and system readings pause when the session goes idle. The visualizer,
+network speed, clock seconds and underline effects start switched off.
 
-### Tested
+The [1.6.0 measurements](docs/perf-history.md) below used the reference laptop with
+the session locked, the visualizer off and [service tuning](docs/performance.md#optional-tuning):
 
-About 24,000 lines of test tooling sit next to 43,000 lines of shell. Every change has to pass:
-
-| Check | What it does |
+| Measurement | Result |
 |---|---|
-| Logic | 2,500+ checks on services, parsers and state machines. |
-| UI stress | 1,300+ checks with real pointer and wheel events, over 120 cycles. |
-| Live settings | 192 settings states changed underneath 60 surfaces. |
-| Popups | 107 behaviours, such as the bar changing under an open popup. |
-| Layout | Menu labels have to fit at every interface size from 100% to 150%. |
-| Real compositors | A whole shell in private Hyprland, niri and KWin sessions, with outputs added and removed. |
-| Real audio | A private PipeWire with no hardware: volume feedback, a device replaced under its name, daemons restarting. |
-| Oldest supported | The minimum Quickshell and Qt, plus 125% and 150% display scaling, in CI. |
+| Memory after startup | 78 MB PSS |
+| Memory after one menu open and close | 86 MB PSS |
+| Average idle CPU | 0.2% of one core |
 
-An update has to start cleanly before it replaces the version you're running.
+These figures depend on the hardware, fonts, enabled widgets and tuning. The
+[performance guide](docs/performance.md) explains PSS, records the test conditions
+and shows how to measure your own setup.
 
-### Attacked
-
-[`dev/test-faults.sh`](docs/testing.md#fault-injection) tries to break a running shell:
-
-- Every tool it calls hangs forever, fails, returns garbage or returns nothing.
-- Notifications arrive with 5 MB bodies, 60,000 combining marks on one character and the wrong type in every field.
-- Media players send cover art urls that try to run commands, and thousands of signals a second.
-- Tray items send broken icons and huge titles.
-
-The shell has to stay up and responsive, throw no script errors and leave no stuck process behind.
-If something still takes it down, it's back in about a second with your notification history intact.
-[The known limits](docs/testing.md#fault-injection) are written down too.
-
-### Measured
-
-Releases record their memory and CPU in the [performance history](docs/perf-history.md).
-An optimization that doesn't measure better doesn't ship.
-
-| On my laptop | |
-|---|---|
-| Memory at start | About 80 MB |
-| Memory once the menu has opened | About 95 MB |
-| CPU at idle | About 0.2% of one core |
-| Activity at idle | No processes started, nothing written to disk |
-| Bar on screen after a restart | Under a second |
-
-Those memory numbers use the [optional tuning](docs/performance.md#optional-tuning), with the
-visualizer playing. Yours will depend on your hardware, fonts and which widgets you turn on.
-[docs/performance.md](docs/performance.md) has the measurements and how to take your own.
-
-The visualizer, network speed, clock seconds and underline effects start switched off, and
-animations and system readings stop when the session goes idle.
-
-Tools such as cava, Matugen and brightnessctl are optional. Without one, its feature is off and
-Settings tells you what's missing. The [optional tools table](docs/install.md#optional-tools)
-explains which package enables each feature.
+The test suite covers service logic, keyboard and pointer input, live settings,
+layout fit and display scaling. Integration tests use private compositor and
+PipeWire sessions; fault tests exercise hung tools and malformed notifications,
+media metadata and tray items. The [testing guide](docs/testing.md) describes the
+checks, CI coverage and known limits.
 
 ## When something's wrong
 
-`silere doctor` checks your setup, `silere log --follow` shows the log and `silere restart`
-restarts the shell. [Common problems](docs/troubleshooting.md) covers the usual fixes.
+Start with `silere doctor` and the [troubleshooting guide](docs/troubleshooting.md).
+For a bug report, include the output of `silere version`, the steps to reproduce
+it and the relevant errors. [Reporting a problem](docs/troubleshooting.md#reporting-a-problem)
+explains where to find logs, including when the shell won't start.
 
 [Ask a question](https://github.com/s3rven/silere-shell/discussions) · [Report a bug](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml)
 
 ## Contributing
 
-Fixes, ideas and documentation changes are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
-and [the code guide](docs/forking.md).
+Fixes, ideas and documentation changes are welcome. Read the
+[contributing guide](CONTRIBUTING.md) for checks and commit conventions, or the
+[code guide](docs/forking.md) for the project layout.
 
 ### On AI assistance
 
