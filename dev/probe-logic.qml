@@ -2192,6 +2192,39 @@ ShellRoot {
             Weather._place = placeWas
             root._check(!Weather.loading && !Weather.failed && !Weather.hasData,
                 "disabling weather clears a retried request and its previous reading")
+
+            discoveryClock.wait(30)
+            let lookupStarts = 0
+            const countLookupStart = () => { if (lookup.running) lookupStarts++ }
+            lookup.runningChanged.connect(countLookupStart)
+            lookup.command = ["sleep", "2"]
+            Weather._place = null
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather.loading = false
+            Weather.request(true)
+            const firstStartDeadline = Date.now() + 1000
+            while (lookupStarts < 1 && Date.now() < firstStartDeadline) discoveryClock.wait(10)
+            root._check(lookupStarts === 1 && lookup.running && Weather.loading,
+                "the weather cancellation fixture starts a location lookup")
+            ShellSettings.weatherEnabled = false
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather.loading = false
+            Weather.request(true)
+            const restartDeadline = Date.now() + 1000
+            while (lookupStarts < 2 && Date.now() < restartDeadline) discoveryClock.wait(10)
+            root._check(lookupStarts === 2 && lookup.running && Weather.loading && !Weather.failed,
+                "a quick weather off/on starts a fresh lookup instead of reusing the cancelled request")
+            ShellSettings.weatherEnabled = false
+            const stopDeadline = Date.now() + 1000
+            while (lookup.running && Date.now() < stopDeadline) discoveryClock.wait(10)
+            root._check(!lookup.running && !Weather.loading && !Weather.hasData,
+                "switching weather off stops its location process")
+            if (lookup.running) lookup.running = false
+            lookup.runningChanged.disconnect(countLookupStart)
+            lookup.command = commandWas
+            Weather._place = placeWas
         }
     }
 

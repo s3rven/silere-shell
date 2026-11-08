@@ -35,6 +35,7 @@ Singleton {
     // the time zone's principal city, looked up again only when the zone offset moves
     property var _place: null
     property var _xhr: null
+    property bool _discardLookup: false
 
     // WMO codes: https://open-meteo.com/en/docs#weathervariables
     function conditionFor(code: int): string {
@@ -130,7 +131,13 @@ Singleton {
         if (!force && !root.failed && root.cacheFresh(root._fetchedAt, root._fetchedFor, Date.now())) return
         root.loading = true
         if (root._place) root._fetchForecast()
-        else _zoneProc.running = true
+        else root._startLookup()
+    }
+
+    function _startLookup(): void {
+        if (!root.enabled || !root.loading || root._place
+                || root._discardLookup || _zoneProc.running) return
+        _zoneProc.running = true
     }
 
     function _fail(reason: string): void {
@@ -198,6 +205,11 @@ Singleton {
         command: ["bash", "-c", TimeZonePlace.script]
         stdout: StdioCollector { id: _zoneOut }
         onExited: code => {
+            if (root._discardLookup) {
+                root._discardLookup = false
+                Qt.callLater(root._startLookup)
+                return
+            }
             // turning weather off superseded this lookup while it ran
             if (!root.loading) return
             const found = _zoneProc.completedSuccessfully(code)
@@ -226,5 +238,9 @@ Singleton {
         root.failure = ""
         root._fetchedAt = 0
         root._fetchedFor = ""
+        if (_zoneProc.running) {
+            root._discardLookup = true
+            _zoneProc.running = false
+        }
     }
 }
