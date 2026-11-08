@@ -396,11 +396,14 @@ Singleton {
     }
 
     readonly property int radiusPanel:   14
-    readonly property int radiusCard:    12
-    readonly property int radiusControl: 10
+    // the inner steps follow Roundness in proportion, so Flat squares the cards inside a square menu
+    // instead of leaving them round; the stock 14 keeps the steps below exactly
+    function _rounded(base: int): int { return Math.round(base * _surfaceRadiusTarget / radiusPanel) }
+    readonly property int radiusCard:    _rounded(12)
+    readonly property int radiusControl: _rounded(10)
     // one step tighter than a control: nav and rail rows, inline wells, compact action buttons
-    readonly property int radiusInline:   8
-    readonly property int radiusField:    6
+    readonly property int radiusInline:  _rounded(8)
+    readonly property int radiusField:   _rounded(6)
     readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
         ? ShellSettings.barRadius
         : radiusPanel

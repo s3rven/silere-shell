@@ -85,7 +85,7 @@ PanelWindow {
                     Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)) / 2)
                 readonly property real pillRadius: ShellSettings.osdMatchBar
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
-                    : Math.min(Theme.radiusPanel, pillH / 2)
+                    : Math.min(Theme.surfaceRadius, pillH / 2)
                 readonly property real _hiddenSlide: osd._bottom ? 7 : -7
                 readonly property Item blurItem: Theme.frosted
                     && _osdPillFill.color.a < 1 && card._op > 0 ? _blurBox : null

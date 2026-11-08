@@ -58,7 +58,8 @@ Item {
             // a held knob stretches toward where it will travel; its outer edge stays pinned
             width: root.pressed ? root._knobSize + Metrics.devicePx(5, root._dpr) : root._knobSize
             height: root._knobSize
-            radius: 4
+            // concentric with the track, so the inset stays even around the corners at any roundness
+            radius: Math.max(0, _track.radius - root._inset)
             antialiasing: true
             x: root.checked ? Metrics.devicePx(parent.width, root._dpr) - width - root._inset : root._inset
             // the same hover lift as the slider handle; a smaller one rounds to nothing at 1.25

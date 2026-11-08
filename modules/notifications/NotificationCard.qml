@@ -567,7 +567,7 @@ Item {
         ClippingRectangle {
             visible: card.showIconSlot
             width: 24; height: 24
-            radius: 6
+            radius: Theme.radiusField
             color: "transparent"
             anchors.top:        parent.top
             anchors.left:       parent.left
@@ -716,7 +716,7 @@ Item {
                 visible: card.showContentImage
                 width:  parent.width
                 height: Math.round(Math.min(150, parent.width * 0.5))
-                radius: 8
+                radius: Theme.radiusInline
                 color:  "transparent"
                 antialiasing: true
 

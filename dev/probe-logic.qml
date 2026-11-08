@@ -4510,6 +4510,16 @@ ShellRoot {
                 && ShellSettings._dotHidden("separators", "barSeparatorMode") === true
                 && ShellSettings._dotHidden("separators", "dotStyle") === false,
             "a docked bar hides its width and dots set to none hide their placement")
+        const savedRadius = ShellSettings.barRadius
+        ShellSettings.barRadius = 0
+        const docked = [Theme.radiusCard, Theme.radiusControl, Theme.radiusInline, Theme.radiusField].join()
+        ShellSettings.barFloating = true
+        const flat = [Theme.radiusCard, Theme.radiusInline, Theme.radiusField].join()
+        ShellSettings.barRadius = 21
+        root._check(docked === "12,10,8,6" && flat === "0,0,0"
+                && Theme.radiusCard === 18 && Theme.radiusField === 9,
+            "inner corners follow a floating bar's roundness and keep the stock steps when docked")
+        ShellSettings.barRadius = savedRadius
         ShellSettings.barFloating = savedFloating
         ShellSettings.dotStyle = savedDots
 

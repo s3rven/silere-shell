@@ -79,7 +79,7 @@ Item {
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         anchors.centerIn: parent
         anchors.alignWhenCentered: false
-        width: Metrics.devicePx(30, _dpr); height: width; radius: 9
+        width: Metrics.devicePx(30, _dpr); height: width; radius: Theme.radiusInline
         transform: PixelSnap { item: _activeBg; dpr: _activeBg._dpr }
         antialiasing: true
         color: _tap.pressed

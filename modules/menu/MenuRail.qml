@@ -172,7 +172,7 @@ Item {
             + _slot * (_railHome.height + _railNav.spacing)
         // 30px is 37.5 device px at 1.25; whole pixels at a snapped position keep its outline even
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-        width: Metrics.devicePx(30, _dpr); height: width; radius: 9
+        width: Metrics.devicePx(30, _dpr); height: width; radius: Theme.radiusInline
         antialiasing: true
         color: Theme.menuControl
         transform: PixelSnap { item: _railSelection; dpr: _railSelection._dpr }
@@ -295,7 +295,7 @@ Item {
                 anchors.centerIn: parent
                 anchors.alignWhenCentered: false
                 width: Metrics.devicePx(22, _dpr); height: width
-                radius: 6
+                radius: Theme.radiusField
                 color: Theme.menuControl
                 opacity: Media.playing ? 1 : 0.55
                 transform: PixelSnap { item: _railCover; dpr: _railCover._dpr }
