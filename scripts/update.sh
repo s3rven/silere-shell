@@ -774,8 +774,9 @@ _set_timer() {
         systemctl --user enable --now "$TIMER_UNIT" >/dev/null \
             || _fail "could not enable $TIMER_UNIT"
     else
-        systemctl --user disable --now "$TIMER_UNIT" >/dev/null 2>&1 || true
-        systemctl --user daemon-reload
+        systemctl --user disable --now "$TIMER_UNIT" >/dev/null 2>&1 \
+            || _fail "could not disable $TIMER_UNIT"
+        systemctl --user daemon-reload || _fail "systemctl daemon-reload failed"
     fi
 }
 

@@ -62,6 +62,8 @@ are updated through the system package manager.
 
 The installer's optional update timer checks for Silere releases. Installing one
 still needs confirmation. It does not silently install a new shell version.
+If a timer change fails, Settings shows the error and refreshes the switch to
+match the timer's actual state.
 
 The bar's package update badge counts distribution and AUR packages separately
 from Silere releases. Use your package manager to install those updates.

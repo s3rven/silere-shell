@@ -970,6 +970,39 @@ test_atomic_update_cache() (
     assert_eq "755" "$(stat -c '%a' "$real_cache")" "cache symlink target mode"
 )
 
+test_update_timer_failures() (
+    local test_home="$TMP/update-timer-home" stub_dir="$TMP/update-timer-stubs" out
+    mkdir -p "$test_home" "$stub_dir"
+    cat > "$stub_dir/systemctl" <<'EOF'
+#!/bin/sh
+case "$*" in
+    *"disable --now silere-update.timer"*)
+        [ "${SILERE_TIMER_FAILURE:-}" != disable ] || exit 1 ;;
+    *daemon-reload*)
+        [ "${SILERE_TIMER_FAILURE:-}" != reload ] || exit 1 ;;
+esac
+exit 0
+EOF
+    chmod +x "$stub_dir/systemctl"
+
+    _disable_timer() {
+        XDG_CONFIG_HOME="$test_home/config" XDG_CACHE_HOME="$test_home/cache" \
+            XDG_STATE_HOME="$test_home/state" PATH="$stub_dir:$PATH" \
+            bash "$ROOT/scripts/update.sh" --timer-disable
+    }
+    if out="$(SILERE_TIMER_FAILURE=disable _disable_timer 2>&1)"; then
+        fail "a failed timer disable was reported as successful"
+    fi
+    grep -qF 'could not disable silere-update.timer' <<<"$out" \
+        || fail "a failed timer disable did not explain what failed"
+    if out="$(SILERE_TIMER_FAILURE=reload _disable_timer 2>&1)"; then
+        fail "a failed timer daemon reload was reported as successful"
+    fi
+    grep -qF 'systemctl daemon-reload failed' <<<"$out" \
+        || fail "a failed timer daemon reload did not explain what failed"
+    _disable_timer >/dev/null || fail "disabling the timer could not recover after a failure"
+)
+
 test_shared_launcher() (
     local stub_dir="$TMP/launcher-stubs"
     local capture="$TMP/launcher-default.out"

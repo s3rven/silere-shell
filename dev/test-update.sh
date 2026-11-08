@@ -16,6 +16,7 @@ if ! command -v git >/dev/null 2>&1 || ! command -v ssh-keygen >/dev/null 2>&1; 
 fi
 
 test_atomic_update_cache
+test_update_timer_failures
 test_update_lock_survives_orphaned_child
 test_installation_mode_detection
 test_candidate_runtime_isolation
