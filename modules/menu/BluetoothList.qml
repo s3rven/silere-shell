@@ -57,6 +57,16 @@ Item {
         width: parent.width
         spacing: 0
 
+        SelectRow {
+            visible: root.open && Bluetooth.adapterCount > 1
+            glyph: "󰂯"
+            label: "Controller"
+            description: "Applies to this session"
+            model: Bluetooth.adapterChoices
+            currentValue: Bluetooth.adapterChoice
+            onChosen: value => Bluetooth.selectAdapter(String(value))
+        }
+
         InlineOptionRow {
             visible: root.open
             glyph: "󰌌"

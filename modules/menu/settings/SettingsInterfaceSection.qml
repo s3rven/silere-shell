@@ -135,6 +135,21 @@ Column {
         }
     }
 
+    CollapsibleSection {
+        expanded: Bluetooth.adapterCount > 1
+        SectionLabel { label: "BLUETOOTH" }
+        SettingsCard {
+            SelectRow {
+                glyph: "󰂯"
+                label: "Controller"
+                description: "Applies to this session"
+                model: Bluetooth.adapterChoices
+                currentValue: Bluetooth.adapterChoice
+                onChosen: value => Bluetooth.selectAdapter(String(value))
+            }
+        }
+    }
+
     SectionLabel { label: "MENU" }
     SettingsCard {
         ToggleRow {

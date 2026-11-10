@@ -7,7 +7,38 @@ import Quickshell.Bluetooth as Bt
 Singleton {
     id: root
 
-    readonly property var adapter: Bt.Bluetooth.defaultAdapter
+    readonly property var _adapters: Bt.Bluetooth.adapters ? (Bt.Bluetooth.adapters.values || []) : []
+    readonly property var _defaultAdapter: Bt.Bluetooth.defaultAdapter
+    // a session choice holds the actual controller, so a recycled hci id never selects another radio
+    property var _chosenAdapter: null
+    readonly property var adapter: root.adapterFor(root._adapters, root._defaultAdapter, root._chosenAdapter)
+    readonly property int adapterCount: root._adapters.filter(a => a).length
+    readonly property string adapterChoice: root._chosenAdapter && root._adapters.indexOf(root._chosenAdapter) >= 0
+        ? String(root._chosenAdapter.adapterId) : ""
+    readonly property var adapterChoices: [{ value: "", label: "Automatic" }].concat(
+        root._adapters.filter(a => a).map(a => ({ value: String(a.adapterId),
+            label: (SafeText.singleLineText(a.name || "", 96) || "Bluetooth") + " (" + a.adapterId + ")" })))
+
+    function adapterFor(adapters, automatic, chosen): var {
+        const list = (adapters || []).filter(a => a)
+        if (chosen && list.indexOf(chosen) >= 0) return chosen
+        if (automatic && list.indexOf(automatic) >= 0) return automatic
+        return list.length > 0 ? list[0] : null
+    }
+
+    function selectAdapter(id: string): bool {
+        if (id.length === 0) { root._chosenAdapter = null; return true }
+        const next = root._adapters.find(a => a && a.adapterId === id)
+        if (!next) return false
+        root._chosenAdapter = next
+        return true
+    }
+
+    on_AdaptersChanged: Qt.callLater(root._releaseMissingAdapter)
+    function _releaseMissingAdapter(): void {
+        if (root._chosenAdapter && root._adapters.indexOf(root._chosenAdapter) < 0)
+            root._chosenAdapter = null
+    }
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
     // bluez reports any rfkill block as Blocked; blueman powers off with a soft block, which only rfkill lifts, while a hardware switch refuses both
