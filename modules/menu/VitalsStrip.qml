@@ -11,6 +11,8 @@ SettingsCard {
     id: root
 
     property bool active: true
+    property bool batteryExpanded: false
+    signal batteryActivated()
     readonly property bool _motionAllowed: root.active
         && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
     on_MotionAllowedChanged: if (!root._motionAllowed) {
@@ -69,6 +71,7 @@ SettingsCard {
         property bool   live: true
         // a reading that has a fuller view opens the system monitor
         property bool   openable: false
+        property string actionDescription: "Opens the system monitor"
         property real   topRadius: 0
         signal activated()
 
@@ -97,8 +100,8 @@ SettingsCard {
         Accessible.role: tile.openable ? Accessible.Button : Accessible.StaticText
         Accessible.name: tile.label + " " + tile.value
         Accessible.description: tile.openable && tile.sub.length > 0
-            ? tile.sub + ". Opens the system monitor"
-            : tile.openable ? "Opens the system monitor" : tile.sub
+            ? tile.sub + ". " + tile.actionDescription
+            : tile.openable ? tile.actionDescription : tile.sub
         Accessible.focusable: tile.openable && root.active
         Accessible.onPressAction: if (tile.openable) tile.activated()
         KeyboardFocus { interactive: tile.openable && root.active; onActivated: tile.activated() }
@@ -305,10 +308,15 @@ SettingsCard {
         status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
     }
 
+    InlinePicker { id: _batteryAbove; mirror: _batteryPicker }
+
     Vital {
         id: _battery
         live: root.active
         visible: Battery.available
+        openable: Battery.details.length > 0
+        actionDescription: "Shows battery details"
+        onActivated: root.batteryActivated()
         glyph: Battery.icon
         label: "Battery"
         value: Battery.available ? Battery.label : "—"
@@ -316,5 +324,11 @@ SettingsCard {
         progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
         status: Battery.critical ? 2 : (Battery.low ? 1 : 0)
         pulse: Battery.alertPulse
+    }
+
+    InlinePicker {
+        id: _batteryPicker
+        open: root.batteryExpanded && Battery.details.length > 0
+        content: Component { BatteryDetails {} }
     }
 }

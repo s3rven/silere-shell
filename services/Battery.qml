@@ -80,6 +80,56 @@ Singleton {
 
     readonly property string label: available ? `${Math.round(pct)}%` : ""
 
+    function _powerDevices(values): var {
+        return (values || []).filter(d => d && d.ready && d.isPresent && d.powerSupply
+            && (d.type === UPowerDeviceType.Battery || d.type === UPowerDeviceType.Ups))
+    }
+
+    readonly property StableObjectList _detailDevices: StableObjectList {
+        source: root._powerDevices(UPower.devices ? UPower.devices.values : [])
+    }
+    readonly property var details: root.detailsFor(root._detailDevices.values)
+
+    function _measurement(value): bool {
+        return typeof value === "number" && isFinite(value) && value >= 0
+    }
+
+    function measurementText(value: real): string {
+        return value.toFixed(1).replace(/\.0$/, "")
+    }
+
+    function detailsFor(devices): var {
+        const list = root._powerDevices(devices)
+        return list.map(device => {
+            const ups = device.type === UPowerDeviceType.Ups
+            const base = ups ? "UPS" : "Battery"
+            const name = SafeText.singleLineText(device.model || "", 96)
+            const state = device.state
+            const charging = state === UPowerDeviceState.Charging
+            const discharging = state === UPowerDeviceState.Discharging
+            const charge = root._measurement(device.percentage)
+                ? root.normalizedPercent(device.percentage) : -1
+            // health is UPower's Capacity in 0-100; only charge is scaled to 0-1
+            const health = device.healthSupported && root._measurement(device.healthPercentage)
+                && device.healthPercentage > 0 ? Math.min(100, device.healthPercentage) : -1
+            const energy = root._measurement(device.energy) && root._measurement(device.energyCapacity)
+                && device.energyCapacity > 0
+                ? root.measurementText(device.energy) + " / " + root.measurementText(device.energyCapacity) + " Wh" : ""
+            // UPower's EnergyRate is negative while charging by its spec; some backends report it that way
+            const rate = charging && typeof device.changeRate === "number" ? Math.abs(device.changeRate) : device.changeRate
+            const power = (charging || discharging) && root._measurement(rate) && rate > 0
+                ? root.measurementText(rate) + " W" : ""
+            // numbered within their own kind: a laptop beside a UPS is "Battery" and "UPS", not 1 and 2
+            const kind = list.filter(d => d.type === device.type)
+            return { name: kind.length === 1 ? base : base + " " + (kind.indexOf(device) + 1), model: name,
+                charge: charge >= 0 ? Math.round(charge) + "%" : "",
+                state: state === UPowerDeviceState.PendingCharge ? "not charging"
+                    : root.statusFor(true, state, discharging, state === UPowerDeviceState.FullyCharged),
+                health: health >= 0 ? Math.round(health) + "%" : "", energy: energy,
+                power: power, powerLabel: charging ? "Charging power" : "Power use" }
+        })
+    }
+
     readonly property real   timeToEmpty: upowerReady ? UPower.displayDevice.timeToEmpty : 0
     readonly property real   timeToFull:  upowerReady ? UPower.displayDevice.timeToFull  : 0
     readonly property string timeLabel: {

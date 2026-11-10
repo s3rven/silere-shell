@@ -586,6 +586,8 @@ PageShell {
                 active: root.active
                 dividerIndent: root._rowTextX
                 width: parent.width
+                batteryExpanded: root._picker === "battery"
+                onBatteryActivated: root._togglePicker("battery")
             }
         }
     }
