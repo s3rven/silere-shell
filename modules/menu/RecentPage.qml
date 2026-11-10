@@ -189,9 +189,8 @@ PageShell {
         // whole days, not milliseconds: a DST day is 23 or 25 hours long, and the raw gap then lands one bucket early — two sections both headed Yesterday
         const days = Math.round((today - day) / 86400000)
         if (days <= 0 && diff < 86400000) return Math.floor(diff / 3600000) + "h"
-        // the section header already carries the day, so an older entry only owes a clock
-        // qt only counts 12-hour when AP shares the format string
-        return Qt.formatDateTime(d, ShellSettings.clock12h ? "h:mm ap" : "HH:mm")
+        // the section header already carries the day, so an older entry only owes a clock, written as the bar's
+        return DateTime.clockText(d)
     }
 
     function sectionLabel(ms): string {
