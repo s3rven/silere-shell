@@ -150,7 +150,7 @@ PanelWindow {
 
         // the card alone: anywhere else in the strip has to fall through, to the closing window or the compositor's grab. With a surface open beside it the whole strip, so a gap between the two still reaches the outside catch
         mask: Region {
-            item: !win.open ? null : win._surfaceOpen ? _stage : win.popupCard
+            item: !win.open || !win.popupCard ? null : win._surfaceOpen ? _stage : _cardHit
             Region { item: _stage; intersection: Intersection.Intersect }
         }
         BackgroundEffect.blurRegion: Region {
@@ -177,6 +177,15 @@ PanelWindow {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                 onPressed: mouse => mouse.accepted = win._outsideCard(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
                 onClicked: mouse => win._closeIfOutside(_outsideCatch.mapToItem(_stage, mouse.x, mouse.y))
+            }
+
+            // the card's resting box for the input mask: a Region maps its item through transforms but re-reads it only on a geometry change, so the card itself froze its open scale and slide into the mask and a click on its far edge fell through and closed the popup
+            Item {
+                id: _cardHit
+                x: win.popupCard ? win.popupCard.x : 0
+                y: win.popupCard ? win.popupCard.y : 0
+                width: win.popupCard ? win.popupCard.width : 0
+                height: win.popupCard ? win.popupCard.height : 0
             }
 
             // the shell is pointer-first, so a mouse's own back button steps back the way Escape does
