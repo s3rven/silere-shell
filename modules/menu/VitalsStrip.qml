@@ -303,7 +303,8 @@ SettingsCard {
         glyph: "󰋊"
         label: "Disk"
         value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
-        sub: SysInfo.diskTotalKb > 0 && SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : ""
+        // a full disk is when the caption matters most, so it says so rather than going blank
+        sub: SysInfo.diskTotalKb <= 0 ? "" : SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : "Full"
         progress: SysInfo.diskPct
         status: SysInfo.diskLevel
     }
