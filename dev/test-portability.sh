@@ -90,7 +90,7 @@ test_xdg_paths_and_timer_default() (
     assert_eq "/absolute/config" "$actual" "uninstaller absolute XDG config"
 
     actual="$(
-        HOME="$home" XDG_CONFIG_HOME=relative/config XDG_CACHE_HOME=relative/cache \
+        HOME="$home" XDG_CONFIG_HOME=relative/config XDG_CACHE_HOME=relative/cache XDG_STATE_HOME=relative/state \
             SILERE_SCRIPT_LIB_ONLY=1 bash -c \
             'source "$1"; printf "%s|%s|%s" "$CACHE_DIR" "$SYSTEMD_USER_DIR" "$STATE_DIR"' \
             _ "$ROOT/scripts/update.sh"
@@ -3309,11 +3309,125 @@ SH
         || fail "benchmark did not explain a refused warm-up"
 )
 
+test_doctor_json() (
+    command -v python3 >/dev/null 2>&1 || return 0
+    local fixture="$TMP/doctor-json" actual python_path
+    python_path="$(command -v python3)"
+    mkdir -p "$fixture/scripts" "$fixture/bin"
+    cp "$ROOT/scripts/doctor.sh" "$ROOT/scripts/doctor-json.sh" "$fixture/scripts/"
+    printf '{"version":"9.1.2"}\n' > "$fixture/release.json"
+    cat > "$fixture/bin/qs" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = --version ]; then printf 'Quickshell 0.3.1\n'
+else printf '%s\n' "${SILERE_JSON_REPLY:-unavailable}"; fi
+EOF
+    cat > "$fixture/bin/qtpaths6" <<'EOF'
+#!/usr/bin/env bash
+printf '6.10.2\n'
+EOF
+    cat > "$fixture/bin/hyprctl" <<'EOF'
+#!/usr/bin/env bash
+printf '{\n    "branch": "private-report-value",\n    "version": "0.57.2",\n    "dirty": false\n}\n'
+EOF
+    chmod +x "$fixture/bin/qs" "$fixture/bin/qtpaths6" "$fixture/bin/hyprctl"
+    actual="$(PATH="$fixture/bin:$PATH" SILERE_TEST_SECRET=private-report-value \
+        NIRI_SOCKET='' HYPRLAND_INSTANCE_SIGNATURE=fixture \
+        SILERE_JSON_REPLY='{"schemaVersion":1,"compositor":"hyprland","bluetooth":{"enabled":true,"name":"private-report-value"},"audio":{"outputs":2,"name":"private-report-value"},"screens":[{"width":1920,"height":1080,"scale":1.25,"serial":"private-report-value"}],"private":"private-report-value"}' \
+        bash "$fixture/scripts/doctor.sh" --json)" || fail "doctor --json failed"
+    "$python_path" -c '
+import json, sys
+d = json.loads(sys.argv[1])
+assert d["schemaVersion"] == 1 and d["runtime"]["silere"] == "9.1.2"
+assert d["runtime"]["quickshell"] == "0.3.1" and d["runtime"]["qt"] == "6.10.2"
+assert d["runtime"]["compositor"] == "hyprland" and d["runtime"]["compositorVersion"] == "0.57.2"
+assert d["runtime"]["distro"] and all(c.islower() or c.isdigit() or c in "._-" for c in d["runtime"]["distro"])
+assert d["devices"]["audio"]["outputs"] == 2
+assert d["devices"]["bluetooth"]["enabled"] is True
+assert d["devices"]["screens"] == [{"width":1920,"height":1080,"scale":1.25}]
+assert "private-report-value" not in sys.argv[1]
+' "$actual" || fail "doctor report includes identifiers or loses required fields"
+    for reply in unavailable '{"schemaVersion":1,broken}' '{"schemaVersion":2,"private":"hidden"}'; do
+        actual="$(PATH="$fixture/bin:$PATH" SILERE_JSON_REPLY="$reply" bash "$fixture/scripts/doctor.sh" --json)"
+        "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["devices"] is None' "$actual" \
+            || fail "doctor report did not handle a missing or malformed live reply"
+    done
+    printf '#!/bin/sh\nexit 127\n' > "$fixture/bin/python3"
+    chmod +x "$fixture/bin/python3"
+    actual="$(PATH="$fixture/bin:$PATH" bash "$fixture/scripts/doctor.sh" --json)"
+    "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["devices"] is None and d["availability"]["qs"]' "$actual" \
+        || fail "doctor summary requires a working optional JSON parser"
+)
+
+test_keyboard_brightness_helper() (
+    local fixture="$TMP/keyboard-helper" actual path=/org/freedesktop/UPower/KbdBacklight
+    mkdir -p "$fixture/bin"
+    cat > "$fixture/bin/busctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case " $* " in
+    *' tree '*)
+        printf '%s\n' /org/freedesktop/UPower/KbdBacklight \
+            /org/freedesktop/UPower/KbdBacklight/led0 /org/freedesktop/UPower/KbdBacklight/led1 \
+            /org/freedesktop/UPower/KbdBacklight/unsupported /org/freedesktop/UPower/KbdBacklight/invalid
+        ;;
+    *' get-property '*)
+        case "$5" in
+            */led1) printf 's "keyboard-1"\n' ;;
+            *) printf 's "%s"\n' "${SILERE_KBD_IDENTITY:-keyboard-0}" ;;
+        esac
+        ;;
+    *' call '*)
+        case "$7" in
+            GetMaxBrightness)
+                case "$5" in */unsupported) printf 'i 0\n';; */invalid) printf 's "2"\n';; *) printf 'i 2\n';; esac
+                ;;
+            GetBrightness) printf 'i 1\n' ;;
+            SetBrightness)
+                [ "${SILERE_KBD_FAIL:-0}" = 0 ] || exit 1
+                printf '%s:%s\n' "$5" "$9" >> "$SILERE_KBD_CALLS"
+                ;;
+            *) exit 1 ;;
+        esac
+        ;;
+    *) exit 1 ;;
+esac
+EOF
+    chmod +x "$fixture/bin/busctl"
+    export PATH="$fixture/bin:$PATH" SILERE_KBD_CALLS="$fixture/calls" SILERE_SANDBOX=0
+    actual="$(bash "$ROOT/scripts/keyboard-brightness.sh" list)"
+    assert_eq "$path"$'\t1\t2\ts "keyboard-0"\n'"$path/led1"$'\t1\t2\ts "keyboard-1"' "$actual" \
+        "keyboard discovery deduplicates UPower aliases and hides unsupported or malformed levels"
+    bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 0 's "keyboard-0"'
+    assert_eq "$path:0" "$(<"$fixture/calls")" "keyboard light supports zero as off"
+    bash "$ROOT/scripts/keyboard-brightness.sh" write "$path/led1" 2 's "keyboard-1"'
+    for level in -1 3 2147483648 invalid; do
+        if bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" "$level" 's "keyboard-0"'; then
+            fail "keyboard writer accepted an unsupported hardware level"
+        fi
+    done
+    if bash "$ROOT/scripts/keyboard-brightness.sh" write /org/other 1 unknown; then
+        fail "keyboard writer accepted an unrelated object"
+    fi
+    if SILERE_KBD_IDENTITY=replacement bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 1 's "keyboard-0"'; then
+        fail "keyboard writer changed a replacement device"
+    fi
+    if SILERE_KBD_FAIL=1 bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 1 's "keyboard-0"'; then
+        fail "keyboard writer hid a UPower rejection"
+    fi
+    if SILERE_SANDBOX=1 bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 1 's "keyboard-0"'; then
+        fail "keyboard writer changed lighting in a sandbox"
+    fi
+    assert_eq "$path:0"$'\n'"$path/led1:2" "$(<"$fixture/calls")" \
+        "invalid, stale and sandbox keyboard requests never reach SetBrightness"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
 
 test_xdg_paths_and_timer_default
+test_doctor_json
+test_keyboard_brightness_helper
 test_fresh_install_permissions
 test_existing_checkout_installer_update
 test_lua_exec_return_guard

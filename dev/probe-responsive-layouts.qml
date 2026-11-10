@@ -179,6 +179,25 @@ Item {
             label: "Bar opacity"
             glyph: "󰕾"
         }
+        SliderRow {
+            width: 232
+            label: "Keyboard light"; glyph: "󰌌"
+            min: 0; max: 2; step: 1; value: 0; displayValue: "Off"
+        }
+        ChoiceChipRow {
+            width: 232; label: "Headset mode"; currentValue: "listening"
+            model: [{ value: "listening", label: "Listening" }, { value: "calls", label: "Calls" }]
+        }
+        Loader {
+            width: 232
+            Component.onCompleted: setSource("../modules/menu/BatteryDetails.qml", {
+                // two, so the per-battery header a single battery hides still meets the width check
+                width: 232, readings: [{ name: "Battery 1", model: "Laptop battery", state: "Discharging",
+                    charge: "100%", health: "95%", energy: "100.5 / 120.7 Wh", power: "32.5 W", powerLabel: "Power use" },
+                    { name: "UPS 2", model: "Desk UPS", state: "Charging", charge: "64%", health: "", energy: "",
+                    power: "12.5 W", powerLabel: "Charging power" }]
+            })
+        }
         GradientSliderRow {
             id: gradientSlider
             width: 232

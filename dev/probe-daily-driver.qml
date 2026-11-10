@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import Quickshell
 import Quickshell.Io
+import Quickshell.Bluetooth as Bt
 import "services"
 
 Scope {
@@ -16,6 +17,19 @@ Scope {
 
     TestCase { id: input; when: false }
     FileView { id: file; blockAllReads: true; blockWrites: true; printErrors: false }
+    Component { id: bluetoothFactory; BluetoothProbe {} }
+    Component { id: audioModeFactory; AudioModeProbe {} }
+    Component {
+        id: radioFactory
+        QtObject {
+            property string adapterId: "hci0"
+            property string name: "Fixture radio"
+            property int state: Bt.BluetoothAdapterState.Blocked
+            property bool enabled: false
+            property bool discovering: false
+            property var devices: ({ values: [] })
+        }
+    }
 
     function write(name, value): void {
         file.path = root.fixtures + "/" + name
@@ -344,6 +358,17 @@ Scope {
             "a failed display returns to its measured level without retrying its rejected queued value")
         root.write("ddc-fail-connector", "")
 
+        root.write("ddc-displays", root.display(35))
+        root.write("ddc-scan-fail", "fail")
+        DisplayBrightness.invalidate()
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 1
+                && DisplayBrightness.levelFor(root.displayKey) === 35 && DisplayBrightness.lastError.length > 0,
+            "a scan that fails after one display keeps that display's brightness control")
+        root.write("ddc-scan-fail", "")
+        DisplayBrightness.refresh(false)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.lastError.length === 0,
+            "an incomplete display scan can retry immediately instead of waiting for the freshness cache")
+
         root.write("ddc-calls", "")
         root.write("ddc-fail", "fail")
         DisplayBrightness.setPercent(root.displayKey, 80)
@@ -360,6 +385,142 @@ Scope {
         root.check(!DisplayBrightness._wanted, "a remembered settings section does not scan from another page")
         MenuState.open = false
         ShellSettings.ddcBrightnessEnabled = false
+    }
+
+    function audioNode(mode: string, serial: string, address = "aa:bb:cc:dd:ee:ff"): var {
+        return { id: 101, name: "bluez_output.aa_bb_cc_dd_ee_ff.1", ready: true, audio: {},
+            properties: { "device.api": "bluez5", "device.id": 77, "api.bluez5.address": address,
+                "api.bluez5.profile": mode, "object.serial": serial } }
+    }
+    function audioProfiles(active: int): string {
+        return JSON.stringify([{ id: 77, type: "PipeWire:Interface:Device", info: { params: {
+            EnumProfile: [{ index: 1, name: "a2dp-sink", priority: 20 },
+                { index: 2, name: "headset-head-unit", priority: 10 }], Profile: [{ index: active }]
+        } } }])
+    }
+    function audioModeChecks(): void {
+        root.write("audio-calls", "")
+        root.write("audio-profiles", root.audioProfiles(1))
+        MenuState.open = true
+        Audio.sink = root.audioNode("a2dp-sink", "1")
+        const mode = audioModeFactory.createObject(root)
+        root.waitFor(() => mode.available && mode.current === "listening", "headset modes load from the private PipeWire fixture")
+        root.write("audio-list-fail", "fail")
+        mode.refresh(true)
+        root.waitFor(() => mode.lastError.length > 0, "headset profile read errors remain visible")
+        root.write("audio-list-fail", "")
+        mode.refresh(true)
+        root.waitFor(() => mode.available && mode.lastError === "", "a successful headset read clears its previous read error")
+        mode.setMode("calls")
+        root.waitFor(() => mode._setSucceeded, "a headset mode change completes its private setter")
+        root.check(mode.switching && Audio.profileSwitching, "audio controls remain held until the requested headset returns")
+        Audio.sink = { ready: true, audio: {}, properties: { "device.api": "alsa", "device.id": 3 } }
+        input.wait(120)
+        root.check(mode.switching && Audio.profileSwitching, "a temporary speaker fallback cannot finish the headset change")
+        root.write("audio-profiles", root.audioProfiles(2))
+        Audio.sink = root.audioNode("headset-head-unit", "2", "11:22:33:44:55:66")
+        input.wait(120)
+        root.check(mode.switching, "a different headset reusing the device id cannot finish the pending change")
+        Audio.sink = root.audioNode("headset-head-unit", "3")
+        root.waitFor(() => !mode.switching && !Audio.profileSwitching && mode.lastError === "",
+            "the requested headset mode restores audio controls when the matching device returns")
+        root.waitFor(() => mode.available && mode.current === "calls", "headset profiles refresh after the node replacement")
+
+        root.write("audio-set-fail", "fail")
+        mode.setMode("listening")
+        root.waitFor(() => !mode.switching && mode.lastError.length > 0,
+            "a rejected headset profile change releases controls and reports an error")
+        root.check(!Audio.profileSwitching, "failed headset requests cannot leave volume controls disabled")
+        root.write("audio-set-fail", "")
+        mode.setMode("listening")
+        root.waitFor(() => mode._setSucceeded, "a headset retry reaches its confirmation phase")
+        mode._settleTimer.stop()
+        mode._settleTimer.triggered()
+        root.check(!mode.switching && !Audio.profileSwitching && mode.lastError.length > 0,
+            "a headset that never returns hits the confirmation deadline and restores controls")
+
+        mode.setMode("listening")
+        root.waitFor(() => mode._setSucceeded && mode.switching, "another headset change starts before a backend restart")
+        Audio.backendReady = false
+        root.check(!mode.switching && !Audio.profileSwitching,
+            "a PipeWire disconnect immediately restores audio controls")
+        Audio.backendReady = true
+        root.write("audio-list-hold", "hold")
+        root.write("audio-calls", "")
+        mode.refresh(true)
+        root.waitFor(() => root.read("audio-calls").includes("list"), "a headset profile read captures the old device")
+        Audio.sink = root.audioNode("a2dp-sink", "4", "11:22:33:44:55:66")
+        root.write("audio-profiles", "[]")
+        root.write("audio-list-hold", "")
+        input.wait(500)
+        root.check(!mode.available, "late profile reads cannot publish capabilities for a replacement headset")
+        mode.destroy()
+        Audio.sink = null
+        MenuState.open = false
+    }
+
+    function keyboardLine(level: int, second = false): string {
+        return "/org/freedesktop/UPower/KbdBacklight/fixture" + (second ? "1" : "0")
+            + "\t" + level + "\t2\tfixture-keyboard-" + (second ? "1" : "0") + "\n"
+    }
+    function keyboardChecks(): void {
+        root.write("keyboard-devices", root.keyboardLine(1) + root.keyboardLine(2, true))
+        root.write("keyboard-calls", "")
+        // the slider lives in Home, so discovery runs there, not behind every surface
+        MenuState.open = true
+        MenuState.homeActive = true
+        SystemTools.hasBusctl = true
+        KeyboardBrightness.rescan()
+        root.waitFor(() => KeyboardBrightness.ready && KeyboardBrightness.devices.length === 2
+            && KeyboardBrightness.currentLevel === 1, "keyboard lights discover their discrete hardware levels")
+        KeyboardBrightness.setLevel(0)
+        root.waitFor(() => KeyboardBrightness._confirmedLevel === 0 && KeyboardBrightness.currentLevel === 0,
+            "keyboard lighting supports turning the light fully off")
+        root.write("keyboard-list-hold", "hold")
+        root.write("keyboard-calls", "")
+        KeyboardBrightness.rescan()
+        root.waitFor(() => root.read("keyboard-calls").includes("list"), "a keyboard read captures an older level")
+        KeyboardBrightness.setLevel(2)
+        root.waitFor(() => KeyboardBrightness._confirmedLevel === 2, "a newer keyboard level reaches the private writer")
+        root.write("keyboard-list-hold", "")
+        input.wait(400)
+        root.check(KeyboardBrightness.currentLevel === 2, "an older keyboard read cannot overwrite the user's newer level")
+
+        root.write("keyboard-set-fail", "fail")
+        KeyboardBrightness.setLevel(1)
+        root.waitFor(() => KeyboardBrightness.lastError.length > 0 && KeyboardBrightness.currentLevel === 2,
+            "keyboard write failures report an error and restore the last confirmed level")
+        root.write("keyboard-set-fail", "")
+        root.write("keyboard-calls", "")
+        KeyboardBrightness.setLevel(0)
+        KeyboardBrightness.preferredKey = KeyboardBrightness.devices[1].key
+        input.wait(250)
+        root.check(!root.read("keyboard-calls").includes("write"),
+            "changing the keyboard target drops a queued edit instead of replaying it onto another light")
+        root.check(KeyboardBrightness.currentLevel === 2,
+            "changing the keyboard target presents its own hardware level: " + KeyboardBrightness.currentLevel)
+        KeyboardBrightness.setLevel(1)
+        root.waitFor(() => KeyboardBrightness._confirmedLevel === 1 && !KeyboardBrightness.lastError,
+            "a keyboard retry targets the newly selected light and clears its error")
+        KeyboardBrightness._pollTimer.stop()
+        root.write("keyboard-list-hold", "hold")
+        root.write("keyboard-calls", "")
+        KeyboardBrightness.rescan()
+        root.waitFor(() => root.read("keyboard-calls").includes("list"), "a keyboard discovery starts before a tool restart")
+        SystemTools.hasBusctl = false
+        root.write("keyboard-devices", "")
+        SystemTools.hasBusctl = true
+        root.write("keyboard-list-hold", "")
+        root.waitFor(() => !KeyboardBrightness.ready && KeyboardBrightness.devices.length === 0,
+            "a stale discovery cannot restore keyboards after the backend restarts")
+        input.wait(400)
+        root.check(!KeyboardBrightness.ready, "the fresh discovery confirms that the removed keyboards stay absent")
+        MenuState.open = false
+        MenuState.homeActive = false
+        Idle.isIdle = true
+        root.check(!KeyboardBrightness._pollTimer.running, "keyboard polling stops when controls close or the session is idle")
+        Idle.isIdle = false
+        SystemTools.hasBusctl = false
     }
 
     function fontChecks(): void {
@@ -404,6 +565,88 @@ Scope {
         root.waitFor(() => FontScan.scanned && !FontScan.scanning
                 && FontScan.families.indexOf("Recovered Sans") >= 0 && FontScan.iconFamilies.length === 1,
             "font discovery recovers with a fresh catalogue instead of the cancelled scan")
+    }
+
+    function bluetoothChecks(): void {
+        const service = bluetoothFactory.createObject(root)
+        const first = radioFactory.createObject(root)
+        const second = radioFactory.createObject(root, { adapterId: "hci1" })
+        const lookup = service._rfkillLookup
+        lookup.command = ["bash", "-c", 'cat "$1/rfkill-state"; echo probe >> "$1/rfkill-calls"; sleep 0.15',
+            "rfkill-fixture", root.fixtures]
+        service._blockRefresh.interval = 50
+        root.write("rfkill-state", "hci0\t1\nhci1\t0\n")
+        service._adapters = [first, second]
+        service._defaultAdapter = first
+        root.check(service.adapter === first && service.adapterChoice === "" && service.adapterChoices.length === 3,
+            "automatic Bluetooth selection follows the default and lists both controllers")
+        root.waitFor(() => service.hardBlocked && !lookup.running,
+            "the selected Bluetooth controller reports its hardware block")
+
+        root.write("rfkill-state", "hci0\t0\nhci1\t1\n")
+        MenuState.open = true
+        root.waitFor(() => !service.hardBlocked && !lookup.running,
+            "opening the menu refreshes a hardware switch while BlueZ still reports Blocked")
+        root.check(service.blocked && first.state === Bt.BluetoothAdapterState.Blocked,
+            "lifting only the hardware block does not require a BlueZ power-state change")
+        root.write("rfkill-state", "hci0\t1\nhci1\t0\n")
+        root.waitFor(() => service.hardBlocked,
+            "moving the hardware switch with the menu open refreshes its control")
+        Idle.isIdle = true
+        root.check(!service._blockRefresh.running,
+            "idle sessions stop recurring Bluetooth switch probes")
+        MenuState.open = false
+        Idle.isIdle = false
+        root.check(!service._blockRefresh.running,
+            "closing the menu stops recurring Bluetooth switch probes")
+        root.waitFor(() => !lookup.running, "the last Bluetooth switch probe finishes")
+
+        root.write("rfkill-state", "hci0\t0\nhci1\t1\n")
+        QuickActionsState.open = true
+        root.waitFor(() => !service.hardBlocked && !lookup.running,
+            "Quick Actions also refreshes a hardware block without opening the menu")
+        QuickActionsState.open = false
+        root.check(!service._blockRefresh.running,
+            "closing Quick Actions releases Bluetooth switch polling")
+
+        // Hold an old hci0 snapshot through a controller change. The hci1
+        // state must come from a new read even though both remain Blocked.
+        root.write("rfkill-state", "hci0\t1\nhci1\t1\n")
+        const calls = root.read("rfkill-calls").length
+        service.refreshBlockState()
+        root.waitFor(() => root.read("rfkill-calls").length > calls,
+            "a Bluetooth switch probe captures the old controller's state")
+        root.write("rfkill-state", "hci0\t1\nhci1\t0\n")
+        root.check(service.selectAdapter("hci1") && service.adapter === second && service.adapterChoice === "hci1",
+            "the Bluetooth controller chooser selects the requested live controller")
+        let staleBlock = false
+        const observe = function() { if (service.hardBlocked) staleBlock = true }
+        service.hardBlockedChanged.connect(observe)
+        root.waitFor(() => !lookup.running && lookup.generation === service._rfkillGeneration
+                && !service.hardBlocked,
+            "switching blocked Bluetooth controllers obtains a fresh switch reading")
+        root.check(!staleBlock,
+            "an old controller's in-flight rfkill reading cannot disable the replacement controller")
+        service.hardBlockedChanged.disconnect(observe)
+
+        root.write("rfkill-fail", "fail")
+        root.write("rfkill-actions", "")
+        service.toggle()
+        root.waitFor(() => !service._unblockWanted && root.read("rfkill-actions").length > 0,
+            "a failed rfkill command clears its pending enable request")
+        root.waitFor(() => !lookup.running, "the failed unblock's switch refresh finishes")
+        const replacement = radioFactory.createObject(root, { adapterId: "hci1" })
+        service._adapters = [first, replacement]
+        root.check(service.adapter === first && !service.selectAdapter("missing"),
+            "replacing a selected controller under the same hci id falls back without selecting different hardware")
+        root.waitFor(() => service.adapterChoice === "", "losing a selected radio releases its session preference")
+        service._adapters = []
+        root.check(!service.hardBlocked && !service._blockRefresh.running,
+            "unplugging a blocked controller clears its cached switch state")
+        service.destroy()
+        first.destroy()
+        second.destroy()
+        replacement.destroy()
     }
 
     function alertCalls(): var {
@@ -558,6 +801,9 @@ Scope {
         root.vpnChecks()
         root.powerChecks()
         root.brightnessChecks()
+        root.bluetoothChecks()
+        root.audioModeChecks()
+        root.keyboardChecks()
         root.fontChecks()
         root.alertChecks()
         root.sessionChecks()

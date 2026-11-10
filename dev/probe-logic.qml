@@ -1975,6 +1975,15 @@ ShellRoot {
         root._check(!SysInfo.cpuHigh && SysInfo._cpuBusySamples === 0 && w.severity === 0,
             "a failed CPU read clears both the warning and its sample count")
         SysInfo._active = was.active
+        SysInfo.memAvailKb = 32 * 1048576 * 0.24
+        const memWarned = w.severity === 1
+        SysInfo.memAvailKb = 32 * 1048576 * 0.26
+        const memHeld = w.severity === 1
+        SysInfo.memAvailKb = 32 * 1048576 * 0.29
+        root._check(memWarned && memHeld && w.severity === 0
+                && SysInfo.usageLevel(0.88, 2) === 2 && SysInfo.usageLevel(0.86, 2) === 1
+                && SysInfo.usageLevel(0.74, 0) === 0 && SysInfo.usageLevel(0.95, 0) === 2,
+            "memory and disk warnings let go only three points under their line, so a reading on it does not blink")
         SysInfo.memAvailKb = 32 * 1048576 * 0.03
         root._check(w.severity === 2 && Qt.colorEqual(w.segments[0].color, Theme.error)
                 && Qt.colorEqual(w.glyphColor, Theme.barText),
@@ -2252,8 +2261,7 @@ ShellRoot {
         const device = bluetoothDeviceFixture.createObject(root)
         root._check(picker !== null, "the Bluetooth picker builds for pairing cancellation checks")
         if (picker) {
-            const list = root._findTrayNode(picker, item => item.model !== undefined
-                && typeof item.forceLayout === "function")
+            const list = root._findTrayNode(picker, item => item.objectName === "bluetooth-devices")
             if (list) {
                 list.visible = true
                 list.model = [device]
@@ -2312,8 +2320,9 @@ ShellRoot {
                 ? component.createObject(root, { width: 320 }) : null
             root._check(picker !== null, test.name + " builds for confirmation deadline checks")
             if (picker) {
-                const list = root._findTrayNode(picker, item => item.model !== undefined
-                    && typeof item.forceLayout === "function")
+                const list = root._findTrayNode(picker, item => test.name === "Bluetooth"
+                    ? item.objectName === "bluetooth-devices"
+                    : item.model !== undefined && typeof item.forceLayout === "function")
                 for (const disconnect of [true, false]) {
                     device.connected = disconnect
                     const entry = test.name === "Bluetooth" ? device : {
@@ -2347,6 +2356,18 @@ ShellRoot {
                     const fired = arm.press(key)
                     root._check(fired && arm.key === "",
                         label + " runs on a second press inside the window and disarms")
+                    if (disconnect) continue
+                    const keyHost = keyboardFixtureFactory.createObject(root)
+                    const pickerParent = picker.parent
+                    picker.parent = keyHost.contentItem
+                    keyHost.requestActivate()
+                    keyHost.input.wait(80)
+                    row.forceActiveFocus(Qt.TabFocusReason)
+                    keyHost.input.keyClick(Qt.Key_Delete)
+                    root._check(arm.key === key, label + " arms from the Delete key")
+                    arm.clear()
+                    picker.parent = pickerParent
+                    keyHost.destroy()
                 }
                 picker.destroy()
             }
@@ -2565,6 +2586,39 @@ ShellRoot {
             ? diagnosticsComponent.createObject(root, { width: 360 }) : null
         root._check(diagnostics !== null, "diagnostics builds for behavioral checks")
         if (diagnostics) {
+            const deviceRows = diagnostics._deviceChecks
+            root._check(deviceRows.some(row => row.id === "audio") && deviceRows.some(row => row.id === "microphone"),
+                "diagnostics describes output and microphone readiness without requiring real audio devices")
+            const btRow = deviceRows.find(row => row.id === "bluetooth")
+            root._check(!btRow || (btRow.action === "interface") === (Bluetooth.adapterCount > 1),
+                "the Bluetooth check links to Interface only when there is a controller to choose there")
+            const summary = DeviceDiagnostics.snapshot()
+            root._check(summary.schemaVersion === 1 && summary.audio.name === undefined
+                    && summary.bluetooth.name === undefined && summary.network.ssid === undefined
+                    && summary.screens.every(screen => screen.name === undefined && screen.serial === undefined),
+                "shareable diagnostics omit device names, network names and display serials")
+            const copiedWas = Quickshell.clipboardText
+            const copyStateWas = DeviceDiagnostics.copyState
+            const copyErrorWas = DeviceDiagnostics.copyError
+            DeviceDiagnostics.acceptReport(0, true, '{"schemaVersion":1,"runtime":{},"availability":{}}')
+            root._check(DeviceDiagnostics.copyState === "failed" && Quickshell.clipboardText === copiedWas,
+                "a timed-out diagnostic copy cannot replace the clipboard or claim success")
+            DeviceDiagnostics.acceptReport(0, false, "malformed")
+            root._check(DeviceDiagnostics.copyState === "failed" && Quickshell.clipboardText === copiedWas,
+                "malformed diagnostic output preserves the clipboard and offers an error")
+            DeviceDiagnostics.acceptReport(0, false, '{"schemaVersion":1,"runtime":{},"availability":{}}')
+            const copiedReport = JSON.parse(Quickshell.clipboardText)
+            root._check(DeviceDiagnostics.copyState === "done" && copiedReport.devices.schemaVersion === 1
+                    && copiedReport.devices.audio.name === undefined,
+                "copying diagnostics adds the current allowlisted device state to a valid versioned report")
+            const holding = DeviceDiagnostics._copiedHoldTimer.running
+            DeviceDiagnostics._copiedHoldTimer.stop()
+            DeviceDiagnostics._copiedHoldTimer.triggered()
+            root._check(holding && DeviceDiagnostics.copyState === "",
+                "a copied diagnostic report returns to Copy after the same hold as the VPN address")
+            Quickshell.clipboardText = copiedWas
+            DeviceDiagnostics.copyState = copyStateWas
+            DeviceDiagnostics.copyError = copyErrorWas
             root._check(diagnostics._attentionIssues.some(issue =>
                     issue.n === "Screen lock unavailable" && issue.a === "interface")
                     && diagnostics._attentionIssues.some(issue =>
@@ -3215,6 +3269,17 @@ ShellRoot {
                 && !WindowActions.focusIsSourceApp(kittyGuess, [])
                 && !WindowActions.focusIsSourceApp(null, [{ pid: 1, cls: "x", focused: true }]),
             "a notification click keeps the window the app raised itself instead of guessing another")
+        const raisedPool = [{ ref: "0xa", pid: 1638, cls: "kitty" }, { ref: "0xb", pid: 1638, cls: "kitty" }]
+        root._check(WindowActions.raisedSource(raisedPool, ["0xb"], []).ref === "0xb"
+                && WindowActions.raisedSource(raisedPool, ["0xa", "0xb"], ["0xa"]).ref === "0xb"
+                && WindowActions.raisedSource(raisedPool, ["0xa"], ["0xa"]) === null
+                && WindowActions.raisedSource(raisedPool, [], []) === null
+                && WindowActions.raisedSource(null, ["0xb"], []) === null
+                && WindowActions.raisedSource(raisedPool, ["0xb"], [], kittyGuess).ref === "0xb"
+                && WindowActions.raisedSource(raisedPool, ["0xb"], [], { pid: 900, cls: "zen" }) === null
+                && WindowActions.raisedSource(raisedPool, ["0xb"], [], { pid: 0, cls: "kitty" }).ref === "0xb"
+                && Array.isArray(Compositor.urgentRefs),
+            "a notification click follows the window its app just marked urgent, not one already asking")
         root._check(WindowActions._norm("  Org.Example.App.desktop  ") === "org.example.app"
                 && WindowActions._norm(null) === "",
             "window matching normalizes desktop ids and empty hints")
@@ -3477,6 +3542,18 @@ ShellRoot {
         barClock.enabled = false
         barClock.Accessible.pressAction()
         root._check(!CalendarState.open, "a disabled clock rejects opening the calendar")
+        const digitSlot = (after) => root._findTrayNode(barClock, item => item !== after
+            && item.reserveText !== undefined && item.horizontalAlignment === Text.AlignRight)
+        const hourSlot = digitSlot(null), minuteSlot = digitSlot(hourSlot)
+        const clock12Before = ShellSettings.clock12h, hourBefore = DateTime.cachedHour
+        ShellSettings.clock12h = true
+        DateTime.cachedHour = "3"
+        const narrowHour = hourSlot.implicitWidth < minuteSlot.implicitWidth
+        DateTime.cachedHour = "10"
+        root._check(narrowHour && hourSlot.implicitWidth === minuteSlot.implicitWidth,
+            "a one-digit 12-hour hour leaves no blank digit before it, and 10-12 still take two")
+        ShellSettings.clock12h = clock12Before
+        DateTime.cachedHour = hourBefore
         barClock.destroy()
 
         const statusClock = clockFactory.createObject(root)
@@ -5416,6 +5493,17 @@ ShellRoot {
         root._check(ShellSettings._schema.every(e => !e.l || e.sec.split(",").every(sec =>
                 MenuState.searchSettings(e.l).some(row => row.section === sec && row.key === e.k))),
             "every labelled setting is found on each of its pages by the label it shows")
+        const sameAs = (typo, word) => MenuState.searchSettings(typo).map(row => row.section).join(",")
+            === MenuState.searchSettings(word).map(row => row.section).join(",") && MenuState.searchSettings(word).length > 0
+        root._check(sameAs("worksapce", "workspace") && sameAs("brigthness", "brightness")
+                && sameAs("notifcations", "notifications") && sameAs("wrok", "work")
+                && sameAs("visualiser", "visualizer") && sameAs("bluetoth", "bluetooth")
+                && sameAs("nigth ligth", "night light"),
+            "a mistyped or swapped letter still finds the setting")
+        root._check(MenuState.searchSettings("spotify").length === 0 && MenuState.searchSettings("bars").length > 0
+                && MenuState.searchSettings("qzxv").length === 0 && MenuState._correctedTerm("clok") === "clock"
+                && MenuState._correctedTerm("lok") === "lok",
+            "typo correction leaves exact matches, short words and unrelated names alone")
         MenuState.setSettingsSection("popups")
         root._check(MenuState.settingsSection === "popups",
             "a known settings page is selected by name")
@@ -5928,7 +6016,26 @@ ShellRoot {
         root._check(!titleWidget._widthGlide._motionAllowed && !titleWidget._widthGlide.running,
             "a title under the overview does not run its per-frame width glide")
         titleWidget.barActive = true
+        // as in a bar slot: the slot hides with the title, and hiding stops the glide
+        const reduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        const slot = Qt.createQmlObject("import QtQuick; Item { property Item title: null; visible: title !== null && title.layoutVisible }", barFixtureHost)
+        titleWidget.layoutWidthLimit = -1
+        titleWidget.parent = slot
+        slot.title = titleWidget
+        titleWidget._shownVisible = true
+        titleWidget._shownShowApp = false
+        titleWidget._shownTitle = "A title on its way out"
+        titleWidget._widthGlide._snap()
+        titleWidget._op = 0
+        titleWidget._shownTitle = ""
+        const glide = titleWidget._widthGlide
+        for (let i = 0; i < 200 && glide.running; i++) glide._advance(0.016)
+        root._check(glide.value === 0 && titleWidget.implicitWidth === 0 && !slot.visible,
+            "a title gliding shut ends at zero width instead of stopping a fraction short when its slot hides")
+        ShellSettings.reduceMotion = reduceWas
         titleWidget.destroy()
+        slot.destroy()
         }
 
         const mediaComponent = Qt.createComponent("modules/bar/widgets/MediaWidget.qml")
@@ -6399,6 +6506,47 @@ ShellRoot {
             "audio IPC reports bounded output and microphone state without opening a surface")
         const audioVolumeWas = Audio._out.targetVolume
         const micVolumeWas = Audio._in.targetVolume
+        const headsetProfiles = [{ id: 77, type: "PipeWire:Interface:Device", info: { params: {
+            EnumProfile: [{ index: 1, name: "a2dp-sink", priority: 10 },
+                { index: 2, name: "a2dp-sink-sbc_xq", priority: 20 },
+                { index: 3, name: "headset-head-unit", priority: 1 },
+                { index: 4, name: "headset-head-unit-msbc", priority: 2 },
+                { index: 5, name: "headset-head-unit", priority: 50, available: "no" },
+                { index: -1, name: "a2dp-sink", priority: 100 },
+                { index: "9", name: "a2dp-sink", priority: 100 }], Profile: [{ index: 1 }]
+        } } }]
+        const headsetModes = AudioMode.profilesFor(headsetProfiles, "77")
+        root._check(headsetModes.listening === 2 && headsetModes.calls === 4 && headsetModes.active === "listening"
+                && AudioMode.profilesFor(headsetProfiles, "78").calls === -1
+                && AudioMode.profilesFor({}, "77").listening === -1,
+            "headset mode discovery prefers supported profiles and rejects malformed indices or another device")
+        root._check(AudioMode.kindOf("bap-sink") === "listening" && AudioMode.kindOf("bap-duplex") === "calls"
+                && AudioMode.kindOf("off") === ""
+                && AudioMode.deviceId({ ready: true, properties: { "device.api": "alsa", "device.id": 77 } }) === ""
+                && AudioMode.deviceIdentity({ properties: { "api.bluez5.address": "AA_BB_CC_DD_EE_FF" } }) === "aa:bb:cc:dd:ee:ff",
+            "headset modes cover classic and LE Audio while limiting switching to identified Bluetooth devices")
+        Audio.beginProfileSwitch()
+        root._check(Audio.profileSwitching && !Audio._out.enabled && !Audio._in.enabled
+                && Audio.ready === audioStatus.output.ready && Audio.sinkName === audioStatus.output.name,
+            "headset switching preserves the presented audio state and suspends queued volume writes")
+        Audio._profilePresentation = Object.assign({}, Audio._profilePresentation, { muted: true, volume: 0, effectiveVolume: 0.43 })
+        root._check(JSON.parse(Audio._ipc.status()).output.volume === 43 && Audio.uiVolume === 0,
+            "audio status preserves the remembered level while a muted headset changes modes")
+        root._check([Audio._ipc.setVolume(50), Audio._ipc.volumeUp(), Audio._ipc.volumeDown(), Audio._ipc.toggleMute(),
+                Audio._ipc.setMicVolume(50), Audio._ipc.micUp(), Audio._ipc.toggleMicMute(), Audio._ipc.cycleInput(),
+                Audio._ipc.cycleOutput()].every(reply => reply === "error: audio device is changing"),
+            "audio IPC rejects edits during a headset transition instead of targeting a temporary fallback")
+        Audio.endProfileSwitch()
+        Audio._releaseProfilePresentation()
+        root._check(!Audio.profileSwitching && Audio._profilePresentation === null,
+            "finishing a headset transition releases its temporary presentation state")
+        const keyboardRows = KeyboardBrightness.parseDevices("/org/freedesktop/UPower/KbdBacklight/led0\t0\t2\tfixture\n"
+            + "/org/freedesktop/UPower/KbdBacklight/led1\t1\t0\tfixture\n"
+            + "/org/freedesktop/UPower/KbdBacklight/led2\t3\t2\tfixture\n"
+            + "/org/other\t1\t2\tfixture\n"
+            + "/org/freedesktop/UPower/KbdBacklight/led3\t1\t2147483648\tfixture\n")
+        root._check(keyboardRows.length === 1 && keyboardRows[0].level === 0 && keyboardRows[0].maximum === 2,
+            "keyboard lighting accepts off and hides invalid or unsupported hardware levels")
         root._check(Audio._ipc.setVolume(-1).indexOf("error:") === 0
                 && Audio._ipc.setVolume(101).indexOf("error:") === 0
                 && Audio._ipc.setMicVolume(-1).indexOf("error:") === 0
@@ -8343,6 +8491,14 @@ ShellRoot {
                 && vitals.sizeText(0) === "" && vitals.sizeText(NaN) === "",
             "the vitals strip writes sizes in binary units with one decimal below ten")
         if (vitals) {
+            const diskRow = root._findTrayNode(vitals, item => item.label === "Disk" && item.sub !== undefined)
+            const diskWas = [SysInfo.diskTotalKb, SysInfo.diskAvailKb]
+            SysInfo.diskTotalKb = 1000; SysInfo.diskAvailKb = 0
+            const fullCaption = diskRow ? diskRow.sub : ""
+            SysInfo.diskTotalKb = 0
+            root._check(fullCaption === "Full" && diskRow.sub === "",
+                "a full disk says so in its caption, and an unread disk leaves the caption empty")
+            SysInfo.diskTotalKb = diskWas[0]; SysInfo.diskAvailKb = diskWas[1]
             const reduceWas = ShellSettings.reduceMotion
             ShellSettings.reduceMotion = false
             vitals.active = true
@@ -8413,6 +8569,35 @@ ShellRoot {
                 && Battery.normalizedPercent(-1) === 0
                 && Battery.normalizedPercent(NaN) === 0,
             "battery percentage reads quickshell's 0-1 charge and stays bounded")
+        const detailBattery = { ready: true, isPresent: true, powerSupply: true,
+            type: Up.UPowerDeviceType.Battery, state: Up.UPowerDeviceState.Discharging,
+            percentage: 0.64, healthSupported: true, healthPercentage: 92,
+            energy: 32, energyCapacity: 50, changeRate: 12.3, model: "Fixture battery" }
+        const batteryDetails = Battery.detailsFor([detailBattery])
+        root._check(batteryDetails.length === 1 && batteryDetails[0].charge === "64%"
+                && batteryDetails[0].health === "92%" && batteryDetails[0].energy === "32 / 50 Wh"
+                && batteryDetails[0].power === "12.3 W" && batteryDetails[0].powerLabel === "Power use",
+            "battery details preserve health's native percent and energy and power units")
+        const twoBatteries = Battery.detailsFor([detailBattery,
+            Object.assign({}, detailBattery, { state: Up.UPowerDeviceState.Charging, percentage: 0,
+                healthSupported: false, energyCapacity: 0, changeRate: 9 })])
+        root._check(twoBatteries.length === 2 && twoBatteries[0].name !== twoBatteries[1].name
+                && twoBatteries[1].charge === "0%" && twoBatteries[1].health === ""
+                && twoBatteries[1].energy === "" && twoBatteries[1].powerLabel === "Charging power",
+            "multiple batteries retain their own readings and omit unsupported measurements")
+        root._check(Battery.detailsFor([null, Object.assign({}, detailBattery, { ready: false }),
+                Object.assign({}, detailBattery, { isPresent: false }),
+                Object.assign({}, detailBattery, { powerSupply: false })]).length === 0,
+            "battery details exclude unready, absent and peripheral batteries")
+        const upsDetails = Battery.detailsFor([Object.assign({}, detailBattery, { type: Up.UPowerDeviceType.Ups,
+            healthPercentage: NaN, energy: Infinity, changeRate: -1, percentage: NaN })])[0]
+        root._check(upsDetails.name === "UPS" && upsDetails.charge === "" && upsDetails.health === ""
+                && upsDetails.energy === "" && upsDetails.power === "",
+            "UPS details reject malformed measurements without displaying invented zeros")
+        const batteryAndUps = Battery.detailsFor([detailBattery, Object.assign({}, detailBattery, {
+            type: Up.UPowerDeviceType.Ups, state: Up.UPowerDeviceState.Charging, changeRate: -8.5 })])
+        root._check(batteryAndUps[0].name === "Battery" && batteryAndUps[1].name === "UPS" && batteryAndUps[1].power === "8.5 W",
+            "a battery beside a UPS keeps plain names, and a charging rate signed as UPower's spec allows still shows")
         root._check(Battery.validReading(true, 0.01) && Battery.validReading(true, 0.72),
             "a battery with any charge keeps its readout and warning eligibility")
         root._check(!Battery.validReading(true, 0)
@@ -9099,6 +9284,33 @@ ShellRoot {
         Notifications.clearHistory()
 
         const scanAdapterWas = Bluetooth._scanAdapter
+        const dockDisplay = { name: "DP-1", model: "Fixture display", serialNumber: "12345" }
+        const reconnectedDisplay = Object.assign({}, dockDisplay, { name: "DP-3" })
+        const otherDisplay = { name: "DP-1", model: "Other display", serialNumber: "67890" }
+        const displayIdentityKey = Monitors.identity(dockDisplay)
+        root._check(Monitors.screenForPreference("DP-1", displayIdentityKey, [otherDisplay, reconnectedDisplay]) === reconnectedDisplay,
+            "a remembered display follows its physical identity when docking changes the connector name")
+        root._check(Monitors.screenForPreference("DP-1", displayIdentityKey, [otherDisplay]) === null,
+            "another known display on the old port does not inherit the missing display's preference")
+        root._check(Monitors.uniqueIdentity(dockDisplay, [dockDisplay, reconnectedDisplay]) === ""
+                && Monitors.screenForPreference("DP-1", displayIdentityKey, [dockDisplay, reconnectedDisplay]) === dockDisplay,
+            "duplicate monitor identities use the explicit connector instead of guessing between identical displays")
+        root._check(Monitors.identity({ model: "Fixture", serialNumber: "0" }) === ""
+                && Monitors.identity({ model: "Fixture", serialNumber: "" }) === ""
+                && Monitors.screenForPreference("DP-1", "", [otherDisplay]) === otherDisplay
+                && Monitors.screenForPreference("", displayIdentityKey, [dockDisplay]) === null,
+            "missing or placeholder monitor serials preserve existing connector-based preferences")
+        const otherIdentityKey = Monitors.identity(otherDisplay)
+        root._check(Monitors.overlayIdentityFor("DP-1", displayIdentityKey, true, [otherDisplay, reconnectedDisplay]) === otherIdentityKey
+                && Monitors.overlayIdentityFor("DP-1", displayIdentityKey, false, [otherDisplay, reconnectedDisplay]) === displayIdentityKey
+                && Monitors.overlayIdentityFor("DP-2", displayIdentityKey, true, [otherDisplay]) === ""
+                && Monitors.overlayIdentityFor("DP-1", "", false, [otherDisplay]) === otherIdentityKey
+                && Monitors.overlayIdentityFor("", displayIdentityKey, false, [otherDisplay]) === "",
+            "a changed popup monitor name re-reads its identity from that screen, while a screen change keeps the identity")
+        root._check(Object.keys(Monitors.identityMap("malformed")).length === 0
+                && Object.keys(Monitors.identityMap('{"DP-1":42}')).length === 0
+                && Monitors.identityMap(JSON.stringify({ "DP-1": displayIdentityKey }))["DP-1"] === displayIdentityKey,
+            "display identity metadata rejects malformed input and preserves valid mappings")
         const scanRequestedWas = Bluetooth._scanRequested
         const firstRadio = { enabled: true, discovering: false }
         const secondRadio = { enabled: true, discovering: false }
@@ -9142,6 +9354,19 @@ ShellRoot {
                 && Bluetooth._toggleStep(false, false, false) === "on"
                 && Bluetooth._toggleStep(false, false, true) === "off",
             "the bluetooth toggle lifts a soft rfkill block and leaves a hardware switch alone")
+
+        root._check(!Bluetooth.hardBlockedFor("hci0\t0\nhci1\t1\n", "hci0")
+                && Bluetooth.hardBlockedFor("hci0\t0\nhci1\t1\n", "hci1"),
+            "a blocked Bluetooth controller does not disable another controller's toggle")
+        root._check(!Bluetooth.hardBlockedFor("ideapad_bluetooth\t1\nhci0\t0\n", "hci0")
+                && !Bluetooth.hardBlockedFor("hci0\t0\nideapad_bluetooth\t1\n", "hci0"),
+            "a controller's own rfkill state takes priority over a platform switch in any order")
+        root._check(Bluetooth.hardBlockedFor("ideapad_bluetooth\t1\nhci1\t0\n", "hci0")
+                && !Bluetooth.hardBlockedFor("hci1\t1\n", "hci0"),
+            "drivers without a controller switch fall back to platform switches, not other radios")
+        root._check(!Bluetooth.hardBlockedFor("hci0\tinvalid\n\t1\nmalformed\n", "hci0")
+                && !Bluetooth.hardBlockedFor("", "hci0"),
+            "missing or malformed rfkill readings cannot invent a hardware block")
 
         const maxPairWaitMs = Bluetooth._attemptGuardMs
             * (Bluetooth._maxPairGuardExtensions + 1)
@@ -9283,6 +9508,38 @@ ShellRoot {
         root._check(ddcRows.length === 1 && ddcRows[0].percent === 25
                 && ddcRows[0].key === "card1-DP-1:" + displayIdentity,
             "external display parsing normalizes non-100 ranges and rejects invalid identities and levels")
+
+        const scanWas = { displays: DisplayBrightness.displays, values: DisplayBrightness.values,
+            queued: DisplayBrightness._queued, error: DisplayBrightness._scanError,
+            lastScan: DisplayBrightness._lastScan, pending: DisplayBrightness._refreshPending }
+        const partialKey = "card1-DP-1:" + displayIdentity
+        const partialRead = "card1-DP-1\t7\t" + displayIdentity + "\t20\t80\ncard1-DP-2\t8"
+        DisplayBrightness.displays = []
+        DisplayBrightness.values = ({})
+        DisplayBrightness._queued = ({ [partialKey]: 65 })
+        DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 0, true, partialRead)
+        root._check(DisplayBrightness.displays.length === 1
+                && DisplayBrightness.levelFor(partialKey) === 65
+                && DisplayBrightness._scanError.length > 0 && DisplayBrightness._lastScan === 0,
+            "an incomplete brightness scan preserves completed displays and queued levels without claiming success")
+        const partialDisplays = DisplayBrightness.displays
+        DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 1, false, "")
+        root._check(DisplayBrightness.displays === partialDisplays && DisplayBrightness.levelFor(partialKey) === 65,
+            "a failed brightness scan with no completed readings preserves the last usable controls")
+        DisplayBrightness._acceptScanResult(DisplayBrightness._generation - 1, 0, true, partialRead)
+        root._check(DisplayBrightness.displays === partialDisplays && DisplayBrightness._refreshPending,
+            "an invalidated partial brightness scan cannot restore obsolete displays")
+        DisplayBrightness._queued = ({})
+        DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 0, false, partialRead)
+        root._check(DisplayBrightness.levelFor(partialKey) === 25
+                && DisplayBrightness._scanError === "" && DisplayBrightness._lastScan > 0,
+            "a complete brightness scan restores measured values and clears the incomplete-scan warning")
+        DisplayBrightness.displays = scanWas.displays
+        DisplayBrightness.values = scanWas.values
+        DisplayBrightness._queued = scanWas.queued
+        DisplayBrightness._scanError = scanWas.error
+        DisplayBrightness._lastScan = scanWas.lastScan
+        DisplayBrightness._refreshPending = scanWas.pending
 
         Hooks._queued = ({})
         Hooks._queueOrder = []
@@ -9858,6 +10115,75 @@ ShellRoot {
         settings._finishDrag("clock")
         ShellSettings.trayWidget = true
         ShellSettings.setTrayItemHidden("probe-a", false)
+
+        const layoutWas = [ShellSettings.barWidgetOrderLeft, ShellSettings.barWidgetOrderCenter,
+            ShellSettings.barWidgetOrderRight]
+        const where = key => ShellSettings.barWidgetLocate(key)
+        const rightKeys = ShellSettings.barWidgetOrderRightKeys
+        const lastKey = rightKeys[rightKeys.length - 1]
+        settings._moveBy(lastKey, -1)
+        const steppedUp = where(lastKey).index === rightKeys.length - 2
+        settings._moveBy(lastKey, 1)
+        settings._moveBy(lastKey, 1)
+        const heldAtEnd = where(lastKey).zone === "right" && where(lastKey).index === rightKeys.length - 1
+        const firstRight = ShellSettings.barWidgetOrderRightKeys[0]
+        const centerCount = ShellSettings.barWidgetOrderCenterKeys.length
+        settings._moveBy(firstRight, -1)
+        const crossed = where(firstRight).zone === "center" && where(firstRight).index === centerCount
+        settings._moveBy(firstRight, 1)
+        root._check(steppedUp && heldAtEnd && crossed
+                && where(firstRight).zone === "right" && where(firstRight).index === 0,
+            "arrow keys on a widget's grip move it one place, across a zone edge, and stop at the bar's end")
+        const grip = root._findTrayNode(settings, item =>
+            item.Accessible.name === "Move " + ShellSettings.barWidgetMeta.clock.label)
+        root._check(grip !== null && grip.Accessible.role === Accessible.Button && grip.activeFocusOnTab,
+            "each widget's grip is a keyboard stop a screen reader names as moving that widget")
+        ShellSettings.setBarWidgetLayout(ShellSettings.barWidgetOrderLeftKeys, ShellSettings.barWidgetOrderCenterKeys,
+            ["clock"].concat(ShellSettings.barWidgetOrderRightKeys.filter(k => k !== "clock")))
+        const toggleOf = key => root._findTrayNode(settings, item => item.Accessible.role === Accessible.CheckBox
+            && item.Accessible.name === ShellSettings.barWidgetMeta[key].label)
+        // clock is built last, so first on the right its drawn neighbour is not its built one. The fixture has
+        // no window to hold focus, so this checks the switch an arrow lands on
+        root._check(settings._toggleAfter("clock", 1) === toggleOf(ShellSettings.barWidgetOrderRightKeys[1])
+                && settings._toggleAfter(ShellSettings.barWidgetOrderRightKeys[1], -1) === toggleOf("clock"),
+            "arrow keys walk the widget switches in the order drawn, not the order the rows were built")
+        const gripOf = key => root._findTrayNode(settings, item =>
+            item.Accessible.name === "Move " + ShellSettings.barWidgetMeta[key].label)
+        const secondRight = ShellSettings.barWidgetOrderRightKeys[1]
+        root._check(settings._tabTarget(toggleOf("clock"), true) === gripOf(secondRight)
+                && settings._tabTarget(gripOf(secondRight), false) === toggleOf("clock")
+                && settings._tabTarget(gripOf("clock"), true) === toggleOf("clock")
+                && settings._tabTarget(toggleOf("tray"), true) === appToggle,
+            "Tab walks each row's grip, switch and tray apps in the order drawn, not the order the rows were built")
+        // a list of its own in a real window: the shared fixture has none, and moving it into one upsets the tray checks
+        const keyHost = keyboardFixtureFactory.createObject(root)
+        const keyList = Qt.createComponent("modules/menu/settings/DraggableWidgetList.qml")
+            .createObject(keyHost.contentItem, { width: 320 })
+        keyHost.requestActivate()
+        keyHost.input.wait(80)
+        const inList = (label, key) => root._findTrayNode(keyList, item => item.Accessible.name === label
+            && item.visible && (key === undefined || item.Accessible.role === key))
+        const label = key => ShellSettings.barWidgetMeta[key].label
+        inList(label("clock"), Accessible.CheckBox).forceActiveFocus(Qt.TabFocusReason)
+        keyHost.input.keyClick(Qt.Key_Tab)
+        const tabbed = inList("Move " + label(secondRight)).activeFocus
+        keyHost.input.keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        const backtabbed = inList(label("clock"), Accessible.CheckBox).activeFocus
+        inList("Move " + label(ShellSettings.barWidgetOrderLeftKeys[0])).forceActiveFocus(Qt.TabFocusReason)
+        keyHost.input.keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        const leftList = keyHost.activeFocusItem !== null && keyList._rowOf(keyHost.activeFocusItem) === null
+        keyHost.destroy()
+        root._check(tabbed && backtabbed && leftList,
+            "real Tab and Shift+Tab keys follow the drawn order and leave the list past its first row")
+        const chevron = root._findTrayNode(settings, item => item.visible
+            && /^(Show|Hide) tray apps$/.test(String(item.Accessible.name)))
+        const trayWasOpen = settings._trayOpen
+        if (chevron) chevron.Accessible.pressAction()
+        root._check(chevron !== null && chevron.Accessible.role === Accessible.Button && chevron.activeFocusOnTab
+                && settings._trayOpen !== trayWasOpen,
+            "the tray's app list opens and closes from the keyboard")
+        settings._setTrayOpen(trayWasOpen)
+        ShellSettings.setBarWidgetLayout(layoutWas[0], layoutWas[1], layoutWas[2])
     }
 
     function _startTrayProbe(): void {

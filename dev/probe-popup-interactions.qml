@@ -380,6 +380,11 @@ Item {
             f.popup._closeIfOutside(centre)
             root._check(f.state.open && !f.popup._outsideCard(centre),
                 "a click on the " + f.name + " card keeps it open")
+            const hit = f.popup.cardWindow.mask ? f.popup.cardWindow.mask.item : null
+            root._check(hit !== null && hit !== card && hit.transform.length === 0
+                    && hit.x === card.x && hit.y === card.y
+                    && hit.width === card.width && hit.height === card.height,
+                "the " + f.name + " window takes clicks across the card's resting box, not a mask frozen mid-open")
             f.popup._closeIfOutside(Qt.point(-5000, 40))
             root._check(!f.state.open, "a click on another monitor closes " + f.name)
 
@@ -462,7 +467,8 @@ Item {
         ShellSettings.barFloating = true
         ShellSettings.barWidth = 0.6
         TrayMenuState.toggleAt(card.winW * 0.25, root.targetScreen, null, false, null, traySource)
-        input.wait(50)
+        // until settled the card follows its anchor by design; a fixed wait read it unsettled under a loaded check.sh
+        for (let i = 0; i < 40 && !card._placementSettled; i++) input.wait(50)
         const placed = card.x
         ShellSettings.barWidth = 0.9
         TrayMenuState.anchorX = card.winW * 0.35
