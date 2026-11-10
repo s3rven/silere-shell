@@ -139,6 +139,8 @@ Singleton {
     property bool   popupMatchBarOpacity: false
     property string barDisabledMonitors: ""
     property string overlayMonitor:      ""
+    property string overlayMonitorIdentity: ""
+    property string barMonitorIdentities: ""
 
     // network, sound, brightness and battery read as one status cluster, as on every desktop bar;
     // split into groups, a lone Wi-Fi glyph sat between two dividers
@@ -464,6 +466,8 @@ Singleton {
         { k: "popupMatchBarOpacity", t: "bool", sec: "theme", l: "Popups match bar opacity" },
         { k: "barDisabledMonitors", t: "re",   re: /^[A-Za-z0-9._,-]*$/, sec: "interface" },
         { k: "overlayMonitor",      t: "re",   re: /^[A-Za-z0-9._-]*$/, sec: "interface", l: "Overlay display" },
+        { k: "overlayMonitorIdentity", t: "re", re: /^[A-Za-z0-9%._~!*'()-]{0,4096}$/, sec: "-" },
+        { k: "barMonitorIdentities", t: "re", re: /^[^\u0000-\u001F\u007F]{0,16384}$/, sec: "-" },
         { k: "barWidgetOrderLeft",  t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
         { k: "barWidgetOrderCenter", t: "re", re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
         { k: "barWidgetOrderRight", t: "re",   re: /^[a-zA-Z]*(,[a-zA-Z]+)*$/, sec: "widgets" },
