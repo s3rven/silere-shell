@@ -201,7 +201,7 @@ hides that widget or marks it unavailable.
 | tool | enables |
 |---|---|
 | `pipewire` + `wireplumber` | volume, output picker |
-| `upower` | battery |
+| `upower` | battery details and supported keyboard lighting; lighting also uses `busctl` |
 | `nmcli` | VPN indicator, name and address (network and Wi-Fi use Quickshell directly) |
 | `brightnessctl` | brightness |
 | `ddcutil` | external monitor brightness over DDC/CI; enable **External brightness** in Settings › Appearance › Interface |
@@ -210,6 +210,7 @@ hides that widget or marks it unavailable.
 | `cava` | media visualizer |
 | `curl` | cover art from the web, when that setting is on |
 | `wpctl` | Bluetooth volume on Quickshell 0.3.1 (part of WirePlumber) |
+| `wpctl` + `pw-dump` | Listening / Calls modes on compatible Bluetooth headsets |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
 | `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |

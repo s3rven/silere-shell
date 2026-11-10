@@ -13,6 +13,7 @@ Start with [installation](install.md) if Silere is new to your desktop, or
 | Measure memory, CPU use or rendering | [Performance](performance.md) |
 | Change the code or build a fork | [Code guide](forking.md) and [contributing](../CONTRIBUTING.md) |
 | Check layouts, display scaling or compositor compatibility | [Testing and CI](testing.md) |
+| Review possible features and compatibility improvements | [Improvement research, November 2026](research/2026-11-09-improvements.md) |
 | Prepare a release | [Release process](releasing.md) |
 | See what changed | [Changelog](../CHANGELOG.md) and [past releases](releases/) |
 

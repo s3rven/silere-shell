@@ -32,6 +32,8 @@ and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
 Page Up/Down. **Ctrl+Tab / Ctrl+Shift+Tab** move between the menu's pages. **Ctrl+F**
 searches notification history and Settings. Escape steps back or closes the popup. Controls expose the same actions to accessibility tools.
 The mouse back button also steps back through the menu before closing it.
+In Settings › Show & order, Tab to a widget's ⋮ grip and press Up or Down to move it
+along the bar, into the next zone past either end.
 
 In an open dropdown, repeat an initial to cycle matches; Backspace corrects the search.
 Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses
@@ -51,6 +53,9 @@ makes the handle wider.
 | window title | **hover** a title that is cut short to scroll through the rest · turn on the app icon under Settings › Widgets › Indicators |
 | system monitor | optional, under Settings › Widgets › Indicators · shows CPU, memory and temperature, amber or red while one stays high · **click** opens Home, where **click** on CPU or Memory opens your system monitor app |
 | media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player · **right-click** opens Now Playing |
+| network | **hover** shows the network and signal, an active VPN, a connection problem, and traffic while data flows · **click** opens the Wi-Fi list in Home, or Home when Wi-Fi is off |
+| bluetooth | **hover** shows the connected device and its battery, or how many are connected · **click** opens the Bluetooth list in Home, or Home when Bluetooth is off |
+| keyboard layout | **hover** shows the full layout name · **click** switches every keyboard to the next layout · CAPS appears while Caps Lock is on |
 | volume | **hover** shows the active output · **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
 | microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
 | brightness | **scroll** changes brightness · **click** opens its slider in Home, with the device choices when more than one backlight drives a screen |
@@ -64,7 +69,8 @@ makes the handle wider.
 On a popup, **click** runs the default action, **right-click** or **drag sideways**
 dismisses, and **middle-click** jumps to the sending app. A reply action opens a text
 field when the sender supports it. Messages from the same app and sender join one
-card; **hover** shows the earlier lines.
+card; **hover** shows the earlier lines. A notification the same app repeats word for
+word keeps one row in history, dated by its latest arrival.
 
 In notification history:
 
@@ -98,9 +104,9 @@ Home/End jumps to the start or end. Seeking is available when supported by the p
 |---|---|
 | Wi-Fi | Click a saved or open network to join. A personal network opens a password field; the eye button shows or hides the password. |
 | Connected Wi-Fi | Click twice to disconnect. |
-| Saved Wi-Fi | Right-click or middle-click twice to forget it; disconnect first if it is connected. |
+| Saved Wi-Fi | Right-click, middle-click or press Delete twice to forget it; disconnect first if it is connected. |
 | Bluetooth | Click to pair or connect; click a connected device twice to disconnect. |
-| Paired Bluetooth | Right-click or middle-click twice to forget it; disconnect first if it is connected. |
+| Paired Bluetooth | Right-click, middle-click or press Delete twice to forget it; disconnect first if it is connected. |
 | Active VPN | Click its address to copy IPv4, or IPv6 on an IPv6-only tunnel. |
 
 Disconnect, forget and power confirmations expire after three seconds. A later
@@ -113,6 +119,22 @@ and IP/DNS configuration. This opens `nm-connection-editor`, or `nmtui` in a ter
 For Bluetooth devices needing a PIN or confirmation, **Pair with a passkey** opens
 `blueman-manager`. Install Blueman to enable that action.
 
+With multiple Bluetooth controllers, choose **Controller** above the device list or
+under **Settings › Appearance › Interface**. The choice lasts for this session;
+**Automatic** follows the system default. Removing the selected controller falls
+back to an available one.
+
+In Home, expand Volume and select **Output**. Compatible Bluetooth headsets offer
+**Listening** for playback and **Calls** for microphone use. This needs `wpctl` and
+`pw-dump`, and appears only when the device offers both profiles. Volume controls
+pause while the headset changes modes; an error restores the controls and offers
+sound settings through the existing output settings action.
+
+Click **Battery** in Home's system readings to expand battery health, stored
+energy, and power use or charging power. With more than one battery or a UPS,
+each is listed with its own charge. UPower determines which readings are
+available; unsupported readings stay hidden.
+
 ## Settings
 
 Open **Settings** in the menu. Most changes apply immediately and are saved to
@@ -123,7 +145,7 @@ A dot beside a Settings page means it has changes from the defaults.
 Click the **search icon** beside the section heading, or press **Ctrl+F**, to expand
 **Find a setting…** and find the section for a feature.
 Try `font`, `history retention`, `night light`, or `reset defaults`; configuration
-names such as `notifHistoryDays` also work, as does any row's name. Click a result to open its section,
+names such as `notifHistoryDays` also work, as does any row's name, and a typo such as `brigthness` still finds it. Click a result to open its section,
 or press Enter for the top one, which the line above the results names; Down and Up walk the results. The clear-query button keeps
 search open for another query; the close button folds it away. Hover the compact
 icon to see its label and Ctrl+F shortcut.
@@ -204,6 +226,16 @@ Under **Appearance › Interface**, enable **External brightness** to control DD
 monitors with `ddcutil`. Enable DDC/CI in the monitor's own menu. Available displays
 get brightness sliders in Home; opening Interface retries detection.
 
+Home also shows **Keyboard light** when UPower exposes a controllable keyboard
+backlight. Its steps follow the hardware, including **Off**. If several lights
+are available, select one under **Appearance › Interface**. Changes use UPower's
+normal permissions; Silere does not request administrative access.
+
+Bar visibility and the selected popup monitor follow a uniquely identified display
+across dock connector changes. Screens without a usable model and serial, or with
+duplicate identities, keep connector-based preferences. A different identified
+display on an old connector keeps its own defaults.
+
 The optional **Keyboard** bar widget shows the input language and, when available,
 Caps Lock. Click it to switch to the next configured layout.
 
@@ -215,3 +247,10 @@ Use **Settings › System › Overview** to check for Silere releases, review th
 and confirm installation. From a terminal, `silere update` checks and
 `silere update --apply` installs. See [updates and recovery](updates.md) for rollback,
 automatic checks, local edits and development checkouts.
+
+Overview's **Devices** section shows audio, lighting and radio state with recovery
+actions. **Copy diagnostic report** collects runtime versions, tool availability,
+and device counts and states. It excludes device names, addresses, network names,
+and screen serials. Run `silere doctor --json` for the same report format in a
+terminal; device state is `null` when no compatible shell is running or the
+optional Python parser is unavailable.

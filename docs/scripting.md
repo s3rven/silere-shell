@@ -94,6 +94,20 @@ percentage, so a muted device can have a nonzero `volume`.
 
 Actions return the requested percentage, mute state or device name. Missing devices
 and percentages outside 0–100 return `error:` replies and exit 1.
+During a headset mode change, mutations return `error: audio device is changing`;
+they are not queued onto a temporary fallback device.
+
+## Diagnostic reports
+
+`silere doctor --json` prints a versioned report with `runtime`, `availability`,
+and `devices`. Runtime and tool availability are collected even if the shell is
+stopped. Live device state requires a running compatible shell, `qs`, `timeout`,
+and Python 3; otherwise `devices` is `null`.
+
+`silere ipc diagnostics status` prints the live `devices` snapshot directly.
+Its schema version is 1. The report includes counts, state flags, screen size and
+scale, but excludes names, addresses, network names, and screen serials. Neither
+command changes device state.
 
 ## Settings
 
