@@ -220,6 +220,53 @@ AnchoredPopupState {
     function searchSettings(query: string): var {
         const words = root._searchWords(query.slice(0, 256))
         if (words.length === 0) return []
+        const found = root._searchTerms(words)
+        if (found.length > 0) return found
+        const fixed = words.split(" ").map(term => root._correctedTerm(term)).join(" ")
+        return fixed === words ? [] : root._searchTerms(fixed)
+    }
+
+    // every word the index knows, for typo correction
+    readonly property var _searchVocabulary: {
+        const seen = Object.create(null)
+        for (const row of root._settingsSearchEntries)
+            for (const word of row.words.split(" "))
+                if (word.length > 2) seen[word] = true
+        return Object.keys(seen)
+    }
+
+    // a word nothing starts with becomes the closest indexed word: one slip (a swap counts as one), two from 8 letters
+    function _correctedTerm(term: string): string {
+        if (term.length < 4 || root._searchVocabulary.some(w => w.startsWith(term))) return term
+        const most = term.length >= 8 ? 2 : 1
+        let best = term, bestCost = most + 1
+        for (const word of root._searchVocabulary) {
+            // a slip in the first letter and the second at once is rare, and skipping those keeps a keystroke cheap
+            if (word.length < term.length - most || (word[0] !== term[0] && word[1] !== term[1])) continue
+            const whole = word.length <= term.length + most ? root._editCost(term, word) : bestCost
+            const cost = word.length > term.length ? Math.min(whole, root._editCost(term, word.slice(0, term.length))) : whole
+            if (cost < bestCost) { best = word; bestCost = cost }
+        }
+        return best
+    }
+
+    // optimal string alignment distance
+    function _editCost(a: string, b: string): int {
+        let prev2 = [], prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+        for (let i = 1; i <= a.length; i++) {
+            const row = [i]
+            for (let j = 1; j <= b.length; j++) {
+                row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+                if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
+                    row[j] = Math.min(row[j], prev2[j - 2] + 1)
+            }
+            prev2 = prev
+            prev = row
+        }
+        return prev[b.length]
+    }
+
+    function _searchTerms(words: string): var {
         const terms = words.split(" ").map(term => " " + term)
         const phrase = " " + words
         const within = text => terms.every(term => text.indexOf(term) >= 0)
