@@ -402,6 +402,8 @@ QtObject {
     function _liveToplevels(): var {
         return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], root._closedAddrs)
     }
+    // its own list: urgency read inside the window model would rebuild that model for every consumer on each flip
+    readonly property var urgentRefs: root._liveToplevels().filter(t => t && t.urgent && t.address).map(t => "0x" + t.address)
 
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""

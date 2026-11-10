@@ -34,6 +34,7 @@ Singleton {
     // off the live title path: an animated title would wake every bar per frame
     readonly property var workspaceToplevels: _be ? _be.workspaceToplevels : []
     readonly property var activeToplevel:     _be ? _be.activeToplevel : null
+    readonly property var urgentRefs:         _be && _be.urgentRefs ? _be.urgentRefs : []
     readonly property string focusedMonitor:  _be ? _be.focusedMonitor : ""
     readonly property int focusedWorkspaceRef: _be ? _be.focusedWorkspaceRef : -1
     readonly property bool overviewActive:    _be ? _be.overviewActive : false

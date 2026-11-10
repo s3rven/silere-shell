@@ -250,6 +250,7 @@ Singleton {
     }
 
     property var _pendingSource: null
+    property var _urgentAtClick: []
     readonly property Timer _sourceFallback: Timer {
         interval: 250
         onTriggered: {
@@ -259,9 +260,39 @@ Singleton {
         }
     }
 
+    // hyprland marks a window urgent when its app asks to be raised and may not take focus: the exact window, even when nothing matched
+    function raisedSource(toplevels, urgentRefs, before, source): var {
+        const list = toplevels || []
+        for (let i = 0; i < list.length; i++) {
+            const t = list[i]
+            if (!t || urgentRefs.indexOf(t.ref) < 0 || before.indexOf(t.ref) >= 0) continue
+            // with the sender's app known, a window of another app pinging in the same quarter second is not it
+            if (source && !((source.pid > 0 && t.pid === source.pid) || (!!source.cls && t.cls === source.cls))) continue
+            return t
+        }
+        return null
+    }
+    Connections {
+        target: Compositor
+        enabled: root._sourceFallback.running
+        function onUrgentRefsChanged() {
+            const t = root.raisedSource(Compositor.toplevels, Compositor.urgentRefs, root._urgentAtClick, root._pendingSource)
+            if (!t) return
+            root._sourceFallback.stop()
+            root._pendingSource = null
+            Compositor.focusToplevel(t)
+        }
+    }
+
+    function followRaise(): void {
+        root._pendingSource = null
+        root._urgentAtClick = Compositor.urgentRefs
+        root._sourceFallback.restart()
+    }
+
     function focusNotificationSourceAfterAction(notification): void {
+        root.followRaise()
         root._pendingSource = root._matchNotificationClient(notification, true)
-        if (root._pendingSource) root._sourceFallback.restart()
     }
 
     function notificationSourceWorkspace(notification): int {

@@ -234,6 +234,7 @@ Item {
     function invokeAction(action): void {
         if (!card._canInteract || !action) return
         action.invoke()
+        WindowActions.followRaise()
         if (!card.notification.resident) card.dismiss()
     }
 
