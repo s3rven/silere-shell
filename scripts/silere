@@ -39,7 +39,7 @@ Usage: silere <command> [options]
   use [checkout]         Make this checkout (or the given one) the one that runs
   status                 Show installation and updater state
   log [--follow]         Print the running shell's log
-  doctor                 Run read-only installation diagnostics
+  doctor [--json]        Run read-only installation diagnostics
   ipc <target> <fn> ...  Call the running shell over IPC; alone, it lists the calls
   link                   Put silere on PATH, in ~/.local/bin, with shell completions
   update                 Check for a signed Silere release
@@ -601,8 +601,7 @@ case "$command_name" in
         fi
         ;;
     doctor)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
-        exec bash "$ROOT/scripts/doctor.sh"
+        exec bash "$ROOT/scripts/doctor.sh" "$@"
         ;;
     ipc)
         command -v qs >/dev/null 2>&1 || die "qs (Quickshell) is not installed"

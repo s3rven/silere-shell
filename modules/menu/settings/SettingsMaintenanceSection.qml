@@ -144,6 +144,7 @@ Column {
     }
     readonly property var _attentionIssues: root._health.attention
     readonly property var _optionalIssues: root._health.optional
+    readonly property var _deviceChecks: DeviceDiagnostics.checks()
     readonly property bool _healthBusy: !SystemTools.ready || SystemTools.checking
         || FontScan.scanning
     readonly property string _healthStatus: {
@@ -215,6 +216,35 @@ Column {
                     else if (modelData.a === "interface") MenuState.setSettingsSection("interface")
                 }
             }
+        }
+    }
+
+    SectionLabel { label: "DEVICES" }
+    SettingsCard {
+        Repeater {
+            model: root._deviceChecks
+            ControlRow {
+                required property var modelData
+                glyph: modelData.glyph
+                title: modelData.title
+                status: modelData.detail
+                valueText: modelData.state
+                passive: modelData.action.length === 0
+                // the value is a state, not what a tap does: accent here made one "On" look unlike another
+                statusColor: modelData.warning ? Theme.warning : "transparent"
+                onActivated: DeviceDiagnostics.activate(modelData.action)
+            }
+        }
+        ControlRow {
+            glyph: "󰆏"
+            title: "Copy diagnostic report"
+            status: DeviceDiagnostics.copyError.length > 0 ? DeviceDiagnostics.copyError
+                : "Versions and device status, no identifiers"
+            valueText: DeviceDiagnostics.copyState === "working" ? "Collecting…"
+                : DeviceDiagnostics.copyState === "done" ? "Copied" : "Copy"
+            available: DeviceDiagnostics.copyState !== "working"
+            valueIsAction: true
+            onActivated: DeviceDiagnostics.copyReport()
         }
     }
 

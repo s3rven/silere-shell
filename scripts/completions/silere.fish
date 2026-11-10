@@ -59,6 +59,7 @@ complete -c silere -n '__fish_seen_subcommand_from use' -l dry-run -d 'Preview s
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a status -d 'Installation and updater state'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a log -d "The running shell's log"
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a doctor -d 'Read-only installation diagnostics'
+complete -c silere -n '__fish_seen_subcommand_from doctor' -l json -d 'Print a diagnostic summary as JSON'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a ipc -d 'Call the running shell'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a link -d 'Put silere on PATH'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a update -d 'Check for a signed release'

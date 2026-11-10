@@ -31,6 +31,7 @@ singleton CalendarState 1.0 CalendarState.qml
 singleton ConfigStore    1.0 ConfigStore.qml
 singleton ControlSurfaces 1.0 ControlSurfaces.qml
 singleton DateTime      1.0 DateTime.qml
+singleton DeviceDiagnostics 1.0 DeviceDiagnostics.qml
 singleton FontScan      1.0 FontScan.qml
 singleton FullscreenState 1.0 FullscreenState.qml
 singleton Hooks         1.0 Hooks.qml

@@ -15,6 +15,7 @@ _silere() {
                 compopt -o plusdirs -o filenames 2>/dev/null || true
                 ;;
             log) [ "$COMP_CWORD" -eq 2 ] && words=(--follow) ;;
+            doctor) [ "$COMP_CWORD" -eq 2 ] && words=(--json --help) ;;
             update) [ "$COMP_CWORD" -eq 2 ] && words=(--apply --rollback) ;;
             repair) words=(--apply --undo --yes) ;;
             reset) words=(--apply --undo --history --yes) ;;

@@ -5,6 +5,9 @@ set -u
 export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ "$#" -eq 1 ] && [ "$1" = --json ]; then
+    exec bash "$ROOT/scripts/doctor-json.sh"
+fi
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/ui.sh"
@@ -12,7 +15,7 @@ source "$ROOT/scripts/lib/unit.sh"
 
 if [ "$#" -gt 0 ]; then
     if [ "$#" -eq 1 ] && [[ "$1" = -h || "$1" = --help ]]; then
-        printf 'Usage: silere doctor\n       bash scripts/install.sh --check\n'
+        printf 'Usage: silere doctor [--json]\n       bash scripts/install.sh --check\n'
         exit 0
     fi
     printf 'silere-doctor: unexpected argument: %s\n' "$1" >&2

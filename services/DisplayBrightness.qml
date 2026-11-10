@@ -10,7 +10,8 @@ Singleton {
     readonly property bool available: ShellSettings.ddcBrightnessEnabled
         && SystemTools.hasDdcutil && SystemTools.hasTimeout
     readonly property bool _wanted: root.available && !Idle.isIdle && MenuState.open
-        && (MenuState.homeActive || (MenuState.settingsActive && MenuState.settingsSection === "interface"))
+        && (MenuState.homeActive || (MenuState.settingsActive
+            && (MenuState.settingsSection === "interface" || MenuState.settingsSection === "updates")))
     property var displays: []
     property var values: ({})
     property string _scanError: ""

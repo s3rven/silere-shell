@@ -105,6 +105,12 @@ Singleton {
         _brightnessFile.reload()
     }
 
+    function rescan(): void {
+        if (!root.toolAvailable) return
+        root._reprobeAttempts = 0
+        _reprobe.restart()
+    }
+
     function _syncToolAvailability(): void {
         if (!SystemTools.ready) return
         if (root.toolAvailable) {
