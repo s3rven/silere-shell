@@ -99,6 +99,7 @@ Item {
 
         ShellListView {
             id: _list
+            objectName: "bluetooth-devices"
             width: parent.width
             height: Math.min(contentHeight, 240)
             visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
@@ -165,6 +166,12 @@ Item {
                     acceptedButtons: Qt.RightButton | Qt.MiddleButton
                     onTapped: _row._forgetTap()
                 }
+                // the keyboard's right-click, as Delete removes a message in history
+                Keys.onPressed: event => {
+                    if (event.key !== Qt.Key_Delete || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return
+                    event.accepted = true
+                    if (_row.interactive && !event.isAutoRepeat) _row._forgetTap()
+                }
             }
         }
 
@@ -174,7 +181,7 @@ Item {
             // as one that lost its pairing key, and only the second is fixed by pairing again
             text: Bluetooth.errorKind === "pair"
                 ? "Needs a passkey? Start a pairing agent such as blueman-applet, then retry."
-                : "Check it is on and nearby, or right-click it twice to forget and pair again."
+                : "Check it is on and nearby, or right-click it or press Delete twice to forget and pair again."
         }
     }
 

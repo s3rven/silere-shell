@@ -228,6 +228,12 @@ Item {
                         acceptedButtons: Qt.RightButton | Qt.MiddleButton
                         onTapped: _row._forgetTap()
                     }
+                    // the keyboard's right-click, as Delete removes a message in history
+                    Keys.onPressed: event => {
+                        if (event.key !== Qt.Key_Delete || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return
+                        event.accepted = true
+                        if (_row.interactive && !event.isAutoRepeat) _row._forgetTap()
+                    }
                 }
 
                 Item {
