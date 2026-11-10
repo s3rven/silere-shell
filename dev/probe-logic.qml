@@ -1182,6 +1182,25 @@ ShellRoot {
         OsdBarState._armed = was.armed
     }
 
+    function _checkOsdProfileHold(): void {
+        const pendingWas = Audio._out.pendingApply
+        OsdBarState._profileHoldTimer.restart()
+        OsdBarState._heldVolumeWrite = false
+        OsdBarState._volumeUpdateQueued = false
+        OsdBarState._releaseProfileHold()
+        const quiet = !OsdBarState._volumeUpdateQueued
+        Audio._out.pendingApply = false
+        Audio._out.pendingApply = true
+        const held = OsdBarState._heldVolumeWrite
+        OsdBarState._volumeUpdateQueued = false
+        OsdBarState._releaseProfileHold()
+        root._check(quiet && held && OsdBarState._volumeUpdateQueued && !OsdBarState._heldVolumeWrite,
+            "a volume set during the hold after a headset mode change is shown when the hold ends, and a hold with none shows nothing")
+        OsdBarState._profileHoldTimer.stop()
+        OsdBarState._volumeUpdateQueued = false
+        Audio._out.pendingApply = pendingWas
+    }
+
     function _checkOsdLifetime(): void {
         const timeoutWas = ShellSettings.osdTimeout
         for (const timeout of [500, 2000, 10000]) {
@@ -2768,6 +2787,7 @@ ShellRoot {
         root._checkWifiScanners()
         root._checkDiscoveryRequests()
         root._checkOsdLifetime()
+        root._checkOsdProfileHold()
         root._checkBrightnessOsdUnattended()
         root._checkWifiDraft()
         root._checkPowerRail()

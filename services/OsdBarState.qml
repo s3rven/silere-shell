@@ -286,7 +286,14 @@ Singleton {
     property bool   _showDeviceName: false
     property bool   _volumeUpdateQueued: false
     // a headset mode change replaces the output node; the level it reads back is not the user changing the volume
-    Timer { id: _profileHold; interval: 400 }
+    readonly property Timer _profileHoldTimer: Timer { id: _profileHold; interval: 400; onTriggered: root._releaseProfileHold() }
+    // the hold swallows the new node's read-back, and with it a level the user set from this shell meanwhile: only that one is owed
+    property bool _heldVolumeWrite: false
+    function _releaseProfileHold(): void {
+        if (!root._heldVolumeWrite) return
+        root._heldVolumeWrite = false
+        root._queueVolumeUpdate()
+    }
 
     Timer {
         id: _deviceNameTimer
@@ -331,10 +338,18 @@ Singleton {
         target: Audio
         function onUiVolumeChanged() { root._queueVolumeUpdate() }
         function onTargetVolumeChanged() { root._queueVolumeUpdate() }
-        function onPendingApplyChanged() { if (Audio.pendingApply) root._queueVolumeUpdate() }
+        function onPendingApplyChanged() {
+            if (!Audio.pendingApply) return
+            if (_profileHold.running) root._heldVolumeWrite = true
+            root._queueVolumeUpdate()
+        }
         function onMutedChanged() { root._queueVolumeUpdate() }
         function onMicMutedExternally() { root._showMicMute() }
-        function onProfileSwitchingChanged() { if (!Audio.profileSwitching) _profileHold.restart() }
+        function onProfileSwitchingChanged() {
+            if (Audio.profileSwitching) return
+            root._heldVolumeWrite = false
+            _profileHold.restart()
+        }
         function onSinkNameChanged() {
             const name = Audio.sinkName
             if (!name || name === root._lastSinkName) return
