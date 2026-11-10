@@ -6576,6 +6576,13 @@ ShellRoot {
         Audio._releaseProfilePresentation()
         root._check(!Audio.profileSwitching && Audio._profilePresentation === null,
             "finishing a headset transition releases its temporary presentation state")
+        root._check(Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, true, false)
+                && Audio._out.needsWpctl({ "device.api": "bluez5" }, true, false)
+                && !Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, true, true)
+                && !Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, false, false)
+                && !Audio._out.needsWpctl({ "application.name": "stream" }, true, false)
+                && !Audio._out.needsWpctl(null, true, false),
+            "volume on a card-routed or bluetooth node goes through wpctl only where quickshell 0.3.1 would drop the write")
         const keyboardRows = KeyboardBrightness.parseDevices("/org/freedesktop/UPower/KbdBacklight/led0\t0\t2\tfixture\n"
             + "/org/freedesktop/UPower/KbdBacklight/led1\t1\t0\tfixture\n"
             + "/org/freedesktop/UPower/KbdBacklight/led2\t3\t2\tfixture\n"

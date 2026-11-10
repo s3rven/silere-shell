@@ -34,6 +34,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Bluetooth controls recover when a hardware switch is released while the radio remains soft-blocked, and follow the selected controller on systems with multiple radios.
 - An incomplete external-display brightness scan keeps the displays it already read usable and allows an immediate retry.
+- On Quickshell 0.3.1, volume changes on a sound card's own outputs are no longer silently dropped; they go through `wpctl`, as Bluetooth volume already did.
 - A click along a popup's far edge, such as the menu's Power button, no longer falls through and closes the popup on Hyprland 0.57.
 - A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
 - A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
