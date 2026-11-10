@@ -250,13 +250,15 @@ Singleton {
     }
 
     property var _pendingSource: null
+    // only the default action stands for "show me the app": a button's click follows a raise and never guesses a window
+    property bool _guessSource: false
     property var _urgentAtClick: []
     readonly property Timer _sourceFallback: Timer {
         interval: 250
         onTriggered: {
             const c = root._pendingSource
             root._pendingSource = null
-            if (c && !root.focusIsSourceApp(c, Compositor.toplevels)) Compositor.focusToplevel(c)
+            if (root._guessSource && c && !root.focusIsSourceApp(c, Compositor.toplevels)) Compositor.focusToplevel(c)
         }
     }
 
@@ -284,15 +286,20 @@ Singleton {
         }
     }
 
-    function followRaise(): void {
-        root._pendingSource = null
+    function _watchRaise(source, guess: bool): void {
+        root._pendingSource = source
+        root._guessSource = guess
         root._urgentAtClick = Compositor.urgentRefs
         root._sourceFallback.restart()
     }
 
+    // a button's click too: with the sender known, another app's window turning urgent in the same quarter second took the focus
+    function followRaise(notification): void {
+        root._watchRaise(root._matchNotificationClient(notification, true), false)
+    }
+
     function focusNotificationSourceAfterAction(notification): void {
-        root.followRaise()
-        root._pendingSource = root._matchNotificationClient(notification, true)
+        root._watchRaise(root._matchNotificationClient(notification, true), true)
     }
 
     function notificationSourceWorkspace(notification): int {

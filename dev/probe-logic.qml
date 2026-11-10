@@ -3300,6 +3300,15 @@ ShellRoot {
                 && WindowActions.raisedSource(raisedPool, ["0xb"], [], { pid: 0, cls: "kitty" }).ref === "0xb"
                 && Array.isArray(Compositor.urgentRefs),
             "a notification click follows the window its app just marked urgent, not one already asking")
+        WindowActions._watchRaise(kittyGuess, false)
+        const buttonWatch = WindowActions._pendingSource === kittyGuess && WindowActions._sourceFallback.running
+        WindowActions._sourceFallback.triggered()
+        const buttonGuessed = WindowActions._pendingSource !== null || WindowActions._guessSource
+        WindowActions.focusNotificationSourceAfterAction(null)
+        root._check(buttonWatch && !buttonGuessed && WindowActions._guessSource && WindowActions._pendingSource === null,
+            "a notification button's click follows only its sender's raise and guesses no window, the default action still may")
+        WindowActions._sourceFallback.stop()
+        WindowActions._guessSource = false
         root._check(WindowActions._norm("  Org.Example.App.desktop  ") === "org.example.app"
                 && WindowActions._norm(null) === "",
             "window matching normalizes desktop ids and empty hints")
