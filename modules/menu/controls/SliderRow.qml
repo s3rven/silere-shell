@@ -76,7 +76,7 @@ MenuRow {
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             text:           root.label
-            elide:          Text.ElideRight
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
             color:          Theme.withAlpha(Theme.text, 0.85)
             font.pixelSize: Settings.fontSize
         }
