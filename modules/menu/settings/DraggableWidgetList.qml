@@ -325,6 +325,72 @@ Item {
         }
     }
 
+    // the keyboard's drag: one place along the whole bar, into the next zone past either end, as a drop lands
+    function _moveBy(key: string, delta: int): void {
+        const loc = ShellSettings.barWidgetLocate(key)
+        let z = root._zones.indexOf(loc.zone)
+        if (z < 0 || root._draggingKey.length > 0) return
+        const zones = [ShellSettings.barWidgetOrderLeftKeys.slice(),
+            ShellSettings.barWidgetOrderCenterKeys.slice(), ShellSettings.barWidgetOrderRightKeys.slice()]
+        zones[z].splice(loc.index, 1)
+        let at = loc.index + delta
+        if (at < 0) {
+            if (--z < 0) return
+            at = zones[z].length
+        } else if (at > zones[z].length) {
+            if (++z > 2) return
+            at = 0
+        }
+        zones[z].splice(at, 0, key)
+        ShellSettings.setBarWidgetLayout(zones[0], zones[1], zones[2])
+    }
+
+    // rows are built in a fixed key order so a drag never rebuilds one, which left arrow keys and Tab walking
+    // that order instead of the one drawn
+    function _toggleAfter(key: string, direction: int): var {
+        const order = root._leftKeys.concat(root._centerKeys, root._rightKeys)
+        for (let i = order.indexOf(key) + direction; i >= 0 && i < order.length; i += direction) {
+            const row = _rows.itemAt(root._allKeys.indexOf(order[i]))
+            if (row && row.toggleControl.activeFocusOnTab) return row.toggleControl
+        }
+        return null
+    }
+    function _focusToggleAfter(key: string, direction: int): void {
+        const next = root._toggleAfter(key, direction)
+        if (next) next.forceActiveFocus(direction > 0 ? Qt.TabFocusReason : Qt.BacktabFocusReason)
+    }
+
+    function _rowOf(item): var {
+        for (let it = item; it && it !== root; it = it.parent)
+            if (it.parent === root && it.toggleControl !== undefined) return it
+        return null
+    }
+    // each row's stops in reading order, rows as drawn; past either end, the stop the build order would leave to
+    function _tabTarget(from: Item, forward: bool): var {
+        const stops = []
+        const order = root._leftKeys.concat(root._centerKeys, root._rightKeys)
+        for (let i = 0; i < order.length; i++) {
+            const row = _rows.itemAt(root._allKeys.indexOf(order[i]))
+            if (row) stops.push(...row.tabStops().filter(stop => stop && stop.activeFocusOnTab))
+        }
+        const at = stops.indexOf(from)
+        if (at < 0) return null
+        const next = stops[at + (forward ? 1 : -1)]
+        if (next) return next
+        let out = from
+        for (let hops = 0; out && root._rowOf(out) && hops < 200; hops++) out = out.nextItemInFocusChain(forward)
+        return out
+    }
+    function _tabKey(event, from: Item): void {
+        if ((event.key !== Qt.Key_Tab && event.key !== Qt.Key_Backtab)
+                || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) return
+        const forward = event.key === Qt.Key_Tab
+        const next = root._tabTarget(from, forward)
+        if (!next) return
+        event.accepted = true
+        next.forceActiveFocus(forward ? Qt.TabFocusReason : Qt.BacktabFocusReason)
+    }
+
     function _finishDrag(key: string): void {
         if (root._draggingKey !== key) return
         root._autoScrollDir = 0
@@ -359,7 +425,7 @@ Item {
             anchors.right: _reset.left
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            // the shell is pointer-only; this used to promise arrow keys that no longer move anything
+            // pointer words: the grip's arrow keys are in its accessible description and the usage guide
             text: "Drag to reorder · toggle to show or hide"
             elide: Text.ElideRight
             color: Theme.withAlpha(Theme.subtext, 0.58)
@@ -474,6 +540,18 @@ Item {
             readonly property bool checked: ShellSettings.barWidgetConfiguredVisible(key)
             readonly property string note: checked ? root._noteFor(key) : ""
             readonly property bool isTray: key === "tray"
+            readonly property Item toggleControl: _toggleTarget
+            function tabStops(): var {
+                const stops = [_chevron, _dragGrip, _toggleTarget]
+                const panel = _trayLoader.item
+                const walk = it => {
+                    if (!it || !it.visible) return
+                    if (it.activeFocusOnTab) stops.push(it)
+                    for (let i = 0; i < it.children.length; i++) walk(it.children[i])
+                }
+                walk(panel)
+                return stops
+            }
 
             x: 4
             width: root.width - 8
@@ -582,6 +660,16 @@ Item {
                 width: visible ? 22 : 0
                 height: parent.height
 
+                Accessible.role: Accessible.Button
+                Accessible.name: (root._trayOpen ? "Hide " : "Show ") + "tray apps"
+                Accessible.focusable: visible && root._draggingKey.length === 0
+                Accessible.onPressAction: if (Accessible.focusable) root._setTrayOpen(!root._trayOpen)
+                KeyboardFocus {
+                    interactive: control ? control.Accessible.focusable : false
+                    onActivated: { if (control) control.Accessible.pressAction() }
+                }
+                Keys.onPressed: event => root._tabKey(event, _chevron)
+
                 ShellText {
                     anchors.centerIn: parent
                     text: "󰅀"
@@ -598,6 +686,7 @@ Item {
             }
 
             Loader {
+                id: _trayLoader
                 active: _row.isTray
                 y: root._rowH
                 width: parent.width
@@ -609,19 +698,40 @@ Item {
                 sourceComponent: _trayPanel
             }
 
-            ShellText {
+            Item {
                 id: _dragGrip
                 // _toggleTarget keeps its geometry while hidden, so the grip holds one column on every row
                 anchors.right: _toggleTarget.left
                 anchors.rightMargin: 1
-                anchors.verticalCenter: parent.verticalCenter
                 width: Metrics.glyphSlotWidth
-                horizontalAlignment: Text.AlignHCenter
-                text: "󰇙"
-                color: Theme.withAlpha(Theme.subtext,
-                    _row.dragging || _rowHover.hovered ? 0.68 : 0.38)
-                font.pixelSize: Settings.fontLabel
-                ColorFade on color {}
+                height: parent.height
+
+                Accessible.role: Accessible.Button
+                Accessible.name: "Move " + _row.meta.label
+                Accessible.description: "Up and Down arrows move it along the bar"
+                Accessible.focusable: root._draggingKey.length === 0
+                KeyboardFocus {
+                    id: _gripFocus
+                    interactive: control ? control.Accessible.focusable : false
+                    listNavigation: true
+                    customNavigation: true
+                    onNavigated: direction => root._moveBy(_row.key, direction)
+                }
+                Keys.onPressed: event => root._tabKey(event, _dragGrip)
+                // the row eases to its new place, and a move across a zone header can carry it out of view
+                Connections {
+                    target: _row
+                    function onYChanged() { if (_dragGrip.activeFocus) _gripFocus.reveal() }
+                }
+
+                ShellText {
+                    anchors.centerIn: parent
+                    text: "󰇙"
+                    color: Theme.withAlpha(Theme.subtext,
+                        _row.dragging || _rowHover.hovered || _dragGrip.activeFocus ? 0.68 : 0.38)
+                    font.pixelSize: Settings.fontLabel
+                    ColorFade on color {}
+                }
             }
 
             Item {
@@ -641,7 +751,14 @@ Item {
                 Accessible.checked: _row.checked
                 Accessible.focusable: enabled
                 Accessible.onPressAction: _toggleTap.activate()
-                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+                KeyboardFocus {
+                    interactive: control ? control.Accessible.focusable : false
+                    listNavigation: true
+                    customNavigation: true
+                    onNavigated: direction => root._focusToggleAfter(_row.key, direction)
+                    onActivated: { if (control) control.Accessible.pressAction() }
+                }
+                Keys.onPressed: event => root._tabKey(event, _toggleTarget)
                 Accessible.onToggleAction: _toggleTap.activate()
 
                 HoverHandler { id: _toggleHover; cursorShape: Qt.PointingHandCursor }
@@ -772,6 +889,7 @@ Item {
                         Accessible.onPressAction: _sub.toggleShown()
                         KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                         Accessible.onToggleAction: _sub.toggleShown()
+                        Keys.onPressed: event => root._tabKey(event, _sub)
 
                         Connections {
                             target: root
