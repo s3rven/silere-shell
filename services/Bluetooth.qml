@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Bluetooth as Bt
 
 Singleton {
@@ -46,13 +47,36 @@ Singleton {
         ? adapter.state === Bt.BluetoothAdapterState.Blocked : false
     property bool _switchOff: false
     readonly property bool hardBlocked: blocked && _switchOff
+    property int _rfkillGeneration: 0
+
+    // prefer the selected controller's switch; a blocked USB radio says nothing
+    // about another controller. Fall back to platform switches only for drivers
+    // that expose no hci-specific rfkill entry
+    function hardBlockedFor(raw: string, adapterId: string): bool {
+        let platformBlocked = false
+        for (const line of raw.split(/\r?\n/)) {
+            const fields = line.split("\t")
+            if (fields.length !== 2 || fields[0].length === 0 || !/^[01]$/.test(fields[1])) continue
+            if (fields[0] === adapterId) return fields[1] === "1"
+            if (!/^hci[0-9]+$/.test(fields[0]) && fields[1] === "1") platformBlocked = true
+        }
+        return platformBlocked
+    }
+
+    function refreshBlockState(): void {
+        if (!root.blocked || _rfkillProbe.running) return
+        _rfkillProbe.generation = root._rfkillGeneration
+        _rfkillProbe.running = true
+    }
     // bluez powers back on by itself after an unblock; quickshell refuses an enable write until the state has left Blocked
     property bool _unblockWanted: false
     onBlockedChanged: {
+        root._rfkillGeneration++
         if (blocked) {
-            _rfkillProbe.running = true
+            root.refreshBlockState()
             return
         }
+        root._switchOff = false
         if (!_unblockWanted) return
         _unblockWanted = false
         if (adapter && adapter.state === Bt.BluetoothAdapterState.Disabled) adapter.enabled = true
@@ -193,18 +217,43 @@ Singleton {
         }
     }
 
-    BoundedProcess {
+    readonly property BoundedProcess _rfkillLookup: BoundedProcess {
         id: _rfkillProbe
+        property int generation: -1
         timeoutMs: 3000
-        command: ["sh", "-c", "for r in /sys/class/rfkill/rfkill*; do grep -qx bluetooth $r/type && grep -qx 1 $r/hard && exit 0; done; exit 1"]
-        onExited: code => root._switchOff = _rfkillProbe.completedSuccessfully(code)
+        command: ["sh", "-c", "for r in /sys/class/rfkill/rfkill*; do "
+            + "t=; n=; h=; { IFS= read -r t < \"$r/type\"; "
+            + "IFS= read -r n < \"$r/name\"; IFS= read -r h < \"$r/hard\"; } 2>/dev/null; "
+            + "[ \"$t\" = bluetooth ] && printf '%s\\t%s\\n' \"$n\" \"$h\"; done; exit 0"]
+        stdout: StdioCollector { id: _rfkillOut }
+        onExited: code => {
+            if (generation !== root._rfkillGeneration) {
+                Qt.callLater(root.refreshBlockState)
+                return
+            }
+            if (root.blocked && root.adapter && _rfkillProbe.completedSuccessfully(code))
+                root._switchOff = root.hardBlockedFor(_rfkillOut.text, root.adapter.adapterId)
+        }
+    }
+
+    // releasing a hardware switch can leave the soft block in place, so BlueZ
+    // stays Blocked and emits no state change. Recheck while the controls show
+    readonly property Timer _blockRefresh: Timer {
+        interval: 2000
+        repeat: true
+        triggeredOnStart: true
+        running: root.blocked && ControlSurfaces.anyOpen && !Idle.isIdle
+        onTriggered: root.refreshBlockState()
     }
 
     BoundedProcess {
         id: _rfkillUnblock
         timeoutMs: 3000
         command: ["rfkill", "unblock", "bluetooth"]
-        onExited: if (root.blocked) _rfkillProbe.running = true
+        onExited: code => {
+            if (!_rfkillUnblock.completedSuccessfully(code)) root._unblockWanted = false
+            root.refreshBlockState()
+        }
     }
 
     property bool _scanRequested: false
@@ -238,6 +287,10 @@ Singleton {
     }
 
     onAdapterChanged: {
+        root._rfkillGeneration++
+        root._switchOff = false
+        root._unblockWanted = false
+        Qt.callLater(root.refreshBlockState)
         root.abandonAttempt()
         _scanSync.restart()
     }
@@ -395,7 +448,7 @@ Singleton {
     on_UntrustedConnectedChanged: Qt.callLater(root._trustConnected, root._untrustedConnected)
     Component.onCompleted: {
         root._trustConnected(root._untrustedConnected)
-        if (root.blocked) _rfkillProbe.running = true
+        root.refreshBlockState()
     }
 
     property int _guardExtensions: 0
