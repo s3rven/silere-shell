@@ -3313,8 +3313,9 @@ test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
     python_path="$(command -v python3)"
-    mkdir -p "$fixture/scripts" "$fixture/bin"
+    mkdir -p "$fixture/scripts/lib" "$fixture/bin"
     cp "$ROOT/scripts/doctor.sh" "$ROOT/scripts/doctor-json.sh" "$fixture/scripts/"
+    cp "$ROOT/scripts/lib/qml-modules.sh" "$fixture/scripts/lib/"
     printf '{"version":"9.1.2"}\n' > "$fixture/release.json"
     cat > "$fixture/bin/qs" <<'EOF'
 #!/usr/bin/env bash
@@ -3345,7 +3346,24 @@ assert d["devices"]["audio"]["outputs"] == 2
 assert d["devices"]["bluetooth"]["enabled"] is True
 assert d["devices"]["screens"] == [{"width":1920,"height":1080,"scale":1.25}]
 assert "private-report-value" not in sys.argv[1]
+assert d["availability"]["python3"] is True
 ' "$actual" || fail "doctor report includes identifiers or loses required fields"
+    # BusyBox's timeout: no long options. The bounded probes must still run through it
+    mkdir -p "$fixture/busybox"
+    printf '#!/bin/sh\ncase "$1" in --*) exit 1 ;; esac\nshift\nexec "$@"\n' > "$fixture/busybox/timeout"
+    chmod +x "$fixture/busybox/timeout"
+    actual="$(PATH="$fixture/busybox:$fixture/bin:$PATH" SILERE_JSON_REPLY='{"schemaVersion":1,"audio":{"outputs":2}}' \
+        bash "$fixture/scripts/doctor.sh" --json)"
+    "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["runtime"]["quickshell"] == "0.3.1" and d["devices"]["audio"]["outputs"] == 2' "$actual" \
+        || fail "doctor report lost its probes to a timeout without --kill-after"
+    # git present, the checkout not describable: the packaged version still answers
+    mkdir -p "$fixture/.git" "$fixture/nogit"
+    printf '#!/bin/sh\nexit 128\n' > "$fixture/nogit/git"
+    chmod +x "$fixture/nogit/git"
+    actual="$(PATH="$fixture/nogit:$fixture/bin:$PATH" bash "$fixture/scripts/doctor.sh" --json)"
+    "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["runtime"]["silere"] == "9.1.2"' "$actual" \
+        || fail "doctor report gave up on the version when git could not describe the checkout"
+    rmdir "$fixture/.git"
     for reply in unavailable '{"schemaVersion":1,broken}' '{"schemaVersion":2,"private":"hidden"}'; do
         actual="$(PATH="$fixture/bin:$PATH" SILERE_JSON_REPLY="$reply" bash "$fixture/scripts/doctor.sh" --json)"
         "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["devices"] is None' "$actual" \

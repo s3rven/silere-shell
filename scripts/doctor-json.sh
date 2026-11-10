@@ -5,6 +5,7 @@ export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ "$#" -eq 0 ] || exit 2
+source "$ROOT/scripts/lib/qml-modules.sh"
 
 json_string() {
     local value="$1" ch escaped i
@@ -21,16 +22,23 @@ json_string() {
     printf '"'
 }
 
+# BusyBox and toybox take the plain form only; with --kill-after sent to them every probe failed and read "unknown"
+if _silere_timeout_kill_after_ok; then bound=(timeout --kill-after=1 3)
+elif command -v timeout >/dev/null 2>&1; then bound=(timeout 3)
+else bound=()
+fi
 bounded() {
     # without timeout, binary presence is still reportable; optional probes are skipped
-    command -v timeout >/dev/null 2>&1 || return 1
-    timeout --kill-after=1 3 "$@" 2>/dev/null
+    [ "${#bound[@]}" -gt 0 ] || return 1
+    "${bound[@]}" "$@" 2>/dev/null
 }
 
-silere_version="unknown"
+silere_version=""
 if [ -e "$ROOT/.git" ] && command -v git >/dev/null 2>&1; then
     silere_version="$(bounded git -C "$ROOT" describe --tags --always --dirty || true)"
-elif [ -r "$ROOT/release.json" ]; then
+fi
+# also where git is present and cannot describe the checkout: a shallow copy, or one git refuses to trust
+if [ -z "$silere_version" ] && [ -r "$ROOT/release.json" ]; then
     silere_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/release.json" | head -n 1)"
 fi
 [[ "$silere_version" =~ ^[A-Za-z0-9][A-Za-z0-9.+_-]{0,127}$ ]] || silere_version=unknown
@@ -112,7 +120,7 @@ printf ',"compositorVersion":'; json_string "${compositor_version:-unknown}"
 printf ',"distro":'; json_string "$distro"
 printf '},"availability":{'
 separator=""
-for tool in qs git pipewire wireplumber upower brightnessctl ddcutil nmcli busctl wpctl pw-dump timeout; do
+for tool in qs git pipewire wireplumber upower brightnessctl ddcutil nmcli busctl wpctl pw-dump timeout python3; do
     printf '%s' "$separator"
     json_string "$tool"
     if command -v "$tool" >/dev/null 2>&1; then printf ':true'; else printf ':false'; fi
