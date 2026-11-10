@@ -194,6 +194,7 @@ Column {
                     key: "overlayMonitor"
                     glyph: "󰍹"; label: "Overlay display"
                     description: "Where popups and the OSD appear"
+                    onChosen: value => Monitors.selectOverlay(String(value))
                     fallbackLabel: ShellSettings.overlayMonitor.length > 0
                         ? ShellSettings.overlayMonitor + " (unavailable)" : "Follow focus"
                     model: {

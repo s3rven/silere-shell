@@ -49,8 +49,15 @@ Singleton {
     // that screen; a screen change keeps the identity, so the preference follows the display across ports
     property bool _rebindOverlayIdentity: false
     function rememberOverlay(): void {
-        if (root._syncingPreferences) return
+        // the first load's change is the saved pair arriving, not a new choice: rebinding there dropped the identity of a display that was unplugged at startup
+        if (root._syncingPreferences || !ShellSettings.ready) return
         root._rebindOverlayIdentity = true
+    }
+    // picking the same connector again is how a display that took over another's port takes over its pin
+    function selectOverlay(name: string): void {
+        root._rebindOverlayIdentity = true
+        if (name === ShellSettings.overlayMonitor) Qt.callLater(root._syncPreferences)
+        else ShellSettings.setValue("overlayMonitor", name)
     }
     function overlayIdentityFor(name: string, stored: string, rebind: bool, screens): string {
         if (!name) return ""

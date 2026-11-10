@@ -9307,6 +9307,21 @@ ShellRoot {
                 && Monitors.overlayIdentityFor("DP-1", "", false, [otherDisplay]) === otherIdentityKey
                 && Monitors.overlayIdentityFor("", displayIdentityKey, false, [otherDisplay]) === "",
             "a changed popup monitor name re-reads its identity from that screen, while a screen change keeps the identity")
+        const monitorLoadedWas = ShellSettings._loaded
+        Monitors._rebindOverlayIdentity = false
+        ShellSettings._loaded = false
+        Monitors.rememberOverlay()
+        const firstLoadRebinds = Monitors._rebindOverlayIdentity
+        ShellSettings._loaded = true
+        Monitors.rememberOverlay()
+        root._check(!firstLoadRebinds && Monitors._rebindOverlayIdentity,
+            "the first settings load keeps a saved popup monitor identity, and a later name change re-reads it")
+        Monitors._rebindOverlayIdentity = false
+        Monitors.selectOverlay(ShellSettings.overlayMonitor)
+        root._check(Monitors._rebindOverlayIdentity,
+            "choosing the popup monitor's own connector again re-reads its identity")
+        Monitors._rebindOverlayIdentity = false
+        ShellSettings._loaded = monitorLoadedWas
         root._check(Object.keys(Monitors.identityMap("malformed")).length === 0
                 && Object.keys(Monitors.identityMap('{"DP-1":42}')).length === 0
                 && Monitors.identityMap(JSON.stringify({ "DP-1": displayIdentityKey }))["DP-1"] === displayIdentityKey,
