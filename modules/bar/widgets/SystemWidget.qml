@@ -24,8 +24,8 @@ Pill {
     readonly property real _temp: root._tempOn && CpuTemp.available ? CpuTemp.temp : -1
 
     readonly property int _cpuLevel: root._cpuOn && SysInfo.cpuReady && SysInfo.cpuHigh ? 1 : 0
-    // memory uses Home's own bands, so the two never disagree about the same reading
-    readonly property int _memLevel: root._mem > 0.9 ? 2 : root._mem > 0.75 ? 1 : 0
+    // memory reads Home's own band, so the two never disagree about the same reading
+    readonly property int _memLevel: root._mem < 0 ? 0 : SysInfo.memLevel
     readonly property int _tempLevel: root._temp < 0 ? 0 : CpuTemp.critical ? 2 : CpuTemp.hot ? 1 : 0
     readonly property int severity: Math.max(root._cpuLevel, root._memLevel, root._tempLevel)
     function _levelTint(level: int): color {

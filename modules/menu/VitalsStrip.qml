@@ -294,7 +294,7 @@ SettingsCard {
                 + (SysInfo.swapActive ? " · " + root.sizeText(SysInfo.swapUsedKb) + " swap" : "")
             : ""
         progress: SysInfo.memPct
-        status: SysInfo.memPct > 0.9 ? 2 : (SysInfo.memPct > 0.75 ? 1 : 0)
+        status: SysInfo.memLevel
     }
 
     Vital {
@@ -305,7 +305,7 @@ SettingsCard {
         value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
         sub: SysInfo.diskTotalKb > 0 && SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : ""
         progress: SysInfo.diskPct
-        status: SysInfo.diskPct > 0.9 ? 2 : (SysInfo.diskPct > 0.75 ? 1 : 0)
+        status: SysInfo.diskLevel
     }
 
     InlinePicker { id: _batteryAbove; mirror: _batteryPicker }

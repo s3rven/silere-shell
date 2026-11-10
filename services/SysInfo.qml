@@ -35,6 +35,17 @@ Singleton {
     // as df counts it: blocks reserved for root are neither used nor available to the user
     readonly property real diskPct:    diskUsedKb + diskAvailKb > 0 ? diskUsedKb / (diskUsedKb + diskAvailKb) : 0
 
+    // 0 calm, 1 above 75%, 2 above 90%; each band lets go three points under its line, so a reading
+    // that sits on one holds its tint instead of blinking it on every poll. Shared so the bar and Home agree
+    function usageLevel(pct: real, was: int): int {
+        const enter = pct > 0.9 ? 2 : pct > 0.75 ? 1 : 0
+        return Math.max(enter, Math.min(was, pct > 0.87 ? 2 : pct > 0.72 ? 1 : 0))
+    }
+    property int memLevel: 0
+    property int diskLevel: 0
+    onMemPctChanged: memLevel = usageLevel(memPct, memLevel)
+    onDiskPctChanged: diskLevel = usageLevel(diskPct, diskLevel)
+
     readonly property string uptimeLabel: {
         if (uptimeSecs <= 0) return "—"
         const s = Math.floor(uptimeSecs)
