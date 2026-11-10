@@ -18,9 +18,14 @@
 
 <p align="center">
   <a href="#getting-started">Get started</a> ·
+  <a href="#a-closer-look">Screenshots</a> ·
   <a href="#getting-around">Controls</a> ·
   <a href="docs/README.md">Documentation</a> ·
   <a href="#when-somethings-wrong">Help</a>
+</p>
+
+<p align="center">
+  <img src="assets/shot-hero.webp" alt="Silere's floating bar with the menu open on Home and a notification beside it" width="100%"/>
 </p>
 
 Silere is the bar, notifications, tray and quick settings I use on my own desktop.
@@ -29,10 +34,6 @@ such as mako or dunst.
 
 You keep your compositor setup and dotfiles, and choose your own launcher, wallpaper
 tool and lock screen.
-
-<p align="center">
-  <img src="assets/shot-hero.webp" alt="Silere's menu open on Home beside a notification, on a dark KISS Linux wallpaper" width="960"/>
-</p>
 
 ## What's included
 
@@ -46,26 +47,27 @@ tool and lock screen.
 | Appearance | Wallpaper colours through Matugen, dark and light modes, a custom accent and adjustable interface size. |
 | Updates | Signed releases from the menu, validation before installation and rollback to the previous version. |
 
-<p align="center">
-  <img src="assets/shot-bar.webp" alt="Silere's floating bar with workspaces, media, system readings, network, volume, brightness, battery and clock" width="960"/>
-</p>
-
-<details>
-<summary>More screenshots: media, calendar, settings and colours</summary>
+## A closer look
 
 <p align="center">
-  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar" width="820"/>
+  <img src="assets/shot-bar.webp" alt="Silere's floating bar with workspaces, media, system readings, network, volume, brightness, battery and clock" width="100%"/>
+  <br/><sub>The bar: workspaces, what's playing, system readings, network, volume, brightness, battery and the clock.</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot-settings.webp" alt="Theme settings for colour source, accent, base tone and bar surfaces" width="720"/>
+  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar" width="88%"/>
+  <br/><sub>Now Playing with cover art and seeking, and the calendar with week numbers.</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot-themes.webp" alt="The Home panel using amber wallpaper colours and Matugen's light mode" width="820"/>
+  <img src="assets/shot-themes.webp" alt="The Home panel in amber wallpaper colours beside Matugen's light mode" width="100%"/>
+  <br/><sub>Colours from your wallpaper through Matugen, and light mode.</sub>
 </p>
 
-</details>
+<p align="center">
+  <img src="assets/shot-settings.webp" alt="Theme settings for colour source, accent, base tone and bar surfaces" width="72%"/>
+  <br/><sub>Settings apply as you change them, and Ctrl+F finds any option.</sub>
+</p>
 
 ## Getting started
 
