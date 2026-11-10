@@ -24,7 +24,8 @@ PageShell {
 
     property string _picker: ""
     signal controlRequested(Item control, Item choices)
-    readonly property bool _avShown: Audio.ready || _brightnessAvailable || DisplayBrightness.displays.length > 0
+    readonly property bool _displayShown: _brightnessAvailable || KeyboardBrightness.ready || DisplayBrightness.displays.length > 0
+    readonly property bool _avShown: Audio.ready || root._displayShown
     readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
         || (SystemTools.hasNmcli && Network.toolAvailable)
     function _bottom(item, shown: bool): real {
@@ -161,8 +162,8 @@ PageShell {
             visible: root._avShown
 
             SectionLabel {
-                label: Audio.ready && root._brightnessAvailable ? "Audio & Display"
-                     : root._brightnessAvailable ? "Display"
+                label: Audio.ready && root._displayShown ? "Audio & Display"
+                     : root._displayShown ? "Display"
                      : "Audio"
             }
             SettingsCard {
@@ -190,6 +191,21 @@ PageShell {
                     visible: root._brightnessAvailable && Brightness.lastError.length > 0
                     text: Brightness.lastError
                     textColor: Theme.withAlpha(Theme.error, 0.90)
+                }
+                SliderRow {
+                    visible: KeyboardBrightness.ready
+                    glyph: "󰌌"
+                    label: "Keyboard light"
+                    min: 0; max: KeyboardBrightness.maximum; step: 1
+                    value: KeyboardBrightness.currentLevel
+                    displayValue: value === 0 ? "Off" : Math.round(100 * value / Math.max(1, max)) + "%"
+                    interactionKey: KeyboardBrightness.key
+                    onChanged: value => KeyboardBrightness.setLevel(value)
+                }
+                HintText {
+                    visible: KeyboardBrightness.ready && KeyboardBrightness.lastError.length > 0
+                    text: KeyboardBrightness.lastError
+                    textColor: Theme.menuTextWarning
                 }
                 Repeater {
                     model: DisplayBrightness.displays

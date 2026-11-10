@@ -145,7 +145,7 @@ AnchoredPopupState {
 
     readonly property var _settingsSearchAliases: ({
         theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
-        interface: "font typeface text size icons scale accessibility animations display monitor brightness lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset",
+        interface: "font typeface text size icons scale accessibility animations display monitor brightness keyboard light backlight bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset",
         surface: "bar position top bottom size shape corners rounded floating",
         underline: "underline glow screenshot pulse activity",
         separators: "spacing gaps padding dividers compact",

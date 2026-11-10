@@ -150,6 +150,21 @@ Column {
         }
     }
 
+    CollapsibleSection {
+        expanded: KeyboardBrightness.devices.length > 1
+        SectionLabel { label: "KEYBOARD LIGHTING" }
+        SettingsCard {
+            SelectRow {
+                glyph: "󰌌"
+                label: "Keyboard light"
+                description: "Applies to this session"
+                model: KeyboardBrightness.choices
+                currentValue: KeyboardBrightness.key
+                onChosen: value => KeyboardBrightness.preferredKey = String(value)
+            }
+        }
+    }
+
     SectionLabel { label: "MENU" }
     SettingsCard {
         ToggleRow {
