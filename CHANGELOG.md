@@ -13,6 +13,12 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- System Overview shows live device checks and can copy a diagnostic report without device names, addresses, or screen serials. `silere doctor --json` also works when the shell is stopped.
+- Expand Battery in Home's system readings for health, stored energy, and charging or discharging power, including separate laptop batteries and UPS devices when UPower reports them.
+- Systems with multiple Bluetooth controllers can choose a controller for the session in the Bluetooth list or Settings › Appearance › Interface.
+- Compatible Bluetooth headsets offer Listening and Calls modes in Home's output choices. Volume controls pause during the change and recover if the headset or audio backend disappears.
+- Bar visibility and popup placement follow a display across connector changes when its model and serial identify it uniquely.
+- Supported keyboard lights get a discrete brightness slider in Home, including Off, with a light chooser under Interface when several are available.
 - Notification history supports Enter or Down from search, arrows between messages, and Delete to remove the focused entry while keeping your place.
 - Empty notification searches and app filters offer a button to clear the query or return to all notifications.
 - Now Playing seeks in five-second increments with the arrow keys or scroll wheel, with larger steps on Shift+arrow or Page Up/Down. Dragging remains continuous.
@@ -20,9 +26,25 @@ settings file carries its own `__version` and migrates separately.
 - Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
 - Hover the volume widget to see which output it controls alongside the volume.
 - Bar shortcuts scroll their controls into view when Home is taller than the screen.
+- Reorder bar widgets from the keyboard in Show & order: Tab to a widget's grip and press Up or Down. Screen readers name each grip.
+- Settings search still finds a setting through a typo or two swapped letters, such as "brigthness" or "worksapce".
+- Press Delete twice on a saved Wi-Fi network or paired Bluetooth device to forget it, as right-click does.
 
 ### Fixed
 
+- Bluetooth controls recover when a hardware switch is released while the radio remains soft-blocked, and follow the selected controller on systems with multiple radios.
+- An incomplete external-display brightness scan keeps the displays it already read usable and allows an immediate retry.
+- A click along a popup's far edge, such as the menu's Power button, no longer falls through and closes the popup on Hyprland 0.57.
+- A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
+- A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
+- Memory or disk use sitting right at 75% or 90% no longer blinks the bar's system monitor and Home's readings between calm and warning on every update.
+- The 12-hour clock no longer leaves a blank digit's space before 1 to 9 o'clock, so its margins match the rest of the bar.
+- Older entries in notification history write AM and PM the same way as the bar and notification cards.
+- A completely full disk reads Full in Home's system readings instead of losing its caption.
+- Turning Reduce motion on or off while the menu is still resizing no longer logs a binding loop.
+- The bar's window title no longer logs a binding loop as it closes, or stops a fraction of a pixel short of zero width.
+- Tab, Shift+Tab, Up and Down in Show & order follow the order shown, not the default widget order, and the tray's app list opens from the keyboard.
+- Show & order's switches and Reset button line up with the right edge every other settings page uses, and Now Playing no longer leaves extra space below its controls.
 - Notification history shows the remove button on keyboard focus, and inactive rows and hidden media controls reject retained actions.
 - A CPU holding at exactly 100% now triggers the sustained-load warning. The bar and Home share that warning across monitors, and separate spikes no longer add up to sustained load.
 - A notification still sliding out when a newer one took the last visible place no longer disappears mid-exit and comes back later.
@@ -45,6 +67,7 @@ settings file carries its own `__version` and migrates separately.
 - The calendar always shows six weeks, so changing the month no longer resizes it. With the bar at the bottom, that resize moved the arrows away from the pointer.
 - The media title in the bar shows the same hover highlight as every other clickable widget.
 - Notification history shows the icon a `notify-send -i` notification had in its popup, instead of the app's first letter.
+- On Hyprland, clicking a notification goes to the window that sent it, not another window of the same app, and a button that opens the app brings its window forward. Both work with `focus_on_activate` off, Hyprland's default.
 - Quick Actions' state chips follow Roundness like the rest of the menu.
 
 ## Releases
