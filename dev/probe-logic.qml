@@ -10207,7 +10207,31 @@ ShellRoot {
         inList("Move " + label(ShellSettings.barWidgetOrderLeftKeys[0])).forceActiveFocus(Qt.TabFocusReason)
         keyHost.input.keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
         const leftList = keyHost.activeFocusItem !== null && keyList._rowOf(keyHost.activeFocusItem) === null
+        // clock is built last: drawn first, the row Tab reaches from Reset is not the first one built
+        const drawnWas = [ShellSettings.barWidgetOrderLeftKeys, ShellSettings.barWidgetOrderCenterKeys, ShellSettings.barWidgetOrderRightKeys]
+        ShellSettings.setBarWidgetLayout(["clock"].concat(drawnWas[0].filter(k => k !== "clock")),
+            drawnWas[1].filter(k => k !== "clock"), drawnWas[2].filter(k => k !== "clock"))
+        ShellSettings.setTrayItemHidden("probe-a", true)
+        keyList._setTrayOpen(true)
+        keyHost.input.wait(80)
+        const resetButton = inList("Reset", Accessible.Button)
+        if (resetButton) resetButton.forceActiveFocus(Qt.TabFocusReason)
+        keyHost.input.keyClick(Qt.Key_Tab)
+        const fromReset = resetButton !== null && inList("Move " + label("clock")).activeFocus
+        const showAllApps = inList("Show all apps")
+        if (showAllApps) showAllApps.forceActiveFocus(Qt.TabFocusReason)
+        keyHost.input.keyClick(Qt.Key_Tab)
+        const drawn = ShellSettings.barWidgetOrderLeftKeys.concat(ShellSettings.barWidgetOrderCenterKeys, ShellSettings.barWidgetOrderRightKeys)
+        const afterTray = drawn[drawn.indexOf("tray") + 1]
+        const pastTray = showAllApps !== null && keyHost.activeFocusItem !== null && (afterTray
+            ? inList("Move " + label(afterTray)).activeFocus : keyList._rowOf(keyHost.activeFocusItem) === null)
+        ShellSettings.setTrayItemHidden("probe-a", false)
+        ShellSettings.setBarWidgetLayout(drawnWas[0], drawnWas[1], drawnWas[2])
         keyHost.destroy()
+        root._check(fromReset,
+            "Tab from Reset reaches the first widget drawn, not the first one built")
+        root._check(pastTray,
+            "Tab from the tray's Show all apps row moves on to the next widget instead of back to the tray's grip")
         root._check(tabbed && backtabbed && leftList,
             "real Tab and Shift+Tab keys follow the drawn order and leave the list past its first row")
         const chevron = root._findTrayNode(settings, item => item.visible

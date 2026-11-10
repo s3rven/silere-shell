@@ -373,6 +373,8 @@ Item {
             const row = _rows.itemAt(root._allKeys.indexOf(order[i]))
             if (row) stops.push(...row.tabStops().filter(stop => stop && stop.activeFocusOnTab))
         }
+        // the reset button sits above the rows: forward from it is the first row drawn, back is the build order's own
+        if (from === _reset) return forward ? (stops[0] ?? null) : null
         const at = stops.indexOf(from)
         if (at < 0) return null
         const next = stops[at + (forward ? 1 : -1)]
@@ -444,6 +446,7 @@ Item {
             tint: Theme.warning
             shown: ShellSettings.barWidgetsModified
             onConfirmed: root._resetAll()
+            Keys.onPressed: event => root._tabKey(event, _reset)
         }
 
         Hairline {
@@ -995,8 +998,11 @@ Item {
                     width: parent.width
                     height: root._traySubH
                     glyph: "󰈈"
+                    id: _showAll
                     label: "Show all apps"
                     onTriggered: root._showAllTrayItems()
+                    // the last stop of the tray's row: left to the build order, Tab went back up to the row's own grip
+                    Keys.onPressed: event => root._tabKey(event, _showAll)
                 }
             }
         }
