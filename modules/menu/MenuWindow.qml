@@ -451,7 +451,6 @@ FittedPopupWindow {
         readonly property bool _heightGlides: panel._geometryReady && panel.open
             && (panel._transitionReady || panel._outerHeightMotion)
             && (panel.activeTab !== 0 || panel._outerHeightMotion)
-            && panel._shownH <= panel._availablePanelH + 1
             && !ShellSettings.reduceMotion && !Idle.isIdle
         // reflow can change the destination every frame. Keep velocity across those updates, and drive geometry once rather than easing each nudge
         readonly property real _shownH: Math.max(1,
