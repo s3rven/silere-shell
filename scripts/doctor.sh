@@ -384,7 +384,7 @@ if [ -z "$config_home" ]; then fail "XDG config" "HOME must be absolute"
 elif [ ! -e "$settings" ]; then info "settings" "not created yet"
 elif [ ! -r "$settings" ]; then fail "settings" "not readable at $settings"
 elif command -v python3 >/dev/null 2>&1 \
-        && ! python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$settings" 2>/dev/null; then
+        && ! python3 -I -c 'import json, sys; json.load(open(sys.argv[1]))' "$settings" 2>/dev/null; then
     fail "settings" "not valid JSON; Silere keeps its defaults and leaves the file alone"
 else ok "settings" "readable at $settings"
 fi
