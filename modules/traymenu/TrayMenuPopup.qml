@@ -329,8 +329,17 @@ FittedPopupWindow {
                 property bool opened: false
                 readonly property bool popupSurface: opened
                 readonly property Region blurShape: Region {
-                    item: Theme.frosted && _flyout.color.a < 1 && _flyout.visible ? _flyout : null
+                    item: Theme.frosted && _flyout.color.a < 1 && _flyout.visible ? _flyoutBlur : null
                     radius: Math.round(_flyout.radius)
+                }
+                // a region re-reads only its own item's geometry, and the flyout slides in by transform
+                Item {
+                    id: _flyoutBlur
+                    parent: win.stage
+                    x: _flyout.x + _flyout._shift
+                    y: _flyout.y
+                    width: _flyout.width
+                    height: _flyout.height
                 }
                 readonly property Item parentFlyout: _entry.ownerFlyout
                 readonly property bool hovered: _flyHover.hovered
