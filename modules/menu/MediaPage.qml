@@ -540,7 +540,5 @@ PageShell {
                 }
             }
         }
-
-        Item { width: 1; height: 8 }
     }
 }
