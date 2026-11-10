@@ -6343,6 +6343,22 @@ ShellRoot {
                 "the disconnected VPN row opens its saved-profile picker through the normal action")
             root._checkHomeWidgetPickers(home)
             Network.vpnAddress = addressWas
+            const keyboardErrorWas = KeyboardBrightness._readError
+            const backlightWas = Brightness.ready
+            const externalWas = DisplayBrightness.displays
+            Brightness.ready = false
+            DisplayBrightness.displays = []
+            KeyboardBrightness._readError = ""
+            const displayHidden = !home._displayShown
+            KeyboardBrightness._readError = "Could not read keyboard lighting. Check UPower."
+            const keyboardHint = root._findTrayNode(home, item => item.text === KeyboardBrightness._readError
+                && item.textColor !== undefined)
+            root._check(displayHidden && !KeyboardBrightness.ready && home._displayShown
+                    && keyboardHint !== null && keyboardHint.visible,
+                "a keyboard light that cannot be read keeps Home's display group and shows its error there")
+            KeyboardBrightness._readError = keyboardErrorWas
+            DisplayBrightness.displays = externalWas
+            Brightness.ready = backlightWas
             home.destroy()
             host.close()
             host.destroy()

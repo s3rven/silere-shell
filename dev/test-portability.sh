@@ -3381,7 +3381,9 @@ case " $* " in
             GetMaxBrightness)
                 case "$5" in */unsupported) printf 'i 0\n';; */invalid) printf 's "2"\n';; *) printf 'i 2\n';; esac
                 ;;
-            GetBrightness) printf 'i 1\n' ;;
+            GetBrightness)
+                case "${SILERE_KBD_READ_FAIL:-}:$5" in 1:*/led1) exit 1 ;; esac
+                printf 'i 1\n' ;;
             SetBrightness)
                 [ "${SILERE_KBD_FAIL:-0}" = 0 ] || exit 1
                 printf '%s:%s\n' "$5" "$9" >> "$SILERE_KBD_CALLS"
@@ -3397,6 +3399,10 @@ EOF
     actual="$(bash "$ROOT/scripts/keyboard-brightness.sh" list)"
     assert_eq "$path"$'\t1\t2\ts "keyboard-0"\n'"$path/led1"$'\t1\t2\ts "keyboard-1"' "$actual" \
         "keyboard discovery deduplicates UPower aliases and hides unsupported or malformed levels"
+    if actual="$(SILERE_KBD_READ_FAIL=1 bash "$ROOT/scripts/keyboard-brightness.sh" list)"; then
+        fail "keyboard discovery hid a light whose level could not be read"
+    fi
+    assert_eq "$path"$'\t1\t2\ts "keyboard-0"' "$actual" "keyboard discovery still lists the lights read before one failed"
     bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 0 's "keyboard-0"'
     assert_eq "$path:0" "$(<"$fixture/calls")" "keyboard light supports zero as off"
     bash "$ROOT/scripts/keyboard-brightness.sh" write "$path/led1" 2 's "keyboard-1"'

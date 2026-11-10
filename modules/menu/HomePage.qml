@@ -24,7 +24,9 @@ PageShell {
 
     property string _picker: ""
     signal controlRequested(Item control, Item choices)
-    readonly property bool _displayShown: _brightnessAvailable || KeyboardBrightness.ready || DisplayBrightness.displays.length > 0
+    // a keyboard light that stopped answering keeps its place, or its error has nowhere to show
+    readonly property bool _displayShown: _brightnessAvailable || KeyboardBrightness.ready
+        || KeyboardBrightness.lastError.length > 0 || DisplayBrightness.displays.length > 0
     readonly property bool _avShown: Audio.ready || root._displayShown
     readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
         || (SystemTools.hasNmcli && Network.toolAvailable)
@@ -203,7 +205,7 @@ PageShell {
                     onChanged: value => KeyboardBrightness.setLevel(value)
                 }
                 HintText {
-                    visible: KeyboardBrightness.ready && KeyboardBrightness.lastError.length > 0
+                    visible: KeyboardBrightness.lastError.length > 0
                     text: KeyboardBrightness.lastError
                     textColor: Theme.menuTextWarning
                 }

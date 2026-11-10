@@ -124,11 +124,15 @@ Singleton {
         stdout: StdioCollector { id: _listOut }
         onExited: code => {
             if (root.toolAvailable && generation === root._discoveryGeneration) {
-                if (completedSuccessfully(code)) {
+                const complete = completedSuccessfully(code)
+                const found = root.parseDevices(_listOut.text)
+                // each row is one light read to the end; one that failed must not take the others' sliders with it
+                if (complete || found.length > 0) {
                     root._publishingRevision = revision
-                    root.devices = root.parseDevices(_listOut.text)
-                    root._readError = ""
-                } else root._readError = "Could not read keyboard lighting. Check UPower."
+                    root.devices = found
+                }
+                root._readError = complete ? "" : found.length > 0 ? "Some keyboard lights could not be read. Check UPower."
+                    : "Could not read keyboard lighting. Check UPower."
             }
             if (root._refreshPending && root._wanted) Qt.callLater(root.rescan)
         }

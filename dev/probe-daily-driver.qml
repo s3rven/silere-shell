@@ -503,6 +503,16 @@ Scope {
         root.waitFor(() => KeyboardBrightness._confirmedLevel === 1 && !KeyboardBrightness.lastError,
             "a keyboard retry targets the newly selected light and clears its error")
         KeyboardBrightness._pollTimer.stop()
+        root.write("keyboard-devices", root.keyboardLine(1))
+        root.write("keyboard-list-fail", "fail")
+        KeyboardBrightness.rescan()
+        root.waitFor(() => KeyboardBrightness.devices.length === 1 && KeyboardBrightness.lastError.length > 0,
+            "a keyboard light that fails its read is reported while the lights that answered keep their sliders")
+        root.write("keyboard-list-fail", "")
+        root.write("keyboard-devices", root.keyboardLine(1) + root.keyboardLine(2, true))
+        KeyboardBrightness.rescan()
+        root.waitFor(() => KeyboardBrightness.devices.length === 2 && !KeyboardBrightness.lastError,
+            "a complete keyboard read clears the earlier failure")
         root.write("keyboard-list-hold", "hold")
         root.write("keyboard-calls", "")
         KeyboardBrightness.rescan()

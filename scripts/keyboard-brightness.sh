@@ -23,12 +23,15 @@ case "${1:-}" in
     list)
         mapfile -t paths < <(busctl --system --timeout=2 --list tree org.freedesktop.UPower 2>/dev/null || true)
         seen=()
+        failed=0
         for path in "${paths[@]}"; do
             valid_path "$path" || continue
             maximum="$(get_int "$path" GetMaxBrightness)" || continue
             [ "$maximum" -gt 0 ] || continue
-            current="$(get_int "$path" GetBrightness)" || continue
-            [ "$current" -le "$maximum" ] || continue
+            # only an object that answered a positive maximum is known to be a light: a tree node without the
+            # interface fails GetMaxBrightness too. Past that, a failed read is reported, after the rows that worked
+            current="$(get_int "$path" GetBrightness)" || { failed=1; continue; }
+            [ "$current" -le "$maximum" ] || { failed=1; continue; }
             native="$(identity "$path")"
             duplicate=0
             for previous in "${seen[@]}"; do
@@ -38,6 +41,7 @@ case "${1:-}" in
             seen+=("$native")
             printf '%s\t%s\t%s\t%s\n' "$path" "$current" "$maximum" "$native"
         done
+        [ "$failed" -eq 0 ] || exit 1
         ;;
     write)
         [ "$#" -eq 4 ] || exit 2
