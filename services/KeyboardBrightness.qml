@@ -156,6 +156,8 @@ Singleton {
                     root.currentLevel = root._confirmedLevel
                 }
             }
+            // a read that began before this write landed still carries the level from before it
+            root._revision++
             if (root._queued) _apply.restart()
             else root.rescan()
         }

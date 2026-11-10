@@ -485,6 +485,24 @@ Scope {
         root.write("keyboard-list-hold", "")
         input.wait(400)
         root.check(KeyboardBrightness.currentLevel === 2, "an older keyboard read cannot overwrite the user's newer level")
+        // the other order: the read starts after the edit and samples the light before the write reaches it
+        const levelsSeen = []
+        const noteLevel = () => levelsSeen.push(KeyboardBrightness.currentLevel)
+        KeyboardBrightness.currentLevelChanged.connect(noteLevel)
+        root.write("keyboard-list-hold", "hold")
+        root.write("keyboard-calls", "")
+        KeyboardBrightness.setLevel(0)
+        KeyboardBrightness.rescan()
+        root.waitFor(() => root.read("keyboard-calls").includes("list") && KeyboardBrightness._confirmedLevel === 0,
+            "a keyboard read that began before the write finishes after it")
+        root.write("keyboard-list-hold", "")
+        input.wait(600)
+        KeyboardBrightness.currentLevelChanged.disconnect(noteLevel)
+        root.check(levelsSeen.every(level => level === 0) && KeyboardBrightness.currentLevel === 0,
+            "a keyboard read begun before a write lands cannot flash the old level back: " + levelsSeen.join(","))
+        KeyboardBrightness.setLevel(2)
+        root.waitFor(() => KeyboardBrightness._confirmedLevel === 2, "the keyboard fixture returns to its earlier level")
+        input.wait(400)
 
         root.write("keyboard-set-fail", "fail")
         KeyboardBrightness.setLevel(1)
