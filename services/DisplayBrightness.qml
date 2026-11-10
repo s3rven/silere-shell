@@ -110,6 +110,29 @@ Singleton {
         if (root._refreshPending) root.refresh(true)
         root._applyNext()
     }
+
+    function _acceptScanResult(generation: int, code: int, timedOut: bool, raw: string): void {
+        if (generation !== root._generation) {
+            root._refreshPending = true
+            return
+        }
+        const complete = code === 0 && !timedOut
+        const found = root.parseDisplays(raw)
+        // each row is a completed read of one display. A slow or hung monitor
+        // later in the scan must not discard the controls already discovered
+        if (complete || found.length > 0) {
+            root.displays = found
+            const levels = {}
+            for (const display of found)
+                levels[display.key] = root._queued[display.key] ?? display.percent
+            root.values = levels
+        }
+        root._scanError = complete ? "" : found.length > 0
+            ? "Some external displays could not be read. Showing available brightness controls."
+            : "Could not read external displays. Check DDC/CI support and I2C permissions."
+        root._lastScan = complete ? Date.now() : 0
+    }
+
     Timer { id: _debounce; interval: 100; onTriggered: root._applyNext() }
     BoundedProcess {
         id: _scan
@@ -117,18 +140,7 @@ Singleton {
         command: ["bash", Quickshell.shellDir + "/scripts/display-brightness.sh", "list", ShellSettings.ddcDisabledDisplays]
         stdout: StdioCollector { id: _scanOut }
         onExited: code => {
-            if (root._scanGeneration !== root._generation) {
-                root._refreshPending = true
-            } else if (_scan.completedSuccessfully(code)) {
-                root.displays = root.parseDisplays(_scanOut.text)
-                const levels = {}
-                // a slider can move during discovery; keep its latest queued value
-                for (const display of root.displays)
-                    levels[display.key] = root._queued[display.key] ?? display.percent
-                root.values = levels
-                root._scanError = ""
-                root._lastScan = Date.now()
-            } else root._scanError = "Could not read external displays. Check DDC/CI support and I2C permissions."
+            root._acceptScanResult(root._scanGeneration, code, _scan.timedOut, _scanOut.text)
             Qt.callLater(root._resume)
         }
     }
@@ -147,10 +159,12 @@ Singleton {
                 delete queued[key]
                 root._queued = queued
                 root._lastScan = 0
+                root._refreshPending = true
             } else {
                 root._writeError = ""
             }
-            if (root._lastScan === 0) root._refreshPending = true
+            // a partial scan also parks _lastScan at 0, for the Interface page's retry; a write that
+            // worked on one of its displays must not rescan every display it could not read
             Qt.callLater(root._resume)
         }
     }
