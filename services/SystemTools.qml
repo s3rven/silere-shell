@@ -60,6 +60,7 @@ Singleton {
     readonly property bool hasPwvucontrol:   _tools.pwvucontrol ?? false
     readonly property bool hasPavucontrol:   _tools.pavucontrol ?? false
     readonly property bool hasWpctl:         _tools.wpctl ?? false
+    readonly property bool hasPwDump:        _tools["pw-dump"] ?? false
     readonly property bool hasCurl:          _tools.curl ?? false
     readonly property bool hasXdgOpen:       _tools["xdg-open"] ?? false
     readonly property bool hasBluemanManager: _tools["blueman-manager"] ?? false
@@ -201,7 +202,7 @@ Singleton {
             "net.hadess.PowerProfiles /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile " +
             ">/dev/null 2>&1 && echo @powerprofiles; " +
             "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep notify-send " +
-            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl curl xdg-open " +
+            "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl pw-dump curl xdg-open " +
             "blueman-manager nm-connection-editor nmtui xdg-terminal-exec ddcutil " +
             "missioncenter resources gnome-system-monitor plasma-systemmonitor btop htop " +
             "kitty foot alacritty wezterm ghostty konsole; do " +

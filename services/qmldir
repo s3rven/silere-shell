@@ -1,5 +1,6 @@
 # hardware
 singleton Audio         1.0 Audio.qml
+singleton AudioMode     1.0 AudioMode.qml
 PwVolumeControl         1.0 PwVolumeControl.qml
 singleton Battery       1.0 Battery.qml
 singleton Bluetooth     1.0 Bluetooth.qml

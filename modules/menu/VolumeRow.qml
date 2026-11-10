@@ -30,7 +30,7 @@ Item {
         watched: root
     }
 
-    readonly property bool _hasOutputs: Audio.sinkCount > 1
+    readonly property bool _hasOutputs: Audio.sinkCount > 1 || AudioMode.available || AudioMode.switching || AudioMode.lastError.length > 0
     readonly property bool _hasInput:   Audio.micReady || Audio.sourceCount > 0
     readonly property bool _hasApps:    Audio.playbackCount > 0
     readonly property bool _canExpand:  root._hasOutputs || root._hasInput || root._hasApps
@@ -111,7 +111,8 @@ Item {
     // section is only folded once emptiness outlives that; the counts are read live
     // because the derived binding still holds its old value inside the signal
     function _hasChoices(): bool {
-        return Audio.sinkCount > 1 || Audio.micReady || Audio.sourceCount > 0
+        return Audio.sinkCount > 1 || AudioMode.available || AudioMode.switching || AudioMode.lastError.length > 0
+            || Audio.micReady || Audio.sourceCount > 0
             || Audio.playbackCount > 0
     }
 
@@ -147,8 +148,8 @@ Item {
         interactionKey: Audio.sink ? String(Audio.sink.id) : ""
         value: Audio.uiVolume
         valueText: Audio.label
-        adjustable: Audio.ready
-        glyphClickable: Audio.ready
+        adjustable: Audio.ready && !Audio.profileSwitching
+        glyphClickable: Audio.ready && !Audio.profileSwitching
         muted: Audio.muted
         expandable: root._canExpand
         expanded: root.open
@@ -194,8 +195,23 @@ Item {
                 opacity: root._tabFade
                 x: root._tabShift
 
+                ChoiceChipRow {
+                    visible: root._shownTab === "output" && (AudioMode.available || AudioMode.switching)
+                    width: _optCol.width
+                    label: "Headset mode"
+                    currentValue: AudioMode.mode
+                    model: [{ value: "listening", label: "Listening" }, { value: "calls", label: "Calls" }]
+                    enabled: !AudioMode.switching
+                    onChosen: value => AudioMode.setMode(String(value))
+                }
+                HintText {
+                    visible: root._shownTab === "output" && (AudioMode.switching || AudioMode.lastError.length > 0)
+                    width: _optCol.width
+                    text: AudioMode.switching ? "Changing headset mode…" : AudioMode.lastError
+                }
+
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "output" ? Audio.sinkModel : []
+                    model: root._optionsShown && root._shownTab === "output" && !Audio.profileSwitching ? Audio.sinkModel : []
                     delegate: InlineOptionRow {
                         id: _out
                         required property var modelData
@@ -225,8 +241,8 @@ Item {
                     interactionKey: Audio.source ? String(Audio.source.id) : ""
                     value: Audio.micVolume
                     valueText: Audio.micLabel
-                    adjustable: Audio.micReady
-                    glyphClickable: Audio.micReady
+                    adjustable: Audio.micReady && !Audio.profileSwitching
+                    glyphClickable: Audio.micReady && !Audio.profileSwitching
                     muted: Audio.micMuted
                     reserveExpandSlot: true
                     onGlyphClicked: Audio.toggleMicMute()
@@ -234,7 +250,7 @@ Item {
                 }
 
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "input" ? Audio.sourceModel : []
+                    model: root._optionsShown && root._shownTab === "input" && !Audio.profileSwitching ? Audio.sourceModel : []
                     delegate: InlineOptionRow {
                         id: _src
                         required property var modelData

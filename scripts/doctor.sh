@@ -72,6 +72,7 @@ _package_for() {
         dnf:nmcli|zypper:nmcli) printf 'NetworkManager' ;;
         *:pwvucontrol) printf 'pavucontrol' ;;
         *:wpctl)       printf 'wireplumber' ;;
+        pacman:pw-dump) printf 'pipewire' ;;
         pacman:hyprsunset|pacman:matugen) printf '%s' "$tool" ;;
         *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset)
             printf '%s' "$tool" ;;
@@ -331,10 +332,13 @@ else optional_any "night light" "warm display" hyprsunset wlsunset
 fi
 optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
-# Quickshell 0.3.2 sets bluetooth volume itself, so only an older or unknown one needs wpctl
+# Quickshell 0.3.2 sets bluetooth volume itself; headset modes still need both pipewire tools
 if [ -z "${qs_version:-}" ] || ! _silere_version_at_least "$qs_version" 0.3.2; then
-    optional_tool wpctl "bluetooth volume on Quickshell 0.3.1"
+    optional_tool wpctl "headset modes + bluetooth volume on Quickshell 0.3.1"
+else
+    optional_tool wpctl "headset modes"
 fi
+optional_tool pw-dump "headset modes"
 optional_tool curl "cover art from the web + installer downloads"
 optional_tool xdg-open "network sign-in page"
 optional_tool cava "audio visualizer"

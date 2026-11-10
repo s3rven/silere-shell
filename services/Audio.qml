@@ -12,6 +12,24 @@ Singleton {
 
     readonly property bool armed: true
     readonly property real stepPct: 0.05
+    property bool profileSwitching: false
+    property var _profilePresentation: null
+
+    function beginProfileSwitch(): void {
+        root._profilePresentation = { ready: root.ready, volume: root.uiVolume, effectiveVolume: root._out.effectiveVolume, muted: root.muted,
+            name: root.sinkName, micReady: root.micReady, micVolume: root.micVolume,
+            micEffectiveVolume: root._in.effectiveVolume, micMuted: root.micMuted, sourceName: root.sourceName }
+        root.profileSwitching = true
+    }
+
+    function endProfileSwitch(): void {
+        root.profileSwitching = false
+        Qt.callLater(root._releaseProfilePresentation)
+    }
+
+    function _releaseProfilePresentation(): void {
+        if (!root.profileSwitching) root._profilePresentation = null
+    }
 
     // quickshell#1301: a node that replaces the default under its own name, as a Bluetooth transport
     // reconnecting can, never becomes the default, because the metadata naming it did not change
@@ -34,25 +52,26 @@ Singleton {
 
     readonly property PwVolumeControl _out: PwVolumeControl {
         node: root.sink
-        enabled: Pipewire.ready
+        enabled: Pipewire.ready && !root.profileSwitching
     }
     signal micMutedExternally()
 
     readonly property PwVolumeControl _in: PwVolumeControl {
         node: root.source
-        enabled: Pipewire.ready
+        enabled: Pipewire.ready && !root.profileSwitching
         onMutedExternally: root.micMutedExternally()
     }
 
-    readonly property bool ready: _out.ready
+    readonly property bool ready: _profilePresentation ? _profilePresentation.ready : _out.ready
+    readonly property bool backendReady: Pipewire.ready
     readonly property real targetVolume: _out.targetVolume
     readonly property bool pendingApply: _out.pendingApply
-    readonly property bool muted: _out.muted
-    readonly property real uiVolume: _out.uiVolume
+    readonly property bool muted: _profilePresentation ? _profilePresentation.muted : _out.muted
+    readonly property real uiVolume: _profilePresentation ? _profilePresentation.volume : _out.uiVolume
 
-    readonly property bool micReady: _in.ready
-    readonly property bool micMuted: _in.muted
-    readonly property real micVolume: _in.uiVolume
+    readonly property bool micReady: _profilePresentation ? _profilePresentation.micReady : _in.ready
+    readonly property bool micMuted: _profilePresentation ? _profilePresentation.micMuted : _in.muted
+    readonly property real micVolume: _profilePresentation ? _profilePresentation.micVolume : _in.uiVolume
 
     // icon name and form factor live on the device, not the node, and a bluez sink carries
     // neither: the node name and its description are all there is to go on. Any Bluetooth
@@ -130,11 +149,11 @@ Singleton {
         uiVolume < 0.33          ? "󰕿" :
         uiVolume < 0.66          ? "󰖀" : "󰕾"
     readonly property string label: ready ? `${Math.round(uiVolume * 100)}%` : "--%"
-    readonly property string sinkName: root.sinkLabel(sink)
+    readonly property string sinkName: _profilePresentation ? _profilePresentation.name : root.sinkLabel(sink)
 
     readonly property string micIcon: !micReady || micMuted ? "󰍭" : "󰍬"
     readonly property string micLabel: micReady ? `${Math.round(micVolume * 100)}%` : "--%"
-    readonly property string sourceName: root.sinkLabel(source)
+    readonly property string sourceName: _profilePresentation ? _profilePresentation.sourceName : root.sinkLabel(source)
 
     readonly property var _nodes: Pipewire.nodes ? (Pipewire.nodes.values || []) : []
 
@@ -258,14 +277,15 @@ Singleton {
     PwObjectTracker { objects: root._tracked }
 
     function setSink(node): void {
-        if (node) Pipewire.preferredDefaultAudioSink = node
+        if (node && !root.profileSwitching) Pipewire.preferredDefaultAudioSink = node
     }
 
     function setSource(node): void {
-        if (node) Pipewire.preferredDefaultAudioSource = node
+        if (node && !root.profileSwitching) Pipewire.preferredDefaultAudioSource = node
     }
 
     function cycleSink(): string {
+        if (root.profileSwitching) return ""
         const list = root.sinks
         if (list.length < 2) return ""
         const i = list.indexOf(root.sink)
@@ -275,6 +295,7 @@ Singleton {
     }
 
     function cycleSource(): string {
+        if (root.profileSwitching) return ""
         const list = root.sources
         if (list.length < 2) return ""
         const i = list.indexOf(root.source)
@@ -343,16 +364,17 @@ Singleton {
         return ""
     }
 
-    function bumpBy(delta: real): void { root._out.bumpBy(delta) }
-    function setVolume(v: real): void  { root._out.setVolume(v) }
-    function toggleMute(): void        { root._out.toggleMute() }
+    function bumpBy(delta: real): void { if (!root.profileSwitching) root._out.bumpBy(delta) }
+    function setVolume(v: real): void  { if (!root.profileSwitching) root._out.setVolume(v) }
+    function toggleMute(): void        { if (!root.profileSwitching) root._out.toggleMute() }
 
-    function micBumpBy(delta: real): void { root._in.bumpBy(delta) }
-    function setMicVolume(v: real): void  { root._in.setVolume(v) }
-    function toggleMicMute(): void        { root._in.toggleMute() }
+    function micBumpBy(delta: real): void { if (!root.profileSwitching) root._in.bumpBy(delta) }
+    function setMicVolume(v: real): void  { if (!root.profileSwitching) root._in.setVolume(v) }
+    function toggleMicMute(): void        { if (!root.profileSwitching) root._in.toggleMute() }
 
     function _ipcSetVolume(percent: int, microphone: bool): string {
         if (percent < 0 || percent > 100) return "error: volume must be between 0 and 100"
+        if (root.profileSwitching) return "error: audio device is changing"
         const control = microphone ? root._in : root._out
         if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
         control.setVolume(percent / 100)
@@ -361,6 +383,7 @@ Singleton {
     }
 
     function _ipcStepVolume(direction: int, microphone: bool): string {
+        if (root.profileSwitching) return "error: audio device is changing"
         const control = microphone ? root._in : root._out
         if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
         control.bumpBy(direction * root.stepPct)
@@ -369,6 +392,7 @@ Singleton {
     }
 
     function _ipcToggleMute(microphone: bool): string {
+        if (root.profileSwitching) return "error: audio device is changing"
         const control = microphone ? root._in : root._out
         if (!control.ready) return microphone ? "error: no audio input available" : "error: no audio output available"
         control.toggleMute()
@@ -377,6 +401,7 @@ Singleton {
     }
 
     function _ipcCycleDevice(microphone: bool): string {
+        if (root.profileSwitching) return "error: audio device is changing"
         const devices = microphone ? root.sources : root.sinks
         if (devices.length === 0) return microphone ? "error: no audio input available" : "error: no audio output available"
         if (devices.length < 2) return microphone ? "error: only one audio input available" : "error: only one audio output available"
@@ -407,9 +432,9 @@ Singleton {
         function status(): string {
             return JSON.stringify({
                 output: { ready: root.ready, name: root.sinkName,
-                    volume: Math.round(root._out.effectiveVolume * 100), muted: root.muted },
+                    volume: Math.round((root._profilePresentation ? root._profilePresentation.effectiveVolume : root._out.effectiveVolume) * 100), muted: root.muted },
                 input: { ready: root.micReady, name: root.sourceName,
-                    volume: Math.round(root._in.effectiveVolume * 100), muted: root.micMuted }
+                    volume: Math.round((root._profilePresentation ? root._profilePresentation.micEffectiveVolume : root._in.effectiveVolume) * 100), muted: root.micMuted }
             })
         }
     }
