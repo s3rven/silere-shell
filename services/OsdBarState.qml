@@ -285,6 +285,8 @@ Singleton {
     property string _lastSinkName: ""
     property bool   _showDeviceName: false
     property bool   _volumeUpdateQueued: false
+    // a headset mode change replaces the output node; the level it reads back is not the user changing the volume
+    Timer { id: _profileHold; interval: 400 }
 
     Timer {
         id: _deviceNameTimer
@@ -307,7 +309,7 @@ Singleton {
     function _updateVolume(): void {
         _volumeUpdateQueued = false
         // an output that went away reads as volume 0, which is not the user muting anything
-        if (!Audio.ready) return
+        if (!Audio.ready || Audio.profileSwitching || _profileHold.running) return
         const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
         const lbl = effectiveMuted ? "Muted"
             : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
@@ -332,9 +334,11 @@ Singleton {
         function onPendingApplyChanged() { if (Audio.pendingApply) root._queueVolumeUpdate() }
         function onMutedChanged() { root._queueVolumeUpdate() }
         function onMicMutedExternally() { root._showMicMute() }
+        function onProfileSwitchingChanged() { if (!Audio.profileSwitching) _profileHold.restart() }
         function onSinkNameChanged() {
             const name = Audio.sinkName
             if (!name || name === root._lastSinkName) return
+            if (Audio.profileSwitching || _profileHold.running) { root._lastSinkName = name; return }
             const isFirst = root._lastSinkName === ""
             root._lastSinkName = name
             if (isFirst || Idle.isIdle) return
