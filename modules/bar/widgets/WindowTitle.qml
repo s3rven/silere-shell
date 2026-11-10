@@ -20,8 +20,10 @@ Item {
         && (root.currentTitle.length > 0
             || (ShellSettings.showWindowTitleApp && root.currentApp.length > 0))
 
+    // the glide's destination and motion, not implicitWidth: hiding the slot stops the glide, which rewrites
+    // implicitWidth while its own binding is still updating and leaves it a fraction short of zero
     readonly property bool layoutVisible: root._titleVisible || root._op > 0.001
-        || root.implicitWidth > 0.5 || _debounce.running || _seq.running
+        || root._widthGlide.target > 0.5 || root._widthGlide.running || _debounce.running || _seq.running
     // the width lags the fade both ways, so a divider keyed off it marks an empty slot;
     // a crossfade between titles holds this up, or each focus change blinks the divider
     readonly property bool contentVisible: root._displayText.length > 0
