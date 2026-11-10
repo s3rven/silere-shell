@@ -369,7 +369,8 @@ Item {
         ConfirmButton {
             id: _reset
             anchors.right: parent.right
-            anchors.rightMargin: 8
+            // the right column every settings control ends on: card edge less 12
+            anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             designHeight: 24
             glyph: "󰦛"
@@ -628,7 +629,8 @@ Item {
                 visible: _row.hasToggle
                 enabled: _row.hasToggle && root._draggingKey.length === 0
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                // row inset 4 + 4 + the switch's 4 inside this 44 target = the 12 ToggleRow ends on
+                anchors.rightMargin: 4
                 width: 44
                 height: parent.height
 
@@ -855,7 +857,7 @@ Item {
                         Item {
                             id: _subToggleTarget
                             anchors.right: parent.right
-                            anchors.rightMargin: 8
+                            anchors.rightMargin: 4
                             width: 44
                             height: parent.height
 
