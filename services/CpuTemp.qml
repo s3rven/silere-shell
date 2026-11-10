@@ -148,9 +148,10 @@ Singleton {
     }
 
     function _retryMissingSensor(): void {
-        if (!root.sensorMissing || _detectProc.running) return
+        if (!root.sensorMissing) return
         // a driver can come back at the same path after suspend; exclusions belong to one discovery pass
         root._badSensorPaths = ""
+        // a pass still running started with the old exclusions: the bump retires it, and its exit starts a fresh one
         root._detectGeneration++
         // leave the missing result up until discovery succeeds, or the control flashes on every retry
         root._startSensorDetection()
