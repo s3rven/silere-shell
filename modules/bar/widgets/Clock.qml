@@ -185,7 +185,8 @@ Item {
             }
             RollingText {
                 tabularDigits: true
-                reserveText: "00"
+                // the 12-hour clock writes 1-9 unpadded; a two-digit reserve left a blank digit before them
+                reserveText: ShellSettings.clock12h ? "0" : "00"
                 horizontalAlignment: Text.AlignRight
                 text:    DateTime.cachedHour
                 color:   root._cText
