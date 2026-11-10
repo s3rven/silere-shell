@@ -213,7 +213,8 @@ MenuRow {
         anchors.verticalCenter: parent.verticalCenter
         height: root.height
         readonly property real _chevronW: _chevron.visible ? _chevron.width + 8 : 0
-        readonly property real _valNatural: Math.ceil(_valMetrics.advanceWidth)
+        // the label's own layout, not TextMetrics: distance-field text measures wider than hinted metrics
+        readonly property real _valNatural: Math.ceil(_valText.implicitWidth)
         // the title names the setting and the value only qualifies it, so a long value
         // gives way first: 42 of label inset + 22 of margins + the same 96 label floor
         // SelectRow reserves. Uncapped, the value took its full width and elided the title
@@ -223,8 +224,6 @@ MenuRow {
             : root.width <= 0 ? _valNatural
             : Math.min(_valNatural, _valMax)
         width: _chevronW + _ctrlW
-
-        TextMetrics { id: _valMetrics; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: root.valueText }
 
         ToggleSwitch {
             id: _switch
@@ -238,6 +237,7 @@ MenuRow {
         }
 
         ShellText {
+            id: _valText
             visible: !root.showSwitch && root.valueText.length > 0
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
