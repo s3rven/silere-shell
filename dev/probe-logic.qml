@@ -8621,6 +8621,11 @@ ShellRoot {
                 && batteryDetails[0].health === "92%" && batteryDetails[0].energy === "32 / 50 Wh"
                 && batteryDetails[0].power === "12.3 W" && batteryDetails[0].powerLabel === "Power use",
             "battery details preserve health's native percent and energy and power units")
+        const bareBattery = Battery.detailsFor([Object.assign({}, detailBattery, { state: Up.UPowerDeviceState.FullyCharged,
+            healthSupported: false, energyCapacity: 0, changeRate: 0 })])
+        root._check(bareBattery.length === 1 && !Battery.detailsShown(bareBattery) && Battery.detailsShown(batteryDetails)
+                && Battery.detailsShown(bareBattery.concat(bareBattery)),
+            "one battery with no health, energy or power reading offers no details panel, since nothing would be in it")
         const twoBatteries = Battery.detailsFor([detailBattery,
             Object.assign({}, detailBattery, { state: Up.UPowerDeviceState.Charging, percentage: 0,
                 healthSupported: false, energyCapacity: 0, changeRate: 9 })])

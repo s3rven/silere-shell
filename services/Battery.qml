@@ -89,6 +89,11 @@ Singleton {
         source: root._powerDevices(UPower.devices ? UPower.devices.values : [])
     }
     readonly property var details: root.detailsFor(root._detailDevices.values)
+    // what the details panel draws: one battery repeats nothing of the reading above it, so it needs a measurement of its own
+    function detailsShown(list): bool {
+        return list.length > 1 || list.some(d => d.health.length > 0 || d.energy.length > 0 || d.power.length > 0)
+    }
+    readonly property bool hasDetails: root.detailsShown(root.details)
 
     function _measurement(value): bool {
         return typeof value === "number" && isFinite(value) && value >= 0

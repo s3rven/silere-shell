@@ -315,7 +315,7 @@ SettingsCard {
         id: _battery
         live: root.active
         visible: Battery.available
-        openable: Battery.details.length > 0
+        openable: Battery.hasDetails
         actionDescription: "Shows battery details"
         onActivated: root.batteryActivated()
         glyph: Battery.icon
@@ -329,7 +329,7 @@ SettingsCard {
 
     InlinePicker {
         id: _batteryPicker
-        open: root.batteryExpanded && Battery.details.length > 0
+        open: root.batteryExpanded && Battery.hasDetails
         content: Component { BatteryDetails {} }
     }
 }
