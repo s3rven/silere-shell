@@ -18,6 +18,7 @@ levels() {
 case "${1:-}" in
     list)
         disabled=",${2:-},"
+        failed=0
         for connector in "$drm_root"/card*-*; do
             [ -r "$connector/status" ] && [ "$(cat "$connector/status")" = connected ] || continue
             name="${connector##*/}"
@@ -25,19 +26,26 @@ case "${1:-}" in
             [ -r "$connector/edid" ] || continue
             fingerprint="$(identity "$connector")" || continue
             [ "$fingerprint" != e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 ] || continue
+            asked=0; answered=0
             for device in "$connector"/ddc/i2c-dev/i2c-*; do
                 [ -d "$device" ] || continue
                 bus="${device##*i2c-}"
                 case "$bus" in ''|*[!0-9]*) continue ;; esac
+                asked=1
                 current=-1; maximum=100
                 case "$disabled" in
                     *",$name:$fingerprint,"*) ;;
                     *) read -r current maximum < <(levels "$bus") || continue ;;
                 esac
                 printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$bus" "$fingerprint" "$current" "$maximum"
+                answered=1
                 break
             done
+            # a display with a DDC bus that answered on none is a failed read, not an absent display:
+            # the rows already printed stand, and the exit status says the list is short
+            [ "$asked" -eq "$answered" ] || failed=1
         done
+        [ "$failed" -eq 0 ] || exit 1
         ;;
     write)
         [ "$#" -eq 5 ] || exit 2

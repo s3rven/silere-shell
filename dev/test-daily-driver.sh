@@ -23,6 +23,7 @@ cat > "$scratch/bin/ddcutil" <<'EOF'
 #!/usr/bin/env bash
 case " $* " in
     *' getvcp '*)
+        case " $* " in *' --bus 9 '*) exit 1 ;; esac
         [ "${SILERE_TEST_REPLACE:-0}" != 1 ] || printf changed > "$SILERE_TEST_DRM_ROOT/card1-DP-1/edid"
         echo 'VCP 10 C 20 80' ;;
     *' setvcp '*) printf '%s\n' "$*" >> "$SILERE_TEST_LOG" ;;
@@ -89,6 +90,13 @@ printf 'fixture-edid' > "$scratch/drm/card1-DP-1/edid"
 fingerprint="$(sha256sum "$scratch/drm/card1-DP-1/edid" | cut -d' ' -f1)"
 listed="$(bash "$ROOT/scripts/display-brightness.sh" list)"
 check test "$listed" = "$(printf 'card1-DP-1\t7\t%s\t20\t80' "$fingerprint")"
+# a second display whose DDC read fails: the first still lists, and the exit status says the list is short
+mkdir -p "$scratch/drm/card1-DP-2/ddc/i2c-dev/i2c-9"
+printf connected > "$scratch/drm/card1-DP-2/status"
+printf 'silent-edid' > "$scratch/drm/card1-DP-2/edid"
+if short="$(bash "$ROOT/scripts/display-brightness.sh" list)"; then echo 'FAIL: a display that failed its DDC read was dropped without a word' >&2; exit 1; fi
+check test "$short" = "$listed"
+rm -rf -- "$scratch/drm/card1-DP-2"
 check bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75
 check grep -qx -- '--bus 7 setvcp 10 60' "$SILERE_TEST_LOG"
 before="$(wc -l < "$SILERE_TEST_LOG")"
