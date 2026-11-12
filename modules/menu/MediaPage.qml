@@ -574,6 +574,7 @@ PageShell {
                         glyph: modelData.isPlaying ? "󰐊" : "󰏤"
                         title: _playerRow._name
                         status: SafeText.singleLineText(modelData.trackTitle, 128)
+                        statusOneLine: true
                         active: modelData === Media.player
                         onActivated: Media.preferredPlayer = modelData.dbusName
                     }
