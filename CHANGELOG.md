@@ -35,6 +35,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - The audio visualizer moves smoothly on every preset instead of flickering to its baseline between beats.
+- The shell no longer restarts itself when Hyprland's events arrive a moment after a burst of focus changes.
 - Bluetooth controls recover when a hardware switch is released while the radio remains soft-blocked, and follow the selected controller on systems with multiple radios.
 - An incomplete external-display brightness scan keeps the displays it already read usable and allows an immediate retry. A display that never answers DDC/CI is named in the warning and listed under Settings › System › Devices, where switching off its control ends the warning.
 - On Quickshell 0.3.1, volume changes on a sound card's own outputs are no longer silently dropped; they go through `wpctl`, as Bluetooth volume already did.

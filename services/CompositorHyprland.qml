@@ -133,7 +133,17 @@ QtObject {
         if (root._socketDead) return
         root._silentFlips = root._eventSeq === root._seqAtFlip ? root._silentFlips + 1 : 0
         root._seqAtFlip = root._eventSeq
-        if (root._silentFlips >= 3) root._eventSocketDead()
+        if (root._silentFlips >= 3 && !root._socketConfirm.running) {
+            root._seqAtConfirm = root._eventSeq
+            root._socketConfirm.restart()
+        }
+    }
+    // wayland and the event socket are read separately, so the flips' own events can still be queued behind them.
+    // Dead only if nothing at all arrived meanwhile: a flip right before the deadline can have its own event unread
+    property int _seqAtConfirm: -1
+    property Timer _socketConfirm: Timer {
+        interval: 4000
+        onTriggered: if (!root._socketDead && root._eventSeq === root._seqAtConfirm) root._eventSocketDead()
     }
     property BoundedProcess _socketRestart: BoundedProcess {
         timeoutMs: 5000

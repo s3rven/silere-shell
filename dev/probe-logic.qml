@@ -5969,10 +5969,33 @@ ShellRoot {
                 hypr._eventSeq++
                 hypr._noteFocusFlip()
             }
-            const liveOk = !hypr._socketDead
+            const liveOk = !hypr._socketDead && !hypr._socketConfirm.running
             for (let i = 0; i < 3; i++) hypr._noteFocusFlip()
-            root._check(liveOk && hypr._socketDead,
-                "focus flips with socket events stay healthy; three silent flips mark the event socket dead")
+            const armedOnly = hypr._socketConfirm.running && !hypr._socketDead
+            hypr._eventSeq++
+            hypr._socketConfirm.stop()
+            hypr._socketConfirm.triggered()
+            const lateOk = !hypr._socketDead
+            hypr._seqAtFlip = -1
+            hypr._silentFlips = 0
+            for (let i = 0; i < 4; i++) hypr._noteFocusFlip()
+            hypr._socketConfirm.stop()
+            hypr._socketConfirm.triggered()
+            root._check(liveOk && armedOnly && lateOk && hypr._socketDead,
+                "focus flips with socket events stay healthy; events landing after three silent flips keep the shell up, silence after them marks the socket dead")
+            hypr._socketConfirm.stop()
+            hypr._socketDead = false
+            hypr._silentFlips = 0
+            hypr._seqAtFlip = -1
+            // the queued events land, then one more flip comes just before the deadline, its own event not yet read
+            for (let i = 0; i < 4; i++) hypr._noteFocusFlip()
+            hypr._eventSeq++
+            hypr._noteFocusFlip()
+            hypr._socketConfirm.stop()
+            hypr._socketConfirm.triggered()
+            root._check(!hypr._socketDead,
+                "events that arrived during the confirmation keep the shell up, even with a flip right before its end")
+            hypr._socketConfirm.stop()
             hypr._socketDead = false
             hypr._silentFlips = 0
             hypr._seqAtFlip = -1
