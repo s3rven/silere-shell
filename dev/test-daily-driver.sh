@@ -95,7 +95,11 @@ mkdir -p "$scratch/drm/card1-DP-2/ddc/i2c-dev/i2c-9"
 printf connected > "$scratch/drm/card1-DP-2/status"
 printf 'silent-edid' > "$scratch/drm/card1-DP-2/edid"
 if short="$(bash "$ROOT/scripts/display-brightness.sh" list)"; then echo 'FAIL: a display that failed its DDC read was dropped without a word' >&2; exit 1; fi
-check test "$short" = "$listed"
+silent_fp="$(sha256sum "$scratch/drm/card1-DP-2/edid" | cut -d' ' -f1)"
+# listed as unreadable so it can be switched off; switched off, it is not asked and the list is whole
+check test "$short" = "$(printf '%s\ncard1-DP-2\t9\t%s\t-2\t100' "$listed" "$silent_fp")"
+off="$(bash "$ROOT/scripts/display-brightness.sh" list "card1-DP-2:$silent_fp")"
+check test "$off" = "$(printf '%s\ncard1-DP-2\t9\t%s\t-1\t100' "$listed" "$silent_fp")"
 rm -rf -- "$scratch/drm/card1-DP-2"
 check bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75
 check grep -qx -- '--bus 7 setvcp 10 60' "$SILERE_TEST_LOG"

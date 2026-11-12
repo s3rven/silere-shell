@@ -26,12 +26,12 @@ case "${1:-}" in
             [ -r "$connector/edid" ] || continue
             fingerprint="$(identity "$connector")" || continue
             [ "$fingerprint" != e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 ] || continue
-            asked=0; answered=0
+            asked=""; answered=0
             for device in "$connector"/ddc/i2c-dev/i2c-*; do
                 [ -d "$device" ] || continue
                 bus="${device##*i2c-}"
                 case "$bus" in ''|*[!0-9]*) continue ;; esac
-                asked=1
+                [ -n "$asked" ] || asked="$bus"
                 current=-1; maximum=100
                 case "$disabled" in
                     *",$name:$fingerprint,"*) ;;
@@ -41,9 +41,12 @@ case "${1:-}" in
                 answered=1
                 break
             done
-            # a display with a DDC bus that answered on none is a failed read, not an absent display:
-            # the rows already printed stand, and the exit status says the list is short
-            [ "$asked" -eq "$answered" ] || failed=1
+            # a display with a DDC bus that answered on none is a failed read, not an absent display: it is
+            # listed as unreadable (-2) so it can be switched off, and the exit status says the list is short
+            if [ -n "$asked" ] && [ "$answered" -eq 0 ]; then
+                printf '%s\t%s\t%s\t-2\t100\n' "$name" "$asked" "$fingerprint"
+                failed=1
+            fi
         done
         [ "$failed" -eq 0 ] || exit 1
         ;;

@@ -33,9 +33,11 @@ Singleton {
             if (f.length !== 5 || !/^card[0-9]+-[A-Za-z0-9-]+$/.test(f[0])
                     || !/^[0-9]+$/.test(f[1]) || !/^[a-f0-9]{64}$/.test(f[2])) continue
             const current = Number(f[3]), maximum = Number(f[4])
-            if (!isFinite(current) || !isFinite(maximum) || maximum <= 0 || current < -1 || current > maximum) continue
+            // -1: switched off, so not read; -2: it answered on none of its buses
+            if (!isFinite(current) || !isFinite(maximum) || maximum <= 0 || current < -2 || current > maximum) continue
             result.push({ key: f[0] + ":" + f[2], connector: f[0], label: f[0].replace(/^card[0-9]+-/, ""),
-                bus: f[1], identity: f[2], percent: Math.round(100 * current / maximum) })
+                bus: f[1], identity: f[2], unreadable: current === -2,
+                percent: current < 0 ? -1 : Math.round(100 * current / maximum) })
         }
         return result
     }
@@ -84,7 +86,7 @@ Singleton {
     function setPercent(key: string, percent: real): void {
         if (!root.available || root.disabled(key) || !isFinite(percent)
                 || Quickshell.env("SILERE_SANDBOX") === "1") return
-        if (!root.displays.some(d => d.key === key)) return
+        if (!root.displays.some(d => d.key === key && !d.unreadable)) return
         const next = Math.max(1, Math.min(100, Math.round(percent)))
         root.values = Object.assign({}, root.values, { [key]: next })
         root._queued = Object.assign({}, root._queued, { [key]: next })
@@ -127,7 +129,11 @@ Singleton {
                 levels[display.key] = root._queued[display.key] ?? display.percent
             root.values = levels
         }
-        root._scanError = complete ? "" : found.length > 0
+        const silent = found.filter(d => d.unreadable && !root.disabled(d.key)).map(d => d.label)
+        root._scanError = complete ? "" : silent.length > 0
+            ? silent.join(", ") + (silent.length === 1 ? " does" : " do")
+                + " not answer DDC/CI. Switch off its control under Devices if it has none."
+            : found.length > 0
             ? "Some external displays could not be read. Showing available brightness controls."
             : "Could not read external displays. Check DDC/CI support and I2C permissions."
         root._lastScan = complete ? Date.now() : 0

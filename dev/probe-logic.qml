@@ -9580,6 +9580,23 @@ ShellRoot {
         root._check(ddcRows.length === 1 && ddcRows[0].percent === 25
                 && ddcRows[0].key === "card1-DP-1:" + displayIdentity,
             "external display parsing normalizes non-100 ranges and rejects invalid identities and levels")
+        const silentRow = DisplayBrightness.parseDisplays("card1-DP-3\t8\t" + displayIdentity + "\t-2\t100\n")
+        root._check(silentRow.length === 1 && silentRow[0].unreadable && silentRow[0].percent === -1
+                && !ddcRows[0].unreadable,
+            "a display that answered on none of its buses parses as an unreadable row")
+
+        const previewToolsWas = SystemTools._tools
+        const previewDdcWas = ShellSettings.ddcBrightnessEnabled
+        SystemTools._tools = Object.assign({}, previewToolsWas, { busctl: true, ddcutil: true, timeout: true })
+        ShellSettings.ddcBrightnessEnabled = true
+        const liveOffer = KeyboardBrightness.toolAvailable && DisplayBrightness.supported && DisplayBrightness.available
+        SystemTools.preview = true
+        root._check(liveOffer && !KeyboardBrightness.toolAvailable && !KeyboardBrightness.ready
+                && !DisplayBrightness.supported && !DisplayBrightness.available,
+            "the preview offers no keyboard light or external brightness control it would refuse to write")
+        SystemTools.preview = false
+        ShellSettings.ddcBrightnessEnabled = previewDdcWas
+        SystemTools._tools = previewToolsWas
 
         const scanWas = { displays: DisplayBrightness.displays, values: DisplayBrightness.values,
             queued: DisplayBrightness._queued, error: DisplayBrightness._scanError,

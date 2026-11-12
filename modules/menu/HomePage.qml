@@ -213,7 +213,7 @@ PageShell {
                     model: DisplayBrightness.displays
                     SliderRow {
                         required property var modelData
-                        visible: !DisplayBrightness.disabled(modelData.key)
+                        visible: !DisplayBrightness.disabled(modelData.key) && !modelData.unreadable
                         glyph: "󰍹"
                         label: modelData.label + " brightness"
                         min: 1; max: 100; step: 1

@@ -369,6 +369,33 @@ Scope {
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.lastError.length === 0,
             "an incomplete display scan can retry immediately instead of waiting for the freshness cache")
 
+        // a TV or dock that never answers DDC/CI: listed for its switch, named in the warning, never written
+        const silentKey = "card1-DP-2:" + root.identity
+        root.write("ddc-displays", root.display(35) + "card1-DP-2\t8\t" + root.identity + "\t-2\t100\n")
+        root.write("ddc-scan-fail", "fail")
+        DisplayBrightness.refresh(true)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2
+                && DisplayBrightness.lastError.indexOf("DP-2 does not answer") === 0,
+            "a display that never answers is listed and named in the warning")
+        root.check(DisplayBrightness.displays.find(d => d.key === silentKey)?.unreadable === true
+                && DisplayBrightness.displays.find(d => d.key === root.displayKey)?.unreadable === false,
+            "only the display that did not answer is marked unreadable")
+        root.write("ddc-calls", "")
+        DisplayBrightness.setPercent(silentKey, 60)
+        input.wait(250)
+        root.check(root.read("ddc-calls").indexOf("write") < 0, "an unreadable display takes no brightness write")
+        // the real script skips a switched-off display's read, so the list comes back whole
+        root.write("ddc-scan-fail", "")
+        root.write("ddc-displays", root.display(35) + "card1-DP-2\t8\t" + root.identity + "\t-1\t100\n")
+        DisplayBrightness.setEnabled(silentKey, false)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2
+                && DisplayBrightness.lastError.length === 0 && DisplayBrightness._lastScan > 0,
+            "switching off an unreadable display ends its warning and the scan caches again")
+        root.write("ddc-displays", root.display(35))
+        DisplayBrightness.setEnabled(silentKey, true)
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 1,
+            "switching the display back on rescans")
+
         root.write("ddc-calls", "")
         root.write("ddc-fail", "fail")
         DisplayBrightness.setPercent(root.displayKey, 80)
