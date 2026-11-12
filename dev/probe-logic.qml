@@ -6380,6 +6380,11 @@ ShellRoot {
                 && Media.formatElapsed(136, 302) === "2:16"
                 && Media.formatElapsed(NaN, 0) === "0:00",
             "elapsed time takes the total's shape so both ends of the seek bar match")
+        root._check(Media.formatRemaining(64.9, 485.4) === "\u22127:01"
+                && Media.formatRemaining(66, 3725) === "\u22121:00:59"
+                && Media.formatRemaining(9999, 302) === "\u22120:00"
+                && Media.formatElapsed(64.9, 485.4) === "1:04",
+            "the time left and the elapsed time add up to the length shown, and never run below zero")
         const mediaPageComponent = Qt.createComponent("modules/menu/MediaPage.qml")
         const mediaPage = mediaPageComponent.status === Component.Ready
             ? mediaPageComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null

@@ -203,6 +203,11 @@ Singleton {
         const t = root.formatTime(secs)
         return total >= 3600 && t.split(":").length < 3 ? "0:" + t.padStart(5, "0") : t
     }
+    // the seek bar's right-hand label: the track's length, or the time left once clicked
+    property bool showRemaining: false
+    function formatRemaining(secs: real, total: real): string {
+        return "\u2212" + root.formatElapsed(Math.max(0, Math.floor(total) - Math.floor(Math.max(0, secs))), total)
+    }
 
     Connections {
         target: root.player

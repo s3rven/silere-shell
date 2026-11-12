@@ -391,7 +391,13 @@ PageShell {
             x: 4
             width: parent.width - 8
             height: 22
-            readonly property real _timeW: Math.max(_elapsedLabel.implicitWidth, _totalLabel.implicitWidth)
+            // the minus sign of a time left is reserved either way, so the track does not shift when the label swaps
+            readonly property real _timeW: Math.max(_elapsedLabel.implicitWidth, _totalLabel.implicitWidth, _leftReserve.advanceWidth)
+            TextMetrics {
+                id: _leftReserve
+                font: _totalLabel.font
+                text: Media.lengthKnown ? Media.formatRemaining(0, Media.length) : ""
+            }
 
             ShellText {
                 id: _elapsedLabel
@@ -436,13 +442,27 @@ PageShell {
 
             ShellText {
                 id: _totalLabel
+                // a click swaps the length for the time left, as players do; it lasts the session
+                readonly property bool _remaining: Media.showRemaining && Media.lengthKnown
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 width: _seek._timeW
                 horizontalAlignment: Text.AlignRight
-                text: Media.lengthKnown ? Media.formatTime(Media.length)
+                text: _totalLabel._remaining
+                        ? Media.formatRemaining(_seekTrack.dragging
+                            ? _seekTrack.shownValue * Media.length : Media.positionNow, Media.length)
+                    : Media.lengthKnown ? Media.formatTime(Media.length)
                     : Media.endless ? "LIVE" : "--:--"
-                color: Theme.menuTextDetail
+                color: _totalHover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.menuTextDetail
                 font.pixelSize: Settings.fontMicro
+                ColorFade on color {}
+                Accessible.role: Accessible.Button
+                Accessible.name: _totalLabel._remaining ? "Time left, press to show the length"
+                    : "Length, press to show the time left"
+                Accessible.focusable: Media.lengthKnown && MenuState.mediaActive
+                Accessible.onPressAction: if (Media.lengthKnown) Media.showRemaining = !Media.showRemaining
+                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+                HoverHandler { id: _totalHover; enabled: Media.lengthKnown; margin: 6; cursorShape: Qt.PointingHandCursor }
+                TapHandler { enabled: Media.lengthKnown; margin: 6; onTapped: Media.showRemaining = !Media.showRemaining }
             }
         }
 
