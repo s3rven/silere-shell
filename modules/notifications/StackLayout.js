@@ -15,7 +15,8 @@ function measure(stack, newestFirst) {
 }
 
 // a leaving card keeps its slot until its exit ends: unloading it then destroys the card before it can ask
-// to be dismissed, so the notification stayed in the stack and came back once the stack shrank
-function slotLoads(index, count, maxVisible, showAll, critical, leaving) {
-    return leaving || showAll || maxVisible <= 0 || index < 0 || index >= count - maxVisible || critical
+// to be dismissed, so the notification stayed in the stack and came back once the stack shrank.
+// A card with a reply open keeps it too: a newer notification would otherwise destroy the draft
+function slotLoads(index, count, maxVisible, showAll, critical, leaving, replying) {
+    return leaving || replying || showAll || maxVisible <= 0 || index < 0 || index >= count - maxVisible || critical
 }

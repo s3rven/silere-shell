@@ -229,7 +229,7 @@ ShellRoot {
                     required property int index
                     property bool exitHeld: false
                     readonly property bool shouldLoad: StackLayout.slotLoads(index, notifStack.count,
-                        notifWindow.maxVisible, false, false, exitHeld)
+                        notifWindow.maxVisible, false, false, exitHeld, Notifications.replyingId === notifSlot.modelData.id)
                     readonly property var card: notifLoader.item
                     width: 400; height: card ? card.implicitHeight : 0
                     visible: shouldLoad

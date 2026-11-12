@@ -8267,6 +8267,12 @@ ShellRoot {
                     "notification layout reads " + count + " slots once with newest-first=" + newestFirst)
             }
         }
+        // the oldest of four with three shown: only a reply in progress, or the other holds, keeps it
+        root._check(!StackLayout.slotLoads(0, 4, 3, false, false, false, false)
+                && StackLayout.slotLoads(0, 4, 3, false, false, false, true)
+                && StackLayout.slotLoads(3, 4, 3, false, false, false, false)
+                && StackLayout.slotLoads(0, 4, 3, false, false, true, false),
+            "a card with a reply in progress stays when newer notifications push it past the visible ones, and leaves with the rest once the reply ends")
         const firstSlot = notificationSlotFactory.createObject(root, { height: 80 })
         const secondSlot = notificationSlotFactory.createObject(root, { height: 120 })
         stackLayoutProbe.slots = [firstSlot, secondSlot]

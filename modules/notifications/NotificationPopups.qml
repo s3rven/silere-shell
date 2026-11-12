@@ -551,7 +551,9 @@ PanelWindow {
                             // a slot being removed reads index -1; it has to keep its card for the gap to close over
                             property bool exitHeld: false
                             readonly property bool shouldLoad: StackLayout.slotLoads(index, stack.count,
-                                ShellSettings.notifMaxVisible, win._showAll, win._isCritical(modelData), exitHeld)
+                                ShellSettings.notifMaxVisible, win._showAll, win._isCritical(modelData), exitHeld,
+                                // the service's id, not the card's own flag: the card exists only while this is true
+                                Notifications.replyingId === modelData.id)
                             readonly property var cardItem: _cardLoader.item
                             // a swiped card leaves its slot sideways; the slot only bounds the blur vertically
                             Item {
