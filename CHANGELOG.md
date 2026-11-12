@@ -55,6 +55,7 @@ settings file carries its own `__version` and migrates separately.
 - A Bluetooth device that fails to connect from Silere and then connects or pairs another way loses its failure mark.
 - The microphone mute key shows its OSD while Home is open, where the microphone row is folded away.
 - Hovering the keyboard layout widget shows long layout names in full.
+- The battery widget tells screen readers the time remaining or the time until full.
 - A sandboxed test shell no longer changes your brightness, Wi-Fi, Bluetooth or power mode. The preview's controls still act on your devices.
 - Bluetooth controls recover when a hardware switch is released while the radio remains soft-blocked, and follow the selected controller on systems with multiple radios.
 - An incomplete external-display brightness scan keeps the displays it already read usable and allows an immediate retry. A display that never answers DDC/CI is named in the warning and listed under Settings › System › Devices, where switching off its control ends the warning.

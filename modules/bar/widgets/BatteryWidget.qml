@@ -20,6 +20,9 @@ Pill {
         const parts = []
         if (Battery.label.length > 0)       parts.push(Battery.label)
         if (Battery.statusLabel.length > 0) parts.push(Battery.statusLabel)
+        // the estimate a pointer reads on hover, in the words Home's battery row uses
+        if (Battery.timeLabel.length > 0)
+            parts.push(Battery.charging ? "full in " + Battery.timeText(Battery.timeToFull, false) : Battery.timeLabel + " left")
         return parts.length > 0 ? "Battery " + parts.join(", ") : "Battery"
     }
     glyphColor:     Battery.barIconColor
