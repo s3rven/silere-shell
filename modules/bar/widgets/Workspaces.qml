@@ -148,6 +148,10 @@ Item {
         return slotModel.knownOnOtherMonitor(id)
     }
     function _visibleIndex(wsId: int): int { return slotModel.visibleIndex(wsId) }
+    // with ids per output, another monitor's workspace 2 is not this bar's 2
+    function _pulseIndex(wsId: int, output: string, perOutput: bool): int {
+        return perOutput && output.length > 0 && output !== root.monitorName ? -1 : root._visibleIndex(wsId)
+    }
 
     function wsObjFor(id: int): var { return root._wsMap[id] ?? null }
     function appsFor(id: int): var { return appModel.appsFor(id) }
@@ -541,8 +545,8 @@ Item {
         target: Notifications
         enabled: root.barActive && ShellSettings.wsNotifPulse
             && !root._paging && !ShellSettings.reduceMotion && !Idle.isIdle
-        function onSourcePulse(wsId, critical) {
-            const index = root._visibleIndex(wsId)
+        function onSourcePulse(wsId, output, critical) {
+            const index = root._pulseIndex(wsId, output, Compositor.perOutputWorkspaceIds)
             if (index < 0) return
             const button = _wsRepeater.itemAt(index)
             if (button) button.playNotificationPulse(critical)

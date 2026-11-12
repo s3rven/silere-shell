@@ -3169,6 +3169,12 @@ ShellRoot {
                 && workspaceStrip._visibleIndex(workspaceStrip.visibleIds[0]) === 0
                 && workspaceStrip._visibleIndex(999999) === -1,
             "workspace page IDs resolve through the shared index")
+        const pulseId = workspaceStrip.visibleIds[0]
+        root._check(workspaceStrip._pulseIndex(pulseId, "OTHER-1", true) === -1
+                && workspaceStrip._pulseIndex(pulseId, workspaceStrip.monitorName, true) === 0
+                && workspaceStrip._pulseIndex(pulseId, "", true) === 0
+                && workspaceStrip._pulseIndex(pulseId, "OTHER-1", false) === 0,
+            "with workspace ids per output, a notification pulses only the bar of the sender's monitor")
         const slots = workspaceSlotModelFactory.createObject(root)
         let pageCasesMatch = true
         for (let scenario = 0; scenario < 120; scenario++) {

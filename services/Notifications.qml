@@ -665,7 +665,7 @@ Singleton {
         }
     }
 
-    signal sourcePulse(int wsId, bool critical)
+    signal sourcePulse(int wsId, string output, bool critical)
     signal contentUpdated(int notifId)
     signal notificationShown(string appName, string summary, bool critical)
     // emitted before the folded cards close, while the stack can still tell them apart
@@ -1259,8 +1259,8 @@ Singleton {
             root._retireOverflow()
 
             if (ShellSettings.wsNotifPulse) {
-                const srcWs = WindowActions.notificationSourceWorkspace(n)
-                if (srcWs > 0) root.sourcePulse(srcWs, n.urgency === NotificationUrgency.Critical)
+                const src = WindowActions.notificationSource(n)
+                if (src && src.wsId > 0) root.sourcePulse(src.wsId, src.output, n.urgency === NotificationUrgency.Critical)
             }
         }
     }

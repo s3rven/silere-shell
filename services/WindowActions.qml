@@ -303,8 +303,13 @@ Singleton {
     }
 
     function notificationSourceWorkspace(notification): int {
+        return root.notificationSource(notification)?.wsId ?? -1
+    }
+
+    // niri numbers workspaces per output, so a workspace id alone names one on every monitor
+    function notificationSource(notification): var {
         const c = root._matchNotificationClient(notification, false)
-        return c ? (c.wsId ?? -1) : -1
+        return c ? { wsId: c.wsId ?? -1, output: String(c.output ?? "") } : null
     }
 
     function focusMediaPlayer(playerName: string, songTitle: string): bool {
