@@ -32,6 +32,9 @@ Singleton {
     property string pendingUuid: ""
     property string _listError: ""
     property string _actionError: ""
+    // the request a failure belongs to: nmcli can give up waiting while the tunnel still comes up
+    // (a second factor answered late), and the error goes once a read shows the profile as asked
+    property var _failedRequest: null
     readonly property string lastError: root._actionError || root._listError
     readonly property bool refreshing: _list.running
     property bool _refreshPending: false
@@ -90,13 +93,21 @@ Singleton {
                 && profile.name === known.name && profile.active === known.active
         })
         if (!same) root.profiles = next
+        const failed = root._failedRequest
+        if (failed && next.some(p => p.uuid === failed.uuid && p.active === failed.active)) {
+            root._actionError = ""
+            root._failedRequest = null
+        }
     }
     function toggle(uuid: string): void {
         if (!root.available || root.pendingUuid.length > 0) return
         const profile = root.profiles.find(p => p.uuid === uuid)
         if (!profile) return
         root._actionError = ""
+        root._failedRequest = null
         root.pendingUuid = uuid
+        _action.uuid = uuid
+        _action.wantActive = !profile.active
         _action.command = ["nmcli", "--wait", "60", "connection", profile.active ? "down" : "up", "uuid", uuid]
         if (Quickshell.env("SILERE_SANDBOX") === "1" && !SystemTools.preview) {
             root.pendingUuid = ""
@@ -139,12 +150,15 @@ Singleton {
     }
     BoundedProcess {
         id: _action
+        property string uuid: ""
+        property bool wantActive: false
         timeoutMs: 65000
         environment: ({ "LC_ALL": "C" })
         onExited: code => {
             root.pendingUuid = ""
             root._actionError = _action.timedOut ? "VPN request timed out."
                 : code !== 0 ? "VPN request failed. Open network settings to check credentials or the connection." : ""
+            root._failedRequest = root._actionError.length > 0 ? { uuid: _action.uuid, active: _action.wantActive } : null
             Network._queueVpnRefresh()
             root.refresh()
         }

@@ -301,7 +301,11 @@ set -euo pipefail
 fixtures="$SILERE_DAILY_FIXTURES"
 if [[ " $* " = *' --wait '* ]]; then
     printf 'action\n' >> "$fixtures/vpn-calls"
+    # "connected": nmcli gives up and exits 1 while the tunnel comes up; "stay": it fails and nothing changes
+    mode="$(cat "$fixtures/vpn-action-fail" 2>/dev/null || true)"
+    [ "$mode" = stay ] && exit 1
     cp "$fixtures/vpn-after-action" "$fixtures/vpn-profiles"
+    [ "$mode" = connected ] && exit 1
     exit 0
 fi
 printf 'list\n' >> "$fixtures/vpn-calls"

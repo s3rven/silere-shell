@@ -83,6 +83,31 @@ Scope {
         Vpn.refresh()
         root.waitFor(() => !Vpn.refreshing && Vpn.lastError.length === 0, "a successful VPN retry clears its read error")
 
+        // nmcli gives up waiting while the tunnel still comes up, as a VPN that waits on a second factor does
+        root.write("vpn-profiles", root.profile(false))
+        Vpn.refresh()
+        root.waitFor(() => !Vpn.refreshing && Vpn.profiles.length === 1 && !Vpn.profiles[0].active, "the VPN fixture reads down again")
+        root.write("vpn-action-fail", "connected")
+        Vpn.toggle(root.uuid)
+        root.waitFor(() => Vpn.pendingUuid.length === 0 && !Vpn.refreshing && Vpn.profiles[0]?.active === true
+                && Vpn.lastError.length === 0,
+            "a VPN request that reports failure but connects anyway drops its error once the profile reads active")
+        root.write("vpn-profiles", root.profile(false))
+        Vpn.refresh()
+        root.waitFor(() => !Vpn.refreshing && Vpn.profiles.length === 1 && !Vpn.profiles[0].active, "the VPN fixture reads down for a failure that sticks")
+        root.write("vpn-action-fail", "stay")
+        Vpn.toggle(root.uuid)
+        root.waitFor(() => Vpn.pendingUuid.length === 0 && !Vpn.refreshing && Vpn.lastError.length > 0, "a VPN request that fails reports it")
+        Vpn.refresh()
+        root.waitFor(() => !Vpn.refreshing, "a read after the failure finishes")
+        root.check(Vpn.lastError.length > 0 && Vpn.profiles[0]?.active === false,
+            "a VPN that really stayed down keeps the error through later reads")
+        root.write("vpn-action-fail", "")
+        root.write("vpn-profiles", root.profile(true))
+        Vpn.toggle(root.uuid)
+        root.waitFor(() => Vpn.pendingUuid.length === 0 && !Vpn.refreshing && Vpn.lastError.length === 0
+                && Vpn.profiles[0]?.active === true, "the VPN fixture returns to connected for the checks after")
+
         Vpn.refresh()
         input.wait(60)
         Network.toolAvailable = false
