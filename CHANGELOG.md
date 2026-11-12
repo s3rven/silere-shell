@@ -35,6 +35,10 @@ settings file carries its own `__version` and migrates separately.
 - In Now Playing, click the track's length to show the time left instead.
 - With the audio visualizer on, Now Playing's seek wave swells and settles with the music.
 
+### Changed
+
+- The settings schema moves to 3 with nothing to convert, so a rollback to 1.6 keeps the display preferences and clock weather setting added since.
+
 ### Fixed
 
 - The audio visualizer moves smoothly on every preset instead of flickering to its baseline between beats.

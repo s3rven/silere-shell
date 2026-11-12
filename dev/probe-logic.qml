@@ -4545,9 +4545,10 @@ ShellRoot {
             barCornerStyle: "flat",
             untouchedFutureShape: "keep until known-key coercion"
         }, 0)
-        root._check(migratedV1.version === 2
-                && migratedV1.applied.join(",") === "1,2"
-                && migratedV1.value.__version === 2,
+        const everyStep = Array.from({ length: ShellSettings._settingsVersion }, (_, i) => i + 1).join(",")
+        root._check(migratedV1.version === ShellSettings._settingsVersion
+                && migratedV1.applied.join(",") === everyStep
+                && migratedV1.value.__version === ShellSettings._settingsVersion,
             "settings migrations apply each target version in order")
         root._check(migratedV1.value.barCenterInGap === true
                 && migratedV1.value.windowTitleCenterGap === undefined
@@ -4576,6 +4577,14 @@ ShellRoot {
         root._check(migrationRollback.version === 2 && migrationRollback.value.uiScale === 1.5
                 && migrationRollback.value.notifMutedApps === "Slack",
             "the 1.5 schema step only marks the file, so a rollback to 1.4 keeps what it cannot read")
+        const migrationSince16 = SettingsMigrations.migrate({ clockShowWeather: true,
+            overlayMonitorIdentity: "AUO|0x1637|0x00006000", barMonitorIdentities: { "eDP-2": "AUO|0x1637|0x00006000" } },
+            2, ShellSettings._settingsVersion)
+        root._check(ShellSettings._settingsVersion >= 3 && migrationSince16.version === ShellSettings._settingsVersion
+                && migrationSince16.value.clockShowWeather === true
+                && migrationSince16.value.overlayMonitorIdentity === "AUO|0x1637|0x00006000"
+                && migrationSince16.value.barMonitorIdentities["eDP-2"] === "AUO|0x1637|0x00006000",
+            "the schema moved past 1.6's, so a rollback to 1.6 keeps the settings added since")
         const migrationHeld = SettingsMigrations.migrate({ barHeight: 40 }, 1, 1)
         root._check(migrationHeld.applied.length === 0
                 && migrationHeld.version === 1

@@ -375,6 +375,23 @@ else
   fail "docs/usage.md must state '{ \"__version\": $settings_schema }' for the settings reset file"
 fi
 
+# an older release keeps keys it cannot read only from a file marked newer than itself, so a release adding settings bumps the schema
+last_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+tag_settings=""
+[ -z "$last_tag" ] || tag_settings="$(git show "$last_tag:services/ShellSettings.qml" 2>/dev/null || true)"
+if [ -z "$tag_settings" ]; then
+  skip "schema bump" "no release tag in this checkout"
+else
+  tag_schema="$(sed -n 's/.*readonly property int _settingsVersion:[[:space:]]*\([0-9][0-9]*\).*/\1/p' <<<"$tag_settings")"
+  added_keys="$(comm -13 <(grep -oE '\{ k: "[A-Za-z0-9]+"' <<<"$tag_settings" | sort -u) \
+      <(grep -oE '\{ k: "[A-Za-z0-9]+"' services/ShellSettings.qml | sort -u) | sed 's/.*"\(.*\)"/\1/' | tr '\n' ' ')"
+  if [ -n "$added_keys" ] && [ "$tag_schema" = "$settings_schema" ]; then
+    fail "settings added since $last_tag need a schema bump, or a rollback to $last_tag drops them: ${added_keys% }"
+  else
+    ok "schema bump" "since $last_tag: schema $tag_schema -> $settings_schema"
+  fi
+fi
+
 section "optional tool detection"
 # The status of the final command in a shell `for` loop becomes the loop's
 # status. Since fc-list is optional and currently last, an explicit success is

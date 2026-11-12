@@ -30,9 +30,15 @@ function _v1ToV2(input) {
     return _copy(input)
 }
 
+// the same mark for 1.6: its file holds monitor identities and the bar's weather switch, which 1.6 cannot read
+function _v2ToV3(input) {
+    return _copy(input)
+}
+
 const registry = [
     { from: 0, to: 1, apply: _v0ToV1 },
-    { from: 1, to: 2, apply: _v1ToV2 }
+    { from: 1, to: 2, apply: _v1ToV2 },
+    { from: 2, to: 3, apply: _v2ToV3 }
 ]
 
 function migrate(input, fromVersion, targetVersion) {

@@ -2574,6 +2574,8 @@ test_reset_workflow() (
     mkdir -p "$repo/scripts" "$stubs" "$config/hooks" "$saved" "$cache/art"
     cp -a "$ROOT/scripts/." "$repo/scripts/"
     cp "$ROOT/release.json" "$repo/release.json"
+    local schema
+    schema="$(sed -n 's/^[[:space:]]*"settingsSchema"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$repo/release.json")"
     printf 'shipped\n' > "$repo/shell.qml"
     git -C "$repo" init -q
     git -C "$repo" config user.name "Silere test"
@@ -2634,7 +2636,7 @@ test_reset_workflow() (
 
     echo 4242 > "$state"; : > "$state.calls"
     run_reset --apply --yes >/dev/null || fail "reset --apply failed"
-    assert_eq $'{\n  "__version": 2\n}' "$(cat "$config/settings.json")" "settings back to defaults"
+    assert_eq $'{\n  "__version": '"$schema"$'\n}' "$(cat "$config/settings.json")" "settings back to defaults"
     assert_eq "shipped" "$(cat "$repo/shell.qml")" "an edited file back to the installed revision"
     [ ! -e "$repo/untracked.qml" ] || fail "reset left a file the installed revision does not have"
     [ ! -e "$config/calendar-marks.json" ] && [ ! -e "$config/notifications.json" ] && [ ! -e "$config/settings.pre-v1.bak.json" ] \
@@ -2671,7 +2673,7 @@ test_reset_workflow() (
     rm -f "$config/settings.json"; ln -s "$home/dotfile.json" "$config/settings.json"
     run_reset --apply --yes --history >/dev/null || fail "reset --history failed"
     [ -L "$config/settings.json" ] || fail "reset replaced a linked settings file with a plain one"
-    assert_eq $'{\n  "__version": 2\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
+    assert_eq $'{\n  "__version": '"$schema"$'\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
     [ ! -e "$saved/notifications.json" ] || fail "--history left the history"
 
     # a settings file written by hand or another tool need not be laid out the way Silere writes it
