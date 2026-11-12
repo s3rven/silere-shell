@@ -9566,6 +9566,20 @@ ShellRoot {
         Bluetooth._syncDiscovery(otherOwnerRadio)
         root._check(otherOwnerRadio.discovering,
             "closing the Bluetooth picker leaves another owner's discovery running")
+        // BlueZ answers a start a round trip later: the write lands only when the fixture says so
+        const slowRadio = { enabled: true, _on: false, _asked: null,
+            get discovering() { return this._on }, set discovering(v) { this._asked = v },
+            land() { if (this._asked !== null) this._on = this._asked; this._asked = null } }
+        Bluetooth._scanAdapter = null
+        Bluetooth._scanRequested = true
+        Bluetooth._syncDiscovery(slowRadio)
+        Bluetooth._scanRequested = false
+        Bluetooth._syncDiscovery(slowRadio)
+        slowRadio.land()
+        Bluetooth._syncDiscovery(slowRadio)
+        slowRadio.land()
+        root._check(!slowRadio.discovering && Bluetooth._scanAdapter === null && Bluetooth._scanStarting === null,
+            "a Bluetooth picker closed before its discovery start lands still stops that discovery")
         Bluetooth._scanAdapter = scanAdapterWas
         Bluetooth._scanRequested = scanRequestedWas
 

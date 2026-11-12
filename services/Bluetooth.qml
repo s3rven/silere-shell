@@ -280,10 +280,20 @@ Singleton {
             previous.discovering = false
         const want = !!(root._scanRequested && target && target.enabled)
         const owned = !!(target && (previous === target || (want && !target.discovering)))
-        root._scanAdapter = want && owned ? target : null
+        // a start is a round trip: a stop asked for inside it still reads discovering as off and has nothing
+        // to write, so the session stays owned until the start lands and the resync below can end it
+        const starting = owned && !want && !target.discovering && root._scanStarting === target
+        root._scanAdapter = owned && (want || starting) ? target : null
         // only stop discovery on an adapter this picker started
-        if (owned && target.discovering !== want)
+        if (owned && target.discovering !== want) {
             target.discovering = want
+            root._scanStarting = want && !target.discovering ? target : null
+        }
+    }
+    property var _scanStarting: null
+    Connections {
+        target: root.adapter
+        function onDiscoveringChanged() { if (root._scanStarting) _scanSync.restart() }
     }
 
     onAdapterChanged: {
