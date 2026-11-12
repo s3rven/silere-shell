@@ -6385,6 +6385,12 @@ ShellRoot {
             ? mediaPageComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null
         root._check(mediaPage !== null && mediaPage.implicitHeight > 332,
             "the now playing page builds around a full-width cover")
+        const barsWas = Media.barHeights
+        Media.barHeights = [0.4, 0.6]
+        root._check(Media.loudness() === -1 && mediaPage !== null && !mediaPage._swellClient
+                && mediaPage.swellLevel() === -1,
+            "with cava stopped a leftover frame is no reading for the seek wave, and the page holds no visualizer client")
+        Media.barHeights = barsWas
         if (mediaPage) {
             const tabWas = MenuState.activeTab
             const openWas = MenuState.open
@@ -6549,6 +6555,29 @@ ShellRoot {
         }
         if (shortWave) shortWave.destroy()
         if (longWave) longWave.destroy()
+        const swellWave = waveComponent.status === Component.Ready
+            ? waveComponent.createObject(root, { width: 160, height: 12, value: 0.9, amplitude: 2.5 }) : null
+        if (swellWave) {
+            const peak = () => Math.max(...swellWave._path.match(/-?\d+(?:\.\d+)?/g).map(Number)
+                .filter((v, i) => i % 2 === 1).map(y => Math.abs(y - swellWave.height / 2)))
+            const rest = swellWave.swellFactor()
+            let level = 1
+            swellWave.swellSource = () => level
+            for (let i = 0; i < 20; i++) swellWave._step()
+            const loud = swellWave.swellFactor(), loudPeak = peak()
+            level = 0
+            for (let i = 0; i < 20; i++) swellWave._step()
+            const quiet = swellWave.swellFactor(), quietPeak = peak()
+            level = -1
+            for (let i = 0; i < 40; i++) swellWave._step()
+            const unknown = swellWave.swellFactor()
+            swellWave.swellSource = null
+            root._check(rest === 1 && loud > 1.3 && loud <= 1.45 && quiet >= 0.55 && quiet < 0.65
+                    && loudPeak > quietPeak * 1.5 && loudPeak + swellWave.thickness / 2 <= swellWave.height / 2
+                    && Math.abs(unknown - 1) < 0.02 && swellWave.swellFactor() === 1,
+                "a seek wave swells with the music's level inside its own height, settles without a reading, and rests without a source")
+            swellWave.destroy()
+        }
         const L = Mp.MprisLoopState
         root._check(Media.nextLoopState(L.None) === L.Playlist
                 && Media.nextLoopState(L.Playlist) === L.Track

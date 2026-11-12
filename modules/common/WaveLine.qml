@@ -28,6 +28,22 @@ Item {
     readonly property real _waveEnd: Math.max(0, root._level - root.endInset)
     readonly property real _trackStart: Math.min(root.width,
         root._level + (root._level > 0 ? Math.max(root.endInset, root.thickness) : 0))
+    // read once per flow step: 0 to 1, or under 0 for no reading; the amplitude swells around its rest with it
+    property var swellSource: null
+    // changed in place, so a step rebuilds the path once instead of once per property it touches
+    readonly property var _swell: ({ level: 0.5 })
+    onSwellSourceChanged: root._swell.level = 0.5
+    function swellFactor(): real {
+        return root.swellSource ? 0.55 + 0.9 * root._swell.level : 1
+    }
+    function _step(): void {
+        if (root.swellSource) {
+            const s = Number(root.swellSource())
+            const target = isFinite(s) && s >= 0 ? Math.min(1, s) : 0.5
+            root._swell.level += (target - root._swell.level) * 0.3
+        }
+        root._flow = (root._flow + _flowTimer.interval / root.flowMs) % 1
+    }
     // an outside offset, such as an intro; the flow adds its own on top
     property real phase: 0
     // accumulated, so a flow resumes where it stopped instead of snapping back to the start of its cycle
@@ -47,7 +63,7 @@ Item {
     readonly property string _path: {
         const len = root._len
         if (len <= 0) return ""
-        const x0 = root.thickness / 2, mid = root.height / 2, amp = root._amp
+        const x0 = root.thickness / 2, mid = root.height / 2, amp = root._amp * root.swellFactor()
         const k = 2 * Math.PI / root._waveLength
         const shift = root._phase * 2 * Math.PI
         if (Math.abs(amp) < 0.001) return "M " + x0 + " " + mid + " H " + root._endX
@@ -89,10 +105,11 @@ Item {
     }
     readonly property bool _flowing: root.flowAllowed(Idle.isQuiet, ShellSettings.reduceMotion)
     Timer {
+        id: _flowTimer
         running: root._flowing
         interval: 33
         repeat: true
-        onTriggered: root._flow = (root._flow + interval / root.flowMs) % 1
+        onTriggered: root._step()
     }
 
     Rectangle {

@@ -783,6 +783,15 @@ Singleton {
         onRunningChanged: if (!running) root.barHeights = root._zeroBars
     }
 
+    // pulled at the reader's own pace, since a binding would re-evaluate at cava's frame rate; under 0 while cava is not running
+    function loudness(): real {
+        const h = root.barHeights
+        if (!_cavaProc.running || h.length === 0) return -1
+        let sum = 0
+        for (let i = 0; i < h.length; i++) sum += h[i]
+        return sum / h.length
+    }
+
     // a player closed to its tray (Spotify) has no window to find; MPRIS can still bring one back
     function focusPlayer(): void {
         if (WindowActions.focusMediaPlayer(root.playerName, root.title)) return

@@ -32,6 +32,7 @@ Item {
     property bool wavy: false
     property bool waveFlowing: false
     property real waveAmplitude: 2.5
+    property var waveSwellSource: null
     property color trackColor: Theme.controlTrackFill(Theme.accent, false,
         _ma.containsMouse, _ma.pressed)
     property color trackOutlineColor: Theme.controlTrackLine(Theme.accent, false,
@@ -180,6 +181,7 @@ Item {
         endInset: root.showThumb ? root._thumbW / 2 + 3 : 0
         thickness: root._railH
         amplitude: root.waveAmplitude
+        swellSource: root.waveSwellSource
         wavelength: 16
         waveOpacity: 0.85
         flowing: root.waveFlowing

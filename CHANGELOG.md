@@ -31,6 +31,7 @@ settings file carries its own `__version` and migrates separately.
 - Press Delete twice on a saved Wi-Fi network or paired Bluetooth device to forget it, as right-click does.
 - With weather on, Home's header shows today's temperature, and Show on bar under Widgets › Clock puts it beside the bar clock. The bar refreshes it every 30 minutes while you are active, and leaves it out while it can't; otherwise it is fetched only when the calendar or Home opens.
 - Settings keeps one height and scrolls long pages instead of growing to the screen edge. It is a little wider, its navigation icons are larger, and each page names what it covers under its title.
+- With the audio visualizer on, Now Playing's seek wave swells and settles with the music.
 
 ### Fixed
 

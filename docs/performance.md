@@ -121,4 +121,6 @@ personal Cava configuration.
 
 Cava stays asleep through a pause of up to eight seconds, so resuming does not restart it
 and its gain does not start over. A longer pause, idle or a fullscreen window stops it.
-On battery it runs at the Eco preset whatever preset is chosen.
+On battery it runs at the Eco preset whatever preset is chosen. Now Playing's seek wave reads
+the same levels while the page shows, and starts Cava on its lowest profile when no bar
+visualizer is running.

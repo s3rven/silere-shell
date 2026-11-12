@@ -44,7 +44,26 @@ PageShell {
         }
         _textSwap.restart()
     }
-    Component.onCompleted: root._settleText()
+    Component.onCompleted: {
+        root._settleText()
+        root._syncSwellClient()
+    }
+    Component.onDestruction: if (root._swellClient) Media.unregisterVisualizer(true)
+
+    // the seek wave swells with the music; while it shows, the page keeps cava awake on its low-power profile
+    readonly property bool _swellWanted: root._motionOk && Media.playing && Media.cavaReady
+    property bool _swellClient: false
+    on_SwellWantedChanged: root._syncSwellClient()
+    function _syncSwellClient(): void {
+        if (root._swellWanted === root._swellClient) return
+        root._swellClient = root._swellWanted
+        if (root._swellClient) Media.registerVisualizer(true)
+        else Media.unregisterVisualizer(true)
+    }
+    function swellLevel(): real {
+        const level = Media.loudness()
+        return level < 0 ? -1 : Math.min(1, level * 3)
+    }
 
     function _settleText(): void {
         root._shownTitle = root._titleNow
@@ -402,6 +421,7 @@ PageShell {
                 wavy: true
                 waveAmplitude: Media.playing ? 2.5 : 0
                 waveFlowing: Media.playing && root._motionOk && !_seekTrack.dragging
+                waveSwellSource: root._swellWanted ? (() => root.swellLevel()) : null
                 hitPad: 8
                 commitOnRelease: true
                 interactionKey: String(Media.trackRevision)
