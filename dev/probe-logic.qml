@@ -2208,6 +2208,22 @@ ShellRoot {
                 && line.zone === "Europe/Riga" && TimeZonePlace.parseLine("garbage") === null
                 && TimeZonePlace.placeName("America/Argentina/Buenos_Aires") === "Buenos Aires",
             "the time zone lookup yields coordinates and a readable city name")
+        // the lookup, run as written over a three-line tz database: $1 is the script
+        const zoneRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; "
+            + "printf 'L Europe/Berlin Europe/Stockholm\\nL Asia/Kolkata Asia/Calcutta\\n' > \"$d/tzdata.zi\"; "
+            + "printf 'DE\\t+5230+01322\\tEurope/Berlin\\nIN\\t+2232+08822\\tAsia/Kolkata\\n' > \"$d/zone1970.tab\"; "
+            + "printf 'SE\\t+5920+01803\\tEurope/Stockholm\\n' > \"$d/zone.tab\"; "
+            + "run() { bash -c \"$script\" tz \"$1\" \"$d\"; }; script=\"$1\"; "
+            + "[ \"$(run Europe/Stockholm)\" = \"$(printf '+5920+01803\\tEurope/Stockholm')\" ] "
+            + "&& [ \"$(run Asia/Calcutta)\" = \"$(printf '+2232+08822\\tAsia/Kolkata')\" ] && [ -z \"$(run Nope/Zone)\" ]",
+            "check", TimeZonePlace.script] })
+        zoneRun.exited.connect(function(code) {
+            root._check(code === 0, "a time zone merged into another country's keeps its own city, and an alias follows its link")
+            root._zoneLinkDone = true
+            zoneRun.destroy()
+        })
+        zoneRun.running = true
         root._check(!Weather.enabled && !Weather.loading && !Weather.hasData,
             "weather stays idle while it is switched off")
         ShellSettings.clockShowWeather = true

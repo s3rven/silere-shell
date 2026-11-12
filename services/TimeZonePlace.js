@@ -3,19 +3,22 @@
 // the system time zone's principal city, read from the tz database's own tables: the
 // place is coarse, but nothing leaves the machine to find it. Prints "<ISO 6709>\t<zone>"
 var script =
-    "tz=\"$(timedatectl show -p Timezone --value 2>/dev/null)\"; " +
+    // $1 and $2 stand in for the system zone and its tables, for the checks
+    "tz=\"${1:-}\"; d=\"${2:-/usr/share/zoneinfo}\"; " +
+    "[ -z \"$tz\" ] && tz=\"$(timedatectl show -p Timezone --value 2>/dev/null)\"; " +
     "[ -z \"$tz\" ] && tz=\"$(readlink -f /etc/localtime 2>/dev/null | sed -n 's#.*/zoneinfo/##p')\"; " +
     "[ -z \"$tz\" ] && [ -r /etc/timezone ] && tz=\"$(cat /etc/timezone)\"; " +
     "[ -z \"$tz\" ] && exit 0; " +
-    // the tables list only canonical zones; an alias like Asia/Calcutta would find no city
-    "for _ in 1 2 3; do " +
-    "  l=\"$(awk -v z=\"$tz\" '$1==\"L\" && $3==z {print $2; exit}' /usr/share/zoneinfo/tzdata.zi 2>/dev/null)\"; " +
+    // the zone as named comes first: Europe/Stockholm is a link to Europe/Berlin since tzdata 2022b, and
+    // zone.tab still gives it its own city. Only a zone neither table lists, like Asia/Calcutta, follows its link
+    "for _ in 1 2 3 4; do " +
+    "  for f in \"$d/zone1970.tab\" \"$d/zone.tab\"; do " +
+    "    [ -r \"$f\" ] || continue; " +
+    "    c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2; exit}' \"$f\")\"; " +
+    "    [ -n \"$c\" ] && { printf '%s\\t%s\\n' \"$c\" \"$tz\"; exit 0; }; " +
+    "  done; " +
+    "  l=\"$(awk -v z=\"$tz\" '$1==\"L\" && $3==z {print $2; exit}' \"$d/tzdata.zi\" 2>/dev/null)\"; " +
     "  [ -n \"$l\" ] && [ \"$l\" != \"$tz\" ] || break; tz=\"$l\"; " +
-    "done; " +
-    "for f in /usr/share/zoneinfo/zone1970.tab /usr/share/zoneinfo/zone.tab; do " +
-    "  [ -r \"$f\" ] || continue; " +
-    "  c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2; exit}' \"$f\")\"; " +
-    "  [ -n \"$c\" ] && { printf '%s\\t%s\\n' \"$c\" \"$tz\"; break; }; " +
     "done"
 
 // ±DDMM[SS]±DDDMM[SS], as zone1970.tab writes it
