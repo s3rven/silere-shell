@@ -66,6 +66,18 @@ a default device replaced under its own name has to stay usable, a lost device m
 and the shell has to come back when WirePlumber or PipeWire restarts, or when PipeWire starts after the
 shell. It takes about ten seconds. `dev/check.sh` runs it when PipeWire and WirePlumber are installed.
 
+## Tray keyboard
+
+```bash
+bash dev/test-tray-keys.sh
+```
+
+Two fake tray apps on a private bus inside a virtual KWin: one with a real DBus menu two submenus
+deep, one with KDE's `/NoMenu`. Real key events walk the menus, open and close the submenus past
+the timer that closes a submenu the pointer has left, step between the apps, and press an entry,
+which the fake app has to receive exactly once. It takes about ten seconds and needs KWin,
+python-dbus and PyGObject; `dev/check.sh` runs it when they are installed.
+
 ## Fault injection
 
 ```bash

@@ -8353,6 +8353,25 @@ ShellRoot {
                 && !TrayMenuState.siblingFlyoutOpen([trayRowA, trayRowB], trayRowA)
                 && !TrayMenuState.siblingFlyoutOpen([], trayRowB),
             "a tray submenu waits for a pause only while a sibling's submenu is open")
+        const stopA = { keyboardStop: true }
+        const stopB = { keyboardStop: true }
+        const skipped = { keyboardStop: false }
+        const stops = [skipped, stopA, {}, skipped, stopB, null]
+        root._check(TrayMenuState.stepStop(stops, null, 1) === stopA && TrayMenuState.stepStop(stops, null, -1) === stopB
+                && TrayMenuState.stepStop(stops, stopA, 1) === stopB && TrayMenuState.stepStop(stops, stopB, 1) === stopA
+                && TrayMenuState.stepStop(stops, stopA, -1) === stopB && TrayMenuState.stepStop(stops, skipped, 1) === stopA
+                && TrayMenuState.stepStop([skipped], null, 1) === null && TrayMenuState.stepStop(null, null, 1) === null,
+            "arrow keys in a tray menu wrap over its usable entries and skip the rest")
+        const outerFlyout = { opened: true, parentFlyout: null }
+        const innerFlyout = { opened: true, parentFlyout: outerFlyout }
+        const otherFlyout = { opened: true, parentFlyout: null }
+        const flyoutRow = { parent: { parent: innerFlyout } }
+        root._check(TrayMenuState.flyoutOf(flyoutRow) === innerFlyout && TrayMenuState.flyoutOf({ parent: {} }) === null
+                && TrayMenuState.flyoutOf(null) === null
+                && TrayMenuState.branchHolds(outerFlyout, innerFlyout) && TrayMenuState.branchHolds(innerFlyout, innerFlyout)
+                && !TrayMenuState.branchHolds(innerFlyout, outerFlyout) && !TrayMenuState.branchHolds(otherFlyout, innerFlyout)
+                && !TrayMenuState.branchHolds(outerFlyout, null) && !TrayMenuState.branchHolds(null, innerFlyout),
+            "a tray submenu holding the keyboard focus, or opening one that does, stays open")
         const rule = { isSeparator: true }
         const item = { isSeparator: false }
         const rows = [rule, item, rule, rule, item, rule, rule]

@@ -117,6 +117,10 @@ if [ "$qs_usable" = 1 ]; then
   if command -v pipewire >/dev/null 2>&1 && command -v wireplumber >/dev/null 2>&1; then
     _start audio dev/test-audio.sh
   fi
+  if command -v kwin_wayland >/dev/null 2>&1 && command -v dbus-run-session >/dev/null 2>&1 \
+      && python3 -I -c 'import dbus, gi' 2>/dev/null; then
+    _start tray_keys dev/test-tray-keys.sh
+  fi
 fi
 
 section "versions"
@@ -876,6 +880,14 @@ if [ -n "${_pid_audio:-}" ]; then
   _report audio audio "volume feedback or a device or daemon change failed against a private PipeWire" 'passed \([0-9]+ checks\)'
 else
   info "audio" "not run: needs PipeWire and WirePlumber"
+fi
+
+section "tray keyboard"
+# the only pass with a real app's tray menu: submenus, their close timer and the keybind, under real key events
+if [ -n "${_pid_tray_keys:-}" ]; then
+  _report tray_keys "tray keys" "a tray menu did not follow the keyboard" 'passed \([0-9]+ checks\)'
+else
+  info "tray keys" "not run: needs KWin, python-dbus and PyGObject"
 fi
 
 if [ "$status" -eq 0 ]; then

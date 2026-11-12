@@ -29,7 +29,8 @@ settings file carries its own `__version` and migrates separately.
 - Hover the volume widget to see which output it controls alongside the volume.
 - Bar shortcuts scroll their controls into view when Home is taller than the screen, and so do lists and battery details opened in Home itself.
 - Reorder bar widgets from the keyboard in Show & order: Tab to a widget's grip and press Up or Down. Screen readers name each grip.
-- Settings search still finds a setting through a typo or two swapped letters, such as "brigthness" or "worksapce".
+- `silere ipc tray toggle` opens the first tray app's menu from a keybind, on its first entry. Left and Right move to the next app's menu.
+- Settings search still finds a setting through a typo or two swapped letters, such as "brigthness" or "worksapce", and by everyday words such as "zoom", "margin" or "caps lock".
 - Press Delete twice on a saved Wi-Fi network or paired Bluetooth device to forget it, as right-click does.
 - With weather on, Home's header shows today's temperature, and Show on bar under Widgets › Clock puts it beside the bar clock. The bar refreshes it every 30 minutes while you are active, and leaves it out while it can't; otherwise it is fetched only when the calendar or Home opens.
 - Settings keeps one height and scrolls long pages instead of growing to the screen edge. It is a little wider, its navigation icons are larger, and each page names what it covers under its title.
@@ -62,6 +63,7 @@ settings file carries its own `__version` and migrates separately.
 - On Quickshell 0.3.1, volume changes on a sound card's own outputs are no longer silently dropped; they go through `wpctl`, as Bluetooth volume already did.
 - A click along a popup's far edge, such as the menu's Power button, no longer falls through and closes the popup on Hyprland 0.57.
 - A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
+- Tray submenus opened from the keyboard stay open and take the focus. Left or Escape returns to the entry that opened them.
 - A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
 - A Bluetooth device whose name starts with a dash now gets its low-battery alert.
 - `silere repair --undo` restores only a repair's own stash, never another stash whose message mentions silere-repair.

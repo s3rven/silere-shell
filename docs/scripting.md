@@ -33,8 +33,9 @@ qs ipc -p "$SILERE_DIR/shell.qml" show
 | `menu settings <name>` | Settings on one page — names below |
 | `calendar toggle` | the calendar |
 | `quickActions toggle` | Do Not Disturb, keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
+| `tray toggle` | the first tray app's menu, on its first entry; Left and Right move to the other apps' menus |
 
-`menu`, `calendar` and `quickActions` each take `close` as well as `toggle`, for a keybind
+`menu`, `calendar`, `quickActions` and `tray` each take `close` as well as `toggle`, for a keybind
 that dismisses without opening anything.
 
 `screenshot flash` opens nothing: it lets a screenshot tool trigger the underline effect

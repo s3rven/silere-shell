@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: Install compositor test dependencies
         run: |
-          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux
+          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux python-dbus python-gobject
           # a file capability cannot be exec'd without privileges, and this container has none to give
           setcap -r "$(command -v kwin_wayland)"
           useradd --create-home silere-test
@@ -120,6 +120,10 @@ jobs:
         if: matrix.compositor == 'kwin'
         shell: bash
         run: runuser -u silere-test -- bash dev/test-screens.sh 2>&1 | tee /tmp/compositor-screens.log
+      - name: Exercise tray menus from the keyboard
+        if: matrix.compositor == 'kwin'
+        shell: bash
+        run: runuser -u silere-test -- bash dev/test-tray-keys.sh 2>&1 | tee /tmp/compositor-tray-keys.log
       - name: Save compositor logs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -14,7 +14,7 @@ FittedPopupWindow {
     layerNamespace: "silere-traymenu"
     popupCard: card
     onDismissed: TrayMenuState.close()
-    onEscapePressed: TrayMenuState.close()
+    onEscapePressed: win._escape()
 
     readonly property int menuWidth: Metrics.snap4Up(220
         + Math.max(0, Settings.capHeight - Settings.capHeightBase) * 6)
@@ -38,10 +38,10 @@ FittedPopupWindow {
             console.warn("silere-shell: tray menu signal failed:", String(error))
         }
     }
-    function _activateEntry(entry): void {
+    function _activateEntry(entry, keyboard): void {
         if (!TrayMenuState.open || !entry || !entry.on) return
         if (entry.sub) {
-            entry._openFlyout()
+            entry._openFlyout(keyboard === true)
             return
         }
         win._trigger(entry.modelData)
@@ -60,6 +60,47 @@ FittedPopupWindow {
             if (k && k.opened === true) k.opened = false
         }
     }
+    // the submenu holding keyboard focus; Escape and Left step out of it before they close the menu
+    readonly property Item _focusFlyout: TrayMenuState.flyoutOf(card.Window.activeFocusItem)
+    function _escape(): void {
+        const row = card.Window.activeFocusItem
+        const flyout = win._focusFlyout
+        // a submenu that sent nothing leaves the focus on its own entry
+        if (row && row.flyoutOpen === true) row.closeFlyout()
+        else if (flyout && flyout.opened) flyout.ownerRow.closeFlyout()
+        else TrayMenuState.close()
+    }
+    function _stepFocus(from, direction: int): void {
+        win._focusFirstPending = false
+        const row = TrayMenuState.stepStop(from && from.parent ? from.parent.children : [], from, direction)
+        if (row) row.forceActiveFocus(Qt.TabFocusReason)
+    }
+    // an app's entries can arrive a moment after its menu opens, or never: Hide from bar holds the focus meanwhile, and the first entry to arrive takes it
+    property bool _focusFirstPending: false
+    function _focusFirst(fallback): void {
+        if (!win._focusFirstPending || !TrayMenuState.open) return
+        const row = TrayMenuState.stepStop(_col.children, null, 1)
+        if (!row) return
+        if (row === _hideRow && win._activeMenu !== null) {
+            if (fallback === true) _hideRow.forceActiveFocus(Qt.TabFocusReason)
+            return
+        }
+        win._focusFirstPending = false
+        row.forceActiveFocus(Qt.TabFocusReason)
+    }
+    Timer {
+        id: _focusFallback
+        interval: 250
+        onTriggered: win._focusFirst(true)
+    }
+    function _takeFocus(): void {
+        card.forceActiveFocus()
+        win._focusFirstPending = TrayMenuState.keyboardEntry
+        if (!win._focusFirstPending) return
+        Qt.callLater(win._focusFirst)
+        _focusFallback.restart()
+    }
+
     function _closeFlyoutBranch(flyout): void {
         const kids = win.stage.children
         for (let i = 0; i < kids.length; i++) {
@@ -71,6 +112,7 @@ FittedPopupWindow {
     }
 
     onShownChanged: if (!shown) {
+        win._focusFirstPending = false
         win._setActiveMenu(null)
         win._heldLeft = 0
         win._heldRight = 0
@@ -145,6 +187,7 @@ FittedPopupWindow {
             property Flickable ownerScroll: null
             property int menuDepth: 0
 
+            readonly property bool keyboardStop: _entry.on && _entry.visible
             readonly property bool sep:       modelData?.isSeparator ?? false
             readonly property bool hasChildMenu: modelData?.hasChildren ?? false
             readonly property bool sub:       hasChildMenu
@@ -172,7 +215,10 @@ FittedPopupWindow {
 
             readonly property bool flyoutOpen: _flyout.opened
             function closeFlyout(): void {
-                if (_flyout.opened) win._closeFlyoutBranch(_flyout)
+                if (!_flyout.opened) return
+                const hadFocus = TrayMenuState.branchHolds(_flyout, win._focusFlyout)
+                win._closeFlyoutBranch(_flyout)
+                if (hadFocus && TrayMenuState.open) _entry.forceActiveFocus(Qt.BacktabFocusReason)
             }
             function _hoverFlyout(): void {
                 if (TrayMenuState.siblingFlyoutOpen(
@@ -185,16 +231,28 @@ FittedPopupWindow {
                 interval: 150
                 onTriggered: if (_rowHover.hovered) _entry._openFlyout()
             }
-            function _openFlyout(): void {
-                if (!_entry.on || !_entry.sub || _flyout.opened) return
-                // one visible child branch per menu branch; closing the siblings releases their nested models
-                const sibs = _entry.parent ? _entry.parent.children : []
-                for (let k = 0; k < sibs.length; k++) {
-                    const c = sibs[k]
-                    if (c !== _entry && c && typeof c.closeFlyout === "function")
-                        c.closeFlyout()
+            function _openFlyout(keyboard): void {
+                if (!_entry.on || !_entry.sub) return
+                if (!_flyout.opened) {
+                    // one visible child branch per menu branch; closing the siblings releases their nested models
+                    const sibs = _entry.parent ? _entry.parent.children : []
+                    for (let k = 0; k < sibs.length; k++) {
+                        const c = sibs[k]
+                        if (c !== _entry && c && typeof c.closeFlyout === "function")
+                            c.closeFlyout()
+                    }
+                    _flyout.opened = true
                 }
-                _flyout.opened = true
+                if (keyboard === true) _flyout.focusFirst()
+            }
+            Keys.onRightPressed: (event) => {
+                if (_entry.sub && _entry.on) _entry._openFlyout(true)
+                else event.accepted = false
+            }
+            Keys.onLeftPressed: (event) => {
+                if (_flyout.opened) _entry.closeFlyout()
+                else if (_entry.ownerFlyout) _entry.ownerFlyout.ownerRow.closeFlyout()
+                else event.accepted = false
             }
             QsMenuOpener {
                 id: _subOpener
@@ -239,7 +297,13 @@ FittedPopupWindow {
             Accessible.checked: _entry.checked
             Accessible.focusable: _entry.on
             Accessible.onPressAction: win._activateEntry(_entry)
-            KeyboardFocus { interactive: _entry.on; listNavigation: true; onActivated: win._activateEntry(_entry) }
+            KeyboardFocus {
+                interactive: _entry.on
+                listNavigation: true
+                customNavigation: true
+                onNavigated: (direction) => win._stepFocus(_entry, direction)
+                onActivated: win._activateEntry(_entry, true)
+            }
 
             TapHandler {
                 id: _entryTap
@@ -361,7 +425,15 @@ FittedPopupWindow {
                     height: _flyout.height
                 }
                 readonly property Item parentFlyout: _entry.ownerFlyout
+                readonly property Item ownerRow: _entry
                 readonly property bool hovered: _flyHover.hovered
+                // opened from the keyboard: focus goes to the first entry, which the app may still be sending
+                property bool _focusPending: false
+                function focusFirst(): void {
+                    const row = TrayMenuState.stepStop(_subCol.children, null, 1)
+                    _flyout._focusPending = row === null && _flyout.opened
+                    if (row) row.forceActiveFocus(Qt.TabFocusReason)
+                }
                 readonly property real _closedShift: _flip ? 5 : -5
                 property real _shift: opened ? 0 : _closedShift
 
@@ -403,15 +475,19 @@ FittedPopupWindow {
                 Disclosure on _shift { closedValue: _flyout._closedShift }
 
                 // _subOpener's reference already tells the app when this submenu opens and closes
-                onOpenedChanged: if (_entry.sub && opened) _flyout._syncOrigin()
+                onOpenedChanged: {
+                    if (!opened) _flyout._focusPending = false
+                    else if (_entry.sub) _flyout._syncOrigin()
+                }
 
                 HoverHandler { id: _flyHover }
 
                 Timer {
                     id: _flyClose
                     interval: 180
-                    running: _flyout.opened && !_rowHover.hovered
+                    running: _flyout.opened && !_rowHover.hovered && !_flyout._focusPending
                         && !TrayMenuState.branchHovered(_flyout, win.stage.children)
+                        && !TrayMenuState.branchHolds(_flyout, win._focusFlyout)
                     onTriggered: _entry.closeFlyout()
                 }
 
@@ -440,6 +516,7 @@ FittedPopupWindow {
                                 item.siblings = _subOpener.children
                                 item.menuDepth = _entry.menuDepth + 1
                                 item.levelWidth = Qt.binding(() => _flyout.levelWidth)
+                                if (_flyout._focusPending) Qt.callLater(_flyout.focusFirst)
                             }
                         }
                     }
@@ -478,9 +555,20 @@ FittedPopupWindow {
 
         Connections {
             target: TrayMenuState
-            function onOpenChanged() { if (TrayMenuState.open) card.forceActiveFocus() }
+            function onOpenChanged() { if (TrayMenuState.open) win._takeFocus() }
         }
-        Component.onCompleted: if (TrayMenuState.open) card.forceActiveFocus()
+        Component.onCompleted: if (TrayMenuState.open) win._takeFocus()
+        Keys.onPressed: (event) => {
+            if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
+            if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+                event.accepted = true
+                win._focusFirstPending = false
+                const row = TrayMenuState.stepStop(_col.children, null, event.key === Qt.Key_Down ? 1 : -1)
+                if (row) row.forceActiveFocus(Qt.TabFocusReason)
+            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+                event.accepted = TrayMenuState.stepApp(event.key === Qt.Key_Right ? 1 : -1)
+            }
+        }
 
         ShellFlickable {
             id: _scroll
@@ -504,6 +592,7 @@ FittedPopupWindow {
                         item.ownerScroll = _scroll
                         item.siblings = _opener.children
                         item.levelWidth = Qt.binding(() => card.levelWidth)
+                        if (win._focusFirstPending) Qt.callLater(win._focusFirst)
                     }
                 }
 
@@ -540,6 +629,7 @@ FittedPopupWindow {
                     width: card.levelWidth
                     height: Metrics.rowHeightFor(32)
                     enabled: TrayMenuState.open
+                    readonly property bool keyboardStop: _hideRow.visible && _hideRow.enabled
 
                     function hide(): void {
                         if (!_hideRow.enabled || _hideRow._liveId.length === 0
@@ -553,7 +643,12 @@ FittedPopupWindow {
                     Accessible.name: "Hide from bar"
                     Accessible.focusable: true
                     Accessible.onPressAction: _hideRow.hide()
-                    KeyboardFocus { onActivated: _hideRow.hide() }
+                    KeyboardFocus {
+                        listNavigation: true
+                        customNavigation: true
+                        onNavigated: (direction) => win._stepFocus(_hideRow, direction)
+                        onActivated: _hideRow.hide()
+                    }
 
                     Rectangle {
                         anchors.fill: parent

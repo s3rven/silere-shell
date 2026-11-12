@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 AnchoredPopupState {
     id: root
@@ -15,10 +16,28 @@ AnchoredPopupState {
 
     onMenuHandleChanged: if (open && menuHandle === null) close()
     onSourceItemChanged: if (open && sourceItem === null) close()
+    // opened from the keyboard: the menu lands on its first entry
+    property bool keyboardEntry: false
     // every close path lands here, so the menu-specific handles clear without overriding close()
     onOpenChanged: if (!open) {
         sourceItem = null
         menuHandle = null
+        keyboardEntry = false
+    }
+
+    // the bar never takes keyboard focus, so a keybind is the way in; the tray on the active monitor answers first
+    signal keyboardOpenRequested(string screenName)
+    IpcHandler {
+        target: "tray"
+
+        function toggle(): string {
+            if (root.open) { root.close(); return "ok" }
+            if (!ShellSettings.trayWidget) return "error: the system tray is hidden; show it in Settings › Show & order"
+            root.keyboardOpenRequested(Monitors.activeName)
+            if (!root.open) root.keyboardOpenRequested("")
+            return root.open ? "ok" : "error: no tray app is showing on a bar"
+        }
+        function close(): void { root.close() }
     }
 
     Connections {
@@ -93,6 +112,38 @@ AnchoredPopupState {
         return false
     }
 
+    // the next entry a key reaches on one menu level, wrapping at the ends; from none, the first or the last
+    function stepStop(rows, current, direction: int): var {
+        const stops = []
+        for (let i = 0; i < (rows?.length ?? 0); i++)
+            if (rows[i] && rows[i].keyboardStop === true) stops.push(rows[i])
+        if (stops.length === 0) return null
+        const at = current ? stops.indexOf(current) : -1
+        if (at < 0) return direction > 0 ? stops[0] : stops[stops.length - 1]
+        return stops[(at + (direction > 0 ? 1 : -1) + stops.length) % stops.length]
+    }
+
+    // the submenu an item sits in: its nearest ancestor with an opened flag and a parent menu
+    function flyoutOf(item): var {
+        for (let node = item, depth = 0; node && depth < 64; node = node.parent, depth++)
+            if (node.opened !== undefined && node.parentFlyout !== undefined) return node
+        return null
+    }
+
+    // the focused submenu is this branch or opens from it
+    function branchHolds(branch, focused): bool {
+        for (let node = focused, depth = 0; branch && node && depth < 9; node = node.parentFlyout, depth++)
+            if (node === branch) return true
+        return false
+    }
+
+    // the arrow keys across a menu's own level walk the tray like a menu bar
+    function stepApp(direction: int): bool {
+        const tile = root.anchorSource
+        if (!root.open || !tile || typeof tile.stepMenu !== "function") return false
+        return tile.stepMenu(direction)
+    }
+
     function branchHovered(branch, flyouts): bool {
         for (let i = 0; i < flyouts.length; i++) {
             const child = flyouts[i]
@@ -106,7 +157,7 @@ AnchoredPopupState {
         return false
     }
 
-    function toggleAt(x: real, screen, handle, bottom: bool, anchor, source): void {
+    function toggleAt(x: real, screen, handle, bottom: bool, anchor, source, keyboard): void {
         if (root.open && root.sourceItem === source) {
             root.close()
             return
@@ -116,6 +167,7 @@ AnchoredPopupState {
         sourceItem = source ?? null
         barBottom = bottom
         menuHandle = handle
+        keyboardEntry = keyboard === true
         openAt(x, screen, anchor)
     }
 }

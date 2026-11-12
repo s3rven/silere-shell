@@ -61,7 +61,7 @@ Item {
     onImplicitWidthChanged: root._syncMenuAnchors()
 
     // an item without its own menu still opens one, holding only the hide entry
-    function _openMenu(item, tile): void {
+    function _openMenu(item, tile, keyboard): void {
         if (!root._canInteract || !item || ShellSettings.trayItemHidden(item.id)) return
         tile.syncMenuAnchor()
         TrayMenuState.toggleAt(
@@ -70,8 +70,29 @@ Item {
             item.hasMenu ? item.menu : null,
             Metrics.barAtBottom,
             tile,
-            item
+            item,
+            keyboard === true
         )
+    }
+
+    function _tiles(): var {
+        const tiles = []
+        for (let i = 0; i < _items.count; i++) tiles.push(_items.itemAt(i))
+        return tiles
+    }
+    function _stepMenu(tile, direction: int): bool {
+        const next = TrayMenuState.stepStop(root._tiles(), tile, direction)
+        if (next && next !== tile) root._openMenu(next.modelData, next, true)
+        return next !== null
+    }
+    Connections {
+        target: TrayMenuState
+        function onKeyboardOpenRequested(screenName) {
+            if (TrayMenuState.open || !root._canInteract
+                    || (screenName.length > 0 && root.screen?.name !== screenName)) return
+            const first = TrayMenuState.stepStop(root._tiles(), null, 1)
+            if (first) root._openMenu(first.modelData, first, true)
+        }
     }
 
     function _activateItem(item, tile): void {
@@ -110,6 +131,8 @@ Item {
                 onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
                 // hidden, not filtered out: a filtered model recreates the icon on every un-hide
                 visible: !hidden
+                readonly property bool keyboardStop: !_tile.hidden
+                function stepMenu(direction: int): bool { return root._stepMenu(_tile, direction) }
                 property real menuAnchorX: 0
                 property real attnPulse: 1.0
                 property bool _attentionSettled: false

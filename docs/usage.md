@@ -19,15 +19,25 @@ on Hyprland and prints the line to add on niri; any keybind can run `silere ipc 
 
 Use **Tab / Shift+Tab** to move between controls, **Enter / Space** to activate them,
 and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
-Page Up/Down. **Ctrl+Tab / Ctrl+Shift+Tab** move between the menu's pages. **Ctrl+F**
-searches notification history and Settings. Escape steps back or closes the popup. Controls expose the same actions to accessibility tools.
-The mouse back button also steps back through the menu before closing it.
+Page Up/Down. **Ctrl+Tab / Ctrl+Shift+Tab** move between the menu's pages, and **Ctrl+F**
+searches notification history and Settings. Escape steps back through an open picker or
+search, then closes the popup; the mouse back button does the same in the menu. Controls
+expose the same actions to accessibility tools.
+
+In an open dropdown, type to jump to a row, repeat an initial to cycle matches, and use
+Backspace to correct the search. Home, End, Page Up and Page Down move further through the list.
+Drag the scrollbar on long pages and lists; hovering it makes the handle wider.
+
+Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses the
+focused notification, and edits text normally while you write a reply.
+
 In Settings › Show & order, Tab to a widget's ⋮ grip and press Up or Down to move it
 along the bar, into the next zone past either end.
 
-In an open dropdown, repeat an initial to cycle matches; Backspace corrects the search.
-Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses
-the focused notification; it edits text normally while writing a reply.
+The bar itself never takes the keyboard, so tray menus open from a keybind:
+`silere ipc tray toggle` opens the first tray app's menu on its first entry. Right or Enter
+opens a submenu, Left or Escape steps back out of one, and on the menu's own level Left and
+Right move to the next app's menu.
 
 ## The bar
 
