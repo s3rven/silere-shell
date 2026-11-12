@@ -12,6 +12,10 @@ SILERE_PROBE_ERRORS='Unable to assign .*|Cannot assign .*|is not a type|Referenc
 export SILERE_SANDBOX=1
 # probes load fresh temp copies, whose compiled units would pile up in ~/.cache/quickshell/qmlcache forever
 export QML_DISABLE_DISK_CACHE=1
+# A failed headless probe must exit instead of leaving Quickshell's crash
+# reporter/relaunch process behind after the harness has reaped its child.
+# Scope this to probes; keep normal desktop crash reporting available.
+export QS_DISABLE_CRASH_HANDLER=1
 
 # A probe on the desktop's own session bus takes org.freedesktop.Notifications from a live shell that
 # restarts during the run, and the desktop's players and tray items leak into what it checks. Each probe
