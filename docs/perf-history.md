@@ -52,6 +52,8 @@ Hardware not already listed takes a new letter.
 | 1.5.0 | 2026-11-03 | A | warm | 101 MB | 202 MB | 0.3% | 26 | 55 |
 | 1.6.0 | 2026-11-06 | A | cold | 78 MB | 172 MB | 0.2% | 24 | 58 |
 | 1.6.0 | 2026-11-06 | A | warm | 86 MB | 181 MB | 0.2% | 25 | 58 |
+| 1.7.0 | 2026-11-12 | A | cold | 106 MB | 225 MB | 0.8% | 26 | 61 |
+| 1.7.0 | 2026-11-12 | A | warm | 115 MB | 234 MB | 0.4% | 29 | 61 |
 
 A dash means that release was not measured.
 
@@ -128,3 +130,16 @@ Cold and warm PSS matched within 1 to 2 MB, and the bar started no later. Live o
 commit with the session unlocked and in use, cold read 82 MB (steady). Warm read 95 to 96 MB but
 never steady, so it is not recorded. A locked session pauses readings and animations, so these
 two live numbers do not compare with the row above.
+
+The 1.7.0 runs use reference-A hardware with kernel `7.3.3-1-cachyos`, Quickshell 0.3.2 and
+Qt 6.12.0, with the display at 240 Hz / 125% scale. Most of the rise over 1.6.0 is the machine,
+not the code: the shell now also loads NVIDIA's EGL libraries while the AMD iGPU drives the
+screen, which it did not on 2026-11-09, and the session was unlocked and in use rather than
+locked. In `dev/bench-lab.sh startup` on this machine, with both trees as clean git checkouts
+and 8 trials per state, 1.6.0 itself read 104 MB cold and 122 MB warm against 1.7.0's 106 and
+125 MB (no caches, medians), and the bar started no later. Both samples come from one restart
+and were steady, and both descriptor counts stayed flat. Each sample started just after a minute
+boundary, with the visualizer stopped and no second Quickshell instance running.
+
+Raw reports: [cold](perf/1.7.0-cold.json) · [warm](perf/1.7.0-warm.json). They were collected
+from runtime commit `de39889` while the release metadata and notes were being prepared.
