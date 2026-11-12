@@ -73,4 +73,11 @@ Column {
             }
         }
     }
+
+    // a read that failed belongs to no battery, and may have left no switch to sit under
+    HintText {
+        visible: BatteryLimit.lastError.length > 0 && BatteryLimit.errorNative.length === 0
+        text: BatteryLimit.lastError
+        textColor: Theme.menuTextWarning
+    }
 }
