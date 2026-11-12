@@ -465,6 +465,21 @@ Scope {
         mode._settleTimer.triggered()
         root.check(!mode.switching && !Audio.profileSwitching && mode.lastError.length > 0,
             "a headset that never returns hits the confirmation deadline and restores controls")
+        MenuState.open = false
+        root.check(mode.lastError === "", "a headset mode error goes when the menu that showed it closes")
+        MenuState.open = true
+        mode.setMode("listening")
+        root.waitFor(() => mode._setSucceeded, "a late-landing headset change reaches its confirmation phase")
+        mode._settleTimer.stop()
+        mode._settleTimer.triggered()
+        root.check(mode.lastError.length > 0, "the late headset change first misses its deadline")
+        root.write("audio-profiles", root.audioProfiles(1))
+        Audio.sink = root.audioNode("a2dp-sink", "5")
+        root.waitFor(() => mode.current === "listening" && mode.lastError === "",
+            "a headset mode that lands after its deadline takes the error with it")
+        root.write("audio-profiles", root.audioProfiles(2))
+        Audio.sink = root.audioNode("headset-head-unit", "6")
+        root.waitFor(() => mode.current === "calls", "the headset fixture returns to calls")
 
         mode.setMode("listening")
         root.waitFor(() => mode._setSucceeded && mode.switching, "another headset change starts before a backend restart")

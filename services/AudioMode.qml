@@ -74,7 +74,14 @@ Singleton {
     property bool _setSucceeded: false
     property string _readError: ""
     property string _switchError: ""
+    property string _failedMode: ""
     readonly property string lastError: root._switchError || root._readError
+    // an error is about one attempt: it goes when the asked-for mode lands after all, or when the surface that showed it closes
+    onCurrentChanged: if (root._switchError && !root.switching && root.current === root._failedMode) root._switchError = ""
+    Connections {
+        target: ControlSurfaces
+        function onAnyOpenChanged() { if (!ControlSurfaces.anyOpen && !root.switching) root._switchError = "" }
+    }
 
     function refresh(force: bool): void {
         if ((!root._wanted && !root.switching) || root._device.length === 0
@@ -149,6 +156,7 @@ Singleton {
         if (!root.switching) return
         _settle.stop()
         root._switchError = error
+        root._failedMode = error ? root._pending : ""
         if (!error) root._profiles = Object.assign({}, root._profiles, { active: root._pending })
         root._pending = ""
         Audio.endProfileSwitch()
