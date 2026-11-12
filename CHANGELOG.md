@@ -41,6 +41,7 @@ settings file carries its own `__version` and migrates separately.
 - A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
 - A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
 - A Bluetooth device whose name starts with a dash now gets its low-battery alert.
+- `silere repair --undo` restores only a repair's own stash, never another stash whose message mentions silere-repair.
 - Home no longer titles its card "Audio & Display" when every external display's brightness control is switched off.
 - Without `checkupdates`, updates found by paru or yay no longer count repository packages as AUR.
 - In `silere try`, VPN connections and headset modes act on your real network and sound, as the preview's other network and sound controls do. Keyboard lighting and external brightness are hidden there instead of doing nothing.

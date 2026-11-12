@@ -1818,6 +1818,8 @@ test_repair_workflow() (
         || fail "repair apply did not produce a clean checkout"
     grep -qF 'silere-repair ' <<<"$(git -C "$repo" stash list)" \
         || fail "repair apply did not create a named stash"
+    printf 'decoy\n' > "$repo/tracked.qml"
+    git -C "$repo" stash push -q -m "notes on silere-repair keeps"
 
     bash "$repo/scripts/repair.sh" --undo --yes >/dev/null
     assert_eq "customized" "$(<"$repo/tracked.qml")" "repair undo tracked file"

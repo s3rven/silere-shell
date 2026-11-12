@@ -29,7 +29,8 @@ _latest_repair_stash() {
     local line
     while IFS= read -r line; do
         case "$line" in
-            *"silere-repair "*)
+            # the whole label, so a stash whose message only mentions silere-repair is never popped
+            *": silere-repair "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z)
                 printf '%s\n' "${line%%$'\t'*}"
                 return 0
                 ;;
