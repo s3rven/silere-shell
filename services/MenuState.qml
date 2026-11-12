@@ -145,11 +145,12 @@ AnchoredPopupState {
 
     readonly property var _settingsSearchAliases: ({
         theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
-        interface: "font typeface text size icons scale accessibility animations display monitor brightness keyboard light backlight bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset",
-        surface: "bar position top bottom size shape corners rounded floating",
+        interface: "font typeface text size bigger larger smaller zoom icons scale accessibility animations contrast menu groups",
+        devices: "display monitor screen brightness ddc ddcutil external backlight keyboard light bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset dock overlay",
+        surface: "bar position top bottom size shape corners rounded floating margin tooltip",
         underline: "underline glow screenshot pulse activity",
         separators: "spacing gaps padding dividers compact",
-        widgets: "widgets show hide arrange reorder left center right tray all apps layout",
+        widgets: "widgets show hide arrange reorder left center right tray all apps layout caps lock",
         workspaces: "workspaces desktops markers numbers apps icons",
         clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm",
         media: "music now playing playback player tracks artwork album cover art spectrum visualizer cava audio",

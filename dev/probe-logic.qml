@@ -5495,6 +5495,11 @@ ShellRoot {
                 && MenuState.searchSettings("do not disturb").some(row => row.section === "popups")
                 && MenuState.searchSettings("reset defaults").some(row => row.section === "updates"),
             "settings search recognizes common feature names and aliases")
+        const topSection = query => (MenuState.searchSettings(query)[0] || {}).section
+        root._check(topSection("bigger text") === "interface" && topSection("zoom") === "interface"
+                && topSection("margin") === "surface" && topSection("tooltip") === "surface"
+                && topSection("caps lock") === "widgets" && topSection("screen lock") === "devices",
+            "settings search finds a setting by the everyday word for it, not only by its label")
         root._check(MenuState.searchSettings("history retention").some(row => row.section === "popups")
                 && MenuState.searchSettings("brightness display").some(row => row.section === "interface")
                 && MenuState.searchSettings("night-light").some(row => row.section === "interface"),
