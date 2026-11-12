@@ -44,6 +44,7 @@ settings file carries its own `__version` and migrates separately.
 - Tray icons sit in cells padded like the bar's other icons, so the hover highlight frames each one and their spacing follows the widget gap. Apps that report themselves idle, as most do, are no longer dimmed.
 - Tray menus widen to fit their longest entry, up to half again their usual width, and keep every label in one column when any entry has an icon or a check mark.
 - A tray app's name on hover follows Reveal values on hover, as the clock's date and workspace names do.
+- Show & order starts with the bar's widgets. Its drag hint and Reset button move below the last row, and Workspaces, the one widget without a switch, says it is always shown.
 
 ### Fixed
 

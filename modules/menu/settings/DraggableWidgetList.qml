@@ -14,11 +14,13 @@ Item {
     property Flickable scroller: null
     property var trayItems: SystemTray.items.values
 
-    readonly property int _toolbarH: Metrics.rowHeightFor(32)
+    // the list opens on its first zone and the hint and Reset close the card; every part is on the 4px grid, or at 1.25 its outline falls between device pixels
+    readonly property int _topPad: 8
+    readonly property int _footerGap: 4
+    readonly property int _footerH: Metrics.rowHeightFor(32)
     readonly property int _zoneHeaderH: 20
     readonly property int _rowH: Metrics.rowHeightFor(32)
     readonly property int _emptyH: Metrics.rowHeightFor(28)
-    readonly property int _bottomPad: 8
     readonly property var _allKeys: ShellSettings.barWidgetKeys
     readonly property var _zones: ["left", "center", "right"]
 
@@ -84,7 +86,7 @@ Item {
     readonly property int _leftPad: _leftEmpty ? _emptyH : 0
     readonly property int _centerPad: _centerEmpty ? _emptyH : 0
     readonly property int _rightPad: _rightEmpty ? _emptyH : 0
-    readonly property int _leftListTop: _toolbarH + _zoneHeaderH
+    readonly property int _leftListTop: _topPad + _zoneHeaderH
     readonly property real _leftBottom: _leftListTop + _leftCount * _rowH + _leftPad
         + (_trayZone === "left" ? _trayExtra : 0)
     readonly property real _centerListTop: _leftBottom + _zoneHeaderH
@@ -96,8 +98,9 @@ Item {
     readonly property int _dragSlot: _combinedSlotOf(_draggingKey)
 
     width: parent ? parent.width : 0
-    height: _rightListTop + _rightCount * _rowH + _rightPad + _bottomPad
+    readonly property real _rowsBottom: _rightListTop + _rightCount * _rowH + _rightPad
         + (_trayZone === "right" ? _trayExtra : 0)
+    height: _rowsBottom + _footerGap + _footerH
     implicitHeight: height
 
     MotionBehavior on height {
@@ -115,6 +118,8 @@ Item {
         case "brightness":
             if (!SystemTools.ready || Brightness.controllable) return ""
             return Brightness.toolAvailable ? "No backlight" : "No brightnessctl"
+        // the one row without a switch says why
+        case "workspaces": return "Always shown"
         case "microphone": return "While in use"
         case "media": return "While playing"
         case "shellUpdate":
@@ -371,8 +376,8 @@ Item {
             const row = _rows.itemAt(root._allKeys.indexOf(order[i]))
             if (row) stops.push(...row.tabStops().filter(stop => stop && stop.activeFocusOnTab))
         }
-        // the reset button sits above the rows: forward from it is the first row drawn, back is the build order's own
-        if (from === _reset) return forward ? (stops[0] ?? null) : null
+        // the reset button closes the list: back from it is the last row drawn, forward is the build order's own
+        if (from === _reset) return forward ? null : (stops[stops.length - 1] ?? null)
         const at = stops.indexOf(from)
         if (at < 0) return null
         const next = stops[at + (forward ? 1 : -1)]
@@ -414,49 +419,6 @@ Item {
         }
     }
 
-    Item {
-        id: _toolbar
-        width: parent.width
-        height: root._toolbarH
-
-        ShellText {
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            anchors.right: _reset.left
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-            // pointer words: the grip's arrow keys are in its accessible description and the usage guide
-            text: "Drag to reorder · toggle to show or hide"
-            elide: Text.ElideRight
-            color: Theme.withAlpha(Theme.subtext, 0.58)
-            font.pixelSize: Settings.fontCaption
-        }
-
-        ConfirmButton {
-            id: _reset
-            anchors.right: parent.right
-            // the right column every settings control ends on: card edge less 12
-            anchors.rightMargin: 12
-            anchors.verticalCenter: parent.verticalCenter
-            designHeight: 24
-            glyph: "󰦛"
-            label: "Reset"
-            tint: Theme.warning
-            shown: ShellSettings.barWidgetsModified
-            onConfirmed: root._resetAll()
-            Keys.onPressed: event => root._tabKey(event, _reset)
-        }
-
-        Hairline {
-            anchors.left: parent.left
-            anchors.leftMargin: 14
-            anchors.right: parent.right
-            anchors.rightMargin: 14
-            anchors.bottom: parent.bottom
-            color: Theme.menuDivider
-        }
-    }
-
     Repeater {
         model: 3
         delegate: Item {
@@ -469,7 +431,7 @@ Item {
             readonly property bool hot: root._dragZone === zone
 
             x: 0
-            y: zone === "left" ? root._toolbarH
+            y: zone === "left" ? root._topPad
                 : zone === "center" ? root._leftBottom : root._centerBottom
             width: root.width
             height: root._zoneHeaderH
@@ -1001,6 +963,55 @@ Item {
                     Keys.onPressed: event => root._tabKey(event, _showAll)
                 }
             }
+        }
+    }
+
+    Item {
+        id: _footer
+        y: root._rowsBottom + root._footerGap
+        width: parent.width
+        height: root._footerH
+
+        MotionBehavior on y {
+            gate: !_trayRevealAnim.running
+            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+        }
+
+        ShellText {
+            anchors.left: parent.left
+            anchors.leftMargin: 12
+            anchors.right: _reset.left
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            // pointer words: the grip's arrow keys are in its accessible description and the usage guide
+            text: "Drag to reorder · toggle to show or hide"
+            elide: Text.ElideRight
+            color: Theme.withAlpha(Theme.subtext, 0.58)
+            font.pixelSize: Settings.fontCaption
+        }
+
+        ConfirmButton {
+            id: _reset
+            anchors.right: parent.right
+            // the right column every settings control ends on: card edge less 12
+            anchors.rightMargin: 12
+            anchors.verticalCenter: parent.verticalCenter
+            designHeight: 24
+            glyph: "󰦛"
+            label: "Reset"
+            tint: Theme.warning
+            shown: ShellSettings.barWidgetsModified
+            onConfirmed: root._resetAll()
+            Keys.onPressed: event => root._tabKey(event, _reset)
+        }
+
+        Hairline {
+            anchors.left: parent.left
+            anchors.leftMargin: 14
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.top: parent.top
+            color: Theme.menuDivider
         }
     }
 }

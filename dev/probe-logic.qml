@@ -10588,7 +10588,7 @@ ShellRoot {
         inList("Move " + label(ShellSettings.barWidgetOrderLeftKeys[0])).forceActiveFocus(Qt.TabFocusReason)
         keyHost.input.keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
         const leftList = keyHost.activeFocusItem !== null && keyList._rowOf(keyHost.activeFocusItem) === null
-        // clock is built last: drawn first, the row Tab reaches from Reset is not the first one built
+        // clock is built last: drawn first, the row Shift+Tab reaches from Reset below the list is not the last one built
         const drawnWas = [ShellSettings.barWidgetOrderLeftKeys, ShellSettings.barWidgetOrderCenterKeys, ShellSettings.barWidgetOrderRightKeys]
         ShellSettings.setBarWidgetLayout(["clock"].concat(drawnWas[0].filter(k => k !== "clock")),
             drawnWas[1].filter(k => k !== "clock"), drawnWas[2].filter(k => k !== "clock"))
@@ -10597,8 +10597,12 @@ ShellRoot {
         keyHost.input.wait(80)
         const resetButton = inList("Reset", Accessible.Button)
         if (resetButton) resetButton.forceActiveFocus(Qt.TabFocusReason)
+        keyHost.input.keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
+        const drawnNow = ShellSettings.barWidgetOrderLeftKeys.concat(ShellSettings.barWidgetOrderCenterKeys, ShellSettings.barWidgetOrderRightKeys)
+        const backRow = keyHost.activeFocusItem ? keyList._rowOf(keyHost.activeFocusItem) : null
+        const backFromReset = resetButton !== null && backRow !== null && backRow.key === drawnNow[drawnNow.length - 1]
         keyHost.input.keyClick(Qt.Key_Tab)
-        const fromReset = resetButton !== null && inList("Move " + label("clock")).activeFocus
+        const fromReset = backFromReset && resetButton.activeFocus
         const showAllApps = inList("Show all apps")
         if (showAllApps) showAllApps.forceActiveFocus(Qt.TabFocusReason)
         keyHost.input.keyClick(Qt.Key_Tab)
@@ -10610,7 +10614,7 @@ ShellRoot {
         ShellSettings.setBarWidgetLayout(drawnWas[0], drawnWas[1], drawnWas[2])
         keyHost.destroy()
         root._check(fromReset,
-            "Tab from Reset reaches the first widget drawn, not the first one built")
+            "Reset sits below the list: Shift+Tab from it reaches the last widget drawn, and Tab from there returns to it")
         root._check(pastTray,
             "Tab from the tray's Show all apps row moves on to the next widget instead of back to the tray's grip")
         root._check(tabbed && backtabbed && leftList,
