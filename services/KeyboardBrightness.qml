@@ -24,7 +24,19 @@ Singleton {
     property string _readError: ""
     property string _writeError: ""
     readonly property string lastError: root._writeError || root._readError
-    readonly property var choices: root.devices.map((d, i) => ({ value: d.key, label: "Keyboard light " + (i + 1) }))
+    // the LED's device part, "asus" of asus::kbd_backlight, from UPower's NativePath as busctl prints it
+    function lightName(identity: string): string {
+        const led = String(identity || "").replace(/^s "|"$/g, "").split("/").pop().split(":")
+        return identity === "unknown" ? "" : (led[0] || led[1] || "").replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 32)
+    }
+    // two lights told apart by name; the ordinal stays for a nameless or repeated one
+    function choicesFor(devices): var {
+        const names = devices.map(d => root.lightName(d.identity))
+        return devices.map((d, i) => ({ value: d.key,
+            label: names[i] && names.indexOf(names[i]) === names.lastIndexOf(names[i])
+                ? "Keyboard light · " + names[i] : "Keyboard light " + (i + 1) }))
+    }
+    readonly property var choices: root.choicesFor(root.devices)
     property int _generation: 0
     property int _discoveryGeneration: 0
     property int _revision: 0

@@ -6612,6 +6612,19 @@ ShellRoot {
             + "/org/freedesktop/UPower/KbdBacklight/led3\t1\t2147483648\tfixture\n")
         root._check(keyboardRows.length === 1 && keyboardRows[0].level === 0 && keyboardRows[0].maximum === 2,
             "keyboard lighting accepts off and hides invalid or unsupported hardware levels")
+        root._check(KeyboardBrightness.lightName('s "/sys/devices/platform/asus-nb-wmi/leds/asus::kbd_backlight"') === "asus"
+                && KeyboardBrightness.lightName('s "tpacpi::kbd_backlight"') === "tpacpi"
+                && KeyboardBrightness.lightName('s ":rgb:kbd_backlight"') === "rgb"
+                && KeyboardBrightness.lightName('s ""') === "" && KeyboardBrightness.lightName("unknown") === ""
+                && KeyboardBrightness.lightName('s "evil\\"$(x)::kbd"') === "evilx",
+            "a keyboard light is named by its LED's device, and nothing but name characters reaches the label")
+        const namedLights = KeyboardBrightness.choicesFor([{ key: "a", identity: 's "asus::kbd_backlight"' },
+            { key: "b", identity: 's "dell::kbd_backlight"' }, { key: "c", identity: "unknown" }]).map(c => c.label)
+        const twinLights = KeyboardBrightness.choicesFor([{ key: "a", identity: 's "asus::kbd_backlight"' },
+            { key: "b", identity: 's "asus::kbd_backlight_1"' }]).map(c => c.label)
+        root._check(namedLights.join("|") === "Keyboard light · asus|Keyboard light · dell|Keyboard light 3"
+                && twinLights.join("|") === "Keyboard light 1|Keyboard light 2",
+            "several keyboard lights are told apart by name, and a nameless or repeated one keeps its number")
         root._check(Audio._ipc.setVolume(-1).indexOf("error:") === 0
                 && Audio._ipc.setVolume(101).indexOf("error:") === 0
                 && Audio._ipc.setMicVolume(-1).indexOf("error:") === 0
