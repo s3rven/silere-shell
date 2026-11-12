@@ -1519,6 +1519,16 @@ ShellRoot {
             component.destroy()
         }
         SystemTools._tools = secondTools
+        const btComponent = Qt.createComponent("modules/bar/widgets/BluetoothWidget.qml")
+        const bt = btComponent.status === Component.Ready ? btComponent.createObject(barFixtureHost, { screen: screen }) : null
+        root._check(bt !== null && bt.restText(false, 64) === "64%" && bt.restText(false, 0) === "0%"
+                && bt.restText(true, 64) === "" && bt.restText(false, -1) === "",
+            "with values shown at rest, Bluetooth reads one device's charge beside its glyph, and nothing on a hover-only bar or without a reading")
+        root._check(bt !== null && bt.lowCharge(SystemAlerts.btLowPct - 1) && !bt.lowCharge(SystemAlerts.btLowPct)
+                && !bt.lowCharge(-1),
+            "a Bluetooth device's glyph warns below the charge its low-battery alert fires at")
+        if (bt) bt.destroy()
+        btComponent.destroy()
         MenuState.selectTab(was.tab)
         MenuState._previousTab = was.previous
         if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)

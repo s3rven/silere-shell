@@ -15,7 +15,9 @@ settings file carries its own `__version` and migrates separately.
 
 - System Overview shows live device checks and can copy a diagnostic report without device names, addresses, or screen serials. `silere doctor --json` also works when the shell is stopped.
 - Expand Battery in Home's system readings for health, stored energy, and charging or discharging power, including separate laptop batteries and UPS devices when UPower reports them.
-- Systems with multiple Bluetooth controllers can choose a controller for the session in the Bluetooth list or Settings › Appearance › Interface.
+- With Reveal values on hover off, the Bluetooth widget shows a connected device's charge beside its glyph, as volume and battery do. The glyph turns amber when that device drops below 20%.
+- Battery details have a Charge limit switch on laptops where UPower can set one, such as Lenovo's conservation mode or ThinkPad charge thresholds. It shows a limit turned on in firmware or by another tool.
+- Systems with multiple Bluetooth controllers can choose a controller for the session in the Bluetooth list or Settings › System › Devices.
 - Compatible Bluetooth headsets offer Listening and Calls modes in Home's output choices. Volume controls pause during the change and recover if the headset or audio backend disappears.
 - Bar visibility and popup placement follow a display across connector changes when its model and serial identify it uniquely. On Hyprland the serial comes from the compositor, since Quickshell reports none there.
 - Supported keyboard lights get a discrete brightness slider in Home, including Off, with a light chooser under Settings › System › Devices that names each light when several are available.

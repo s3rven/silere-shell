@@ -28,12 +28,25 @@ Pill {
         : root._linked && Bluetooth.connectedCount === 1
               && Bluetooth.connectedGlyph.length > 0 && !root._glyphEchoesVolume
             ? Bluetooth.connectedGlyph : "󰂯"
-    glyphColor: root._linked ? Theme.barText : Theme.barSubtext
+    // one device's charge, -1 for none or for several: a lone number beside two headsets would name neither
+    readonly property int _battery: root._linked && Bluetooth.connectedCount === 1 ? Bluetooth.connectedBattery : -1
+    // a device about to run out warns on the glyph, at the mark its desktop alert uses
+    function lowCharge(battery: int): bool {
+        return battery >= 0 && battery < SystemAlerts.btLowPct
+    }
+    readonly property bool _batteryLow: root.lowCharge(root._battery)
+    glyphColor: root._batteryLow ? Theme.warning : root._linked ? Theme.barText : Theme.barSubtext
     textColor:  Theme.barSubtext
     animateText: false
     maxTextWidth: compact ? 130 : 220
 
-    text: expanded ? Bluetooth.statusText : ""
+    // with values shown at rest, the charge reads beside the glyph as the volume's level does
+    function restText(valuesOnHover: bool, battery: int): string {
+        return !valuesOnHover && battery >= 0 ? battery + "%" : ""
+    }
+    readonly property string _restText: root.restText(ShellSettings.valuesOnHover, root._battery)
+    reserveText: root._restText.length > 0 ? "00%" : ""
+    text: expanded ? Bluetooth.statusText : root._restText
     accessibleName: "Bluetooth, " + Bluetooth.statusText
     interactive: root.show
     pressed: _tap.pressed
