@@ -241,11 +241,12 @@ Canvas {
                 _barFillB = ac.b
             }
             ctx.fillStyle = _barFill
+            // one path holds every bar: a fill per bar was a painter pass per bar on every cava frame
+            ctx.beginPath()
             for (var b = 0; b < n; b++) {
                 var bh = Math.max(1.5, base - cy[b])
                 var x = Math.round(x0 + slot * b + (slot - barW) * 0.5)
                 var y = height - bh
-                ctx.beginPath()
                 ctx.moveTo(x + radius, y)
                 ctx.lineTo(x + barW - radius, y)
                 ctx.quadraticCurveTo(x + barW, y, x + barW, y + radius)
@@ -253,8 +254,9 @@ Canvas {
                 ctx.lineTo(x, height)
                 ctx.lineTo(x, y + radius)
                 ctx.quadraticCurveTo(x, y, x + radius, y)
-                ctx.fill()
+                ctx.closePath()
             }
+            ctx.fill()
             _finish(ctx)
             return
         }
