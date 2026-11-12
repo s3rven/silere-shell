@@ -220,8 +220,9 @@ Singleton {
     function show(kind: string, icon: string, value: real, label: string, muted: bool): void {
         if (!_armed) return
         if (!root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
-        // only the home page carries the volume/brightness rows; elsewhere the menu replaces nothing
-        if (MenuState.homeActive) return
+        // only the home page carries the volume/brightness rows; elsewhere the menu replaces nothing.
+        // The microphone sits behind folded input options there, so a mute key still needs its answer
+        if (MenuState.homeActive && kind !== "microphone") return
 
         const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
         root.fillColor = Theme.accent

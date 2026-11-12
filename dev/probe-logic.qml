@@ -1168,6 +1168,26 @@ ShellRoot {
             "a sandboxed test shell writes no device: brightness, Wi-Fi, Bluetooth and power mode refuse its changes")
     }
 
+    function _checkOsdOverHome(): void {
+        const was = { armed: OsdBarState._armed, open: MenuState.open, tab: MenuState.activeTab,
+            x: MenuState.anchorX, screen: MenuState.triggerScreen, anchor: MenuState.anchorSource }
+        const screen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        OsdBarState._armed = true
+        OsdBarState._clearEntries()
+        MenuState.selectTab(MenuState.homeTab)
+        MenuState.openAt(100, screen, null)
+        const onHome = MenuState.homeActive
+        OsdBarState.show("volume", "", 0.5, "50%", false)
+        OsdBarState.show("microphone", "", 0.5, "Microphone muted", true)
+        root._check(onHome && OsdBarState._entryIndex("volume") < 0 && OsdBarState._entryIndex("microphone") >= 0,
+            "over Home the volume OSD stays quiet beside its own slider, while a microphone mute, whose row is folded away, still answers")
+        OsdBarState._clearEntries()
+        MenuState.close()
+        MenuState.selectTab(was.tab)
+        if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
+        OsdBarState._armed = was.armed
+    }
+
     function _checkBrightnessOsdUnattended(): void {
         const was = { device: Brightness._device, max: Brightness.maxBrightness,
             level: Brightness.currentBrightness, ready: Brightness.ready, armed: OsdBarState._armed }
@@ -2906,6 +2926,7 @@ ShellRoot {
         root._checkOsdLifetime()
         root._checkOsdProfileHold()
         root._checkBrightnessOsdUnattended()
+        root._checkOsdOverHome()
         root._checkSandboxWritesNoDevice()
         root._checkWifiDraft()
         root._checkPowerRail()
