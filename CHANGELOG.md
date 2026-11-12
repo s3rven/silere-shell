@@ -39,6 +39,7 @@ settings file carries its own `__version` and migrates separately.
 - A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
 - A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
 - A Bluetooth device whose name starts with a dash now gets its low-battery alert.
+- Without `checkupdates`, updates found by paru or yay no longer count repository packages as AUR.
 - In `silere try`, VPN connections and headset modes act on your real network and sound, as the preview's other network and sound controls do. Keyboard lighting and external brightness are hidden there instead of doing nothing.
 - Memory or disk use sitting right at 75% or 90% no longer blinks the bar's system monitor and Home's readings between calm and warning on every update.
 - The 12-hour clock no longer leaves a blank digit's space before 1 to 9 o'clock, so its margins match the rest of the bar.

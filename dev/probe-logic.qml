@@ -36,6 +36,8 @@ ShellRoot {
     property PwVolumeControl _volumeCancelProbe: null
     property bool _volumeCancelDone: false
     property bool _ignoredUpdatesDone: false
+    property bool _helperUpdatesDone: false
+    property bool _zoneLinkDone: false
     property real _volumeCancelDeadline: 0
 
     QtObject {
@@ -6982,6 +6984,29 @@ ShellRoot {
             ignoredRun.destroy()
         })
         ignoredRun.running = true
+        // without checkupdates, paru -Qu lists both sources; only a foreign package is the AUR's
+        SystemTools._tools = { paru: true }
+        const helperStubs = "paru() { printf 'core 1-1 -> 1-2\\naurpkg 3-1 -> 3-2\\n'; }; "
+            + "pacman() { [ \"$*\" = -Qqm ] && printf 'aurpkg\\nunrelated\\n'; }; "
+        const helperRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "out=$(" + helperStubs + Updates._cmd() + "); "
+            + "[ \"$out\" = \"$(printf '2\\nSPLIT 1 1\\ncore 1-1 -> 1-2\\nDETAIL AUR\\naurpkg 3-1 -> 3-2')\" ]"] })
+        helperRun.exited.connect(function(code) {
+            root._check(code === 0, "a helper-only update check splits repository and AUR packages")
+            root._helperUpdatesDone = true
+            helperRun.destroy()
+        })
+        helperRun.running = true
+        Updates.count = 2
+        Updates._parseDetail("2\nSPLIT 1 1\ncore 1-1 -> 1-2\nDETAIL AUR\naurpkg 3-1 -> 3-2")
+        root._check(Updates.manager === "aur" && Updates.repoCount === 1 && Updates.aurCount === 1
+                && !Updates.packages[0].aur && Updates.packages[1].aur,
+            "a helper-only update list tags only its AUR packages as AUR")
+        Updates.count = 1
+        Updates._parseDetail("1\naurpkg 3-1 -> 3-2")
+        root._check(Updates.aurCount === 1 && Updates.packages[0].aur,
+            "an unsplit helper-only list still reads as the helper's")
+        SystemTools._tools = { checkupdates: true, paru: true }
         Updates.count = 3
         Updates._parseDetail("3\nSPLIT 2 1\none 1 -> 2\ntwo 2 -> 3\naur 4 -> 5")
         root._check(Updates.repoCount === 2 && Updates.aurCount === 1
@@ -11975,6 +12000,8 @@ ShellRoot {
     function _finish(): void {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
+        root._check(root._helperUpdatesDone, "the helper-only update split check completes")
+        root._check(root._zoneLinkDone, "the time zone link check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()

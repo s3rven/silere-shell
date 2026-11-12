@@ -159,12 +159,21 @@ Singleton {
         }
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
+            // -Qu lists repository upgrades too: a package no sync database carries (pacman -Qqm) is the AUR's
+            const split = (keep) => "$(printf '%s\\n' \"$out\" | awk 'NR == FNR { f[$1] = 1; next } NF && "
+                + keep + "($1 in f)' <(printf '%s\\n' \"$foreign\") -)"
             return "out=$(LC_ALL=C " + root._limit(90, tool + " -Qu") + " 2>/dev/null); rc=$?; " +
                    "if [ \"$rc\" -ne 0 ] && { [ \"$rc\" -ne 1 ] || [ -n \"$out\" ]; }; " +
                    "then echo \"ERR " + tool + " check failed (exit $rc)\"; exit 0; fi; " +
                    root._dropIgnored("out") +
-                   "printf '%s' \"$out\" | grep -c .; " +
-                   "printf '%s\\n' \"$out\" | head -n " + root._maxDetail
+                   "foreign=$(pacman -Qqm 2>/dev/null); repoout=" + split("!") + "; aurout=" + split("") + "; " +
+                   "repo=$(printf '%s' \"$repoout\" | grep -c .); " +
+                   "aur=$(printf '%s' \"$aurout\" | grep -c .); " +
+                   "echo $((repo + aur)); " +
+                   "echo \"SPLIT $repo $aur\"; " +
+                   "printf '%s\\n' \"$repoout\" | head -n " + root._maxDetail + "; " +
+                   "echo \"DETAIL AUR\"; " +
+                   "printf '%s\\n' \"$aurout\" | head -n " + root._maxDetail
         }
         case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
@@ -209,7 +218,8 @@ Singleton {
         const repoBudget = Math.max(0, root._maxDetail - Math.max(0, aur))
         const out = []
         let seen = 0, repoShown = 0
-        let aurSection = root.manager === "aur"
+        // a helper-only check marks its AUR rows too; only an unsplit list is all the helper's
+        let aurSection = root.manager === "aur" && start === 1
         for (let i = start; i < lines.length && out.length < root._maxDetail; i++) {
             const line = lines[i].trim()
             if (line.length === 0) continue
