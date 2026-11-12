@@ -88,6 +88,17 @@ ShellRoot {
             view.revealControl(row, choices)
             const choicesAbove = choices.y >= view.contentY + 8
                 && row.y + row.height <= view.contentY + view.height - 8
+            const card = Qt.createQmlObject('import QtQuick\nColumn {}', view.contentItem)
+            const toggle = Qt.createQmlObject('import QtQuick\nItem { width: 100; height: 40 }', card)
+            const opened = Qt.createQmlObject('import QtQuick\nItem { readonly property bool isRadiusGroup: true; property bool expanded: true; width: 100; height: 80 }', card)
+            const sectionFound = view.sectionAfter(toggle) === opened && view.sectionAfter(opened) === null
+            opened.expanded = false
+            const closedSkipped = view.sectionAfter(toggle) === null
+            card.destroy()
+            if (!sectionFound || !closedSkipped) {
+                console.warn("PROBE-FAIL MenuWindow :: a switch's reveal must take in the open section right under it, and only that")
+                root._failed++
+            }
             if (!below || !above || !tall || !choicesBelow || !choicesAbove) {
                 console.warn("PROBE-FAIL MenuWindow :: requested controls must scroll into view, stop a flick and retain tall rows' headers")
                 root._failed++

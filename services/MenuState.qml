@@ -71,6 +71,8 @@ AnchoredPopupState {
     property var _settingsSelectOwner: null
     readonly property bool settingsSelectOpen: _settingsSelectOwner !== null
     signal settingsSelectClaimed()
+    // a switch flipped by hand: the rows it opens can land under the edge of a capped page
+    signal settingsRevealRequested(Item row)
     function claimSettingsSelect(owner): void {
         if (!owner || _settingsSelectOwner === owner) return
         const previous = _settingsSelectOwner

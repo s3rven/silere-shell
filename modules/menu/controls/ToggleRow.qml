@@ -47,6 +47,7 @@ MenuRow {
         // animate the knob only on a real user flip; section switches re-run layout and would otherwise slide every checked knob
         _toggle.armFlipAnimation()
         root.toggled(!root.checked)
+        MenuState.settingsRevealRequested(root)
     }
 
     // a description grows the row to fit its wrapping subtitle, still on the shared grid

@@ -553,6 +553,27 @@ FittedPopupWindow {
                         Math.min(Math.max(0, contentHeight - height), target))
                 }
 
+                // the rows a switch opens sit right under it, in the same card
+                function sectionAfter(row): var {
+                    const siblings = row && row.parent ? row.parent.children : []
+                    for (let i = 0; i + 1 < siblings.length; i++)
+                        if (siblings[i] === row)
+                            return siblings[i + 1].isRadiusGroup && siblings[i + 1].expanded ? siblings[i + 1] : null
+                    return null
+                }
+
+                Timer {
+                    id: _toggleReveal
+                    property Item row: null
+                    interval: Motion.medium + 24
+                    onTriggered: {
+                        const flipped = row
+                        row = null
+                        if (flipped && panel.open && panel.activeTab === 1)
+                            contentFlick.revealControl(flipped, contentFlick.sectionAfter(flipped))
+                    }
+                }
+
                 Timer {
                     id: _selectReveal
                     interval: Motion.medium + 24
@@ -581,6 +602,11 @@ FittedPopupWindow {
                         _homeReveal.stop()
                         _homeReveal.control = null
                         _homeReveal.choices = null
+                    }
+                    function onSettingsRevealRequested(row) {
+                        if (!panel.open || panel.activeTab !== 1) return
+                        _toggleReveal.row = row
+                        _toggleReveal.restart()
                     }
                     function onSettingsSelectClaimed() {
                         if (panel.open && panel.activeTab === 1) {
