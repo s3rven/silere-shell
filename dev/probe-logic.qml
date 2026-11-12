@@ -8851,12 +8851,29 @@ ShellRoot {
         const detailBattery = { ready: true, isPresent: true, powerSupply: true,
             type: Up.UPowerDeviceType.Battery, state: Up.UPowerDeviceState.Discharging,
             percentage: 0.64, healthSupported: true, healthPercentage: 92,
-            energy: 32, energyCapacity: 50, changeRate: 12.3, model: "Fixture battery" }
+            energy: 32, energyCapacity: 50, changeRate: 12.3, model: "Fixture battery", nativePath: "BAT1" }
         const batteryDetails = Battery.detailsFor([detailBattery])
         root._check(batteryDetails.length === 1 && batteryDetails[0].charge === "64%"
                 && batteryDetails[0].health === "92%" && batteryDetails[0].energy === "32 / 50 Wh"
                 && batteryDetails[0].power === "12.3 W" && batteryDetails[0].powerLabel === "Power use",
             "battery details preserve health's native percent and energy and power units")
+        root._check(batteryDetails[0].nativePath === "BAT1"
+                && Battery.detailsFor([Object.assign({}, detailBattery, { nativePath: undefined })])[0].nativePath === "",
+            "each battery's details carry the kernel's name for it, which ties the row to its charge limit")
+        const limitPath = "/org/freedesktop/UPower/devices/battery_"
+        const limitRows = BatteryLimit.parseDevices([
+            limitPath + "BAT1\tBAT1\ton\t0", limitPath + "BAT0\tBAT0\toff\t80",
+            limitPath + "BAT1\tBAT1\toff\t0", "/org/freedesktop/UPower/KbdBacklight\tBAT2\ton\t0",
+            limitPath + "BAT3\t../BAT1\ton\t0", limitPath + "BAT4\tBAT4\tmaybe\t0",
+            limitPath + "BAT5\tBAT5\ton\t100", limitPath + "BAT6\tBAT6\ton", ""].join("\n"))
+        root._check(limitRows.length === 2 && limitRows[0].nativePath === "BAT1" && limitRows[0].on
+                && limitRows[0].stopsAt === 0 && limitRows[0].path === limitPath + "BAT1"
+                && limitRows[1].nativePath === "BAT0" && !limitRows[1].on && limitRows[1].stopsAt === 80,
+            "charge limit rows keep a battery object with a plain name, a state and a stop under 100, once each")
+        root._check(BatteryLimit.describe({ on: true, stopsAt: 80 }) === "Stops at 80% to slow wear"
+                && BatteryLimit.describe({ on: true, stopsAt: 0 }) === "Stops short of full to slow wear"
+                && BatteryLimit.describe(null) === "",
+            "the charge limit names its stop where the kernel gives one, and only its intent where it gives none")
         const bareBattery = Battery.detailsFor([Object.assign({}, detailBattery, { state: Up.UPowerDeviceState.FullyCharged,
             healthSupported: false, energyCapacity: 0, changeRate: 0 })])
         root._check(bareBattery.length === 1 && !Battery.detailsShown(bareBattery) && Battery.detailsShown(batteryDetails)

@@ -3,6 +3,7 @@ singleton Audio         1.0 Audio.qml
 singleton AudioMode     1.0 AudioMode.qml
 PwVolumeControl         1.0 PwVolumeControl.qml
 singleton Battery       1.0 Battery.qml
+singleton BatteryLimit  1.0 BatteryLimit.qml
 singleton Bluetooth     1.0 Bluetooth.qml
 singleton Brightness    1.0 Brightness.qml
 singleton KeyboardBrightness 1.0 KeyboardBrightness.qml

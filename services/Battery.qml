@@ -127,6 +127,8 @@ Singleton {
             // numbered within their own kind: a laptop beside a UPS is "Battery" and "UPS", not 1 and 2
             const kind = list.filter(d => d.type === device.type)
             return { name: kind.length === 1 ? base : base + " " + (kind.indexOf(device) + 1), model: name,
+                // the kernel's name for it, which ties the row to its charge limit
+                nativePath: String(device.nativePath || ""),
                 charge: charge >= 0 ? Math.round(charge) + "%" : "",
                 state: state === UPowerDeviceState.PendingCharge ? "not charging"
                     : root.statusFor(true, state, discharging, state === UPowerDeviceState.FullyCharged),

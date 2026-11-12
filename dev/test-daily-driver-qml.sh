@@ -14,7 +14,7 @@ chmod 0700 "$scratch/run"
 cp "$ROOT/dev/probe-daily-driver.qml" "$scratch/probe.qml"
 cp "$ROOT/services/Vpn.qml" "$ROOT/services/DisplayBrightness.qml" "$ROOT/services/FontScan.qml" \
     "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$ROOT/services/RequestSet.qml" \
-    "$ROOT/services/PowerProfiles.qml" "$ROOT/services/KeyboardBrightness.qml" \
+    "$ROOT/services/PowerProfiles.qml" "$ROOT/services/KeyboardBrightness.qml" "$ROOT/services/BatteryLimit.qml" \
     "$ROOT/services/SafeText.qml" "$ROOT/services/Grapheme.js" "$ROOT/services/SystemAlerts.qml" \
     "$scratch/services/"
 # Exercise the Bluetooth service with injectable adapters, keeping every radio
@@ -49,6 +49,7 @@ BluetoothProbe 1.0 BluetoothProbe.qml
 AudioModeProbe 1.0 AudioModeProbe.qml
 singleton Audio 1.0 Audio.qml
 singleton KeyboardBrightness 1.0 KeyboardBrightness.qml
+singleton BatteryLimit 1.0 BatteryLimit.qml
 singleton CpuTemp 1.0 CpuTemp.qml
 singleton Notifications 1.0 Notifications.qml
 EOF
@@ -263,6 +264,35 @@ else
     awk -F '\t' -v path="$2" -v level="$3" -v identity="$4" 'BEGIN { OFS="\t" }
         $1 == path && $4 == identity { $2=level } { print }' "$fixtures/keyboard-devices" > "$fixtures/keyboard-next"
     mv "$fixtures/keyboard-next" "$fixtures/keyboard-devices"
+fi
+EOF
+cat > "$scratch/scripts/battery-limit.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+fixtures="$SILERE_DAILY_FIXTURES"
+if [ "$1" = list ]; then
+    snapshot="$(cat "$fixtures/limit-devices")"
+    printf 'list\n' >> "$fixtures/limit-calls"
+    while [ -s "$fixtures/limit-list-hold" ]; do sleep 0.02; done
+    sleep 0.05
+    printf '%s\n' "$snapshot"
+    [ ! -s "$fixtures/limit-list-fail" ] || exit 1
+else
+    printf 'write %s %s %s\n' "$2" "$3" "$4" >> "$fixtures/limit-calls"
+    while [ -s "$fixtures/limit-set-hold" ]; do sleep 0.02; done
+    sleep 0.05
+    # the exit the real script gives: 1 refused, 3 a swapped battery, 4 the kernel kept its state;
+    # "applied" changes the kernel and still fails, as a call that times out after polkit answered
+    code="$(cat "$fixtures/limit-set-fail" 2>/dev/null || true)"
+    case "$code" in 1|3) exit "$code" ;; esac
+    if [ "$code" != 4 ]; then
+        awk -F '\t' -v path="$2" -v want="$3" -v native="$4" 'BEGIN { OFS="\t" }
+            $1 == path && $2 == native { $3 = want } { print }' "$fixtures/limit-devices" > "$fixtures/limit-next"
+        mv "$fixtures/limit-next" "$fixtures/limit-devices"
+    fi
+    [ "$code" != applied ] || exit 1
+    awk -F '\t' -v path="$2" '$1 == path' "$fixtures/limit-devices"
+    [ "$code" != 4 ] || exit 4
 fi
 EOF
 cat > "$scratch/bin/nmcli" <<'EOF'

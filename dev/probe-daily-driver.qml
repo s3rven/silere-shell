@@ -593,6 +593,98 @@ Scope {
         SystemTools.hasBusctl = false
     }
 
+    function limitLine(name: string, on: bool, stop = 0): string {
+        return "/org/freedesktop/UPower/devices/battery_" + name + "\t" + name + "\t" + (on ? "on" : "off") + "\t" + stop + "\n"
+    }
+    function limitChecks(): void {
+        const bat1 = "/org/freedesktop/UPower/devices/battery_BAT1"
+        root.write("limit-devices", root.limitLine("BAT1", true) + root.limitLine("BAT0", false, 80))
+        root.write("limit-calls", "")
+        root.write("limit-set-fail", "")
+        SystemTools.hasBusctl = true
+        MenuState.open = true
+        MenuState.homeActive = true
+        root.waitFor(() => BatteryLimit.devices.length === 2 && BatteryLimit.forNative("BAT1")?.on === true
+            && BatteryLimit.forNative("BAT0")?.on === false && BatteryLimit.forNative("BAT0")?.stopsAt === 80,
+            "Home reads each battery's charge limit as it first opens")
+        MenuState.open = false
+        root.write("limit-calls", "")
+        MenuState.open = true
+        input.wait(300)
+        root.check(!root.read("limit-calls").includes("list"), "Home opening again reads no charge limit")
+        BatteryLimit.refresh()
+        root.waitFor(() => root.read("limit-calls").includes("list"), "the battery details read the limit again as they open")
+        root.waitFor(() => !BatteryLimit._list.running, "that read finishes")
+
+        root.write("limit-set-hold", "hold")
+        root.write("limit-calls", "")
+        BatteryLimit.setEnabled("BAT1", false)
+        root.check(BatteryLimit.pendingNative === "BAT1" && !BatteryLimit.pendingOn,
+            "the switch shows the state asked for while the write is out")
+        BatteryLimit.setEnabled("BAT0", true)
+        root.write("limit-set-hold", "")
+        root.waitFor(() => BatteryLimit.pendingNative === "" && BatteryLimit.forNative("BAT1")?.on === false
+            && BatteryLimit.lastError === "", "a charge limit turned off lands as the kernel reports it")
+        root.check(root.read("limit-calls") === "write " + bat1 + " off BAT1\n",
+            "the write names its battery by object and kernel name, and a second switch during it is dropped")
+
+        // the read samples the old state, then a write lands before it answers
+        root.write("limit-list-hold", "hold")
+        root.write("limit-calls", "")
+        BatteryLimit.refresh()
+        root.waitFor(() => root.read("limit-calls").includes("list"), "a charge limit read starts before a write")
+        BatteryLimit.setEnabled("BAT1", true)
+        input.wait(250)
+        root.write("limit-list-hold", "")
+        root.waitFor(() => BatteryLimit.pendingNative === "" && !BatteryLimit._list.running
+            && BatteryLimit.forNative("BAT1")?.on === true, "a write lands while an older read is out")
+        input.wait(400)
+        root.check(BatteryLimit.forNative("BAT1")?.on === true && !BatteryLimit._list.running,
+            "a charge limit read begun before a write cannot put the old state back")
+
+        root.write("limit-set-fail", "1")
+        BatteryLimit.setEnabled("BAT1", false)
+        root.waitFor(() => BatteryLimit.pendingNative === "" && BatteryLimit.errorNative === "BAT1"
+            && BatteryLimit.lastError.indexOf("permissions") >= 0 && !BatteryLimit._list.running
+            && BatteryLimit.forNative("BAT1")?.on === true,
+            "a refused write reports under its own battery and the switch returns to what the kernel holds")
+        root.write("limit-set-fail", "4")
+        BatteryLimit.setEnabled("BAT1", false)
+        root.waitFor(() => BatteryLimit.pendingNative === "" && BatteryLimit.lastError.indexOf("did not change") >= 0
+            && BatteryLimit.forNative("BAT1")?.on === true, "a write the kernel ignores says so and shows the kernel's state")
+        root.write("limit-set-fail", "applied")
+        BatteryLimit.setEnabled("BAT1", false)
+        root.waitFor(() => BatteryLimit.pendingNative === "" && BatteryLimit.lastError.length > 0
+            && !BatteryLimit._list.running && BatteryLimit.forNative("BAT1")?.on === false,
+            "a failed write that still reached the kernel shows the limit the kernel now holds")
+        root.write("limit-set-fail", "")
+        BatteryLimit.refresh()
+        root.check(BatteryLimit.lastError === "" && BatteryLimit.errorNative === "", "opening the details again clears the old error")
+        root.waitFor(() => !BatteryLimit._list.running, "the reopened details' read finishes")
+
+        root.write("limit-devices", root.limitLine("BAT1", true))
+        root.write("limit-list-fail", "fail")
+        BatteryLimit.refresh()
+        root.waitFor(() => BatteryLimit.devices.length === 1 && BatteryLimit.lastError.length > 0
+            && BatteryLimit.errorNative === "", "a battery that answered keeps its switch when another cannot be read")
+        root.write("limit-list-fail", "")
+
+        SystemTools.preview = true
+        root.check(!BatteryLimit.toolAvailable && BatteryLimit.devices.length === 0, "the preview offers no charge limit")
+        BatteryLimit.setEnabled("BAT1", false)
+        SystemTools.preview = false
+        root.write("limit-devices", "")
+        root.waitFor(() => BatteryLimit._listed && !BatteryLimit._list.running && BatteryLimit.devices.length === 0,
+            "a machine with no charge limit lists none")
+        root.write("limit-calls", "")
+        BatteryLimit.refresh()
+        input.wait(250)
+        root.check(root.read("limit-calls") === "", "a machine with no charge limit reads nothing more as its details open")
+        MenuState.open = false
+        MenuState.homeActive = false
+        SystemTools.hasBusctl = false
+    }
+
     function fontChecks(): void {
         root.write("font-families", "Fixture Sans,Fixture Sans Alias\nFixture Nerd Font Mono\nFixture Nerd Font\n")
         root.write("font-calls", "")
@@ -879,6 +971,7 @@ Scope {
         root.bluetoothChecks()
         root.audioModeChecks()
         root.keyboardChecks()
+        root.limitChecks()
         root.fontChecks()
         root.alertChecks()
         root.sessionChecks()

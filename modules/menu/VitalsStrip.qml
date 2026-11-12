@@ -311,11 +311,14 @@ SettingsCard {
 
     InlinePicker { id: _batteryAbove; mirror: _batteryPicker }
 
+    // a battery with no reading to add still opens for its charge limit switch
+    readonly property bool _batteryOpenable: Battery.hasDetails || BatteryLimit.devices.length > 0
+
     Vital {
         id: _battery
         live: root.active
         visible: Battery.available
-        openable: Battery.hasDetails
+        openable: root._batteryOpenable
         actionDescription: "Shows battery details"
         onActivated: root.batteryActivated()
         glyph: Battery.icon
@@ -329,7 +332,7 @@ SettingsCard {
 
     InlinePicker {
         id: _batteryPicker
-        open: root.batteryExpanded && Battery.hasDetails
+        open: root.batteryExpanded && root._batteryOpenable
         content: Component { BatteryDetails {} }
     }
 }

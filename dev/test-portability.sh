@@ -3449,6 +3449,95 @@ EOF
         "invalid, stale and sandbox keyboard requests never reach SetBrightness"
 )
 
+test_battery_limit_helper() (
+    local fixture="$TMP/battery-limit" actual devices=/org/freedesktop/UPower/devices
+    mkdir -p "$fixture/bin" "$fixture/power/BAT1" "$fixture/power/BAT0" "$fixture/power/CMB0" "$fixture/power/DELL"
+    printf 'Fast Standard [Long_Life]\n' > "$fixture/power/BAT1/charge_types"
+    printf '75\n' > "$fixture/power/BAT0/charge_control_start_threshold"
+    printf '80\n' > "$fixture/power/BAT0/charge_control_end_threshold"
+    printf '0\n' > "$fixture/power/CMB0/charge_control_start_threshold"
+    printf '100\n' > "$fixture/power/CMB0/charge_control_end_threshold"
+    # Dell applies its thresholds only while the charge type is Custom
+    printf 'Trickle Fast [Standard] Adaptive Custom\n' > "$fixture/power/DELL/charge_types"
+    printf '50\n' > "$fixture/power/DELL/charge_control_start_threshold"
+    printf '80\n' > "$fixture/power/DELL/charge_control_end_threshold"
+    cat > "$fixture/bin/busctl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$3:$7" in
+    call:EnumerateDevices)
+        printf 'ao 9'
+        for name in battery_BAT1 battery_BAT0 battery_CMB0 battery_DELL battery_NOSYS line_power_ACAD \
+            battery_hidpp_battery_0 battery_UNSUP battery_BAD; do printf ' "/org/freedesktop/UPower/devices/%s"' "$name"; done
+        printf '\n' ;;
+    get-property:Type)
+        # type, power supply, supported, native path, upower's own flag, the end upower would set
+        case "${SILERE_LIMIT_READ_FAIL:-}:${5##*/}" in 1:battery_BAT0) exit 1 ;; esac
+        case "${5##*/}" in
+            battery_BAT1) printf 'u 2\nb true\nb true\ns "%s"\nb false\nu 0\n' "${SILERE_LIMIT_NATIVE:-BAT1}" ;;
+            battery_BAT0) printf 'u 2\nb true\nb true\ns "BAT0"\nb true\nu 80\n' ;;
+            battery_CMB0) printf 'u 2\nb true\nb true\ns "CMB0"\nb false\nu 80\n' ;;
+            battery_DELL) printf 'u 2\nb true\nb true\ns "DELL"\nb false\nu 80\n' ;;
+            battery_NOSYS) printf 'u 2\nb true\nb true\ns "NOSYS"\nb true\nu 90\n' ;;
+            battery_hidpp_battery_0) printf 'u 5\nb false\nb false\ns "hidpp_battery_0"\nb false\nu 0\n' ;;
+            battery_UNSUP) printf 'u 2\nb true\nb false\ns "UNSUP"\nb false\nu 0\n' ;;
+            battery_BAD) printf 'u 2\nb true\nb true\ns "../BAT1"\nb false\nu 0\n' ;;
+            *) exit 1 ;;
+        esac ;;
+    call:EnableChargeThreshold)
+        [ "${SILERE_LIMIT_FAIL:-0}" = 0 ] || exit 1
+        printf '%s:%s\n' "${5##*/}" "$9" >> "$SILERE_LIMIT_CALLS"
+        # a charge_types write upower swallows leaves the kernel where it was
+        [ "${SILERE_LIMIT_IGNORE:-0}" = 0 ] || exit 0
+        case "${5##*/}:$9" in
+            battery_BAT1:true) printf 'Fast Standard [Long_Life]\n' > "$SILERE_TEST_POWER_ROOT/BAT1/charge_types" ;;
+            battery_BAT1:false) printf 'Fast [Standard] Long_Life\n' > "$SILERE_TEST_POWER_ROOT/BAT1/charge_types" ;;
+            battery_CMB0:true) printf '75\n' > "$SILERE_TEST_POWER_ROOT/CMB0/charge_control_start_threshold"
+                printf '80\n' > "$SILERE_TEST_POWER_ROOT/CMB0/charge_control_end_threshold" ;;
+        esac ;;
+    *) exit 1 ;;
+esac
+EOF
+    chmod +x "$fixture/bin/busctl"
+    export PATH="$fixture/bin:$PATH" SILERE_LIMIT_CALLS="$fixture/calls" SILERE_SANDBOX=1 \
+        SILERE_TEST_POWER_ROOT="$fixture/power"
+    : > "$fixture/calls"
+    actual="$(bash "$ROOT/scripts/battery-limit.sh" list)"
+    assert_eq "$devices/battery_BAT1"$'\tBAT1\ton\t0\n'"$devices/battery_BAT0"$'\tBAT0\ton\t80\n'"$devices/battery_CMB0"$'\tCMB0\toff\t80\n'"$devices/battery_DELL"$'\tDELL\toff\t80\n'"$devices/battery_NOSYS"$'\tNOSYS\ton\t90' \
+        "$actual" "charge limits come from the kernel, and from upower only where the kernel cannot say"
+    if actual="$(SILERE_LIMIT_READ_FAIL=1 bash "$ROOT/scripts/battery-limit.sh" list)"; then
+        fail "charge limit discovery hid a battery that could not be read"
+    fi
+    assert_eq "$devices/battery_BAT1"$'\tBAT1\ton\t0\n'"$devices/battery_CMB0"$'\tCMB0\toff\t80\n'"$devices/battery_DELL"$'\tDELL\toff\t80\n'"$devices/battery_NOSYS"$'\tNOSYS\ton\t90' \
+        "$actual" "charge limit discovery still lists the batteries around one that failed"
+    actual="$(bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" off BAT1)"
+    assert_eq "$devices/battery_BAT1"$'\tBAT1\toff\t0' "$actual" "turning a charge limit off reports the kernel's new state"
+    bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" on BAT1 > /dev/null
+    bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_CMB0" on CMB0 > /dev/null
+    assert_eq "$(printf '%s\n' battery_BAT1:false battery_BAT1:true battery_CMB0:true)" "$(<"$fixture/calls")" \
+        "each switch reaches upower as one EnableChargeThreshold call"
+    local code=0
+    actual="$(SILERE_LIMIT_IGNORE=1 bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" off BAT1)" || code=$?
+    assert_eq "4:$devices/battery_BAT1"$'\tBAT1\ton\t0' "$code:$actual" \
+        "a write upower accepts but the kernel ignores fails and reports the limit still on"
+    : > "$fixture/calls"
+    code=0; SILERE_LIMIT_NATIVE=BAT2 bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" off BAT1 || code=$?
+    assert_eq 3 "$code" "a battery swapped behind its object is not written"
+    code=0; bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_hidpp_battery_0" off hidpp_battery_0 || code=$?
+    assert_eq 3 "$code" "a battery with no limit to set is not written"
+    code=0; bash "$ROOT/scripts/battery-limit.sh" write /org/other off BAT1 || code=$?
+    assert_eq 2 "$code" "the charge limit writer refuses an unrelated object"
+    code=0; bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" maybe BAT1 || code=$?
+    assert_eq 2 "$code" "the charge limit writer refuses anything but on or off"
+    code=0; SILERE_LIMIT_FAIL=1 bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" off BAT1 || code=$?
+    assert_eq 1 "$code" "the charge limit writer reports an upower refusal"
+    code=0; env -u SILERE_TEST_POWER_ROOT bash "$ROOT/scripts/battery-limit.sh" write "$devices/battery_BAT1" off BAT1 || code=$?
+    assert_eq 1 "$code" "a sandbox without a fixture never touches the battery"
+    code=0; env -u SILERE_TEST_POWER_ROOT bash "$ROOT/scripts/battery-limit.sh" list > /dev/null || code=$?
+    assert_eq 1 "$code" "a sandbox without a fixture reads no battery either"
+    assert_eq "" "$(<"$fixture/calls")" "refused and stale charge limit requests never reach upower"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -3456,6 +3545,7 @@ fi
 test_xdg_paths_and_timer_default
 test_doctor_json
 test_keyboard_brightness_helper
+test_battery_limit_helper
 test_fresh_install_permissions
 test_existing_checkout_installer_update
 test_lua_exec_return_guard

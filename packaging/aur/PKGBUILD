@@ -71,7 +71,7 @@ package() {
     install -dm755 "$dest/scripts"
     cp -a --no-preserve=ownership \
         scripts/install.sh scripts/update.sh scripts/repair.sh scripts/reset.sh scripts/try.sh scripts/doctor.sh scripts/doctor-json.sh \
-        scripts/session.sh scripts/display-brightness.sh scripts/keyboard-brightness.sh scripts/service.sh \
+        scripts/session.sh scripts/display-brightness.sh scripts/keyboard-brightness.sh scripts/battery-limit.sh scripts/service.sh \
         scripts/silere \
         scripts/silere-update.service scripts/silere-update.timer scripts/silere-shell.service \
         scripts/lib "$dest/scripts/"
