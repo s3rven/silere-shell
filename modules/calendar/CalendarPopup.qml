@@ -25,6 +25,11 @@ FittedPopupWindow {
         barBottom: Metrics.barAtBottom
 
         readonly property int  cell:     Metrics.rowHeightFor(32) + 4
+        // a short screen (768p at 2x) lowers the weeks on the 4px grid rather than run the card off its edge
+        readonly property real _gridRoom: winH - _edgeY - 8 - pad * 2 - _gridWrap.y
+            - (_weather.visible ? _col.spacing + _weather.height : 0)
+        readonly property int  rowH:     Math.max(Metrics.snap4Up(Settings.fontSize * 1.5),
+            Math.min(cell, Metrics.snap4Down(_gridRoom / _rowCount)))
         readonly property int  pad:      14
         readonly property int  weekCol:  ShellSettings.calendarWeekNumbers ? 22 : 0
         readonly property int  gridW:    weekCol + cell * 7
@@ -392,7 +397,7 @@ FittedPopupWindow {
             Item {
                 id: _gridWrap
                 width: parent.width
-                height: card._rowCount * card.cell
+                height: card._rowCount * card.rowH
                 clip: true
 
                 Column {
@@ -407,7 +412,7 @@ FittedPopupWindow {
                             id: _weekRow
                             required property int index
                             width: card.weekCol
-                            height: card.cell
+                            height: card.rowH
                             ShellText {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
@@ -451,7 +456,7 @@ FittedPopupWindow {
                             readonly property var date: card._dateForCell(index)
                             readonly property int dayNum: date.getDate()
 
-                            width: card.cell; height: card.cell
+                            width: card.cell; height: card.rowH
 
                             Accessible.role: _dayCell.cur ? Accessible.StaticText : Accessible.Button
                             Accessible.name: Qt.formatDateTime(_dayCell.date, "dddd, d MMMM yyyy")
@@ -463,7 +468,7 @@ FittedPopupWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: card.cell - 4; height: width; radius: Theme.radiusInline
+                                width: card.rowH - 4; height: width; radius: Theme.radiusInline
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                     : _dayTap.pressed
