@@ -74,6 +74,8 @@ Item {
     property int _paintedWsId: 0
     onWsIdChanged: {
         if (root.wsId >= 0) root._paintedWsId = root.wsId
+        // a slot paged onto another urgent workspace pulses for it, as a fresh one would
+        if (_urgentFx.item) _urgentFx.item.settled = false
         root._syncHoverReport()
     }
 

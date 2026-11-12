@@ -1022,6 +1022,11 @@ ShellRoot {
         const urgentFx = root._findTrayNode(workspace, item => item.motionActive !== undefined)
         root._check(!workspace._notifPulseLoaded && urgentFx && !urgentFx.motionActive,
             "a hidden workspace runs neither notification nor urgency pulses")
+        if (urgentFx) urgentFx.settled = true
+        workspace.wsId = 3
+        root._check(urgentFx && !urgentFx.settled,
+            "a workspace slot paged onto another urgent workspace pulses for it again")
+        workspace.wsId = 2
         root._check(!marker._travel.running && marker._glint === -1.15 && marker._tapScale === 1
                 && !urgentTick._motionActive && urgentTick._pulse === 1,
             "hiding the workspace strip settles its marker and urgency indicator")

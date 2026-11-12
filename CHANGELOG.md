@@ -44,6 +44,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere repair --undo` restores only a repair's own stash, never another stash whose message mentions silere-repair.
 - Home no longer titles its card "Audio & Display" when every external display's brightness control is switched off.
 - On niri with several monitors, a notification pulses its workspace only on the bar of the sender's monitor.
+- An urgent workspace paged into view after another urgent one has settled still pulses.
 - Without `checkupdates`, updates found by paru or yay no longer count repository packages as AUR.
 - In `silere try`, VPN connections and headset modes act on your real network and sound, as the preview's other network and sound controls do. Keyboard lighting and external brightness are hidden there instead of doing nothing.
 - Memory or disk use sitting right at 75% or 90% no longer blinks the bar's system monitor and Home's readings between calm and warning on every update.
