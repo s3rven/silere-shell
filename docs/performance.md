@@ -5,13 +5,13 @@ Hidden menus and popups unload their content after closing.
 
 ## Reference numbers
 
-These are the 1.6.0 release measurements on reference machine A in
+These are the 1.7.0 release measurements on reference machine A in
 [performance history](perf-history.md), not a memory limit for the current checkout.
 
 | State | PSS | What it is |
 |---|---|---|
-| cold | ~78 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~86 MB | The same session after the menu has been opened once. |
+| cold | ~106 MB | Freshly started, menu never opened. Only the bar has drawn. |
+| warm | ~115 MB | The same session after the menu has been opened once. |
 
 Popups and the menu's large pages compile the first time they are wanted, off the GUI thread,
 which starts the bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles
