@@ -14,6 +14,8 @@ Pill {
     glyph: InputState.capsLock ? "󰘲" : "󰌌"
     glyphColor: InputState.capsLock ? Theme.warning : Theme.barSubtext
     text: (root.expanded ? InputState.layout : InputState.shortLayout) + (InputState.capsLock ? " CAPS" : "")
+    // the hover shows the full layout name, as long as the other widgets' details get
+    maxTextWidth: compact ? 150 : 260
     accessibleName: "Keyboard, " + InputState.layout
         + (InputState.capsAvailable ? (InputState.capsLock ? ", Caps Lock on" : ", Caps Lock off") : "")
     interactive: root.show && InputState.layout.length > 0
