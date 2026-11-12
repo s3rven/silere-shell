@@ -114,11 +114,20 @@ EOF
     test "$(qs ipc -p "$ROOT/shell.qml" call audio setVolume 101)" = 'error: volume must be between 0 and 100'
     test "$(qs ipc -p "$ROOT/shell.qml" call audio setMicVolume 101)" = 'error: volume must be between 0 and 100'
     test "$(qs ipc -p "$ROOT/shell.qml" call menu tab 0)" = ok
-    sleep 0.5
-    # the menu compiles on this first open, off the GUI thread, so "ok" alone says nothing about the surface
-    if [ "$backend" = hyprland ] && ! hyprctl layers | grep -q 'namespace: silere-menu'; then
-        printf 'FAIL: the menu surface did not map on first open\n' >&2
-        exit 1
+    # the menu compiles on this first open, off the GUI thread, so "ok" alone says nothing about the surface;
+    # a deadline, not a fixed half second, or a busy machine (check.sh runs suites side by side) fails a slower compile
+    if [ "$backend" = hyprland ]; then
+        mapped=0
+        for _ in $(seq 1 100); do
+            hyprctl layers | grep -q 'namespace: silere-menu' && { mapped=1; break; }
+            sleep 0.05
+        done
+        if [ "$mapped" != 1 ]; then
+            printf 'FAIL: the menu surface did not map within 5 s of its first open\n' >&2
+            exit 1
+        fi
+    else
+        sleep 0.5
     fi
     qs ipc -p "$ROOT/shell.qml" call menu close > /dev/null
     if [ -n "$benchmark" ]; then
