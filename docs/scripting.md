@@ -135,9 +135,6 @@ rejected write also names the values the key accepts. The `list` filter matches 
 `list clock` reaches `showSeconds`. The filter is required; pass `""` to list every key at
 once.
 
-Hook arguments can contain text supplied by any application on the session bus. Quote
-arguments such as `"$1"` in hook scripts and never pass them to `eval`.
-
 `set dnd true` and `set dnd false` switch Do Not Disturb without toggling it, and `get dnd`
 reads it.
 
@@ -147,7 +144,7 @@ For `menu settings <name>` and `settings list <name>`, use a page's label as Set
 it, or its id:
 
 `theme`, `interface`, `surface`, `underline`, `separators`, `widgets`, `workspaces`,
-`clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`
+`clock`, `media`, `indicators`, `popups`, `osd`, `warnings`, `updates`, `devices`
 
 Six ids differ from their labels:
 
@@ -208,6 +205,9 @@ chmod +x ~/.config/silere-shell/hooks/battery-critical
 Hooks are read at startup; `qs ipc -p "$SILERE_DIR/shell.qml" call hooks rescan` picks up a
 new one without a restart, and `hooks list` shows which are active. An event with no
 executable file costs nothing.
+
+Hook arguments can contain text supplied by any application on the session bus. Quote
+arguments such as `"$1"` in hook scripts and never pass them to `eval`.
 
 ### Limits
 

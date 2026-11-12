@@ -40,7 +40,7 @@ tool and lock screen.
 | Feature | What you get |
 |---|---|
 | Bar | Workspaces with app icons, window title, media, system readings, tray and clock. Choose the widgets and their order. |
-| Quick settings | Output, microphone and per-app volume; brightness; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake. |
+| Quick settings | Output, microphone and per-app volume; brightness; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake; battery health and charge limit. |
 | Notifications | Actions, inline replies, conversation grouping, searchable history, app muting and Do Not Disturb. |
 | Media | Album art, seeking, player switching and an optional Cava visualizer. |
 | On-screen display | Volume, brightness, power mode changes and battery warnings, floating or inside the bar. |
@@ -122,15 +122,8 @@ The installer checks QML dependencies and offers autostart and a `silere` comman
 in `~/.local/bin`. It asks before editing your compositor config and backs up what
 it changes. The default install directory is `~/.config/silere-shell`.
 
-If the installer hasn't already started it, run this inside your Hyprland or niri
-session:
-
-```bash
-silere run
-```
-
-If `silere` isn't on your `PATH`, use `~/.config/silere-shell/scripts/silere run`,
-or substitute your install path.
+If the installer hasn't started it, run `silere run` inside your Hyprland or niri session,
+or `~/.config/silere-shell/scripts/silere run` while `silere` isn't on your `PATH`.
 
 See the [installation guide](docs/install.md) for a dry run, custom directories,
 unattended setup and crash recovery. `silere uninstall` removes the installer's
@@ -158,21 +151,16 @@ the [scripting guide](docs/scripting.md) lists IPC commands and event hooks.
 
 ## Settings
 
-Open **Settings** in the menu to change the bar layout, colours, interface size and
-behaviour. Most changes apply immediately. Press **Ctrl+F** to find an option by
-name or feature; a dot in the sidebar marks pages you've changed.
+Open **Settings** in the menu to change the bar, colours, interface size, devices and
+behaviour. Most changes apply immediately. **Ctrl+F** finds an option by name or feature,
+and a dot in the sidebar marks pages you've changed. Pick your own accent, or use your
+wallpaper's colours through [Matugen](docs/install.md#matugen), which the installer
+offers to set up.
 
-Choose an accent manually, or use your wallpaper's colours with
-[Matugen](docs/install.md#matugen). The installer offers to configure it when
-Matugen is installed.
-
-Preferences live in `~/.config/silere-shell/settings.json`, or
-`$XDG_CONFIG_HOME/silere-shell/settings.json` when you've set an absolute config
-root. The file stores only values that differ from the defaults.
-
-Restore defaults from **Settings › System › Overview**. If the menu won't open,
-`silere reset` previews a reset from the terminal. See
-[settings and resets](docs/usage.md#settings) for the details.
+Only values that differ from the defaults are saved, in `~/.config/silere-shell/settings.json`,
+or under `$XDG_CONFIG_HOME` when you've set an absolute one. Restore defaults from
+**Settings › System › Overview**, or preview a reset with `silere reset` when the menu
+won't open. See [settings and resets](docs/usage.md#settings) for the details.
 
 ## Other desktop tools
 
