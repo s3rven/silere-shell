@@ -6422,6 +6422,17 @@ ShellRoot {
             DisplayBrightness.displays = []
             KeyboardBrightness._readError = ""
             const displayHidden = !home._displayShown
+            const ddcOffWas = ShellSettings.ddcDisabledDisplays
+            const ddcKey = "card1-DP-1:" + "a".repeat(64)
+            DisplayBrightness.displays = [{ key: ddcKey, connector: "card1-DP-1", label: "DP-1", bus: "7",
+                identity: "a".repeat(64), unreadable: false, percent: 50 }]
+            const ddcShown = home._displayShown
+            ShellSettings.ddcDisabledDisplays = ddcKey
+            const ddcOffHidden = !home._displayShown
+            ShellSettings.ddcDisabledDisplays = ddcOffWas
+            DisplayBrightness.displays = []
+            root._check(displayHidden && ddcShown && ddcOffHidden,
+                "Home's display group counts an external display only while its slider shows")
             KeyboardBrightness._readError = "Could not read keyboard lighting. Check UPower."
             const keyboardHint = root._findTrayNode(home, item => item.text === KeyboardBrightness._readError
                 && item.textColor !== undefined)

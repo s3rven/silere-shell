@@ -24,9 +24,11 @@ PageShell {
 
     property string _picker: ""
     signal controlRequested(Item control, Item choices)
-    // a keyboard light that stopped answering keeps its place, or its error has nowhere to show
+    // a light or display that stopped answering keeps its place, or its error has nowhere to show; one switched off has no row
     readonly property bool _displayShown: _brightnessAvailable || KeyboardBrightness.ready
-        || KeyboardBrightness.lastError.length > 0 || DisplayBrightness.displays.length > 0
+        || KeyboardBrightness.lastError.length > 0
+        || DisplayBrightness.displays.some(d => !d.unreadable && !DisplayBrightness.disabled(d.key))
+        || (ShellSettings.ddcBrightnessEnabled && DisplayBrightness.lastError.length > 0)
     readonly property bool _avShown: Audio.ready || root._displayShown
     readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
         || (SystemTools.hasNmcli && Network.toolAvailable)
