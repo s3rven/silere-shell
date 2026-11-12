@@ -327,7 +327,8 @@ Singleton {
         // declared locked before the object is set: RetainableLock refs once on the object and once more on a
         // later locked: true, but releases only one on destruction
         w.lock = _retainLock.createObject(root, { object: notification })
-        _withdrawalSafety.restart()
+        // started, not restarted: a stream of new withdrawals would keep pushing back a stuck one's deadline
+        if (!_withdrawalSafety.running) _withdrawalSafety.start()
     }
 
     function holdWithdrawn(notification): void {
