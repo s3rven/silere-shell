@@ -730,6 +730,11 @@ Scope {
         Bluetooth._devices = [headset(18), keyboard]
         root.waitFor(() => root.alertCalls().length === 4,
             "reconnecting a still-low device warns once for the new connection")
+        Bluetooth._devices = [{ address: "CC", name: "-x pad", connected: true, percent: 5 }]
+        root.waitFor(() => root.alertCalls().length === 5,
+            "a device whose name starts with a dash is warned")
+        root.check((root.alertCalls()[4] || "").indexOf(" -- -x pad battery low") >= 0,
+            "a dash-led device name reaches notify-send after the end of its options")
         Bluetooth._devices = []
         input.wait(30)
         root.check(Object.keys(SystemAlerts._btWarned).length === 0,

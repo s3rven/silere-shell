@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
 - A click along a popup's far edge, such as the menu's Power button, no longer falls through and closes the popup on Hyprland 0.57.
 - A tray submenu's background blur stays under the submenu after it slides open instead of sitting a few pixels to one side.
 - A missing CPU temperature sensor's retry is no longer skipped for another minute when it lands while a scan is still running.
+- A Bluetooth device whose name starts with a dash now gets its low-battery alert.
 - Memory or disk use sitting right at 75% or 90% no longer blinks the bar's system monitor and Home's readings between calm and warning on every update.
 - The 12-hour clock no longer leaves a blank digit's space before 1 to 9 o'clock, so its margins match the rest of the bar.
 - Older entries in notification history write AM and PM the same way as the bar and notification cards.

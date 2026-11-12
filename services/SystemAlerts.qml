@@ -30,6 +30,8 @@ Singleton {
             "--urgency=" + urgency,
             "--expire-time=" + ShellSettings.sysAlertTimeout,
             "--app-name=silere-shell",
+            // a bluetooth device can be named "-x": without the end of options, notify-send refuses the alert
+            "--",
             summary,
             body
         ])
