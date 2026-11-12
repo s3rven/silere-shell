@@ -219,23 +219,27 @@ Item {
         cardRect.opacity = 1
     }
 
+    // invoke() closes a non-resident notification, and with reduced motion no exit holds it, so it is read first.
+    // the raise watch only snapshots the urgent windows, and the app cannot answer before this returns
     function activatePrimary(): void {
         if (!card._canInteract) return
-        if (card._defaultAction) {
-            card._defaultAction.invoke()
+        const action = card._defaultAction
+        const resident = !!card.notification?.resident
+        if (action) {
             WindowActions.focusNotificationSourceAfterAction(card.notification)
+            action.invoke()
         } else {
             WindowActions.focusNotificationSource(card.notification)
         }
-        if (!card._defaultAction || !card.notification.resident)
-            card.dismiss()
+        if (!action || !resident) card.dismiss()
     }
 
     function invokeAction(action): void {
         if (!card._canInteract || !action) return
-        action.invoke()
+        const resident = !!card.notification?.resident
         WindowActions.followRaise(card.notification)
-        if (!card.notification.resident) card.dismiss()
+        action.invoke()
+        if (!resident) card.dismiss()
     }
 
     function _actionText(action): string {
