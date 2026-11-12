@@ -99,7 +99,7 @@ AnchoredPopupState {
             { glyph: "󰉦", label: "Theme",       section: "theme",
               description: "Colors, opacity, blur, and shadows" },
             { glyph: "󰛖", label: "Interface", section: "interface",
-              description: "Text, accessibility, displays, and programs" }
+              description: "Text, scale, and accessibility" }
         ]},
         { glyph: "󰕮", label: "Bar", children: [
             { glyph: "󰍹", label: "Layout",    section: "surface",
@@ -131,7 +131,9 @@ AnchoredPopupState {
         ]},
         { glyph: "󰒓", label: "System", children: [
             { glyph: "󰒓", label: "Overview", section: "updates",
-              description: "Updates, diagnostics, and recovery" }
+              description: "Updates, diagnostics, and recovery" },
+            { glyph: "󰦉", label: "Devices", section: "devices",
+              description: "Displays, lighting, Bluetooth, and programs" }
         ]}
     ]
 

@@ -157,7 +157,7 @@ Singleton {
     property bool open: false
     property bool homeActive: true
     property bool settingsActive: false
-    property string settingsSection: "interface"
+    property string settingsSection: "devices"
 }
 EOF
 cat > "$scratch/services/QuickActionsState.qml" <<'EOF'

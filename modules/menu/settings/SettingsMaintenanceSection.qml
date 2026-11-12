@@ -111,7 +111,7 @@ Column {
                 tool("󰖙", "Night light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
             else
                 add(attention, "󰖙", "Night light unavailable",
-                    "Selected program cannot run", "Choose", false, "interface", Theme.warning)
+                    "Selected program cannot run", "Choose", false, "devices", Theme.warning)
         }
         if (Settings.soundSettingsCommand.length === 0)
             tool("󰕾", "Sound settings", "pwvucontrol")
@@ -124,7 +124,7 @@ Column {
                 add(attention, "󰌾", "Screen lock unavailable",
                     ShellSettings.lockProvider === "custom" ? "Custom command is empty or invalid"
                         : "Selected program is not installed",
-                    "Choose", false, "interface", Theme.warning)
+                    "Choose", false, "devices", Theme.warning)
         }
         if (!SystemTools.hasCheckupdates && !SystemTools.hasParu && !SystemTools.hasYay
                 && SystemTools.packageFamily === "pacman")
@@ -213,13 +213,14 @@ Column {
                 valueIsAction: modelData.a.length > 0
                 onActivated: {
                     if (modelData.a === "matugen") SystemTools.repairMatugen()
-                    else if (modelData.a === "interface") MenuState.setSettingsSection("interface")
+                    else if (modelData.a === "interface" || modelData.a === "devices")
+                        MenuState.setSettingsSection(modelData.a)
                 }
             }
         }
     }
 
-    SectionLabel { label: "DEVICES" }
+    SectionLabel { label: "DEVICE CHECKS" }
     SettingsCard {
         Repeater {
             model: root._deviceChecks

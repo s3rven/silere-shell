@@ -7,6 +7,7 @@ internal LockCommandEditor LockCommandEditor.qml
 internal CommandEditor CommandEditor.qml
 internal DraggableWidgetList DraggableWidgetList.qml
 internal SettingsClockSection SettingsClockSection.qml
+internal SettingsDevicesSection SettingsDevicesSection.qml
 internal SettingsIndicatorsSection SettingsIndicatorsSection.qml
 internal SettingsInterfaceSection SettingsInterfaceSection.qml
 internal SettingsMaintenanceSection SettingsMaintenanceSection.qml

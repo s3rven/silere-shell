@@ -11,7 +11,7 @@ Singleton {
     readonly property bool toolAvailable: SystemTools.hasBusctl && !SystemTools.preview
     readonly property bool _wanted: root.toolAvailable && !Idle.isIdle && MenuState.open
         && (MenuState.homeActive || (MenuState.settingsActive
-            && (MenuState.settingsSection === "interface" || MenuState.settingsSection === "updates")))
+            && (MenuState.settingsSection === "devices" || MenuState.settingsSection === "updates")))
     property var devices: []
     property string preferredKey: ""
     readonly property var selected: root.devices.find(d => d.key === root.preferredKey) || root.devices[0] || null

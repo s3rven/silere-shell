@@ -17,8 +17,8 @@ settings file carries its own `__version` and migrates separately.
 - Expand Battery in Home's system readings for health, stored energy, and charging or discharging power, including separate laptop batteries and UPS devices when UPower reports them.
 - Systems with multiple Bluetooth controllers can choose a controller for the session in the Bluetooth list or Settings › Appearance › Interface.
 - Compatible Bluetooth headsets offer Listening and Calls modes in Home's output choices. Volume controls pause during the change and recover if the headset or audio backend disappears.
-- Bar visibility and popup placement follow a display across connector changes when its model and serial identify it uniquely.
-- Supported keyboard lights get a discrete brightness slider in Home, including Off, with a light chooser under Interface when several are available.
+- Bar visibility and popup placement follow a display across connector changes when its model and serial identify it uniquely. On Hyprland the serial comes from the compositor, since Quickshell reports none there.
+- Supported keyboard lights get a discrete brightness slider in Home, including Off, with a light chooser under Settings › System › Devices that names each light when several are available.
 - Notification history supports Enter or Down from search, arrows between messages, and Delete to remove the focused entry while keeping your place.
 - Empty notification searches and app filters offer a button to clear the query or return to all notifications.
 - Now Playing seeks in five-second increments with the arrow keys or scroll wheel, with larger steps on Shift+arrow or Page Up/Down. Dragging remains continuous.
@@ -37,6 +37,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Settings has a Devices page under System for displays, external brightness, keyboard lighting, the Bluetooth controller, and the screen lock and night light programs. Interface keeps text, scale and accessibility.
 - The settings schema moves to 3 with nothing to convert, so a rollback to 1.6 keeps the display preferences and clock weather setting added since.
 
 ### Fixed

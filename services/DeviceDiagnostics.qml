@@ -69,8 +69,8 @@ Singleton {
             add("bluetooth", "󰂯", "Bluetooth controller", Bluetooth.hardBlocked ? "Use your hardware radio switch"
                     : SafeText.singleLineText(Bluetooth.adapter.name || Bluetooth.adapter.adapterId, 128),
                 Bluetooth.hardBlocked ? "Blocked" : Bluetooth.enabled ? "On" : "Off",
-                // the Interface page lists controllers only when there is a choice to make
-                Bluetooth.adapterCount > 1 ? "interface" : "", Bluetooth.hardBlocked)
+                // the Devices page lists controllers only when there is a choice to make
+                Bluetooth.adapterCount > 1 ? "devices" : "", Bluetooth.hardBlocked)
         if (Network.hasWifiDevice)
             add("wifi", "󰤨", "Wi-Fi radio", Network.wifiHardBlocked ? "Use your hardware radio switch"
                     : Network.connectivityText || (Network.connected ? "Network connection available" : "No active connection"),
@@ -80,10 +80,10 @@ Singleton {
 
     function activate(action: string): void {
         if (action === "sound") Audio.openSoundSettings()
-        else if (action === "interface") MenuState.setSettingsSection("interface")
-        else if (action === "brightness") Brightness.rescan()
-        else if (action === "displays") DisplayBrightness.refresh(true)
-        else if (action === "keyboardBrightness") KeyboardBrightness.rescan()
+        else if (action === "devices") MenuState.setSettingsSection("devices")
+        else if (action === "brightness") Brightness.retry()
+        else if (action === "displays") DisplayBrightness.retry()
+        else if (action === "keyboardBrightness") KeyboardBrightness.retry()
     }
 
     function copyReport(): void {

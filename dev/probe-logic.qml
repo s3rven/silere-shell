@@ -2728,9 +2728,9 @@ ShellRoot {
             DeviceDiagnostics.copyState = copyStateWas
             DeviceDiagnostics.copyError = copyErrorWas
             root._check(diagnostics._attentionIssues.some(issue =>
-                    issue.n === "Screen lock unavailable" && issue.a === "interface")
+                    issue.n === "Screen lock unavailable" && issue.a === "devices")
                     && diagnostics._attentionIssues.some(issue =>
-                        issue.n === "Night light unavailable" && issue.a === "interface"),
+                        issue.n === "Night light unavailable" && issue.a === "devices"),
                 "unavailable selected programs link to the page that can fix them")
             ShellSettings.lockProvider = "auto"
             ShellSettings.nightLightProvider = "auto"
@@ -2837,23 +2837,34 @@ ShellRoot {
         updatesComponent.destroy()
 
         ShellSettings.overlayMonitor = "disconnected-probe-monitor"
-        const interfaceComponent = Qt.createComponent("modules/menu/settings/SettingsInterfaceSection.qml")
-        const interfacePage = interfaceComponent.status === Component.Ready
-            ? interfaceComponent.createObject(root, { width: 360 }) : null
-        root._check(interfacePage !== null, "interface builds for display recovery checks")
-        if (interfacePage) {
-            const picker = root._findTrayNode(interfacePage, item => item.key === "overlayMonitor")
+        const devicesComponent = Qt.createComponent("modules/menu/settings/SettingsDevicesSection.qml")
+        const devicesPage = devicesComponent.status === Component.Ready
+            ? devicesComponent.createObject(root, { width: 360 }) : null
+        root._check(devicesPage !== null, "devices builds for display recovery checks")
+        if (devicesPage) {
+            const picker = root._findTrayNode(devicesPage, item => item.key === "overlayMonitor")
             root._check(picker !== null && picker.enabled
                     && picker.model.some(choice => choice.value === ""),
                 "a disconnected overlay display stays editable with a Follow focus choice")
             ShellSettings.overlayMonitor = ""
-            root._check(interfacePage._hasOverlayChoice === interfacePage._hasMultiScreen,
+            root._check(devicesPage._hasOverlayChoice === devicesPage._hasMultiScreen,
                 "clearing display routing hides the unnecessary single-display picker")
-            root._check(root._findTrayNode(interfacePage, item => item.key === "lockProvider") !== null
-                    && root._findTrayNode(interfacePage, item => item.key === "nightLightProvider") !== null,
-                "system program choices live on Interface")
-            interfacePage.destroy()
+            root._check(root._findTrayNode(devicesPage, item => item.key === "lockProvider") !== null
+                    && root._findTrayNode(devicesPage, item => item.key === "nightLightProvider") !== null
+                    && root._findTrayNode(devicesPage, item => item.key === "ddcBrightnessEnabled") !== null,
+                "system program choices and external brightness live on Devices")
+            devicesPage.destroy()
         }
+        devicesComponent.destroy()
+        const interfaceComponent = Qt.createComponent("modules/menu/settings/SettingsInterfaceSection.qml")
+        const interfacePage = interfaceComponent.status === Component.Ready
+            ? interfaceComponent.createObject(root, { width: 360 }) : null
+        root._check(interfacePage !== null
+                && root._findTrayNode(interfacePage, item => item.key === "fontFamily") !== null
+                && ["overlayMonitor", "lockProvider", "nightLightProvider", "ddcBrightnessEnabled", "brightnessDevice"]
+                    .every(key => root._findTrayNode(interfacePage, item => item.key === key) === null),
+            "Interface keeps text and accessibility, and no device or program row")
+        if (interfacePage) interfacePage.destroy()
         interfaceComponent.destroy()
         SystemTools._tools = toolsWas
         SystemTools.ready = readyWas
@@ -4644,9 +4655,10 @@ ShellRoot {
 
         const lockBeforeAttribution = ShellSettings.lockProvider
         ShellSettings.lockProvider = "custom"
-        root._check(ShellSettings.modifiedSections.interface === true
+        root._check(ShellSettings.modifiedSections.devices === true
+                && ShellSettings.modifiedSections.interface === undefined
                 && ShellSettings.modifiedSections.maintenance === undefined,
-            "program preferences mark Interface rather than Diagnostics")
+            "program preferences mark Devices rather than Interface or Diagnostics")
         ShellSettings.lockProvider = lockBeforeAttribution
 
         const savedBattGlow = ShellSettings.underlineBattGlow
@@ -5572,8 +5584,8 @@ ShellRoot {
                 && topSection("caps lock") === "widgets" && topSection("screen lock") === "devices",
             "settings search finds a setting by the everyday word for it, not only by its label")
         root._check(MenuState.searchSettings("history retention").some(row => row.section === "popups")
-                && MenuState.searchSettings("brightness display").some(row => row.section === "interface")
-                && MenuState.searchSettings("night-light").some(row => row.section === "interface"),
+                && MenuState.searchSettings("brightness display").some(row => row.section === "devices")
+                && MenuState.searchSettings("night-light").some(row => row.section === "devices"),
             "settings search matches all words and normalizes punctuation")
         root._check(MenuState.searchSettings("notifHistoryDays").some(row => row.section === "popups")
                 && MenuState.searchSettings("calendarWeekStart").some(row => row.section === "clock")
@@ -5583,7 +5595,7 @@ ShellRoot {
                 && MenuState.searchSettings("no such feature qzx").length === 0,
             "unrelated terms cannot produce a misleading settings match")
         const lockHits = MenuState.searchSettings("lock")
-        root._check(lockHits[0]?.section === "interface" && !lockHits.some(row => row.section === "clock")
+        root._check(lockHits[0]?.section === "devices" && !lockHits.some(row => row.section === "clock")
                 && !MenuState.searchSettings("light").some(row => row.section === "surface")
                 && MenuState.searchSettings("wi-fi").some(row => row.section === "indicators")
                 && MenuState.searchSettings("12h")[0]?.key === "clock12h",
@@ -5626,7 +5638,7 @@ ShellRoot {
             "a row titled exactly like the query outranks pages that only share its words")
         root._check(top("keyboard layout").section === "widgets" && top("keyboard").key === "barShowKeyboard"
                 && top("update").section === "updates" && top("reset").section === "updates"
-                && top("dark mode").section === "theme" && top("blue light").section === "interface",
+                && top("dark mode").section === "theme" && top("blue light").section === "devices",
             "settings search answers everyday words and the widget names on Show & order")
         root._check(ShellSettings._schema.every(e => !e.l || e.sec.split(",").every(sec =>
                 MenuState.searchSettings(e.l).some(row => row.section === sec && row.key === e.k))),
