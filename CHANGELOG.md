@@ -41,6 +41,9 @@ settings file carries its own `__version` and migrates separately.
 
 - Settings has a Devices page under System for displays, external brightness, keyboard lighting, the Bluetooth controller, and the screen lock and night light programs. Interface keeps text, scale and accessibility.
 - The settings schema moves to 3 with nothing to convert, so a rollback to 1.6 keeps the display preferences and clock weather setting added since.
+- Tray icons sit in cells padded like the bar's other icons, so the hover highlight frames each one and their spacing follows the widget gap. Apps that report themselves idle, as most do, are no longer dimmed.
+- Tray menus widen to fit their longest entry, up to half again their usual width, and keep every label in one column when any entry has an icon or a check mark.
+- A tray app's name on hover follows Reveal values on hover, as the clock's date and workspace names do.
 
 ### Fixed
 
@@ -95,6 +98,8 @@ settings file carries its own `__version` and migrates separately.
 - Notification history shows the icon a `notify-send -i` notification had in its popup, instead of the app's first letter.
 - On Hyprland, clicking a notification goes to the window that sent it, not another window of the same app, and a button that opens the app brings its window forward. Both work with `focus_on_activate` off, Hyprland's default.
 - Quick Actions' state chips follow Roundness like the rest of the menu.
+- Tray, tray menu and workspace app icons are sharp at fractional scales. At 1.25 a theme icon was decoded at two and a half times its size and squeezed into place.
+- Hovering a tray icon on the right of the bar no longer slides it out from under the pointer; its name grows to the left instead.
 
 ## Releases
 

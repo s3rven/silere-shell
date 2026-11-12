@@ -28,16 +28,12 @@ Row {
             height: root.iconSize
 
             // in the app's own colours, like the tray: a muted icon only reads as a disabled one
-            Image {
+            ShellIcon {
                 id: _iconSrc
-                anchors.fill: parent
+                anchors.centerIn: parent
+                side: root.iconSize
                 source: appIcon.modelData.icon
-                // decoded at the device size and placed on whole device pixels, like the tray: any other size is resampled soft
-                sourceSize.width: Math.ceil(root.iconSize * root._dpr)
-                sourceSize.height: Math.ceil(root.iconSize * root._dpr)
-                fillMode: Image.PreserveAspectFit
                 asynchronous: true
-                transform: PixelSnap { item: _iconSrc; dpr: root._dpr }
             }
 
             Rectangle {

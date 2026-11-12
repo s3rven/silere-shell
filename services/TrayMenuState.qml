@@ -75,6 +75,24 @@ AnchoredPopupState {
         return true
     }
 
+    // a menu takes its widest row's natural width, never under the base and never past the cap, on the 4px grid
+    function fitWidth(rows, base: real, cap: real): int {
+        let widest = 0
+        for (let i = 0; i < (rows?.length ?? 0); i++)
+            widest = Math.max(widest, rows[i]?.naturalWidth ?? 0)
+        return Math.min(Math.floor(cap), 4 * Math.ceil(Math.max(base, widest) / 4))
+    }
+
+    // one label column per menu: an icon or a check mark on one entry indents every label, not just its own
+    function menuHasLead(entries): bool {
+        for (let i = 0; i < (entries?.length ?? 0); i++) {
+            const entry = entries[i]
+            if (!entry || entry.isSeparator) continue
+            if ((entry.buttonType ?? 0) !== 0 || IconResolver.trayIconSource(entry.icon).length > 0) return true
+        }
+        return false
+    }
+
     function branchHovered(branch, flyouts): bool {
         for (let i = 0; i < flyouts.length; i++) {
             const child = flyouts[i]

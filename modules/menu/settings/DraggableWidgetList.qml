@@ -1,9 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import Quickshell.Services.SystemTray
-import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -924,14 +922,12 @@ Item {
                             opacity: _sub.checked ? 1.0 : 0.45
                             MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
 
-                            IconImage {
+                            ShellIcon {
                                 id: _subImage
-                                anchors.fill: parent
-                                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-                                transform: PixelSnap { item: _subImage; dpr: _subImage._dpr }
+                                anchors.centerIn: parent
+                                side: parent.width
                                 source: IconResolver.trayAppIconSource(
                                     _sub._providedIconFailed ? "" : _sub._providedIconSource, _sub.modelData)
-                                implicitSize: parent.width
                                 asynchronous: true
                                 backer.cache: false
                                 visible: status === Image.Ready

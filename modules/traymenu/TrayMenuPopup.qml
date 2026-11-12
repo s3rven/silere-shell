@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
@@ -19,6 +18,14 @@ FittedPopupWindow {
 
     readonly property int menuWidth: Metrics.snap4Up(220
         + Math.max(0, Settings.capHeight - Settings.capHeightBase) * 6)
+    // a menu widens to its longest label, up to half again the base; the monospace type fit about 25 characters in the base
+    readonly property int menuMaxWidth: Metrics.snap4Up(win.menuWidth * 1.5)
+    // the column a menu's icons and check marks share; its labels start after it
+    readonly property int leadWidth: Settings.fontSize + 4
+
+    function fitWidth(rows): int {
+        return TrayMenuState.fitWidth(rows, win.menuWidth, win.menuMaxWidth)
+    }
 
     property var _activeMenu: null
     function _trigger(entry): void {
@@ -150,8 +157,15 @@ FittedPopupWindow {
             readonly property bool checked:   (modelData?.checkState ?? Qt.Unchecked) === Qt.Checked
             readonly property string label: SafeText.singleLineText(modelData?.text, 256)
             readonly property string iconSrc: IconResolver.trayIconSource(modelData?.icon)
+            readonly property bool menuHasLead: TrayMenuState.menuHasLead(_entry.siblings?.values ?? [])
+            // set by the menu this row sits in, from its widest row
+            property real levelWidth: win.menuWidth
+            // both side margins, the lead column, the label, and the margin before the arrow, which the label keeps without one
+            readonly property real naturalWidth: _entry.sep ? 0
+                : 20 + (_entry.menuHasLead ? win.leadWidth + 8 : 0) + Math.ceil(_labelText.implicitWidth)
+                    + 8 + (_entry.sub ? Math.ceil(_arrow.implicitWidth) : 0)
 
-            width: win.menuWidth
+            width: _entry.levelWidth
             height: sep ? 11 : Metrics.rowHeightFor(32)
             visible: !_entry.sep || !_entry.siblings
                 || !TrayMenuState.strayRule(_entry.siblings.values ?? [], _entry.index)
@@ -242,11 +256,18 @@ FittedPopupWindow {
                 opacity: _entry.on ? 1.0 : 0.4
 
                 Item {
-                    id: _mark
-                    visible: _entry.checkable
+                    id: _lead
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
-                    width: visible ? Settings.fontSize : 0
+                    width: _entry.menuHasLead ? win.leadWidth : 0
+                    height: win.leadWidth
+                }
+
+                Item {
+                    id: _mark
+                    visible: _entry.checkable
+                    anchors.centerIn: _lead
+                    width: Settings.fontSize
                     height: Settings.fontSize
 
                     Rectangle {
@@ -286,21 +307,19 @@ FittedPopupWindow {
                     }
                 }
 
-                IconImage {
+                ShellIcon {
                     id: _icon
                     visible: !_entry.checkable && _entry.iconSrc !== "" && status === Image.Ready
-                    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-                    transform: PixelSnap { item: _icon; dpr: _icon._dpr }
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    implicitSize: Settings.fontSize + 4
+                    anchors.centerIn: _lead
+                    side: win.leadWidth
                     source: _entry.iconSrc
                     asynchronous: true
                 }
 
                 ShellText {
-                    anchors.left: _entry.checkable ? _mark.right : _icon.visible ? _icon.right : parent.left
-                    anchors.leftMargin: (_entry.checkable || _icon.visible) ? 8 : 0
+                    id: _labelText
+                    anchors.left: _lead.right
+                    anchors.leftMargin: _entry.menuHasLead ? 8 : 0
                     anchors.right: _arrow.left
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
@@ -350,7 +369,8 @@ FittedPopupWindow {
                 enabled: opened
                 opacity: opened ? 1 : 0
                 z: 10
-                readonly property real _w: win.menuWidth + pad * 2
+                readonly property int levelWidth: win.fitWidth(_subCol.children)
+                readonly property real _w: levelWidth + pad * 2
                 readonly property int  pad: 6
                 // mapToItem() captures no dependencies, so a binding freezes at the pre-layout position; re-snap off everything that moves the row
                 property point _origin: Qt.point(0, 0)
@@ -398,7 +418,7 @@ FittedPopupWindow {
                 ShellFlickable {
                     id: _subScroll
                     x: _flyout.pad; y: _flyout.pad
-                    width: win.menuWidth
+                    width: _flyout.levelWidth
                     height: Math.max(0, _flyout.height - _flyout.pad * 2)
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
@@ -406,7 +426,7 @@ FittedPopupWindow {
 
                     Column {
                         id: _subCol
-                        width: win.menuWidth
+                        width: _flyout.levelWidth
                         spacing: 1
                         Repeater {
                             // hold the delegates through the close fade, then release the nested branch while the flyout is hidden
@@ -419,6 +439,7 @@ FittedPopupWindow {
                                 item.ownerScroll = _subScroll
                                 item.siblings = _subOpener.children
                                 item.menuDepth = _entry.menuDepth + 1
+                                item.levelWidth = Qt.binding(() => _flyout.levelWidth)
                             }
                         }
                     }
@@ -444,8 +465,9 @@ FittedPopupWindow {
 
         readonly property int pad: 6
         readonly property real _maxContentH: Math.max(48, winH - _edgeY - pad * 2 - 8)
+        readonly property int levelWidth: win.fitWidth(_col.children)
 
-        width:  win.menuWidth + pad * 2
+        width:  card.levelWidth + pad * 2
         height: _heightGlide.value
         SmoothGlide {
             id: _heightGlide
@@ -463,7 +485,7 @@ FittedPopupWindow {
         ShellFlickable {
             id: _scroll
             x: card.pad; y: card.pad
-            width: win.menuWidth
+            width: card.levelWidth
             height: Math.max(0, card.height - card.pad * 2)
             contentWidth: width
             contentHeight: _col.implicitHeight
@@ -471,7 +493,7 @@ FittedPopupWindow {
 
             Column {
                 id: _col
-                width: win.menuWidth
+                width: card.levelWidth
                 spacing: 1
 
                 Repeater {
@@ -481,13 +503,14 @@ FittedPopupWindow {
                     onItemAdded: (index, item) => {
                         item.ownerScroll = _scroll
                         item.siblings = _opener.children
+                        item.levelWidth = Qt.binding(() => card.levelWidth)
                     }
                 }
 
                 Item {
                     visible: _hideRow.visible
                         && (_opener.children?.values ?? []).some(entry => entry && !entry.isSeparator)
-                    width: win.menuWidth
+                    width: card.levelWidth
                     height: 11
 
                     Hairline {
@@ -514,7 +537,7 @@ FittedPopupWindow {
                         }
                     }
                     visible: trayId.length > 0
-                    width: win.menuWidth
+                    width: card.levelWidth
                     height: Metrics.rowHeightFor(32)
                     enabled: TrayMenuState.open
 
@@ -546,7 +569,9 @@ FittedPopupWindow {
 
                     ShellText {
                         anchors.left: parent.left
-                        anchors.leftMargin: 10
+                        // on the app's label column, so the menu reads as one list
+                        anchors.leftMargin: 10 + (TrayMenuState.menuHasLead(_opener.children?.values ?? [])
+                            ? win.leadWidth + 8 : 0)
                         anchors.right: parent.right
                         anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter

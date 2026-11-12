@@ -393,6 +393,7 @@ ShellRoot {
         id: trayWidgetFactory
         TrayWidget { trayModel: root._trayProbeItems; height: 36 }
     }
+    Component { id: shellIconFactory; ShellIcon {} }
     FileView {
         id: trayIconFixture
         path: ConfigStore.directory + "/tray-probe.svg"
@@ -5877,6 +5878,30 @@ ShellRoot {
         root._check(IconResolver.iconSource(
                 "image://icon/spotify-linux-32?path=/usr/share/spotify/icons") === "",
             "the tray's allowance does not widen the shared icon resolver")
+        // measured on Hyprland at 1.25: the screen reports 2, and a theme icon asked for 20 came back as 50
+        root._check(IconResolver.decodeSide("image://icon/spotify-linux-32?path=/usr/share/spotify/icons", 16, 1.25, 2) === 8
+                && IconResolver.decodeSide("image://icon/x", 16, 1, 2) === 8
+                && IconResolver.decodeSide("image://icon/x", 16, 2, 2) === 8
+                && IconResolver.decodeSide("image://icon/x", 16, 1.25, 1) === 16,
+            "a theme icon asks for its device size divided by both ratios that scale the request")
+        root._check(IconResolver.decodeSide("image://qspixmap/7/0", 16, 1.25, 2) === 16
+                && IconResolver.decodeSide("file:///usr/share/icons/x.svg", 16, 1.25, 2) === 16
+                && IconResolver.decodeSide("file:///usr/share/pixmaps/x.png", 16, 1.25, 2) === 20,
+            "a tray pixmap or an SVG is scaled once by the window ratio, and a raster file is decoded as asked")
+        root._check(IconResolver.themeScaleMissing("image://icon/x", 8, 16, 1.25, 2)
+                && !IconResolver.themeScaleMissing("image://icon/x", 16, 16, 1.25, 2)
+                && !IconResolver.themeScaleMissing("image://icon/x", 8, 16, 1.25, 1)
+                && !IconResolver.themeScaleMissing("image://qspixmap/7/0", 8, 16, 1.25, 2),
+            "an icon notices a theme provider that stopped scaling twice, and nothing else")
+        // this probe's screen is 1x, so a theme icon told to expect a factor of 2 meets exactly that provider
+        const unscaled = shellIconFactory.createObject(root, { side: 16, iconScale: 2, source: "image://icon/silere-probe-absent" })
+        const scaledAsUsual = shellIconFactory.createObject(root, { side: 16, iconScale: 1, source: "image://icon/silere-probe-absent" })
+        root._check(unscaled.status === Image.Ready && !unscaled.themeScaled && unscaled.backer.sourceSize.width === 16
+                && scaledAsUsual.themeScaled && scaledAsUsual.backer.sourceSize.width === 16
+                && unscaled.width === 16,
+            "an icon whose theme request comes back unscaled asks once more at its full size")
+        unscaled.destroy()
+        scaledAsUsual.destroy()
         root._check(IconResolver.senderImageSource("image://QsImage/1")
                 === "image://QsImage/1",
             "a mixed-case in-memory provider stays available")
@@ -8301,6 +8326,20 @@ ShellRoot {
                 .join("") === "xa-xaxx"
                 && TrayMenuState.strayRule([rule, rule], 1) && TrayMenuState.strayRule([item, rule], 1),
             "a tray menu draws one rule between entries and none leading, trailing or doubled")
+        const plainEntry = { isSeparator: false, buttonType: 0, icon: "" }
+        const iconEntry = { isSeparator: false, buttonType: 0, icon: "image://qsimage/3/0" }
+        const checkEntry = { isSeparator: false, buttonType: 1, icon: "" }
+        const iconRule = { isSeparator: true, buttonType: 0, icon: "image://qsimage/4/0" }
+        root._check(TrayMenuState.menuHasLead([plainEntry, iconEntry]) && TrayMenuState.menuHasLead([checkEntry, plainEntry])
+                && !TrayMenuState.menuHasLead([plainEntry, iconRule, plainEntry])
+                && !TrayMenuState.menuHasLead([plainEntry, { isSeparator: false, buttonType: 0, icon: "image://evil/x" }])
+                && !TrayMenuState.menuHasLead([]) && !TrayMenuState.menuHasLead(null),
+            "one icon or check mark gives a whole tray menu one label column, and a refused icon gives none")
+        root._check(TrayMenuState.fitWidth([{ naturalWidth: 100 }, {}], 220, 332) === 220
+                && TrayMenuState.fitWidth([{ naturalWidth: 231 }, { naturalWidth: 90 }], 220, 332) === 232
+                && TrayMenuState.fitWidth([{ naturalWidth: 900 }], 220, 332) === 332
+                && TrayMenuState.fitWidth([], 220, 332) === 220,
+            "a tray menu widens to its longest row on the 4px grid, between its base and its cap")
         const dndAt = new Date(2026, 9, 11, 14, 31, 20).getTime()
         root._check(Notifications.dndEndFor(dndAt, 60) === new Date(2026, 9, 11, 15, 32).getTime()
                 && Notifications.dndEndAtHour(dndAt, 8) === new Date(2026, 9, 12, 8, 0).getTime()
@@ -10587,6 +10626,56 @@ ShellRoot {
         ShellSettings.setBarWidgetLayout(layoutWas[0], layoutWas[1], layoutWas[2])
     }
 
+    function _checkTrayCell(s, widget, tile, icon): void {
+        const label = tile ? root._findTrayNode(tile, item => item.reserveText !== undefined && item.expanded !== undefined) : null
+        if (!widget || !tile || !icon || !label) {
+            root._check(false, "the tray cell checks found the widget, its tile, icon and name")
+            return
+        }
+        const pad = Metrics.pillPadFor(widget.compact)
+        root._check(tile.width === widget.cellWidth && widget.cellWidth === widget.iconSize + 2 * pad
+                && icon.width === Metrics.devicePx(widget.iconSize, icon.dpr)
+                && Math.abs(icon.x + icon.width / 2 - widget.cellWidth / 2) < 0.01,
+            "a tray icon sits centred in a cell with a glyph pill's padding, on whole device pixels")
+
+        const spacingWas = ShellSettings.barSpacing
+        ShellSettings.barSpacing = 4
+        const tightGap = widget.itemGap
+        ShellSettings.barSpacing = 12
+        const wideGap = widget.itemGap
+        const wideWidgetGap = Metrics.widgetGapFor(widget.compact)
+        ShellSettings.barSpacing = spacingWas
+        root._check(tightGap === 0 && wideGap > 0 && wideGap < wideWidgetGap,
+            "tray icons abut at the tightest widget gap and stay closer than the widgets as it widens")
+
+        const statusWas = s.first.status
+        s.first.status = St.Status.Passive
+        root._check(tile.opacity === 1 && icon.opacity === 1,
+            "a passive tray app is idle, not off, and keeps its full colour")
+        s.first.status = statusWas
+
+        const hoverWas = ShellSettings.valuesOnHover
+        const restRight = tile.width - (icon.x + icon.width)
+        ShellSettings.valuesOnHover = false
+        tile._dwelled = true
+        root._check(!label.expanded && tile.width === widget.cellWidth,
+            "with hover reveals off the tray names no app, like the clock's date and the workspace names")
+        ShellSettings.valuesOnHover = true
+        tile.syncMenuAnchor()
+        const iconCentre = tile.mapToItem(null, icon.x + icon.width / 2, 0).x
+        root._check(widget.labelLeads && label.expanded && label.width > 0 && label.x + label.width <= icon.x
+                && Math.abs(tile.width - (icon.x + icon.width) - restRight) < 0.01
+                && Math.abs(tile.menuAnchorX - iconCentre) < 0.5,
+            "in the right zone a tray name grows to the icon's left, so the icon and its menu stay under the pointer")
+        ShellSettings.setBarWidgetLayout("tray," + s.layout[0], s.layout[1],
+            s.layout[2].split(",").filter(k => k !== "tray").join(","))
+        root._check(!widget.labelLeads && label.x >= icon.x + icon.width && icon.x === pad,
+            "in the left zone the name grows to the right, away from the edge that zone is pinned to")
+        ShellSettings.setBarWidgetLayout(s.layout[0], s.layout[1], s.layout[2])
+        tile._dwelled = false
+        ShellSettings.valuesOnHover = hoverWas
+    }
+
     function _startTrayProbe(): void {
         const state = {
             step: 0, enabled: ShellSettings.trayWidget, hidden: ShellSettings.trayHidden,
@@ -10639,6 +10728,7 @@ ShellRoot {
                 s.tile = tile
                 root._check(tile && icon && icon.status === Image.Ready && s.zone.implicitWidth > 0,
                     "a tray icon renders in its real bar zone")
+                root._checkTrayCell(s, widget, tile, icon)
                 root._checkWidgetAccessibility(s.settings)
                 s.settings._setTrayItemShown("probe-a", false)
                 break

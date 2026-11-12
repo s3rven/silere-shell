@@ -1,9 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Quickshell
 import Quickshell.Services.SystemTray
-import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -28,12 +26,23 @@ Item {
     readonly property int iconSize: Math.max(12,
         Math.min(Math.round(Metrics.barHeight * 0.62),
             Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 4))
-    readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-    readonly property int _pillPad: Metrics.pillPadFor(compact)
+    readonly property int _pad: Metrics.pillPadFor(compact)
+    readonly property int _labelGap: Metrics.pillGapFor(compact)
+    // each icon owns a pill's padding, so the hover cap fills its cell, as on a glyph pill
+    readonly property int cellWidth: root.iconSize + root._pad * 2
+    // icons sit two thirds as far apart as the widgets around them, edge to edge, so the tray reads as one group at every gap setting
+    readonly property int itemGap: Math.max(0, Math.round(
+        2 * (2 * root._pad + Metrics.widgetGapFor(root.compact)) / 3) - 2 * root._pad)
+    // the right zone is pinned to its right edge: a label grown to the right there carries the hovered icon out from under the pointer
+    readonly property bool labelLeads: ShellSettings.barWidgetOrderRightKeys.indexOf("tray") >= 0
+
+    readonly property string accessibleName: "System tray"
+    Accessible.role: Accessible.Grouping
+    Accessible.name: root.accessibleName
 
     // only appearing/leaving eases; hover growth is already eased by the label, and a second ease on top lags the slot behind its own content
     property real _showProgress: show ? 1.0 : 0.0
-    implicitWidth:  (_row.implicitWidth + _pillPad * 2) * _showProgress
+    implicitWidth:  _row.implicitWidth * _showProgress
     implicitHeight: parent ? parent.height : 24
     visible: layoutVisible
     clip: _showProgress < 0.999
@@ -74,9 +83,8 @@ Item {
 
     Row {
         id: _row
-        x: root._pillPad
         anchors.verticalCenter: parent.verticalCenter
-        spacing: Math.max(3, Metrics.widgetGapFor(root.compact) - 2)
+        spacing: root.itemGap
 
         Repeater {
             id: _items
@@ -97,7 +105,6 @@ Item {
                 readonly property bool fallbackVisible: !_icon.shown
                     && (_tile.iconSource.length === 0 || _icon.status === Image.Error || _tile._fallbackDue)
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
-                readonly property bool passive: modelData.status === Status.Passive
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 readonly property bool hidden: ShellSettings.trayItemHidden(modelData.id)
                 onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
@@ -125,22 +132,25 @@ Item {
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
                 KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
-                width: root.iconSize + (_hoverLabel.width > 0 ? _hoverLabel.width + 5 : 0)
-                height: root.iconSize
-                opacity: passive ? 0.78 : 1.0
+                // the gap opens with the label's first pixels, so the cell never jumps by it
+                readonly property real _labelSpan: _hoverLabel.width > 0
+                    ? _hoverLabel.width + Math.min(root._labelGap, _hoverLabel.width) : 0
+                readonly property real _iconX: root.labelLeads
+                    ? _tile.width - root._pad - root.iconSize : root._pad
+                width: root.cellWidth + _tile._labelSpan
+                height: Metrics.barRowHeight
                 anchors.verticalCenter: parent.verticalCenter
 
                 function syncMenuAnchor(): void {
-                    // labels grow to the right on hover; the popup belongs to the icon, so its anchor must not wander with the label width
-                    const pt = _tile.mapToItem(null, root.iconSize / 2, 0)
+                    // the popup belongs to the icon, so its anchor must not wander with the label width
+                    const pt = _tile.mapToItem(null, _tile._iconX + root.iconSize / 2, 0)
                     if (isFinite(pt.x)) _tile.menuAnchorX = pt.x
                 }
 
                 Component.onCompleted: _tile.syncMenuAnchor()
                 onXChanged: _tile.syncMenuAnchor()
                 onYChanged: _tile.syncMenuAnchor()
-
-                MotionBehavior on opacity {NumberAnimation { duration: Motion.color } }
+                on_IconXChanged: _tile.syncMenuAnchor()
 
                 Timer {
                     id: _labelDwell
@@ -150,10 +160,7 @@ Item {
 
                 Rectangle {
                     id: _hoverCap
-                    x: -3
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: _tile.width + 6
-                    height: Metrics.barRowHeight
+                    anchors.fill: parent
                     radius: Metrics.hoverRadiusFor(height)
                     color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
                          : _ma.pressed           ? Theme.barPressed
@@ -201,6 +208,7 @@ Item {
                 }
 
                 Rectangle {
+                    x: _tile._iconX
                     width: root.iconSize
                     height: root.iconSize
                     anchors.verticalCenter: parent.verticalCenter
@@ -218,14 +226,15 @@ Item {
 
                 CollapsingText {
                     id: _hoverLabel
-                    x: root.iconSize + 5
+                    x: root.labelLeads ? root._pad : root._pad + root.iconSize + Math.min(root._labelGap, width)
                     color: Theme.barSubtext
                     text: SafeText.boundedText(_tile.label, 22)
-                    expanded: ((_tile._dwelled && !root.compact))
+                    // a name peek, like the clock's date and the workspace names: none of them while hover reveals are off
+                    expanded: _tile._dwelled && !root.compact && ShellSettings.valuesOnHover
                         && _tile.label.length > 0 && !TrayMenuState.open
                 }
 
-                IconImage {
+                ShellIcon {
                     id: _icon
                     readonly property bool ready: status === Image.Ready
                     // an app that redraws its icon (an unread count, a sync spinner) sends a new
@@ -238,20 +247,15 @@ Item {
                                 && _tile._providedIconSource.length > 0)
                             _tile._providedIconFailed = true
                     }
-                    width: root.iconSize
-                    height: root.iconSize
+                    side: root.iconSize
+                    x: _tile._iconX + (root.iconSize - width) / 2
                     anchors.verticalCenter: parent.verticalCenter
                     // a hidden app can keep animating its icon, and each frame goes through the icon theme loader
                     source: _tile.hidden ? "" : _tile.iconSource
-                    implicitSize: root.iconSize
-                    // loaded at device size: mipmap takes the image out of the texture atlas, and that path SEGVs the render thread
-                    backer.sourceSize.width:  Math.ceil(root.iconSize * root._dpr)
-                    backer.sourceSize.height: Math.ceil(root.iconSize * root._dpr)
                     // apps reuse an icon url across restarts and updates; a reload must not keep an earlier failed image
                     backer.cache: false
                     backer.retainWhileLoading: true
                     asynchronous: true
-                    transform: PixelSnap { item: _icon; dpr: root._dpr }
                     visible: opacity > 0.01
                     opacity: shown ? 1.0 : 0.0
                     transformOrigin: Item.Center

@@ -17,6 +17,7 @@ PerimeterProgress 1.0 PerimeterProgress.qml
 ActionButton 1.0 ActionButton.qml
 ConfirmButton 1.0 ConfirmButton.qml
 ShellText 1.0 ShellText.qml
+ShellIcon 1.0 ShellIcon.qml
 ShellFlickable 1.0 ShellFlickable.qml
 ShellListView 1.0 ShellListView.qml
 ScreenDismiss 1.0 ScreenDismiss.qml

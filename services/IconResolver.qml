@@ -64,6 +64,37 @@ Singleton {
         return source.length > 0 ? source : (root.appMeta(identity)?.icon ?? "")
     }
 
+    // QIcon's own factor: the largest screen ratio, which Wayland reports as the whole output scale (2 for a 1.25 screen)
+    readonly property real screenScale: {
+        let scale = 1
+        const screens = Quickshell.screens
+        for (let i = 0; i < screens.length; i++)
+            scale = Math.max(scale, screens[i]?.devicePixelRatio ?? 1)
+        return scale
+    }
+
+    function isThemeIcon(source): bool {
+        return /^image:(\/\/)?icon\//i.test(String(source ?? ""))
+    }
+
+    // the sourceSize that decodes an icon at its device size: Qt Quick scales an image: or SVG request by the window ratio
+    // and QIcon scales a theme icon's again by iconScale, so a 16px tray icon at 1.25 was a 50px texture squeezed into 20
+    function decodeSide(source, logical: real, dpr: real, iconScale: real): int {
+        const ratio = dpr > 0 ? dpr : 1
+        const device = Math.max(1, Math.round(logical * ratio))
+        const url = String(source ?? "")
+        if (root.isThemeIcon(url)) return Math.max(1, Math.round(device / (ratio * Math.max(1, iconScale))))
+        if (/^image:/i.test(url) || /\.svgz?(\?.*)?$/i.test(url)) return Math.max(1, Math.round(device / ratio))
+        return device
+    }
+
+    // a provider that stopped scaling twice hands back about 1/iconScale of the side it was asked for
+    function themeScaleMissing(source, implicitSide: real, logical: real, dpr: real, iconScale: real): bool {
+        if (!(iconScale > 1) || !root.isThemeIcon(source) || !(implicitSide > 0)) return false
+        const ratio = dpr > 0 ? dpr : 1
+        return implicitSide * ratio * 1.5 < Math.round(logical * ratio)
+    }
+
     // icon and image fields can originate in any notification or StatusNotifier
     // sender. Keep local files and Qt's internal providers, but never let a label
     // silently turn the shell into a network client or feed it an unbounded data URI
