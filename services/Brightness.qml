@@ -348,7 +348,7 @@ Singleton {
         id: _applyDebounce
         interval: 50
         onTriggered: {
-            if (!root.controllable) return
+            if (!root.controllable || !SystemTools.writesDevices) return
             if (_setProc.running) {
                 root._applyQueued = true
                 return

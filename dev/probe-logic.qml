@@ -1162,6 +1162,12 @@ ShellRoot {
         Network.wifiErrorReason = wifiReasonWas
     }
 
+    function _checkSandboxWritesNoDevice(): void {
+        // the probe runs as every test does, sandboxed and not a preview: nothing it drives may reach the desk's hardware
+        root._check(Quickshell.env("SILERE_SANDBOX") === "1" && !SystemTools.preview && !SystemTools.writesDevices,
+            "a sandboxed test shell writes no device: brightness, Wi-Fi, Bluetooth and power mode refuse its changes")
+    }
+
     function _checkBrightnessOsdUnattended(): void {
         const was = { device: Brightness._device, max: Brightness.maxBrightness,
             level: Brightness.currentBrightness, ready: Brightness.ready, armed: OsdBarState._armed }
@@ -2900,6 +2906,7 @@ ShellRoot {
         root._checkOsdLifetime()
         root._checkOsdProfileHold()
         root._checkBrightnessOsdUnattended()
+        root._checkSandboxWritesNoDevice()
         root._checkWifiDraft()
         root._checkPowerRail()
         root._checkPillTextBaseline()

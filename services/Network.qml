@@ -188,7 +188,7 @@ Singleton {
     }
 
     function toggleWifi(): void {
-        if (!toolAvailable || !hasWifiDevice || wifiHardBlocked) return
+        if (!toolAvailable || !hasWifiDevice || wifiHardBlocked || !SystemTools.writesDevices) return
         Networking.wifiEnabled = !Networking.wifiEnabled
     }
 
@@ -436,7 +436,7 @@ Singleton {
     }
 
     function connectWifi(ssid: string, password: string): void {
-        if (!toolAvailable || ssid.length === 0) return
+        if (!toolAvailable || ssid.length === 0 || !SystemTools.writesDevices) return
         const network = _findWifiNetwork(ssid)
         if (!network) {
             wifiError = ssid
@@ -465,6 +465,7 @@ Singleton {
     }
 
     function forgetWifi(ssid: string): void {
+        if (!SystemTools.writesDevices) return
         const network = _findWifiNetwork(ssid)
         if (!network) return
         root.clearWifiError()
@@ -473,6 +474,7 @@ Singleton {
 
     // by name, not _linkState.best: the active link may be wired, and a vanished network must not drop another
     function disconnectWifi(ssid: string): void {
+        if (!SystemTools.writesDevices) return
         const devices = root._devices.filter(d => d && d.type === DeviceType.Wifi)
         for (let i = 0; i < devices.length; i++) {
             const networks = devices[i].networks ? (devices[i].networks.values || []) : []

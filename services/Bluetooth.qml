@@ -207,7 +207,7 @@ Singleton {
     }
 
     function toggle(): void {
-        if (!adapter) return
+        if (!adapter || !SystemTools.writesDevices) return
         const step = root._toggleStep(root.blocked, root.hardBlocked, adapter.enabled)
         if (step === "unblock") {
             root._unblockWanted = true
@@ -448,7 +448,8 @@ Singleton {
     }
 
     // a device connected by another tool (blueman, bluetoothctl) is trusted too, or its own reconnects stay refused.
-    // probes and the update smoke test share the real system bus, so a sandbox never writes device state
+    // probes and the update smoke test share the real system bus, so a sandbox never writes device state:
+    // power, connections, pairing and forgetting all check SystemTools.writesDevices, and trust is held here
     readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     function _trustConnected(devices): void {
         for (let i = 0; i < devices.length; i++)
@@ -494,6 +495,7 @@ Singleton {
 
     // dispatch by address through the raw _devices array to reach the live C++ object, not a sorted JS copy
     function connectDevice(address: string): void {
+        if (!SystemTools.writesDevices) return
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) { root._beginAttempt(address, "connect"); d.connect(); return }
@@ -513,24 +515,28 @@ Singleton {
     }
 
     function disconnectDevice(address: string): void {
+        if (!SystemTools.writesDevices) return
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) { root._clearDeviceAttempt(address); d.disconnect(); return }
         }
     }
     function pairDevice(address: string): void {
+        if (!SystemTools.writesDevices) return
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) { root._beginAttempt(address, "pair"); d.pair(); return }
         }
     }
     function cancelPair(address: string): void {
+        if (!SystemTools.writesDevices) return
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) { root._clearDeviceAttempt(address); d.cancelPair(); return }
         }
     }
     function forgetDevice(address: string): void {
+        if (!SystemTools.writesDevices) return
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
             if (d && d.address === address) {

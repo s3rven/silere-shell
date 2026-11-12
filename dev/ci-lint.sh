@@ -2517,6 +2517,26 @@ if grep -qE '^ +SILERE_SANDBOX=1 SILERE_PREVIEW=1 ' scripts/try.sh; then
 else
   fail "scripts/try.sh must start its shell with SILERE_PREVIEW=1 beside SILERE_SANDBOX=1, or its headset and VPN controls do nothing"
 fi
+# probes share the real system bus and backlight: a writer that skips the guard lets a test toggle the desk's Wi-Fi.
+# A test cannot prove the guard by tripping it, since tripping it is the harm, so each writer is read for it instead
+unguarded=""
+for pair in services/Network.qml:toggleWifi services/Network.qml:connectWifi services/Network.qml:forgetWifi \
+    services/Network.qml:disconnectWifi services/Bluetooth.qml:toggle services/Bluetooth.qml:connectDevice \
+    services/Bluetooth.qml:disconnectDevice services/Bluetooth.qml:pairDevice services/Bluetooth.qml:cancelPair \
+    services/Bluetooth.qml:forgetDevice services/PowerProfiles.qml:_apply; do
+  file="${pair%%:*}"; fn="${pair#*:}"
+  awk -v fn="$fn" '$0 ~ "^    function " fn "\\(" { found = 1; n = 0; next }
+    found && ++n <= 2 && /SystemTools\.writesDevices/ { ok = 1 }
+    END { exit !(found && ok) }' "$file" || unguarded="$unguarded $file:$fn"
+done
+awk '/id: _applyDebounce/ { f = 1 } f && /SystemTools\.writesDevices/ { ok = 1 } f && /_setProc\.exec/ { done = 1; exit }
+  END { exit !(done && ok) }' services/Brightness.qml \
+  || unguarded="$unguarded services/Brightness.qml:_applyDebounce"
+if [ -n "$unguarded" ]; then
+  fail "these device writers must return first while SystemTools.writesDevices is false, or a sandboxed test changes real hardware:$unguarded"
+else
+  ok "device writes" "sandboxed shells change no brightness, Wi-Fi, Bluetooth or power mode"
+fi
 
 section "portability regressions"
 portability_code=0

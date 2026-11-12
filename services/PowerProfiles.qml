@@ -103,6 +103,7 @@ Singleton {
     }
 
     function _apply(want: string, rememberFor: string): void {
+        if (!SystemTools.writesDevices) return
         root.lastError = ""
         root._pendingPreference = rememberFor.length > 0 ? { key: rememberFor, name: want } : null
         _set.exec(root.commandFor(want, SystemTools.hasPowerProfilesCtl, SystemTools.hasBusctl))

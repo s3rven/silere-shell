@@ -12,6 +12,8 @@ Singleton {
     property string lastError: ""
     // `silere try`: a person on their own sound and network, unlike a test, though both run sandboxed
     property bool preview: Quickshell.env("SILERE_PREVIEW") === "1"
+    // a test shell shares the real system bus and backlight, so it changes no device; the preview is a person at their own desk
+    readonly property bool writesDevices: Quickshell.env("SILERE_SANDBOX") !== "1" || root.preview
     property var _tools: ({})
     property string packageFamily: ""
     // the running binary's own version, so a workaround for an older Quickshell can stand down on a fixed one; empty until known
