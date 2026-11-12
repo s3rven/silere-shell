@@ -51,6 +51,25 @@ PageShell {
         _volumeRow.closeInline()
         _brightnessRow.closeInline()
         _picker = which
+        // opened by hand or by a bar shortcut alike: a list past the edge of a tall Home scrolls in, and no further than it must
+        const parts = root._pickerParts(which)
+        if (parts[0]) root.controlRequested(parts[0], parts[1])
+    }
+
+    // a picker's row and the list drawn for it: above the row when the bar is at the bottom
+    function _pickerParts(which: string): var {
+        const up = Metrics.barAtBottom
+        switch (which) {
+        case "wifi":       return [_wifiRow, up ? _wifiAbove : _wifiPicker]
+        case "vpn":        return [_vpnRow, up ? _vpnAbove : _vpnPicker]
+        case "bt":         return [_btRow, up ? _btAbove : _btPicker]
+        case "nightlight": return [_nightRow, up ? _nightAbove : _nightPicker]
+        case "dnd":        return [_dndRow, up ? _dndAbove : _dndPicker]
+        case "awake":      return [_awakeRow, up ? _awakeAbove : _awakePicker]
+        case "power":      return [_powerRow, up ? _powerAbove : _powerPicker]
+        case "battery":    return [_vitals, null]
+        }
+        return [null, null]
     }
 
     // a bar shortcut reveals its control; device choices open only when available
@@ -70,13 +89,11 @@ PageShell {
             : want === "bt" ? root._btAvailable && Bluetooth.enabled
             : want === "power" ? PowerProfiles.available && PowerProfiles.choices.length > 1
             : false
+        // an already open picker is still brought into view
         if (allowed && root._picker !== want) root._togglePicker(want)
-        if (allowed) {
-            const row = want === "wifi" ? _wifiRow : want === "bt" ? _btRow : _powerRow
-            const choices = want === "wifi" ? (Metrics.barAtBottom ? _wifiAbove : _wifiPicker)
-                : want === "bt" ? (Metrics.barAtBottom ? _btAbove : _btPicker)
-                : Metrics.barAtBottom ? _powerAbove : _powerPicker
-            root.controlRequested(row, choices)
+        else if (allowed) {
+            const parts = root._pickerParts(want)
+            root.controlRequested(parts[0], parts[1])
         }
         else if (want === "power") {
             root.dismissInline()
@@ -298,7 +315,7 @@ PageShell {
                     }
                 }
 
-                InlinePicker { mirror: _vpnPicker }
+                InlinePicker { id: _vpnAbove; mirror: _vpnPicker }
                 ControlRow {
                     id: _vpnRow
                     // nothing to pick without a saved profile, so the row waits for one
@@ -377,7 +394,7 @@ PageShell {
             SettingsCard {
                 dividerIndent: root._rowTextX
 
-                InlinePicker { mirror: _nightPicker }
+                InlinePicker { id: _nightAbove; mirror: _nightPicker }
                 ControlRow {
                     id: _nightRow
                     visible: NightLight.toolAvailable
@@ -433,7 +450,7 @@ PageShell {
                     }
                 }
 
-                InlinePicker { mirror: _dndPicker }
+                InlinePicker { id: _dndAbove; mirror: _dndPicker }
                 ControlRow {
                     id: _dndRow
                     active: Notifications.dnd
@@ -492,7 +509,7 @@ PageShell {
                     }
                 }
 
-                InlinePicker { mirror: _awakePicker }
+                InlinePicker { id: _awakeAbove; mirror: _awakePicker }
                 ControlRow {
                     id: _awakeRow
                     active: Idle.keepAwake

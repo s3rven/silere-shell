@@ -25,7 +25,7 @@ settings file carries its own `__version` and migrates separately.
 - Click the brightness widget to open its slider in Home, with device choices on systems with multiple backlights.
 - Click the battery widget to open Power Mode, or system readings when power profiles are unavailable.
 - Hover the volume widget to see which output it controls alongside the volume.
-- Bar shortcuts scroll their controls into view when Home is taller than the screen.
+- Bar shortcuts scroll their controls into view when Home is taller than the screen, and so do lists and battery details opened in Home itself.
 - Reorder bar widgets from the keyboard in Show & order: Tab to a widget's grip and press Up or Down. Screen readers name each grip.
 - Settings search still finds a setting through a typo or two swapped letters, such as "brigthness" or "worksapce".
 - Press Delete twice on a saved Wi-Fi network or paired Bluetooth device to forget it, as right-click does.

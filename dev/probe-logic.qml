@@ -1534,6 +1534,24 @@ ShellRoot {
         root._check(requested && requested.open && Brightness.currentBrightness === 50,
             "multiple backlights open the device choices without changing the brightness")
 
+        let requestedChoices = null
+        const noteChoices = (control, choices) => requestedChoices = choices
+        home.controlRequested.connect(noteChoices)
+        home._closePicker()
+        requested = null
+        home._togglePicker("power")
+        root._check(home._picker === "power" && requested && requested.title === "Power Mode"
+                && requestedChoices && requestedChoices.above === Metrics.barAtBottom,
+            "a picker opened by hand asks to be brought into view with the list drawn for it")
+        requested = null
+        home._togglePicker("power")
+        root._check(home._picker === "" && requested === null, "closing a picker scrolls nothing")
+        home._togglePicker("battery")
+        root._check(home._picker === "battery" && requested && requested.sizeText !== undefined,
+            "battery details opened at the foot of Home bring the system readings into view")
+        home._closePicker()
+        home.controlRequested.disconnect(noteChoices)
+
         SystemTools._tools = Object.assign({}, SystemTools._tools, { powerprofilesctl: false })
         requested = null
         MenuState.homePicker = "power"
