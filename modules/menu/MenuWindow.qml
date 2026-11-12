@@ -66,7 +66,7 @@ FittedPopupWindow {
         // every panel width stays on the 4px grid, or the outline's right edge lands on a half output px at fractional scale and rasterizes wider than its left
         readonly property int _compactW: 400 + Metrics.menuContentGrowth
         readonly property int _powerW: 572 + _typeGain + Metrics.menuContentGrowth
-        readonly property int _settingsW: 632 + _typeGain + Metrics.menuContentGrowth
+        readonly property int _settingsW: 672 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentBaseW: 492 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentW: _recentBaseW + _navMaxW + 16
         readonly property bool _settingsNavVisible:
@@ -497,13 +497,17 @@ FittedPopupWindow {
                 color: Theme.menuPane
             }
 
+            // settings stops at the nav's height, as history stops at its viewport: a long page
+            // scrolls inside it instead of stretching the panel to the screen edge
+            readonly property int _settingsMaxH: Math.max(rail.settingsNavHeight + 16,
+                Metrics.rowHeightFor(640))
             readonly property int targetH: {
                 const contentH = tabContent.y + tabContent.height
                     + panel.pageBottomInset
                 const navH = panel.activeTab === 1
                     ? rail.settingsNavHeight + 16 : 0
-                return 4 * Math.ceil(Math.max(panel.minRailFitH,
-                    panel.idealMinH, contentH, navH) / 4)
+                return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, navH,
+                    panel.activeTab === 1 ? Math.min(contentH, _settingsMaxH) : contentH) / 4)
             }
 
             height: panel.height

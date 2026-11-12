@@ -29,6 +29,7 @@ settings file carries its own `__version` and migrates separately.
 - Reorder bar widgets from the keyboard in Show & order: Tab to a widget's grip and press Up or Down. Screen readers name each grip.
 - Settings search still finds a setting through a typo or two swapped letters, such as "brigthness" or "worksapce".
 - Press Delete twice on a saved Wi-Fi network or paired Bluetooth device to forget it, as right-click does.
+- Settings keeps one height and scrolls long pages instead of growing to the screen edge. It is a little wider, its navigation icons are larger, and each page names what it covers under its title.
 
 ### Fixed
 

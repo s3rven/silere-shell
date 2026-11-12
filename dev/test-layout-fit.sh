@@ -13,14 +13,14 @@ trap 'exit 130' INT TERM
 # only proves the section instantiates. This builds each one at the width the
 # detail pane actually ships at and fails if Qt marks any text truncated.
 #
-# 388 is derived, not chosen: the settings panel targets 632, the rail takes 44
+# 428 is derived, not chosen: the settings panel targets 672, the rail takes 44
 # plus a nav column capped at 160, and the pane pads 20 a side — see
 # MenuWindow's panelW/navW/contentPad. Narrower than this only happens on a
 # screen under roughly 700px wide, where status text is expected to elide.
 # The panel and the nav cap take the same growth above 100% type, so this pane
 # width holds across the range; the rail below is probed at its base 160, which
 # measures a narrower column than the shell draws there.
-CONTENT_WIDTH="${FIT_W:-388}"
+CONTENT_WIDTH="${FIT_W:-428}"
 PROBE="dev/probe-fit.qml"
 
 _probe_require_qs

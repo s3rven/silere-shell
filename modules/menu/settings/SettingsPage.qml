@@ -366,26 +366,33 @@ PageShell {
             width: parent.width
             readonly property real _mainH: _search.expanded ? _search.fieldHeight
                 : Math.max(Metrics.rowHeightFor(32), _hdrText.implicitHeight, _search.toggleHeight)
+            // the description hangs below the row, so the row still shares the nav title's line
+            readonly property real _textBottom: _hdrDesc.visible ? _hdrDesc.y + _hdrDesc.height : _mainH
             readonly property real _contentBottom: _hdrError.visible
                 ? _hdrError.y + _hdrError.height
-                : _mainH
+                : _textBottom
             height: 4 * Math.ceil((_contentBottom + 4) / 4)
             readonly property var _meta: root._sectionMeta[root._shownSection]
                 ?? ({ glyph: "", label: "", description: "" })
 
-            Item {
+            // a tinted tile: the page's mark, quieter than the selection outline beside it
+            Rectangle {
                 id: _hdrIconSlot
                 visible: !_search.expanded
                 anchors.left: parent.left
-                anchors.verticalCenter: _hdrText.verticalCenter
-                width: 22
-                height: 22
+                y: Math.round((_detailHeader._mainH - height) / 2)
+                width: Metrics.rowHeightFor(28)
+                height: width
+                radius: Theme.radiusInline
+                antialiasing: true
+                color: Theme.blend(Theme.menuControl, Theme.accent,
+                    ShellSettings.highContrast ? 0.24 : 0.14)
 
                 ShellText {
                     id: _hdrIcon
                     anchors.centerIn: parent
                     text: _detailHeader._meta.glyph
-                    color: Theme.withAlpha(Theme.accent, 0.82)
+                    color: Theme.mix(Theme.accent, Theme.text, 0.10)
                     font.pixelSize: Settings.fontSize + 2
                 }
             }
@@ -394,7 +401,7 @@ PageShell {
                 id: _hdrText
                 visible: !_search.expanded
                 anchors.left: _hdrIconSlot.right
-                anchors.leftMargin: 7
+                anchors.leftMargin: 10
                 anchors.right: parent.right
                 anchors.rightMargin: _search.toggleHeight + 8
                 y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
@@ -410,14 +417,25 @@ PageShell {
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
                 }
+            }
 
+            ShellText {
+                id: _hdrDesc
+                visible: !_search.expanded && text.length > 0
+                anchors.left: _hdrText.left
+                anchors.right: _hdrText.right
+                y: Math.round(_hdrText.y + _hdrText.height)
+                text: _detailHeader._meta.description
+                color: Theme.withAlpha(Theme.subtext, 0.86)
+                font.pixelSize: Settings.fontCaption
+                elide: Text.ElideRight
             }
 
             Rectangle {
                 id: _hdrError
                 visible: ShellSettings.settingsError.length > 0
                 x: 0
-                y: Metrics.snap4(_detailHeader._mainH + 8)
+                y: Metrics.snap4(_detailHeader._textBottom + 8)
                 width: parent.width
                 height: Metrics.snap4Up(_errorText.implicitHeight + 16)
                 radius: Theme.radiusInline

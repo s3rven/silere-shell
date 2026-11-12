@@ -515,17 +515,18 @@ Item {
                                         id: _leafGlyph
                                         visible: !root.compact
                                         anchors.left: parent.left
-                                        anchors.leftMargin: 15
+                                        // on the group caption's line: the icon column marks the tier, not an indent
+                                        anchors.leftMargin: 10
                                         anchors.verticalCenter: parent.verticalCenter
                                         // the rail cap is fixed while the label grows with uiScale, so the slot beside it has to give the type its width back
-                                        width: Metrics.iconCellFor(Settings.fontLabel)
+                                        width: Metrics.iconCellFor(font.pixelSize)
                                         horizontalAlignment: Text.AlignHCenter
                                         text: _leaf.glyph
                                         color: _leaf.active
                                             ? Theme.mix(Theme.accent, Theme.text, 0.10)
                                             : Theme.withAlpha(Theme.subtext,
-                                                _leafHover.hovered ? 0.92 : 0.76)
-                                        font.pixelSize: Settings.fontLabel
+                                                _leafHover.hovered ? 1.0 : 0.88)
+                                        font.pixelSize: Settings.fontSize + 1
                                         ColorFade on color {}
                                     }
 
@@ -545,7 +546,7 @@ Item {
 
                                     ShellText {
                                         anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
-                                        anchors.leftMargin: _leafGlyph.visible ? 7 : 18
+                                        anchors.leftMargin: _leafGlyph.visible ? 8 : 18
                                         anchors.right: _leafDot.visible ? _leafDot.left : parent.right
                                         anchors.rightMargin: _leafDot.visible ? 5 : 6
                                         anchors.verticalCenter: parent.verticalCenter
