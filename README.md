@@ -50,18 +50,13 @@ tool and lock screen.
 ## A closer look
 
 <p align="center">
-  <img src="assets/shot-bar.webp" alt="Silere's floating bar with workspaces, media, system readings, network, volume, brightness, battery and clock" width="100%"/>
-  <br/><sub>The bar: workspaces, what's playing, system readings, network, volume, brightness, battery and the clock.</sub>
+  <img src="assets/shot-themes.webp" alt="The same desktop under four wallpapers, each in the colours Matugen draws from it, the last in light mode" width="100%"/>
+  <br/><sub>Colours follow your wallpaper through Matugen, in dark or light mode.</sub>
 </p>
 
 <p align="center">
-  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar" width="88%"/>
-  <br/><sub>Now Playing with cover art and seeking, and the calendar with week numbers.</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot-themes.webp" alt="The Home panel in amber wallpaper colours beside Matugen's light mode" width="100%"/>
-  <br/><sub>Colours from your wallpaper through Matugen, and light mode.</sub>
+  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar and a notification with actions" width="88%"/>
+  <br/><sub>Now Playing with cover art and seeking, the calendar with week numbers, and a notification with actions.</sub>
 </p>
 
 <p align="center">
