@@ -5926,6 +5926,11 @@ ShellRoot {
                 { name: "DP-2", lastIpcObject: { specialWorkspace: { id: 0, name: "" } } },
                 { name: "DP-3", lastIpcObject: { specialWorkspace: { id: -97, name: "special:term" } } },
                 { name: "DP-4", lastIpcObject: {} }, null]
+            root._check(JSON.stringify(hypr.serialsFrom([
+                    { lastIpcObject: { name: "eDP-2", serial: " 0x00006000 " } },
+                    { lastIpcObject: { name: "DP-1", serial: "" } }, { lastIpcObject: { name: "DP-2" } },
+                    { lastIpcObject: null }, null])) === '{"eDP-2":"0x00006000"}',
+                "hyprland's monitor replies give a serial only where one was reported")
             root._check(JSON.stringify(hypr.specialFromMonitors(specialMons, { "DP-3": true })) === '{"DP-1":true}',
                 "the first monitor read marks a special workspace shown before startup, unless an event spoke since")
             const specialWas = hypr._specialOn
@@ -9396,6 +9401,14 @@ ShellRoot {
         const reconnectedDisplay = Object.assign({}, dockDisplay, { name: "DP-3" })
         const otherDisplay = { name: "DP-1", model: "Other display", serialNumber: "67890" }
         const displayIdentityKey = Monitors.identity(dockDisplay)
+        const quietPanel = { name: "eDP-2", model: "0x1637", serialNumber: "" }
+        root._check(Monitors.identity(quietPanel, {}) === ""
+                && Monitors.identity(quietPanel, { "eDP-2": "0x00006000" })
+                    === Monitors.identity({ name: "eDP-9", model: "0x1637", serialNumber: "0x00006000" }, {})
+                && Monitors.identity(dockDisplay, { "DP-1": "elsewhere" })
+                    === Monitors.identity(Object.assign({}, dockDisplay, { serialNumber: "elsewhere" }), {})
+                && Monitors.identity(dockDisplay, {}) === displayIdentityKey,
+            "a screen takes the compositor's serial before Quickshell's, under the same key either would give")
         root._check(Monitors.screenForPreference("DP-1", displayIdentityKey, [otherDisplay, reconnectedDisplay]) === reconnectedDisplay,
             "a remembered display follows its physical identity when docking changes the connector name")
         root._check(Monitors.screenForPreference("DP-1", displayIdentityKey, [otherDisplay]) === null,

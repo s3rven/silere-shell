@@ -40,6 +40,8 @@ Singleton {
     readonly property bool overviewActive:    _be ? _be.overviewActive : false
     readonly property Component popupGrab:    _be ? _be.popupGrab : null
     readonly property var specialOutputs:     _be ? _be.specialOutputs : []
+    // output name -> EDID serial, where the compositor knows one Quickshell does not
+    readonly property var monitorSerials:     _be && _be.monitorSerials ? _be.monitorSerials : ({})
     readonly property string keyboardLayout: _be && _be.keyboardLayout !== undefined ? _be.keyboardLayout : ""
     readonly property bool sharingSupported: root.isHyprland || !!(_be && _be.sharingSupported)
     function cycleKeyboardLayout(): void {

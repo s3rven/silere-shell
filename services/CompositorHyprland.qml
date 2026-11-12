@@ -619,6 +619,35 @@ QtObject {
         function onValuesChanged() { root._seedSpecial() }
     }
 
+    // quickshell leaves ShellScreen.serialNumber empty on wayland (quickshell#903); hyprland's monitor reply has the EDID serial
+    property var monitorSerials: ({})
+    function serialsFrom(mons): var {
+        const out = {}
+        for (let i = 0; i < mons.length; i++) {
+            const m = mons[i]
+            const name = m && m.lastIpcObject ? m.lastIpcObject.name : undefined
+            const serial = m && m.lastIpcObject ? m.lastIpcObject.serial : undefined
+            if (typeof name === "string" && typeof serial === "string" && serial.trim().length > 0)
+                out[name] = serial.trim()
+        }
+        return out
+    }
+    function _syncSerials(): void {
+        const next = root.serialsFrom(Hyprland.monitors ? (Hyprland.monitors.values ?? []) : [])
+        if (JSON.stringify(next) !== JSON.stringify(root.monitorSerials)) root.monitorSerials = next
+    }
+    // the reply lands after the monitor is listed, and only its own signal says so
+    property Instantiator _serialWatch: Instantiator {
+        model: Hyprland.monitors
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onLastIpcObjectChanged() { Qt.callLater(root._syncSerials) }
+        }
+        onObjectAdded: Qt.callLater(root._syncSerials)
+        onObjectRemoved: Qt.callLater(root._syncSerials)
+    }
+
     readonly property var _inertEvents: ({
         "openlayer": true, "closelayer": true, "submap": true, "activelayout": true,
         "screencastv2": true, "changefloatingmode": true, "bell": true, "pin": true,

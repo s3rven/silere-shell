@@ -8,10 +8,12 @@ Singleton {
 
     property bool _syncingPreferences: false
 
-    function identity(screen): string {
+    // the compositor's serial first: Quickshell reports none on wayland today, so every saved key holds the
+    // compositor's, and one Quickshell starts reporting in another format must not move them
+    function identity(screen, serials = Compositor.monitorSerials): string {
         if (!screen) return ""
         const model = String(screen.model || "").trim()
-        const serial = String(screen.serialNumber || "").trim()
+        const serial = String((serials || {})[screen.name] || screen.serialNumber || "").trim()
         if (!model || !serial || model.length > 128 || serial.length > 128
                 || /^(0+|0x0+|unknown|none|n\/a)$/i.test(serial)) return ""
         return encodeURIComponent(JSON.stringify([model, serial]))
@@ -105,6 +107,11 @@ Singleton {
     Connections {
         target: Quickshell
         function onScreensChanged() { Qt.callLater(root._syncPreferences) }
+    }
+    // serials land after the screens; a preference saved before then gains its identity now
+    Connections {
+        target: Compositor
+        function onMonitorSerialsChanged() { Qt.callLater(root._syncPreferences) }
     }
     Connections {
         target: ShellSettings
