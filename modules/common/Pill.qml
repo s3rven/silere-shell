@@ -59,6 +59,9 @@ Item {
     readonly property bool visualPressed: pressed && root.hoverEnabled
 
     signal activated()
+    // right-click, for the app that owns the pill's subject, as the volume pill opens the mixer
+    property bool   hasSecondary: false
+    signal secondaryActivated()
 
     property string accessibleName: root.text
 
@@ -460,6 +463,13 @@ Item {
                 root.hoverActive = false
             }
         }
+    }
+
+    TapHandler {
+        enabled: root.canActivate && root.hasSecondary
+        acceptedButtons: Qt.RightButton
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        onTapped: root.secondaryActivated()
     }
 
     Timer {

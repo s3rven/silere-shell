@@ -38,6 +38,8 @@ Pill {
     interactive: root.show
     pressed: _tap.pressed
     onActivated: if (root.canActivate) MenuState.showHomeAt("bt", root, root.screen)
+    hasSecondary: Settings.bluetoothSettingsCommand.length > 0
+    onSecondaryActivated: SystemTools.runOrNotify(Settings.bluetoothSettingsCommand, "Bluetooth manager failed")
 
     TapHandler {
         id: _tap

@@ -1504,6 +1504,21 @@ ShellRoot {
             }
             component.destroy()
         }
+        // the pill's right-click goes to the app Home's own "settings" rows open, and is offered only where one is installed
+        const secondTools = SystemTools._tools
+        const owners = { NetworkWidget: "nm-connection-editor", BluetoothWidget: "blueman-manager", SystemWidget: "missioncenter" }
+        for (const name of Object.keys(owners)) {
+            const component = Qt.createComponent("modules/bar/widgets/" + name + ".qml")
+            const widget = component.status === Component.Ready ? component.createObject(barFixtureHost, { screen: screen }) : null
+            SystemTools._tools = {}
+            const without = widget !== null && !widget.hasSecondary
+            SystemTools._tools = { [owners[name]]: true }
+            root._check(without && widget.hasSecondary,
+                name + " offers its right-click only where " + owners[name] + " is installed")
+            if (widget) widget.destroy()
+            component.destroy()
+        }
+        SystemTools._tools = secondTools
         MenuState.selectTab(was.tab)
         MenuState._previousTab = was.previous
         if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
@@ -12148,6 +12163,19 @@ ShellRoot {
             f.input.wait(100)
             root._check(f.pill.hovered && f.pill.expanded,
                 "a real pointer dwell reveals a bar pill")
+            let seconds = 0
+            f.pill.secondaryActivated.connect(() => seconds++)
+            f.input.mouseClick(f.pill, 12, 12, Qt.RightButton)
+            const unoffered = seconds
+            f.pill.hasSecondary = true
+            f.input.mouseClick(f.pill, 12, 12, Qt.LeftButton)
+            f.input.mouseClick(f.pill, 12, 12, Qt.RightButton)
+            f.pill.barActive = false
+            f.input.mouseClick(f.pill, 12, 12, Qt.RightButton)
+            f.pill.barActive = true
+            f.pill.hasSecondary = false
+            root._check(unoffered === 0 && seconds === 1,
+                "a right-click runs a pill's second action once: not where none is offered, not from a left click, not on a sleeping bar")
             Scroll._processDelta(30, f.pill.wheelKey, 60, 1, 0)
             f.pill.barActive = false
             root._check(!f.pill.hoverActive && !f.pill.expanded

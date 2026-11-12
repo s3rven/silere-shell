@@ -81,6 +81,8 @@ Pill {
     interactive: root.show
     pressed: _tap.pressed
     onActivated: if (root.canActivate) MenuState.showHomeAt("wifi", root, root.screen)
+    hasSecondary: Settings.networkSettingsCommand.length > 0
+    onSecondaryActivated: SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
 
     TapHandler {
         id: _tap
