@@ -257,11 +257,12 @@ Singleton {
 
     Connections {
         target: root._present["workspace-changed"] === true ? Compositor : null
-        // niri's ref is an internal id; wsId is the number on screen on both backends
-        function onFocusedWorkspaceRefChanged() {
-            root.fire("workspace-changed",
-                [Compositor.activeWorkspaceId(Compositor.focusedMonitor)])
-        }
+        // niri's ref is an internal id; wsId is the number on screen on both backends. Read a tick later:
+        // the ref can move before the monitor's active workspace does, and the hook would get the old one
+        function onFocusedWorkspaceRefChanged() { Qt.callLater(root._fireWorkspaceChanged) }
+    }
+    function _fireWorkspaceChanged(): void {
+        root.fire("workspace-changed", [Compositor.activeWorkspaceId(Compositor.focusedMonitor)])
     }
 
     Component.onCompleted: if (ConfigStore.ready) root.rescan()
