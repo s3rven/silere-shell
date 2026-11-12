@@ -52,6 +52,7 @@ settings file carries its own `__version` and migrates separately.
 - The shell no longer restarts itself when Hyprland's events arrive a moment after a burst of focus changes.
 - A reply you are typing on an older notification survives newer notifications arriving instead of being cleared.
 - A VPN that connects after its request timed out, such as one waiting on a second factor, no longer keeps showing the failure.
+- A Bluetooth device that fails to connect from Silere and then connects or pairs another way loses its failure mark.
 - A sandboxed test shell no longer changes your brightness, Wi-Fi, Bluetooth or power mode. The preview's controls still act on your devices.
 - Bluetooth controls recover when a hardware switch is released while the radio remains soft-blocked, and follow the selected controller on systems with multiple radios.
 - An incomplete external-display brightness scan keeps the displays it already read usable and allows an immediate retry. A display that never answers DDC/CI is named in the warning and listed under Settings › System › Devices, where switching off its control ends the warning.

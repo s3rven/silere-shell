@@ -30,6 +30,21 @@ Scope {
             property var devices: ({ values: [] })
         }
     }
+    Component {
+        id: btDeviceFactory
+        QtObject {
+            property string address: "AA:BB:CC:DD:EE:01"
+            property string name: "Fixture headset"
+            property string icon: "audio-headset"
+            property bool connected: false
+            property bool paired: false
+            property bool pairing: false
+            property bool trusted: false
+            property int state: Bt.BluetoothDeviceState.Disconnected
+            property bool batteryAvailable: false
+            property real battery: 0
+        }
+    }
 
     function write(name, value): void {
         file.path = root.fixtures + "/" + name
@@ -834,6 +849,31 @@ Scope {
         first.destroy()
         second.destroy()
         replacement.destroy()
+
+        // a device that failed here and then came up another way (it reconnected itself, or another manager paired it)
+        const headset = btDeviceFactory.createObject(root)
+        const radio = radioFactory.createObject(root, { adapterId: "hci2", devices: ({ values: [headset] }) })
+        const bt = bluetoothFactory.createObject(root)
+        bt._adapters = [radio]
+        bt._defaultAdapter = radio
+        bt.errorAddr = headset.address
+        bt.errorKind = "connect"
+        const heldWhileDown = bt.errorAddr === headset.address
+        headset.connected = true
+        root.waitFor(() => heldWhileDown && bt.errorAddr === "" && bt.errorKind === "",
+            "a Bluetooth device that connects another way after failing here loses its failure mark")
+        headset.connected = false
+        bt.errorAddr = headset.address
+        bt.errorKind = "pair"
+        headset.connected = true
+        input.wait(60)
+        const pairHeld = bt.errorAddr === headset.address
+        headset.paired = true
+        root.waitFor(() => pairHeld && bt.errorAddr === "",
+            "a failed pairing stays marked through a connection and clears once another tool pairs the device")
+        bt.destroy()
+        radio.destroy()
+        headset.destroy()
     }
 
     function alertCalls(): var {

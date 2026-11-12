@@ -377,6 +377,19 @@ Singleton {
         root.errorKind = ""
     }
 
+    // a device that failed here and then came up another way, reconnecting itself or paired by another
+    // manager, is no longer failed: its row kept the mark and the retry hint while it worked
+    readonly property bool _errorResolved: {
+        if (root.errorAddr === "") return false
+        const d = root._devices.find(d => d && d.address === root.errorAddr)
+        return !!d && (root.errorKind === "pair" ? d.paired === true : d.connected === true)
+    }
+    // a tick later: clearing inside the change would rewrite the address this binding reads
+    on_ErrorResolvedChanged: if (root._errorResolved) Qt.callLater(root._clearResolvedError)
+    function _clearResolvedError(): void {
+        if (root._errorResolved) root.clearError()
+    }
+
     // nothing watches an attempt once its list is gone, and the guard would still fire minutes later and paint a stale failure on the next open
     function abandonAttempt(): void {
         root._endAttempt()
