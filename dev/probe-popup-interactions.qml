@@ -474,7 +474,8 @@ Item {
         TrayMenuState.anchorX = card.winW * 0.35
         input.wait(50)
         root._check(TrayMenuState.open && card.x === placed,
-            "an open card holds still while the bar's width and its anchor move (" + placed + " -> " + card.x + ")")
+            "an open card holds still while the bar's width and its anchor move (" + placed + " -> " + card.x
+                + (TrayMenuState.open ? "" : ", the menu was closed from outside") + (card._placementSettled ? "" : ", unsettled") + ")")
         TrayMenuState.close()
         TrayMenuState.toggleAt(card.winW * 0.35, root.targetScreen, null, false, null, traySource)
         input.wait(50)
