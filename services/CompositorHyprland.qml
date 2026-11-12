@@ -389,18 +389,26 @@ QtObject {
         if (closed) {
             next[key] = true
             const keys = Object.keys(next)
-            if (keys.length > 64) delete next[keys[0]]
+            if (keys.length > 64)
+                delete next[root._evictable(keys, root._liveToplevels({}))]
         } else {
             delete next[key]
         }
         root._closedAddrs = next
     }
+    // a closed address quickshell no longer lists needs no filtering; dropping a listed ghost brings it back for good
+    function _evictable(keys, tops): string {
+        const listed = {}
+        for (const t of tops) if (t && t.address) listed["0x" + t.address] = true
+        return keys.find(k => listed[k] !== true) ?? keys[0]
+    }
     // t.address, not lastIpcObject: each read of that map builds a fresh JS object, per window per tick
     function _withoutClosed(tops, closed): var {
         return tops.filter(t => !(t && t.address && closed["0x" + t.address] === true))
     }
-    function _liveToplevels(): var {
-        return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], root._closedAddrs)
+    // an empty closed set lists every window quickshell holds, ghosts included: only the eviction asks for that
+    function _liveToplevels(closed = root._closedAddrs): var {
+        return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], closed)
     }
     // its own list: urgency read inside the window model would rebuild that model for every consumer on each flip
     readonly property var urgentRefs: root._liveToplevels().filter(t => t && t.urgent && t.address).map(t => "0x" + t.address)

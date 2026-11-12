@@ -6035,6 +6035,9 @@ ShellRoot {
             root._check(Object.keys(hypr._closedAddrs).length === 64
                     && hypr._closedAddrs["0xf69"] === true && hypr._closedAddrs["0xf0"] === undefined,
                 "closed windows are remembered up to the newest 64")
+            root._check(hypr._evictable(["0xa", "0xb", "0xc"], [{ address: "a" }, null]) === "0xb"
+                    && hypr._evictable(["0xa", "0xb"], [{ address: "a" }, { address: "b" }]) === "0xa",
+                "the closed-window memory forgets a window quickshell already dropped before a ghost it still lists")
             hypr._closedAddrs = closedWas
             hypr._eventSeq = seqWas
             const refreshKeyWas = hypr._workspaceRefreshKey
