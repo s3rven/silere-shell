@@ -59,6 +59,11 @@ Singleton {
         root._scanGeneration = root._generation
         _scan.running = true
     }
+    // a write error outlives the rescans, so a retry asks again from a clean slate; the next failed write sets it back
+    function retry(): void {
+        root._writeError = ""
+        root.refresh(true)
+    }
     function invalidate(): void {
         root._generation++
         root._lastScan = 0

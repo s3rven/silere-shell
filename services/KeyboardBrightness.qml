@@ -55,6 +55,12 @@ Singleton {
         _list.running = true
     }
 
+    // a write error outlives the polls, so a retry asks again from a clean slate; the next failed write sets it back
+    function retry(): void {
+        root._writeError = ""
+        root.rescan()
+    }
+
     on_WantedChanged: if (root._wanted) root.rescan()
     Component.onCompleted: if (root._wanted) root.rescan()
     onToolAvailableChanged: {

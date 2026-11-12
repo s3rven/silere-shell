@@ -111,6 +111,12 @@ Singleton {
         _reprobe.restart()
     }
 
+    // a write error outlives every read, so a retry asks again from a clean slate; the next failed write sets it back
+    function retry(): void {
+        root.lastError = ""
+        root.rescan()
+    }
+
     function _syncToolAvailability(): void {
         if (!SystemTools.ready) return
         if (root.toolAvailable) {

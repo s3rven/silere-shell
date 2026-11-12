@@ -2611,6 +2611,19 @@ ShellRoot {
             const btRow = deviceRows.find(row => row.id === "bluetooth")
             root._check(!btRow || (btRow.action === "interface") === (Bluetooth.adapterCount > 1),
                 "the Bluetooth check links to Interface only when there is a controller to choose there")
+            const writeErrorsWas = [Brightness.lastError, DisplayBrightness._writeError, KeyboardBrightness._writeError]
+            Brightness.lastError = "Could not set brightness"
+            DisplayBrightness._writeError = "Display brightness could not be changed."
+            KeyboardBrightness._writeError = "Keyboard light could not be changed. Check UPower permissions."
+            DeviceDiagnostics.activate("brightness")
+            DeviceDiagnostics.activate("displays")
+            DeviceDiagnostics.activate("keyboardBrightness")
+            root._check(Brightness.lastError === "" && DisplayBrightness._writeError === ""
+                    && KeyboardBrightness._writeError === "",
+                "a Diagnostics retry clears a write error that a re-read alone keeps")
+            Brightness.lastError = writeErrorsWas[0]
+            DisplayBrightness._writeError = writeErrorsWas[1]
+            KeyboardBrightness._writeError = writeErrorsWas[2]
             const summary = DeviceDiagnostics.snapshot()
             root._check(summary.schemaVersion === 1 && summary.audio.name === undefined
                     && summary.bluetooth.name === undefined && summary.network.ssid === undefined
