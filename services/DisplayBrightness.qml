@@ -7,8 +7,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property bool available: ShellSettings.ddcBrightnessEnabled
-        && SystemTools.hasDdcutil && SystemTools.hasTimeout
+    readonly property bool supported: SystemTools.hasDdcutil && SystemTools.hasTimeout && !SystemTools.preview
+    readonly property bool available: ShellSettings.ddcBrightnessEnabled && root.supported
     readonly property bool _wanted: root.available && !Idle.isIdle && MenuState.open
         && (MenuState.homeActive || (MenuState.settingsActive
             && (MenuState.settingsSection === "interface" || MenuState.settingsSection === "updates")))

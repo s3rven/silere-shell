@@ -7,7 +7,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    readonly property bool toolAvailable: SystemTools.hasBusctl
+    // the preview leaves the desktop's own lights alone, so it offers no slider that could not move them
+    readonly property bool toolAvailable: SystemTools.hasBusctl && !SystemTools.preview
     readonly property bool _wanted: root.toolAvailable && !Idle.isIdle && MenuState.open
         && (MenuState.homeActive || (MenuState.settingsActive
             && (MenuState.settingsSection === "interface" || MenuState.settingsSection === "updates")))

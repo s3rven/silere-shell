@@ -10,6 +10,8 @@ Singleton {
     property bool ready: false
     property bool checking: false
     property string lastError: ""
+    // `silere try`: a person on their own sound and network, unlike a test, though both run sandboxed
+    property bool preview: Quickshell.env("SILERE_PREVIEW") === "1"
     property var _tools: ({})
     property string packageFamily: ""
     // the running binary's own version, so a workaround for an older Quickshell can stand down on a fixed one; empty until known

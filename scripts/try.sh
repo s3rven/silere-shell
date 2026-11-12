@@ -236,7 +236,7 @@ printf 'Session files: %s\n' "$scratch"
 env -u XDG_SESSION_ID -u HYPRLAND_INSTANCE_SIGNATURE -u NIRI_SOCKET -u DISPLAY -u PIPEWIRE_REMOTE \
     XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" XDG_CACHE_HOME="$scratch/cache" \
     XDG_RUNTIME_DIR="$scratch/run" PIPEWIRE_RUNTIME_DIR="$real_runtime" WAYLAND_DISPLAY="$parent" \
-    SILERE_SANDBOX=1 SILERE_WATCH_FILES=0 QS_PIPEWIRE_IMMEDIATE_RECONNECT=1 \
+    SILERE_SANDBOX=1 SILERE_PREVIEW=1 SILERE_WATCH_FILES=0 QS_PIPEWIRE_IMMEDIATE_RECONNECT=1 \
     setsid dbus-run-session --config-file="$scratch/bus.conf" -- bash "$ROOT/scripts/try.sh" --inner "$COMPOSITOR" "$scratch" &
 inner_pid=$!
 status=0

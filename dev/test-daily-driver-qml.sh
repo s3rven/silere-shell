@@ -105,6 +105,7 @@ Singleton {
     property bool hasPowerProfilesCtl: true
     property bool hasPowerProfilesService: false
     property bool hasBusctl: false
+    property bool preview: false
     property bool hasWpctl: true
     property bool hasPwDump: true
     property bool hasNotifySend: false

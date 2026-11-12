@@ -98,7 +98,7 @@ Singleton {
         root._actionError = ""
         root.pendingUuid = uuid
         _action.command = ["nmcli", "--wait", "60", "connection", profile.active ? "down" : "up", "uuid", uuid]
-        if (Quickshell.env("SILERE_SANDBOX") === "1") {
+        if (Quickshell.env("SILERE_SANDBOX") === "1" && !SystemTools.preview) {
             root.pendingUuid = ""
             return
         }

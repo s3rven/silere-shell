@@ -2494,6 +2494,12 @@ if grep -qF '|| Quickshell.env("SILERE_SANDBOX") === "1") return' services/Compo
 else
   fail "services/CompositorHyprland.qml must skip its unit probe under SILERE_SANDBOX=1, or a test shell can restart the live one"
 fi
+# tests run sandboxed too; only the preview's own flag lets its sound and network controls act
+if grep -qE '^ +SILERE_SANDBOX=1 SILERE_PREVIEW=1 ' scripts/try.sh; then
+  ok "preview flag" "the preview tells the shell it is a preview, not a test"
+else
+  fail "scripts/try.sh must start its shell with SILERE_PREVIEW=1 beside SILERE_SANDBOX=1, or its headset and VPN controls do nothing"
+fi
 
 section "portability regressions"
 portability_code=0

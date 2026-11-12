@@ -126,7 +126,8 @@ Singleton {
 
     function setMode(kind: string): void {
         if (!root.available || root.switching || _set.running || kind === root.current
-                || ["listening", "calls"].indexOf(kind) < 0 || Quickshell.env("SILERE_SANDBOX") === "1") return
+                || ["listening", "calls"].indexOf(kind) < 0
+                || (Quickshell.env("SILERE_SANDBOX") === "1" && !SystemTools.preview)) return
         root._switchDevice = root._device
         root._switchIdentity = root._identity
         root._switchSerial = root.nodeSerial(Audio.sink)
