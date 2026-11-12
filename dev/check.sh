@@ -552,7 +552,7 @@ if command -v matugen >/dev/null 2>&1; then
 fi
 
 if command -v cava >/dev/null 2>&1; then
-  if grep -qE 'case "eco":[[:space:]]+return 0\.[0-9]+' services/Media.qml \
+  if grep -qE 'case "eco":[[:space:]]+return (1[1-9]|[2-9][0-9]|100)[[:space:]]*$' services/Media.qml \
       && grep -qF '"method = raw\n"' services/Media.qml \
       && grep -qF '"data_format = ascii\n"' services/Media.qml; then
     ok "visualizer" "cava available; Silere supplies a bounded temporary raw profile"

@@ -6317,9 +6317,15 @@ ShellRoot {
                     "A real video", "Creator", "", "Zen", "firefox",
                     "org.mpris.MediaPlayer2.firefox"),
             "media distinguishes privacy-redacted browser playback from real metadata")
-        root._check(Media._cavaNoiseReduction >= 0
-                && Media._cavaNoiseReduction <= 1
-                && Media._cavaConfigText.includes("method = pipewire")
+        root._check(["eco", "balanced", "smooth", "nonsense"].every(p => {
+                    const v = Media.vizNoiseReduction(p)
+                    return Number.isInteger(v) && v > 10 && v <= 100
+                })
+                && Media.vizNoiseReduction("eco") > Media.vizNoiseReduction("balanced")
+                && Media.vizNoiseReduction("balanced") > Media.vizNoiseReduction("smooth")
+                && Media._cavaConfigText.includes("noise_reduction = " + Media.vizNoiseReduction(Media._vizPreset) + "\n"),
+            "cava smoothing is a percentage above the falloff floor, calmest on Eco")
+        root._check(Media._cavaConfigText.includes("method = pipewire")
                 && Media._cavaConfigText.includes("method = raw")
                 && Media._cavaConfigText.includes("data_format = ascii")
                 && Media._cavaConfigText.includes("ascii_max_range = " + Media._cavaRange),

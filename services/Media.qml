@@ -626,14 +626,15 @@ Singleton {
     readonly property int _cavaBars: root.vizBarCount(root._vizActive.bars,
         root._visualizerLowPowerOnly)
     readonly property int _cavaFps:  root._vizActive.fps
-    readonly property real _cavaNoiseReduction: {
-        switch (root._vizPreset) {
-        // Cava accepts a float from 0 (fast/noisy) to 1 (slow/smooth)
-        case "eco":    return 0.72
-        case "smooth": return 0.46
-        default:       return 0.58
+    // cava reads 0 (fast, noisy) to 100 (slow, smooth) and divides by 100; at 10 or under it also skips its falloff
+    function vizNoiseReduction(preset: string): int {
+        switch (preset) {
+        case "eco":    return 72
+        case "smooth": return 46
+        default:       return 58
         }
     }
+    readonly property int _cavaNoiseReduction: root.vizNoiseReduction(root._vizPreset)
     readonly property var _zeroBars: {
         const out = []
         for (let i = 0; i < _cavaBars; i++) out.push(0)
