@@ -53,6 +53,11 @@ Item {
         NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic }
     }
 
+    // both switches before Weather is read: off, the service and its lookups are never created.
+    // a failed refresh leaves the bar blank: the old reading has no room here to say it is old
+    readonly property string _weather: ShellSettings.weatherEnabled && ShellSettings.clockShowWeather
+        && Weather.hasData && !Weather.failed ? Weather.glyph + " " + Weather.temperature + "°" : ""
+
     readonly property bool _calendarOpen: CalendarState.open
         && (CalendarState.anchorSource === root
             || (CalendarState.anchorSource === null && root._anchorFallbackBar))
@@ -121,6 +126,15 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         spacing: 0
         layoutDirection: root.mirrored ? Qt.RightToLeft : Qt.LeftToRight
+
+        // the space sits on the side facing the date, which flips with the row
+        CollapsingText {
+            text:     root._weather.length === 0 ? ""
+                : root.mirrored ? " " + root._weather : root._weather + " "
+            color:    root._cSub
+            animate:  root._animatable
+            expanded: root._weather.length > 0
+        }
 
         Item {
             id: _dateSectionClip
@@ -221,6 +235,7 @@ Item {
     readonly property string accessibleName: "Clock, " + DateTime.cachedHour + ":" + DateTime.cachedMinute
         + (DateTime.cachedAmPm.length > 0 ? " " + DateTime.cachedAmPm : "")
         + ", " + DateTime.cachedWeekday + " " + DateTime.cachedMonthDay
+        + (root._weather.length > 0 ? ", " + Weather.temperature + Weather.unit + " " + Weather.condition : "")
         + (Compositor.screenSharing ? ", Sharing screen" : "")
         + (Notifications.presentationMode ? ", Presentation Mode" : "")
         + (Idle.keepAwake ? ", Keep Awake" : "")

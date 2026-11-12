@@ -73,5 +73,13 @@ Column {
                 ? Weather.place : "your time zone")
             key: "weatherEnabled"
         }
+        CollapsibleSection {
+            expanded: ShellSettings.weatherEnabled
+            ToggleRow {
+                glyph: "󰖕"; label: "Show on bar"
+                description: "Beside the clock, refreshed every 30 min"
+                key: "clockShowWeather"
+            }
+        }
     }
 }

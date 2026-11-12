@@ -5,8 +5,8 @@ import Quickshell
 import Quickshell.Io
 import "TimeZonePlace.js" as TimeZonePlace
 
-// opt in, and on demand only: the calendar asks when it opens, an answer serves for half
-// an hour, and nothing polls in between. Open-Meteo needs no account or key
+// opt in, and on demand only: the calendar and Home ask when they open, an answer serves for
+// half an hour, and nothing polls in between unless the bar clock shows it. Open-Meteo needs no account or key
 Singleton {
     id: root
 
@@ -31,6 +31,7 @@ Singleton {
     readonly property string condition: root.conditionFor(root.code)
 
     property real _fetchedAt: 0
+    property real _triedAt: 0
     property string _fetchedFor: ""
     // the time zone's principal city, looked up again only when the zone offset moves
     property var _place: null
@@ -130,6 +131,7 @@ Singleton {
         root.forgetMovedPlace(new Date().getTimezoneOffset())
         if (!force && !root.failed && root.cacheFresh(root._fetchedAt, root._fetchedFor, Date.now())) return
         root.loading = true
+        root._triedAt = Date.now()
         if (root._place) root._fetchForecast()
         else root._startLookup()
     }
@@ -218,6 +220,29 @@ Singleton {
             root._place = { lat: found.lat, lon: found.lon,
                 name: TimeZonePlace.placeName(found.zone), offset: new Date().getTimezoneOffset() }
             root._fetchForecast()
+        }
+    }
+
+    // the bar's reading has no calendar opening to ask for it; the cache still decides, so this
+    // fetches at most every 30 min, and idle skips the night
+    Timer {
+        id: _barRefresh
+        interval: 5 * 60000
+        running: root.enabled && ShellSettings.clockShowWeather && ShellSettings.barShowClock
+            && !Idle.isIdle
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root._barTick()
+    }
+    // a failure waits as long as an answer would: a time zone with no city fails the same way every time
+    function _barTick(): void {
+        if (!root.failed || Date.now() - root._triedAt >= root.maxAgeMs) root.request(false)
+    }
+    // offline is the common failure, and it ends with the connection, not on the next tick
+    Connections {
+        target: Network
+        function onConnectedChanged() {
+            if (Network.connected && root.failed && (_barRefresh.running || CalendarState.open)) root.request(false)
         }
     }
 

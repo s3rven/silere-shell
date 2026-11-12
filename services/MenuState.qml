@@ -152,7 +152,7 @@ AnchoredPopupState {
         separators: "spacing gaps padding dividers compact",
         widgets: "widgets show hide arrange reorder left center right tray all apps layout caps lock",
         workspaces: "workspaces desktops markers numbers apps icons",
-        clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm",
+        clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm temperature forecast",
         media: "music now playing playback player tracks artwork album cover art spectrum visualizer cava audio",
         indicators: "window title battery wifi wi-fi network vpn bluetooth microphone status ram",
         popups: "notifications popup history retention quiet hours do not disturb dnd critical",

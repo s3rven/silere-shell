@@ -111,6 +111,14 @@ Item {
             const narrowUptime = narrow.children.find(item => item.text === narrow.uptimeText)
             if (narrowUptime.y < narrowDateText.y + narrowDateText.height)
                 failures.push("narrow home metadata keeps competing for one line")
+            for (const header of [narrow, wide]) {
+                const day = header.children.find(item => item.text === header.weekday)
+                const weather = header.children.find(item => item.text === header.weatherText)
+                if (weather.visible && day.x + day.width > weather.x - 0.5)
+                    failures.push("the weekday runs into the weather beside it")
+            }
+            if (!wide.children.find(item => item.text === wide.weatherText).visible)
+                failures.push("a wide home header hides the weather it has room for")
             const wideDateText = wide.children.find(item => item.text === wide.dateText)
             const wideUptime = wide.children.find(item => item.text === wide.uptimeText)
             if (Math.abs(wideDateText.y - wideUptime.y) > 0.5)
@@ -292,6 +300,7 @@ Item {
                 item.weekday = "Wednesday"
                 item.dateText = "September 30 · Week 40"
                 item.uptimeText = "up 999d 23h"
+                item.weatherText = "󰖙 -12°"
             }
         }
         Loader {
@@ -301,6 +310,7 @@ Item {
                 item.weekday = "Wednesday"
                 item.dateText = "September 30 · Week 40"
                 item.uptimeText = "up 999d 23h"
+                item.weatherText = "󰖙 -12°"
             }
         }
     }

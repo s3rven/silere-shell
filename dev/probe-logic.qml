@@ -2205,6 +2205,10 @@ ShellRoot {
             "the time zone lookup yields coordinates and a readable city name")
         root._check(!Weather.enabled && !Weather.loading && !Weather.hasData,
             "weather stays idle while it is switched off")
+        ShellSettings.clockShowWeather = true
+        root._check(!Weather.loading && !Weather.hasData && !Weather._zoneLookup.running,
+            "showing weather on the bar fetches nothing while weather itself is off")
+        ShellSettings.clockShowWeather = false
         const movedPlaceWas = Weather._place
         const movedFetchedWas = Weather._fetchedAt
         Weather._place = { lat: 1, lon: 2, name: "Here", offset: 120 }
@@ -2230,8 +2234,24 @@ ShellRoot {
             Weather.request(false)
             root._check(!Weather.loading && !lookup.running,
                 "opening a calendar with a fresh forecast does not start a lookup")
+            const weatherClock = clockFactory.createObject(root)
+            const barWeatherWas = ShellSettings.clockShowWeather
+            ShellSettings.clockShowWeather = true
+            const barShowsFresh = weatherClock._weather.length > 0
             Weather.failed = true
+            const barHidesFailed = weatherClock._weather === ""
+            Weather.failed = false
+            ShellSettings.clockShowWeather = barWeatherWas
+            weatherClock.destroy()
+            root._check(barShowsFresh && barHidesFailed,
+                "the bar shows a weather reading only while its refresh works")
+            Weather.failed = true
+            Weather._triedAt = Date.now() - 60000
+            Weather._barTick()
+            const barWaits = !Weather.loading && !lookup.running
             Weather.request(false)
+            root._check(barWaits && Date.now() - Weather._triedAt < 5000,
+                "the bar waits out a failed weather lookup, and every attempt is timed for that wait")
             root._check(Weather.loading && lookup.running,
                 "reopening after a failed refresh retries even when its previous reading is inside the cache lifetime")
             ShellSettings.weatherEnabled = false
@@ -11051,7 +11071,7 @@ ShellRoot {
                     "a broad settings query retains matches beyond the visible result cap")
                 root._check(search.resultSummary.indexOf("Scroll for more") >= 0,
                     "a capped settings result list explicitly announces additional matches")
-                search.choose("clock")
+                search.choose("workspaces")
                 root._check(search.searching && MenuState.settingsSection === "interface",
                     "a section outside the current results cannot be selected through search")
                 f.input.wait(Motion.fast + 20)
