@@ -264,7 +264,7 @@ silere reset --undo             # puts back what the last reset replaced
 It saves a settings file that won't parse rather than discarding it, and writes through a link
 if you keep `settings.json` in a dotfiles repo. Hooks, the Matugen palette, autostart and the
 service stay as they are. To do it by hand, stop Silere, back up `settings.json`, replace its
-contents with `{ "__version": 3 }`, then start Silere again.
+contents with `{ "__version": 4 }`, then start Silere again.
 
 [The scripting guide](scripting.md) lists IPC calls, setting names and event hooks.
 

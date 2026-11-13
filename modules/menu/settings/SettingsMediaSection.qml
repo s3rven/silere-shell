@@ -25,6 +25,11 @@ Column {
             available: !SystemTools.ready || Media.remoteArtAvailable
             dependsNote: "No curl"
         }
+        ToggleRow {
+            glyph: "󰟎"; label: "Pause when headphones disconnect"
+            description: "Bluetooth and USB, not the headphone jack"
+            key: "mediaPauseOnDisconnect"
+        }
     }
 
     SectionLabel { label: "VISUALIZER" }

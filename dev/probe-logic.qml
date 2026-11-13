@@ -4757,6 +4757,10 @@ ShellRoot {
                 && migrationSince16.value.overlayMonitorIdentity === "AUO|0x1637|0x00006000"
                 && migrationSince16.value.barMonitorIdentities["eDP-2"] === "AUO|0x1637|0x00006000",
             "the schema moved past 1.6's, so a rollback to 1.6 keeps the settings added since")
+        const migrationSince17 = SettingsMigrations.migrate({ mediaPauseOnDisconnect: false }, 3, ShellSettings._settingsVersion)
+        root._check(ShellSettings._settingsVersion >= 4 && migrationSince17.version === ShellSettings._settingsVersion
+                && migrationSince17.value.mediaPauseOnDisconnect === false,
+            "the schema moved past 1.7's, so a rollback to 1.7 keeps the headphone pause setting")
         const migrationHeld = SettingsMigrations.migrate({ barHeight: 40 }, 1, 1)
         root._check(migrationHeld.applied.length === 0
                 && migrationHeld.version === 1
@@ -5824,6 +5828,7 @@ ShellRoot {
                 && top("notification pulse").section === "workspaces"
                 && top("app icon").key === "showWindowTitleIcon"
                 && top("low battery warning").key === "osdBatteryWarn"
+                && top("pause when headphones disconnect").key === "mediaPauseOnDisconnect"
                 && top("source").section === "theme",
             "a row titled exactly like the query outranks pages that only share its words")
         root._check(top("keyboard layout").section === "widgets" && top("keyboard").key === "barShowKeyboard"
@@ -7019,6 +7024,37 @@ ShellRoot {
                     { address: "F4:9D:8A:18:02:3B", connected: false, batteryAvailable: true, battery: 0.1 }]) === -1
                 && Bluetooth.batteryForAddress("", [{ address: "", connected: true, batteryAvailable: true, battery: 0.5 }]) === -1,
             "an output's charge comes from the connected Bluetooth device its sink names, and from no other")
+        const dropped = (wasHeadset, wasName, nextName, nextHeadset, wasListed, switching) =>
+            Audio.headphonesDropped(wasHeadset, wasName, nextName, nextHeadset, wasListed, switching)
+        root._check(dropped(true, "bluez_output.AA_BB_CC_DD_EE_FF.1", "alsa_output.speaker", false, false, false)
+                && !dropped(true, "bluez_output.AA_BB_CC_DD_EE_FF.1", "alsa_output.speaker", false, true, false)
+                && !dropped(true, "bluez_output.AA_BB_CC_DD_EE_FF.1", "usb_headset", true, false, false)
+                && !dropped(false, "alsa_output.hdmi", "alsa_output.speaker", false, false, false)
+                && !dropped(true, "bluez_output.AA_BB_CC_DD_EE_FF.1", "alsa_output.speaker", false, false, true)
+                && !dropped(true, "bluez_output.AA_BB_CC_DD_EE_FF.1", "bluez_output.AA_BB_CC_DD_EE_FF.1", false, false, false)
+                && !dropped(true, "", "alsa_output.speaker", false, false, false),
+            "only headphones that vanish for a non-headset output count as dropped, never a switch the user made or a mode change")
+        root._check(Bluetooth.connectedDevice("aa:bb:cc:dd:ee:ff", [{ address: "AA:BB:CC:DD:EE:FF", connected: true }]) !== null
+                && Bluetooth.connectedDevice("aa:bb:cc:dd:ee:ff", [{ address: "AA:BB:CC:DD:EE:FF", connected: false }]) === null
+                && Bluetooth.connectedDevice("", [{ address: "", connected: true }]) === null,
+            "a lost headset counts as gone once BlueZ no longer lists it connected")
+        const pauseWas = ShellSettings.mediaPauseOnDisconnect
+        const pauses = []
+        const fakePlayer = (name, playing, canPause) => ({ dbusName: name, isPlaying: playing, canPause: canPause,
+            pause: () => pauses.push(name) })
+        const lostPlayers = [fakePlayer("org.mpris.MediaPlayer2.spotify", true, true),
+            fakePlayer("org.mpris.MediaPlayer2.playerctld", true, true),
+            fakePlayer("org.mpris.MediaPlayer2.firefox", false, true),
+            fakePlayer("org.mpris.MediaPlayer2.stream", true, false)]
+        ShellSettings.mediaPauseOnDisconnect = true
+        const pausedOn = Audio.pauseForSpeakers(lostPlayers)
+        const pausedNames = pauses.join(",")
+        ShellSettings.mediaPauseOnDisconnect = false
+        const pausedOff = Audio.pauseForSpeakers(lostPlayers)
+        ShellSettings.mediaPauseOnDisconnect = pauseWas
+        root._check(pausedOn === 1 && pausedNames === "org.mpris.MediaPlayer2.spotify" && pausedOff === 0 && pauses.length === 1
+                && ShellSettings._defaults.mediaPauseOnDisconnect === true,
+            "headphone loss pauses each playing player that can pause, not playerctld's mirror, and nothing once switched off")
         Audio.beginProfileSwitch()
         root._check(Audio.profileSwitching && !Audio._out.enabled && !Audio._in.enabled
                 && Audio.ready === audioStatus.output.ready && Audio.sinkName === audioStatus.output.name,

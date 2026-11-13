@@ -35,10 +35,16 @@ function _v2ToV3(input) {
     return _copy(input)
 }
 
+// the same mark for 1.7: its file holds the pause on headphone loss, which 1.7 cannot read
+function _v3ToV4(input) {
+    return _copy(input)
+}
+
 const registry = [
     { from: 0, to: 1, apply: _v0ToV1 },
     { from: 1, to: 2, apply: _v1ToV2 },
-    { from: 2, to: 3, apply: _v2ToV3 }
+    { from: 2, to: 3, apply: _v2ToV3 },
+    { from: 3, to: 4, apply: _v3ToV4 }
 ]
 
 function migrate(input, fromVersion, targetVersion) {

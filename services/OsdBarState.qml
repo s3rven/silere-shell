@@ -91,6 +91,7 @@ Singleton {
         root._commitClose = ({})
         root.rapid = false
         root._showDeviceName = false
+        root._pausedNote = false
         root._syncPrimary()
     }
 
@@ -283,6 +284,7 @@ Singleton {
 
     property string _lastSinkName: ""
     property bool   _showDeviceName: false
+    property bool   _pausedNote: false
     property bool   _volumeUpdateQueued: false
     // a headset mode change replaces the output node; the level it reads back is not the user changing the volume
     readonly property Timer _profileHoldTimer: Timer { id: _profileHold; interval: 400; onTriggered: root._releaseProfileHold() }
@@ -303,6 +305,7 @@ Singleton {
 
     function _hideDeviceName(): void {
         root._showDeviceName = false
+        root._pausedNote = false
         const index = root._entryIndex("volume")
         if (index < 0) return
         const entry = _entries.get(index)
@@ -318,6 +321,7 @@ Singleton {
         if (!Audio.ready || Audio.profileSwitching || _profileHold.running) return
         const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
         const lbl = effectiveMuted ? "Muted"
+            : root._showDeviceName && Audio.sinkName && root._pausedNote ? `Paused · ${Audio.sinkName}`
             : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
         root.show("volume", Audio.icon, Audio.uiVolume, lbl, effectiveMuted)
     }
@@ -344,6 +348,14 @@ Singleton {
         }
         function onMutedChanged() { root._queueVolumeUpdate() }
         function onMicMutedExternally() { root._showMicMute() }
+        // what played in the headphones stops rather than moving to the speakers; the osd says why it went quiet
+        function onPausedForSpeakers() {
+            if (Idle.isIdle) return
+            root._showDeviceName = true
+            root._pausedNote = true
+            _deviceNameTimer.restart()
+            root._queueVolumeUpdate()
+        }
         function onProfileSwitchingChanged() {
             if (Audio.profileSwitching) return
             root._heldVolumeWrite = false

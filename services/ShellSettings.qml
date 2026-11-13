@@ -13,6 +13,7 @@ Singleton {
     property bool   mediaProgress:       false
     property bool   mediaRemoteArt:      false
     property bool   mediaWidgetHelper:   false
+    property bool   mediaPauseOnDisconnect: true
     property string mediaVisualizerPreset: "balanced"
     property string mediaVisualizerStyle:  "wave"
     property string mediaVisualizerPosition: "media"
@@ -338,7 +339,7 @@ Singleton {
     readonly property bool firstRun: _firstRun
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
-    readonly property int _settingsVersion: 3
+    readonly property int _settingsVersion: 4
     property var _defaults: ({})
     property real _loadedVersion: _settingsVersion
     property var _futureSettings: ({})
@@ -349,6 +350,7 @@ Singleton {
         { k: "mediaProgress",       t: "bool", sec: "media", l: "Audio visualizer" },
         { k: "mediaWidgetHelper",   t: "bool", sec: "media", l: "Playback status" },
         { k: "mediaRemoteArt",      t: "bool", sec: "media", l: "Cover art from the web" },
+        { k: "mediaPauseOnDisconnect", t: "bool", sec: "media", l: "Pause when headphones disconnect" },
         { k: "mediaVisualizerPreset", t: "enum", vals: ["eco", "balanced", "smooth"], sec: "media", l: "Preset" },
         { k: "mediaVisualizerStyle",  t: "enum", vals: ["wave", "bars", "pulse"], sec: "media", l: "Shape" },
         { k: "mediaVisualizerPosition", t: "enum", vals: ["media", "center", "underline"], sec: "media", l: "Position" },

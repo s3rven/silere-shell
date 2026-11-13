@@ -4,6 +4,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import "../config"
 
@@ -148,6 +149,70 @@ Singleton {
     }
     readonly property string sinkBluetoothAddress: root.bluetoothAddress(sink)
 
+    // headphones that drop out hand what was playing to the speakers; a Bluetooth headset counts only once BlueZ
+    // says it went, since a mode change replaces its node too, and a sink the user moved away from is still listed
+    function headphonesDropped(wasHeadset: bool, wasName: string, nextName: string, nextHeadset: bool,
+            wasListed: bool, switching: bool): bool {
+        return wasHeadset && wasName.length > 0 && nextName.length > 0 && nextName !== wasName
+            && !nextHeadset && !wasListed && !switching
+    }
+    property string _heardSink: ""
+    property bool _heardHeadset: false
+    property string _lostAddress: ""
+    onSinkChanged: {
+        const next = root.sink
+        if (!next) return
+        const wasName = root._heardSink
+        const wasHeadset = root._heardHeadset
+        const nextHeadset = root.deviceClass(next) === "headset"
+        root._heardSink = next.name
+        root._heardHeadset = nextHeadset
+        if (nextHeadset) {
+            _lostWait.stop()
+            root._lostAddress = ""
+        }
+        if (!root.headphonesDropped(wasHeadset, wasName, next.name, nextHeadset,
+                root.namesake(wasName, root.sinks) !== null, root.profileSwitching)) return
+        const address = root.bluetoothAddress({ name: wasName })
+        if (address.length > 0 && Bluetooth.connectedDevice(address) !== null) {
+            root._lostAddress = address
+            _lostWait.restart()
+        } else {
+            root.pauseForSpeakers()
+        }
+    }
+    // the class can resolve after the node does, once its properties arrive
+    onSinkClassChanged: if (root.sink && root.sink.name === root._heardSink) root._heardHeadset = root.sinkClass === "headset"
+    readonly property bool _lostStillLinked: root._lostAddress.length > 0
+        && Bluetooth.connectedDevice(root._lostAddress) !== null
+    on_LostStillLinkedChanged: {
+        if (root._lostStillLinked || root._lostAddress.length === 0) return
+        _lostWait.stop()
+        root._lostAddress = ""
+        root.pauseForSpeakers()
+    }
+    Timer {
+        id: _lostWait
+        interval: 3000
+        onTriggered: root._lostAddress = ""
+    }
+    signal pausedForSpeakers(int count)
+    function pauseForSpeakers(list): int {
+        if (!ShellSettings.mediaPauseOnDisconnect) return 0
+        const players = list ?? (Mpris.players.values || [])
+        let count = 0
+        for (let i = 0; i < players.length; i++) {
+            const p = players[i]
+            // playerctld only mirrors a real player, which pauses itself
+            if (!p || String(p.dbusName || "").indexOf("playerctld") >= 0) continue
+            if (p.isPlaying && p.canPause) {
+                p.pause()
+                count++
+            }
+        }
+        if (count > 0) root.pausedForSpeakers(count)
+        return count
+    }
 
     // the level glyphs give way only for a headset, which is the routing worth seeing at a
     // glance; the percentage and the hover level bar still carry the level

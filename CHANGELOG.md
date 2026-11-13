@@ -13,11 +13,13 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- Music pauses when Bluetooth or USB headphones disconnect or run flat, instead of carrying on through the speakers; Settings › Widgets › Media › Pause when headphones disconnect.
 - A menu page that fails to load, Now Playing included, offers Reload, which reloads the shell and reopens the menu on the same page.
 - The volume icon turns amber while Bluetooth headphones it plays through are below 20%, and its hover shows their charge, unless the Bluetooth widget already shows that one device's charge.
 
 ### Changed
 
+- The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
 - Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
