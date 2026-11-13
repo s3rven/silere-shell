@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Two on-screen display pills of different widths, such as a volume change beside a battery warning, share one centre.
 - With two or more notifications showing, the cards sit on whole pixels at fractional scaling, and Clear all and Show more keep an even gap to them.
+- With week numbers on, the calendar's day squares sit on whole pixels at fractional scaling instead of blurring at their sides.
 - The System and Keyboard widgets fade out when switched off, as the other widgets do, instead of disappearing at once.
 - Window titles that contain icon glyphs no longer cut off early with a font other than the default.
 - On a computer without a battery, Alerts keeps the low battery warning switch, which also covers Bluetooth devices.
@@ -46,6 +47,10 @@ settings file carries its own `__version` and migrates separately.
 - On a theme change, workspace markers, the OSD, notification outlines and update status colours change with the rest of the shell instead of trailing it.
 - The night light's sun arc writes durations like the battery does, "1h 5m" rather than "1h 05m".
 - Switching outputs with a long device name no longer pushes the volume level out of the on-screen display.
+- Above 115% UI scale, Quick Actions icons no longer run into their labels.
+- The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
+- With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.
+- Notification popups' app icon and close button grow with UI scale above 100%, instead of shrinking beside the larger title.
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
 - Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 - The `silere reset` preview lists whole setting names instead of cutting one off.

@@ -152,6 +152,10 @@ Item {
             "date targets and grid width grow with interface scaling")
         root._check(monthButton !== null && monthButton.height > baseMonthHeight,
             "month navigation targets also grow with interface scaling")
+        const weekHead = root._find(card, item => item.text === "Wk")
+        root._check(card.weekCol > 24 && card.weekCol % 4 === 0
+                && weekHead !== null && card.weekCol - weekHead.implicitWidth >= 12,
+            "the week column widens with the type and keeps its numbers clear of the rule")
         const barHeightWas = ShellSettings.barHeight
         ShellSettings.barHeight = 24
         root._check(bar.surfaceHeight >= Metrics.barRowHeight + 4
@@ -260,10 +264,49 @@ Item {
         for (const state of ["Sharing screen", "Presenting", "Until 12:30 PM"]) {
             row.stateText = state
             const pill = root._find(row, item => item.text === state)
-            const room = row.width - 10 - 18 - 8 - 8 - (pill ? pill.implicitWidth + 12 : row.width) - 10
+            const room = row.width - 10 - Metrics.glyphSlotWidth - 8 - 8 - (pill ? pill.implicitWidth + 12 : row.width) - 10
             root._check(label !== null && label.implicitWidth <= room,
                 "Do Not Disturb stays whole beside the long state " + state)
         }
+
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        const glyph = root._find(row, item => item.text === row.glyph && item !== row)
+        root._check(glyph !== null && label !== null && glyph.width === Metrics.glyphSlotWidth
+                && glyph.width > 18 && glyph.implicitWidth <= glyph.width
+                && label.x >= glyph.x + glyph.width + 8,
+            "a quick action's glyph keeps its own slot beside the label at the largest scale")
+        ShellSettings.uiScale = 1
+
+        // a group with nothing showing takes its break with it, so no rule leads, trails or doubles up
+        const column = row.parent
+        const named = name => root._find(column, item => item.label === name && item._mainHeight !== undefined)
+        const optional = ["Night Light", "Power Mode", "Wi-Fi", "Bluetooth", "Airplane Mode"].map(named)
+        root._check(optional.every(r => r !== null) && column.children.some(c => c.groupBreak === true),
+            "quick actions has its optional rows and group breaks")
+        if (optional.some(r => r === null)) return
+        const was = optional.map(r => r.visible)
+        let sound = true
+        for (let mask = 0; mask < 32; mask++) {
+            optional.forEach((r, i) => { r.visible = (mask & (1 << i)) !== 0 })
+            const shown = column.children.filter(c => c.visible && c.height > 0)
+            const breaks = shown.map(c => c.groupBreak === true)
+            const expected = (mask & 3 ? 1 : 0) + (mask & 28 ? 1 : 0)
+            if (breaks[0] || breaks[breaks.length - 1] || breaks.some((b, i) => b && breaks[i + 1])
+                    || breaks.filter(b => b).length !== expected) sound = false
+        }
+        optional.forEach((r, i) => { r.visible = was[i] })
+        root._check(sound, "every mix of optional quick actions draws one break between each pair of groups that show")
+
+        // the card holds the focus as it opens; the arrows and a keybind open have to land on a row
+        const stops = column.children.filter(r => r.visible && r.enabled && r.activeFocusOnTab)
+        QuickActionsState.open = true
+        actions.popupCard.focusRow(false)
+        const firstHeld = stops.length > 0 && stops[0].focus
+        actions.popupCard.focusRow(true)
+        const lastHeld = stops.length > 1 && stops[stops.length - 1].focus && !stops[0].focus
+        QuickActionsState.open = false
+        root._check(firstHeld && lastHeld,
+            "quick actions' arrow keys reach the first and last rows from the card")
     }
 
     function _checkTray(): void {
@@ -528,6 +571,7 @@ Item {
         OsdBarState._upsertEntry("volume", "󰕾", 0.48, "48%", false, Theme.accent)
         OsdBarState._upsertEntry("temp", "󰔏", 0, "72°", false, Theme.warning)
         root._checkPopupOpacityEntries()
+        root._checkOsdScale()
         ShellSettings.popupMatchBarOpacity = true
         root._checkPopupOpacityEntries()
         ShellSettings.barOpacity = 0.25
@@ -541,6 +585,25 @@ Item {
         ShellSettings.reduceMotion = saved[3]
         ShellSettings.osdEnabled = saved[4]
         ShellSettings.osdBarIntegrated = saved[5]
+    }
+
+    function _checkOsdScale(): void {
+        const entry = root._find(osd.contentItem, item => item.kind === "volume" && item.pillW !== undefined)
+        root._check(entry !== null, "the volume OSD is available to the scale probe")
+        if (!entry) return
+        const base = { pill: entry.pillW, track: entry.trackW, glyph: entry.glyphW }
+        root._check(base.track === 136 && base.glyph === 20 && base.pill % 8 === 0,
+            "the OSD keeps its 1.0 frame at UI scale 1")
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        const icon = root._find(entry, item => item.text === entry.icon && item.horizontalAlignment === Text.AlignHCenter)
+        const level = root._find(entry, item => item.text === entry.label && item.elide === Text.ElideMiddle)
+        root._check(entry.trackW > base.track && entry.pillW > base.pill && entry.pillW % 8 === 0
+                && icon !== null && icon.width === entry.glyphW && icon.implicitWidth <= entry.glyphW
+                && level !== null && entry.chromeW + level.implicitWidth <= entry.pillW,
+            "the OSD pill, its track and its glyph slot grow with the type")
+        ShellSettings.uiScale = 1
+        root._check(entry.pillW === base.pill && entry.trackW === base.track,
+            "the OSD returns to its 1.0 frame")
     }
 
     function _checkPopupOpacityEntries(): void {

@@ -31,7 +31,17 @@ FittedPopupWindow {
         readonly property int  rowH:     Math.max(Metrics.snap4Up(Settings.fontSize * 1.5),
             Math.min(cell, Metrics.snap4Down(_gridRoom / _rowCount)))
         readonly property int  pad:      14
-        readonly property int  weekCol:  ShellSettings.calendarWeekNumbers ? 22 : 0
+        // a multiple of 4: each day square sits 2 px into its cell, so 22 left every one half an output pixel off at 1.25.
+        // It widens with the header's type: at a fixed 24 the numbers grew to 3 px from the rule above 115%
+        readonly property int  weekCol:  ShellSettings.calendarWeekNumbers
+            ? Metrics.snap4Up(Math.max(24, Math.ceil(_weekHeadMetrics.advanceWidth) + 12)) : 0
+        TextMetrics {
+            id: _weekHeadMetrics
+            font.family: Settings.font
+            font.pixelSize: Settings.fontMicro
+            font.weight: Font.Medium
+            text: "WK"
+        }
         readonly property int  gridW:    weekCol + cell * 7
         readonly property int  panelW:   Metrics.snap4Up(gridW + pad * 2)
 

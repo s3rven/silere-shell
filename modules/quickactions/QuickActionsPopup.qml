@@ -93,7 +93,8 @@ FittedPopupWindow {
             anchors.left: parent.left
             anchors.leftMargin: 10
             y: Math.round((_row._mainHeight - height) / 2)
-            width: 18
+            // the glyph grows with the type, so a fixed 18 px slot let it run into the label above 115%
+            width: Metrics.glyphSlotWidth
             horizontalAlignment: Text.AlignHCenter
             text: _row.glyph
             color: _row.error || _row.warning || _row.highlighted

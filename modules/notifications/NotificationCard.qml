@@ -91,6 +91,8 @@ Item {
         || _previewImg.status === Image.Ready || _previewImg.status === Image.Error
     // keep every header on the same text grid. Invalid or absent app icons get an initial instead of collapsing the slot and shifting the whole card
     readonly property bool showIconSlot: _previewSettled
+    // the app icon and the close disc grow with the type above 100%, as the menu's rows do; fixed at 24 they shrank beside an 18 px title
+    readonly property int _iconSide: Metrics.rowHeightFor(24)
 
     Accessible.role: Accessible.Notification
     Accessible.name: card.appNameText.length > 0
@@ -571,7 +573,7 @@ Item {
 
         ClippingRectangle {
             visible: card.showIconSlot
-            width: 24; height: 24
+            width: card._iconSide; height: card._iconSide
             radius: Theme.radiusField
             // the initial gets a tile of its own; bare, a lone dim letter reads as a missing glyph
             color: _headerIcon.status === Image.Ready ? "transparent" : Theme.withAlpha(Theme.subtext, 0.12)
@@ -619,7 +621,7 @@ Item {
                 left:        parent.left
                 right:       parent.right
                 topMargin:   13
-                leftMargin:  card.showIconSlot ? 46 : 16
+                leftMargin:  card.showIconSlot ? 22 + card._iconSide : 16
                 rightMargin: 16
             }
             spacing: 5
@@ -1017,14 +1019,14 @@ Item {
             anchors.topMargin:   13 + (_summary.contentHeight
                 / Math.max(1, _summary.lineCount) - height) / 2
             anchors.rightMargin: 16
-            width: 24; height: 24
+            width: card._iconSide; height: card._iconSide
             readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
             transform: PixelSnap { item: _closeDisc; dpr: _closeDisc._dpr }
             opacity: card._expanded ? 1.0 : 0.48
 
             Rectangle {
                 anchors.fill: parent
-                radius: 12
+                radius: height / 2
                 antialiasing: true
                 color: _closeTap.pressed ? Theme.withAlpha(Theme.error, 0.24)
                     : _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl
@@ -1034,7 +1036,7 @@ Item {
                 }
                 ColorFade on color {}
                 OutlineBorder {
-                    radius: 12
+                    radius: parent.radius
                     outlineColor: _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.32) : Theme.menuControlLine
                     ColorFade on outlineColor {}
                 }

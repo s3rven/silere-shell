@@ -150,6 +150,17 @@ Item {
                     if (label.truncated === true)
                         failures.push("notification action label is truncated: " + label.text)
             }
+            const card = loader.item
+            const disc = root.descendants(card, item => (item.Accessible || {}).name === "Dismiss notification")[0]
+            const title = root.descendants(card, item => item.text === card.titleText && item.wrapMode === Text.Wrap)[0]
+            if (!disc || !title) failures.push("notification fixture lacks its title or dismiss disc")
+            else {
+                const d = disc.mapToItem(card, 0, 0), t = title.mapToItem(card, 0, 0)
+                if (disc.width < Config.Metrics.rowHeightFor(24) || disc.height !== disc.width)
+                    failures.push("notification dismiss disc ignores interface size")
+                if (t.x + title.width > d.x - 5.5)
+                    failures.push("notification title runs under its dismiss disc")
+            }
             if (loader === narrowNotification && rows.size < 2)
                 failures.push("narrow notification keeps squeezing four actions into one row")
             if (loader === wideNotification && rows.size !== 1)

@@ -78,11 +78,16 @@ PanelWindow {
                 required property int serial
                 required property var fillColor
 
-                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, Metrics.barHeight) : 36
-                readonly property int chromeW: hasBar ? 216 : 70
+                // what the type gained over UI scale 1.0: a frame fixed in px kept its 1.0 size while the glyph and the level grew inside it
+                readonly property real _typeGain: Math.max(1, Settings.fontSize / Math.max(1, Settings.fontSizeBase))
+                readonly property int glyphW: Math.max(20, Metrics.iconCellFor(Settings.fontSize + 4))
+                readonly property int trackW: Metrics.snap4(136 * _typeGain)
+                readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, Metrics.barHeight) : Metrics.rowHeightFor(36)
+                // the glyph, the track and the 10 px gaps before the label, plus 20 px each side
+                readonly property int chromeW: glyphW + (hasBar ? trackW + 20 : 10) + 40
                 // a multiple of 8 so centring on the screen leaves the left edge on the 4px grid
                 readonly property int pillW: 2 * Metrics.snap4(
-                    Math.max(268, Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)) / 2)
+                    Math.max(Math.round(268 * _typeGain), Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)) / 2)
                 readonly property real pillRadius: ShellSettings.osdMatchBar
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.surfaceRadius, pillH / 2)
@@ -237,7 +242,7 @@ PanelWindow {
 
                             ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width:               20
+                                width:               card.glyphW
                                 horizontalAlignment: Text.AlignHCenter
                                 text:           card.icon
                                 color:          card.hasBar ? Theme.text : card.fillColor
@@ -248,7 +253,7 @@ PanelWindow {
                             Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: card.hasBar
-                                width:  136
+                                width:  card.trackW
                                 height: 6
                                 radius: 3
                                 color:  Theme.menuTrack
