@@ -19,7 +19,12 @@ SettingsCard {
         for (const row of [_cpu, _memory, _disk, _battery]) row.settleIntro()
     }
     // only as the menu opens: any running animation redraws the whole window at the display rate, so a replay on every tab switch doubled what the switch cost
-    Component.onCompleted: if (root.active) root._introRows()
+    Component.onCompleted: {
+        if (root.active) root._introRows()
+        SysInfo.requestTopProcess(root, root.active)
+    }
+    onActiveChanged: SysInfo.requestTopProcess(root, root.active)
+    Component.onDestruction: SysInfo.requestTopProcess(root, false)
     Connections {
         target: MenuState
         function onOpenChanged() {
@@ -273,7 +278,11 @@ SettingsCard {
         glyph: "󰍛"
         label: "CPU"
         value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
-        sub: CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
+        sub: {
+            const temp = CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
+            const busiest = SysInfo.topShown ? SysInfo.topName + " (" + SysInfo.topPid + ")" : ""
+            return temp.length > 0 && busiest.length > 0 ? temp + " · " + busiest : temp + busiest
+        }
         progress: SysInfo.cpuReady ? SysInfo.cpuPct : 0
         activity: !SysInfo.cpuReady ? 0 : SysInfo.cpuPct >= 0.7 ? 1 : SysInfo.cpuPct >= 0.3 ? 0.5 : 0
         status: CpuTemp.critical ? 2 : (CpuTemp.hot || (SysInfo.cpuReady && SysInfo.cpuHigh) ? 1 : 0)

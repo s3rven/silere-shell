@@ -2200,6 +2200,61 @@ ShellRoot {
         root._check(w.text === "" && w.glyph === "󰍛" && w.segments.length === 0
                 && Qt.colorEqual(w.glyphColor, Theme.error),
             "with values on hover the monitor rests as its glyph, still tinted")
+
+        const topWas = { shown: SysInfo.topShown, name: SysInfo.topName, pid: SysInfo.topPid, share: SysInfo.topShare,
+            samples: SysInfo._topSamples, last: SysInfo._topLast, active: SysInfo._active }
+        const procLine = (pid, name, utime, stime) => pid + " (" + name + ") R 1 " + pid + " " + pid
+            + " 0 -1 0 0 0 0 0 " + utime + " " + stime + " 0 0 20 0 1 0 1 0 0"
+        const statAt = (user, idle, procs) => ["cpu " + user + " 0 0 " + idle + " 0 0 0 0",
+            "cpu0 " + user / 2 + " 0 0 " + idle / 2 + " 0 0 0 0", "cpu1 " + user / 2 + " 0 0 " + idle / 2 + " 0 0 0 0",
+            "intr 1 2 3"].concat(procs).join("\n") + "\n"
+        const firstTop = SysInfo.processSample(statAt(1000, 1000,
+            [procLine(41, "ffmpeg", 100, 20), procLine(42, "Web Content (2)", 50, 10), procLine(43, "make", 5, 5)]))
+        const secondTop = SysInfo.processSample(statAt(1300, 1100,
+            [procLine(41, "ffmpeg", 250, 50), procLine(42, "Web Content (2)", 90, 20), procLine(43, "cc1", 400, 5)]))
+        const thirdTop = SysInfo.processSample(statAt(1600, 1200,
+            [procLine(41, "ffmpeg", 400, 80), procLine(42, "Web Content (2)", 100, 20)]))
+        const busiestTop = SysInfo.busiestProcess(firstTop, secondTop)
+        root._check(firstTop.cpus === 2 && firstTop.names["42"] === "Web Content (2)" && firstTop.ticks["41"] === 120
+                && busiestTop !== null && busiestTop.pid === 41 && busiestTop.name === "ffmpeg"
+                && Math.abs(busiestTop.share - 0.45) < 1e-9 && Math.abs(busiestTop.cores - 0.9) < 1e-9
+                && SysInfo.busiestProcess(null, secondTop) === null && SysInfo.busiestProcess(secondTop, firstTop) === null,
+            "the busiest process has the most CPU ticks since the last sample, and a reused PID is left out")
+        const heavyTop = { cores: 0.9 }, easingTop = { cores: 0.7 }, lightTop = { cores: 0.2 }
+        root._check([SysInfo.topSamplesAfter(heavyTop, 0.1, 0), SysInfo.topSamplesAfter(heavyTop, 0.1, 1),
+                SysInfo.topSamplesAfter(easingTop, 0.1, 2), SysInfo.topSamplesAfter(lightTop, 0.1, 2),
+                SysInfo.topSamplesAfter(lightTop, 0.6, 0), SysInfo.topSamplesAfter(easingTop, 0.1, 1),
+                SysInfo.topSamplesAfter(null, 0.9, 2)].join() === "1,2,2,0,1,0,0",
+            "a busy machine or a process holding a core is named after two samples and let go under a lower line")
+        SysInfo.cpuReady = true
+        SysInfo.cpuPct = 0.62
+        SysInfo._topLast = null
+        SysInfo._topSamples = 0
+        SysInfo._applyTop(firstTop)
+        SysInfo._applyTop(secondTop)
+        const topNotYet = !SysInfo.topShown && w._parts[0].detail === "62%"
+        SysInfo._applyTop(thirdTop)
+        root._check(topNotYet && SysInfo.topShown && SysInfo.topName === "ffmpeg" && SysInfo.topPid === 41
+                && w._parts[0].detail === "62% · ffmpeg (41)" && w._parts[0].value === "62%"
+                && w._parts[0].spoken === "CPU 62%, most by ffmpeg",
+            "the monitor's hover names the busiest process and its ID while the CPU is busy")
+        const topOwner = ({})
+        SysInfo._active = false
+        SysInfo.requestTopProcess(topOwner, true)
+        const topQuietOff = !SysInfo._topWanted && SysInfo.topShown
+        SysInfo._active = true
+        const topWantedOn = SysInfo._topWanted
+        SysInfo.requestTopProcess(topOwner, false)
+        root._check(topQuietOff && topWantedOn && !SysInfo._topWanted && !SysInfo.topShown
+                && SysInfo.topName === "" && w._parts[0].detail === "62%",
+            "the busiest process is read only while a view asks for it, and forgotten when the last one stops")
+        SysInfo._active = topWas.active
+        SysInfo.topShown = topWas.shown
+        SysInfo.topName = topWas.name
+        SysInfo.topPid = topWas.pid
+        SysInfo.topShare = topWas.share
+        SysInfo._topSamples = topWas.samples
+        SysInfo._topLast = topWas.last
         w.destroy()
         ShellSettings.valuesOnHover = was.hoverValues
         ShellSettings.barShowSystem = was.show
@@ -9374,6 +9429,14 @@ ShellRoot {
             root._check(fullCaption === "Full" && diskRow.sub === "",
                 "a full disk says so in its caption, and an unread disk leaves the caption empty")
             SysInfo.diskTotalKb = diskWas[0]; SysInfo.diskAvailKb = diskWas[1]
+            const cpuRow = root._findTrayNode(vitals, item => item.label === "CPU" && item.sub !== undefined)
+            const busiestWas = [SysInfo.topShown, SysInfo.topName, SysInfo.topPid]
+            SysInfo.topName = "ffmpeg"; SysInfo.topPid = 41; SysInfo.topShown = true
+            const busiestCaption = cpuRow ? cpuRow.sub : ""
+            SysInfo.topShown = false
+            root._check(busiestCaption.endsWith("ffmpeg (41)") && cpuRow.sub.indexOf("ffmpeg") < 0,
+                "Home's CPU caption names the busiest process while it matters, beside the temperature")
+            SysInfo.topShown = busiestWas[0]; SysInfo.topName = busiestWas[1]; SysInfo.topPid = busiestWas[2]
             const reduceWas = ShellSettings.reduceMotion
             ShellSettings.reduceMotion = false
             vitals.active = true

@@ -24,6 +24,12 @@ Pill {
     readonly property real _mem: root._memOn && SysInfo.memTotalKb > 0 ? SysInfo.memPct : -1
     readonly property real _temp: root._tempOn && CpuTemp.available ? CpuTemp.temp : -1
 
+    readonly property bool _busiestWanted: root.show && root._cpuOn && root.expanded
+    on_BusiestWantedChanged: SysInfo.requestTopProcess(root, root._busiestWanted)
+    Component.onDestruction: SysInfo.requestTopProcess(root, false)
+    readonly property string _busiest: root._cpuOn && SysInfo.topShown
+        ? SysInfo.topName + " (" + SysInfo.topPid + ")" : ""
+
     readonly property int _cpuLevel: root._cpuOn && SysInfo.cpuReady && SysInfo.cpuHigh ? 1 : 0
     // memory reads Home's own band, so the two never disagree about the same reading
     readonly property int _memLevel: root._mem < 0 ? 0 : SysInfo.memLevel
@@ -45,7 +51,9 @@ Pill {
         const parts = []
         // two digits reserved per reading: the pill keeps its width as values tick, and only grows at 100%
         if (root._cpuOn) parts.push({ glyph: "󰍛", value: root.percent(root._cpu), reserve: "00%",
-            detail: root.percent(root._cpu), level: root._cpuLevel, spoken: "CPU " + root.percent(root._cpu) })
+            detail: root.percent(root._cpu) + (root._busiest.length > 0 ? " · " + root._busiest : ""),
+            level: root._cpuLevel,
+            spoken: "CPU " + root.percent(root._cpu) + (root._busiest.length > 0 ? ", most by " + SysInfo.topName : "") })
         if (root._memOn) {
             const used = SysInfo.memTotalKb - SysInfo.memAvailKb
             parts.push({ glyph: "󰘚", value: root.percent(root._mem), reserve: "00%",

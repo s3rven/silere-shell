@@ -31,6 +31,24 @@ Singleton {
     property real _lastCpuTotal: 0
     property real _lastCpuIdle: 0
 
+    readonly property RequestSet _topRequests: RequestSet {}
+    function requestTopProcess(owner, wanted: bool): void {
+        root._topRequests.set(owner, wanted)
+    }
+    readonly property bool _topWanted: root._active && root._topRequests.active
+    property string topName: ""
+    property int topPid: 0
+    property real topShare: 0
+    property bool topShown: false
+    property int _topSamples: 0
+    property var _topLast: null
+    on_TopWantedChanged: {
+        if (root._topWanted) {
+            root._sampleTop()
+            _topPrime.restart()
+        } else root._clearTop()
+    }
+
     readonly property real memPct:     memTotalKb > 0 ? (memTotalKb - memAvailKb) / memTotalKb : 0
     // as df counts it: blocks reserved for root are neither used nor available to the user
     readonly property real diskPct:    diskUsedKb + diskAvailKb > 0 ? diskUsedKb / (diskUsedKb + diskAvailKb) : 0
@@ -97,6 +115,7 @@ Singleton {
         _uptimePoll.stop()
         _active = false
         root._clearCpuSample()
+        root._clearTop()
         if (_slowProc.running) _slowProc.running = false
     }
 
@@ -105,6 +124,7 @@ Singleton {
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
     Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active) _statFile.reload() }
+    Timer { id: _topPrime; interval: 1000; onTriggered: if (root._topWanted) root._sampleTop() }
     Timer { id: _uptimePoll; onTriggered: if (root._active && root._homeWanted) _uptimeFile.reload() }
 
     Timer {
@@ -187,6 +207,7 @@ Singleton {
         _meminfoFile.reload()
         _pressureFile.reload()
         _statFile.reload()
+        if (root._topWanted) root._sampleTop()
     }
 
     property string _vmstat: ""
@@ -299,6 +320,84 @@ Singleton {
         } else {
             root._clearCpuSample()
         }
+    }
+
+    // per-process ticks from /proc against the machine's, so the name is what runs now: ps gives a lifetime average
+    function processSample(raw: string): var {
+        const ticks = {}, names = {}
+        let total = 0, cpus = 0
+        for (const line of raw.split("\n")) {
+            if (line.startsWith("cpu ")) {
+                total = line.trim().split(/\s+/).slice(1, 9).reduce((sum, v) => sum + (Number(v) || 0), 0)
+                continue
+            }
+            if (/^cpu[0-9]+ /.test(line)) { cpus++; continue }
+            const open = line.indexOf(" (")
+            const close = line.lastIndexOf(") ")
+            if (open <= 0 || close < open) continue
+            const pid = line.slice(0, open)
+            if (!/^[0-9]+$/.test(pid)) continue
+            const rest = line.slice(close + 2).split(" ")
+            const used = Number(rest[11]) + Number(rest[12])
+            if (!isFinite(used)) continue
+            ticks[pid] = used
+            names[pid] = line.slice(open + 2, close)
+        }
+        return { total: total, cpus: Math.max(1, cpus), ticks: ticks, names: names }
+    }
+
+    function busiestProcess(last, next): var {
+        if (!last || !next || !(next.total > last.total)) return null
+        let pid = "", most = 0
+        for (const id in next.ticks) {
+            if (last.ticks[id] === undefined || last.names[id] !== next.names[id]) continue
+            const used = next.ticks[id] - last.ticks[id]
+            if (used > most) { most = used; pid = id }
+        }
+        if (pid.length === 0) return null
+        const share = Math.min(1, most / (next.total - last.total))
+        return { pid: Number(pid), name: SafeText.singleLineText(next.names[pid], 32), share: share, cores: share * next.cpus }
+    }
+
+    // a busy machine, or one process holding a core, for two samples in a row; it eases out under a lower line
+    function topSamplesAfter(busiest, cpuPct: real, samples: int): int {
+        if (!busiest) return 0
+        if (cpuPct >= 0.5 || busiest.cores >= 0.9) return Math.min(2, samples + 1)
+        return samples >= 2 && (cpuPct >= 0.35 || busiest.cores >= 0.6) ? 2 : 0
+    }
+
+    function _applyTop(sample): void {
+        const busiest = root.busiestProcess(root._topLast, sample)
+        root._topLast = sample
+        root._topSamples = root.topSamplesAfter(busiest, root.cpuReady ? root.cpuPct : 0, root._topSamples)
+        root.topShown = root._topSamples >= 2
+        root.topName = root.topShown ? busiest.name : ""
+        root.topPid = root.topShown ? busiest.pid : 0
+        root.topShare = root.topShown ? busiest.share : 0
+    }
+
+    function _sampleTop(): void {
+        if (_topProc.running) return
+        _topProc.exec(["sh", "-c", "exec cat /proc/stat /proc/[0-9]*/stat 2>/dev/null"])
+    }
+
+    function _clearTop(): void {
+        _topPrime.stop()
+        if (_topProc.running) _topProc.running = false
+        root._topLast = null
+        root._topSamples = 0
+        root.topShown = false
+        root.topName = ""
+        root.topPid = 0
+        root.topShare = 0
+    }
+
+    BoundedProcess {
+        id: _topProc
+        timeoutMs: 3000
+        stdout: StdioCollector { id: _topOut }
+        onExited: if (!_topProc.timedOut && root._topWanted) root._applyTop(root.processSample(_topOut.text))
+        Component.onDestruction: running = false
     }
 
     function _refreshSlow(): void {
