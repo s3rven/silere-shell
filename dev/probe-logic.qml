@@ -11189,6 +11189,16 @@ ShellRoot {
                 && rowIcon.backer.sourceSize.width === Math.round(16 * dpr)
                 && railIcon.backer.sourceSize.width === Math.round(16 * dpr),
             "notification, history and app rail icons decode at their device size, as the tray's do")
+        // the page goes invisible as its fade ends (PageShell); its rows must not relay themselves out for that
+        const shownHeight = row ? row.height : -1
+        if (page) page.opacity = 0
+        host.input.wait(50)
+        const hiddenHeight = row ? row.height : -2
+        const pageHidden = page !== null && !page.visible
+        if (page) page.opacity = 1
+        host.input.wait(50)
+        root._check(pageHidden && shownHeight > 0 && hiddenHeight === shownHeight && row.height === shownHeight,
+            "a history row keeps its size while its page fades out of sight, so coming back relays nothing out")
         if (nav) nav.destroy()
         navComponent.destroy()
         if (page) page.destroy()

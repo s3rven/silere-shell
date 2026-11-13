@@ -78,12 +78,14 @@ Rectangle {
     property real _armedW: Math.max(root.armedWidth, _armedRow.implicitWidth + 20)
 
     // no Behavior on width: it would grow from 0 every time the button is shown
-    width:  visible ? root._restW + (root._armedW - root._restW) * root._armT : 0
+    width:  root.revealed ? root._restW + (root._armedW - root._restW) * root._armT : 0
     height: Metrics.rowHeightFor(root.designHeight)
     radius: Theme.radiusControl
     antialiasing: true
     clip: root._armT > 0 && root._armT < 1
-    visible: root._reveal > 0.001
+    // what a neighbour lays out against: visible is effective, so it also drops whenever the page fades away
+    readonly property bool revealed: root._reveal > 0.001
+    visible: root.revealed
     onVisibleChanged: if (!visible) root.disarm()
     onShownChanged: if (!shown) root.disarm()
     onEnabledChanged: if (!enabled) root.disarm()

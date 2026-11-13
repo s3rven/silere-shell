@@ -17,7 +17,7 @@ PageShell {
     implicitHeight: viewportHeight
     // grouped runs, day sections and expanded rows all change a row's height, so only the laid-out list knows
     readonly property real _fullListHeight: _searchBox.y + _searchBox.height + 8
-        + (_historyList.visible ? _historyList.contentHeight : 0) + 10
+        + (root.rowCount > 0 ? _historyList.contentHeight : 0) + 10
     // a filter or search holds the height it opened with, or every keystroke would resize the panel
     readonly property bool _narrowed: root._appliedFilter.length > 0 || root.searching || root._swapping
     property real _heldHeight: 0
@@ -278,9 +278,9 @@ PageShell {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: Math.max(1, Math.min(implicitWidth,
-                    (_muteButton.visible ? _muteButton.x - 10
-                        : _clearButton.visible ? _clearButton.x - 10 : _header.width)
-                    - (_countChip.visible ? _countChip.width + 9 : 0)))
+                    (root.filter.length > 0 ? _muteButton.x - 10
+                        : _clearButton.revealed ? _clearButton.x - 10 : _header.width)
+                    - (root.rowCount > 0 ? _countChip.width + 9 : 0)))
                 text: root.filter.length > 0 ? root.filter : "Notifications"
                 color: Theme.text
                 font.pixelSize: Settings.fontSize + 4
@@ -316,8 +316,8 @@ PageShell {
                 readonly property bool muted: ShellSettings.notifAppMuted(root.filter)
                 readonly property bool _interactive: visible && enabled
                 visible: root.filter.length > 0
-                anchors.right: _clearButton.visible ? _clearButton.left : parent.right
-                anchors.rightMargin: _clearButton.visible ? 8 : 0
+                anchors.right: _clearButton.revealed ? _clearButton.left : parent.right
+                anchors.rightMargin: _clearButton.revealed ? 8 : 0
                 anchors.verticalCenter: parent.verticalCenter
                 width: _muteRow.implicitWidth + 20
                 height: Metrics.rowHeightFor(30)
@@ -471,7 +471,7 @@ PageShell {
                         anchors.rightMargin: 4
                         anchors.verticalCenter: parent.verticalCenter
                         visible: _silenceNote.endable
-                        width: visible ? implicitWidth : 0
+                        width: _silenceNote.endable ? implicitWidth : 0
                         label: "Turn off"
                         accessibleName: "Turn off " + _silenceNote._shown
                         onTriggered: _silenceNote.end()
@@ -484,9 +484,9 @@ PageShell {
             id: _searchBox
             width: parent.width
             anchors.top: _silenceNote.bottom
-            anchors.topMargin: visible ? 8 : 0
+            anchors.topMargin: root.hasHistory ? 8 : 0
             visible: root.hasHistory
-            height: visible ? Metrics.rowHeightFor(36) : 0
+            height: root.hasHistory ? Metrics.rowHeightFor(36) : 0
             // a capsule, so the round clear button sits concentric in its end cap; matches settings search
             radius: height / 2
             antialiasing: true
@@ -681,8 +681,11 @@ PageShell {
 
                     readonly property int _topPad: 11
                     readonly property int _sidePad: 14
+                    // layout reads what the row holds, never effective visibility: the page goes invisible as its fade
+                    // ends, and every row relaid itself out then and again on the first frame back (once in a binding loop)
+                    readonly property bool _hasBody: _body.text.length > 0
                     // a lone line has no bottom corner clear of the remove button, so the chevron joins that line
-                    readonly property bool _chevronInline: !_showHeader && !_body.visible
+                    readonly property bool _chevronInline: !_showHeader && !_hasBody
                     readonly property int _rightGutter: _rightSlot.width + 10
                         + (_chevronInline ? _chevron.implicitWidth + 10 : 0)
                     readonly property int _firstLineHeight: _showHeader ? _metaRow.height
@@ -917,7 +920,7 @@ PageShell {
                             Row {
                                 id: _metaRow
                                 width: parent.width
-                                height: visible ? Math.max(16, _appName.implicitHeight) : 0
+                                height: _entry._showHeader ? Math.max(16, _appName.implicitHeight) : 0
                                 visible: _entry._showHeader
                                 spacing: 7
 
@@ -973,17 +976,17 @@ PageShell {
                             ShellText {
                                 id: _summary
                                 width: Math.max(0, parent.width
-                                    - (_metaRow.visible ? 0 : _entry._rightGutter))
+                                    - (_entry._showHeader ? 0 : _entry._rightGutter))
                                 text: (_entry.modelData.summary || "").trim()
                                     || (_entry.modelData.body || "").trim() || "Notification"
                                 color: Theme.text
                                 // bottom-most text owes the chevron its corner
-                                rightPadding: _body.visible || _entry._chevronInline ? 0 : 16
+                                rightPadding: _entry._hasBody || _entry._chevronInline ? 0 : 16
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                                 // a line per stored character can never truncate the bounded title
-                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : _body.visible ? 1 : 2
+                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : _entry._hasBody ? 1 : 2
                                 elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
 
@@ -991,7 +994,7 @@ PageShell {
                                 id: _body
                                 width: parent.width
                                 rightPadding: 16
-                                visible: text.length > 0
+                                visible: _entry._hasBody
                                 text: (_entry.modelData.summary || "").trim().length > 0
                                     ? _entry.modelData.body || "" : ""
                                 color: Theme.withAlpha(Theme.text, 0.78)
