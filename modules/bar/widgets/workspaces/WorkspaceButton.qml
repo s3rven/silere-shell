@@ -25,6 +25,10 @@ Item {
     required property bool markerCovers
     property int hiddenAppCount: 0
     property string workspaceName: ""
+    // the bar above and below the row, and half the gap on each side: a click at a docked bar's screen edge or between two cells still lands
+    property real hitTop: 0
+    property real hitBottom: 0
+    property real hitGap: 0
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
 
     signal activateRequested()
@@ -132,7 +136,6 @@ Item {
     Accessible.onPressAction: root._activate()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
-    HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
     // stable slots can change identity without the pointer moving. Clear the old identity before publishing the new one, including during teardown
     property int _reportedHoverId: -1
     function _syncHoverReport(): void {
@@ -145,26 +148,35 @@ Item {
     onHoveredChanged: root._syncHoverReport()
     onCanActivateChanged: root._syncHoverReport()
 
-    TapHandler {
-        id: _tap
-        enabled: root.canActivate
-        acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
-        onTapped: (eventPoint, button) => {
-            if (!root.canActivate) return
-            if (button === Qt.MiddleButton) {
-                if (!Compositor.activeToplevel) return
-                root.moveWindowRequested()
-                if (root._motionAllowed() && !_dropPulse.running) _dropPulse.start()
-                return
-            }
-            if (button === Qt.RightButton) {
-                if (root.active) {
-                    root.markerPulseRequested()
-                    root.quickActionsRequested()
+    Item {
+        objectName: "workspace-hit"
+        x: -root.hitGap / 2
+        y: -root.hitTop
+        width: root.width + root.hitGap
+        height: root.height + root.hitTop + root.hitBottom
+
+        HoverHandler { id: _hover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
+        TapHandler {
+            id: _tap
+            enabled: root.canActivate
+            acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+            onTapped: (eventPoint, button) => {
+                if (!root.canActivate) return
+                if (button === Qt.MiddleButton) {
+                    if (!Compositor.activeToplevel) return
+                    root.moveWindowRequested()
+                    if (root._motionAllowed() && !_dropPulse.running) _dropPulse.start()
+                    return
                 }
-                return
+                if (button === Qt.RightButton) {
+                    if (root.active) {
+                        root.markerPulseRequested()
+                        root.quickActionsRequested()
+                    }
+                    return
+                }
+                root._activate()
             }
-            root._activate()
         }
     }
 

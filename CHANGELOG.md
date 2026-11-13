@@ -103,6 +103,7 @@ settings file carries its own `__version` and migrates separately.
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
 - Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 - The `silere reset` preview lists whole setting names instead of cutting one off.
+- A click at the top or bottom edge of the bar above or below a workspace number, or between two numbers, switches to that workspace instead of doing nothing.
 
 ## Releases
 

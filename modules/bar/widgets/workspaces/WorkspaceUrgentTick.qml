@@ -12,6 +12,8 @@ Item {
     required property real rowHeight
     required property bool barActive
     property bool before: false
+    property real hitTop: 0
+    property real hitBottom: 0
 
     signal jumpRequested(int wsId)
 
@@ -50,8 +52,14 @@ Item {
     Accessible.onPressAction: root._jump()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
-    HoverHandler { id: _tickHover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
-    TapHandler   { enabled: root.canActivate; onTapped: root._jump() }
+    Item {
+        objectName: "workspace-tick-hit"
+        y: -root.hitTop
+        width: root.width
+        height: root.height + root.hitTop + root.hitBottom
+        HoverHandler { id: _tickHover; enabled: root.canActivate; cursorShape: Qt.PointingHandCursor }
+        TapHandler   { enabled: root.canActivate; onTapped: root._jump() }
+    }
 
     property real _pulse: 1.0
     property bool _pulseSettled: false

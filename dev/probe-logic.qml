@@ -3861,6 +3861,34 @@ ShellRoot {
             "a page change still places the marker at once")
         glideMarker.destroy()
 
+        const hitCell = workspaceButtonFactory.createObject(root, {
+            wsId: 3, monitorReady: true, active: false, occupied: true,
+            urgent: false, apps: [], compact: false, iconSize: 14,
+            cellWidth: 26, rowHeight: 24, barActive: true,
+            initialized: true, paging: false, markerCovers: true,
+            hitTop: 6, hitBottom: 6, hitGap: 3
+        })
+        const hit = root._findTrayNode(hitCell, item => item.objectName === "workspace-hit")
+        root._check(hit && hit.x === -1.5 && hit.y === -6 && hit.width === 29 && hit.height === 36
+                && hit.data.filter(o => o.cursorShape !== undefined).length === 2,
+            "a workspace's click target spans the bar's height and half the gap to each neighbour")
+        hitCell.destroy()
+        const hitTick = workspaceUrgentTickFactory.createObject(root, {
+            liveId: 9, rowHeight: 24, barActive: true, hitTop: 6, hitBottom: 6
+        })
+        const tickHit = root._findTrayNode(hitTick, item => item.objectName === "workspace-tick-hit")
+        root._check(tickHit && tickHit.y === -6 && tickHit.height === 36 && tickHit.width === hitTick.width
+                && tickHit.data.filter(o => o.cursorShape !== undefined).length === 2,
+            "the off-page urgent arrow's click target spans the bar's height too")
+        hitTick.destroy()
+        const tallStrip = workspaceStripFactory.createObject(root)
+        const stripRow = root._findTrayNode(tallStrip, item => item.objectName === "workspace-strip")
+        root._check(tallStrip.implicitHeight === Metrics.barHeight && tallStrip._rowY > 0
+                && Math.abs(tallStrip._rowY + tallStrip.btnH + tallStrip._rowBelow - tallStrip.height) < 0.01
+                && Math.abs(tallStrip._rowY - tallStrip._rowBelow) < 0.01
+                && stripRow && stripRow.y === tallStrip._rowY && stripRow.height === tallStrip.btnH,
+            "the workspace strip takes the bar's height and keeps its row centred in it")
+        tallStrip.destroy()
     }
 
     function _checksBarPills(): void {

@@ -93,7 +93,10 @@ Item {
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
     implicitWidth:  wsRow.implicitWidth + _tickRoom - _leadTrim - _tailTrim
-    implicitHeight: btnH
+    // the bar's full height, like the other widgets, so its edges reach the buttons; the strip itself stays a centred row
+    implicitHeight: Metrics.barHeight
+    readonly property real _rowY: Math.max(0, (height - btnH) / 2)
+    readonly property real _rowBelow: Math.max(0, height - btnH - _rowY)
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
     readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
@@ -553,6 +556,13 @@ Item {
         }
     }
 
+    Item {
+        id: _strip
+        objectName: "workspace-strip"
+        y: root._rowY
+        width: root.width
+        height: root.btnH
+
     WorkspaceMarker {
         id: marker
         style: ShellSettings.wsActiveMarker
@@ -601,6 +611,9 @@ Item {
                 initialized:  root._initialized
                 paging:       root._paging
                 markerCovers: root.markerCovers
+                hitTop:       root._rowY
+                hitBottom:    root._rowBelow
+                hitGap:       root.gap
 
                 onActivateRequested:      root.activate(wsId)
                 onMoveWindowRequested:     root.moveWindowTo(wsId)
@@ -622,6 +635,9 @@ Item {
         before: root._displayIds.length > 0 && root.urgentOffPage < root._displayIds[0]
         rowHeight: root.btnH
         barActive: root.barActive
+        hitTop: root._rowY
+        hitBottom: root._rowBelow
         onJumpRequested: id => root.activate(id)
+    }
     }
 }
