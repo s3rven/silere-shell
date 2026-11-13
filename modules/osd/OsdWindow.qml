@@ -264,11 +264,9 @@ PanelWindow {
                                     }
                                     height: parent.height
                                     radius: parent.radius
-                                    clip: true
                                     color: card.muted
                                         ? Theme.withAlpha(Theme.subtext, 0.58)
                                         : Theme.withAlpha(card.fillColor, 0.88)
-
                                 }
                             }
 
@@ -284,7 +282,8 @@ PanelWindow {
                                 width: Math.max(Math.ceil(tm.advanceWidth),
                                     Math.min(Math.ceil(_labelMetrics.advanceWidth), card.pillW - card.chromeW)) + 2
                                 horizontalAlignment: Text.AlignRight
-                                elide:          Text.ElideRight
+                                // an output switch reads "name · 45%": a long device name cut the level off its end
+                                elide:          Text.ElideMiddle
                                 text:           card.label
                                 // the glyph and rim carry the alert; a coloured readout only costs contrast
                                 color:          card.muted
