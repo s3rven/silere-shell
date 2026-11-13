@@ -42,6 +42,7 @@ settings file carries its own `__version` and migrates separately.
 - Quick Actions sets its toggles in three groups, with a line between what holds notifications back, what the computer is doing, and the radios; a group with nothing to show takes its line with it.
 - Quick Actions and tray menu rows answer a hover or a press on the same timing as the menu's rows: a press shows at once and a hover fades out a little slower than it came.
 - Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
+- Opening Quick Actions from a keybind lands on its first row, as a tray menu does, and the arrow keys move through the rows straight away instead of after Tab.
 - Settings options that fold away when you switch something off now ease to a stop, instead of the rows below them landing at full speed.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.

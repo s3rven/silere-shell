@@ -11,10 +11,13 @@ AnchoredPopupState {
     property var surfaceScreen: null
     controlSurface: true
     property bool barBottom: false
+    // opened from a keybind: the panel lands on its first row, as a tray menu does
+    property bool keyboardEntry: false
 
     function toggleAt(x: real, screen, bottom: bool, source): void {
         if (open) { close(); return }
         barBottom = bottom
+        keyboardEntry = false
         openAt(x, screen, source)
     }
 
@@ -24,6 +27,7 @@ AnchoredPopupState {
         function toggle(): string {
             if (root.open) { root.close(); return "ok" }
             root.barBottom = Metrics.barAtBottom
+            root.keyboardEntry = true
             root.openUnanchored()
             return root.open ? "ok"
                 : "error: quick actions stay closed while the session is idle or the overview is open"

@@ -23,7 +23,9 @@ FittedPopupWindow {
     Connections {
         target: QuickActionsState
         function onOpenChanged() {
-            if (QuickActionsState.open) card.forceActiveFocus()
+            if (!QuickActionsState.open) return
+            card.forceActiveFocus()
+            if (QuickActionsState.keyboardEntry) Qt.callLater(() => card.focusRow(false))
         }
     }
 
@@ -204,7 +206,23 @@ FittedPopupWindow {
             duration: Motion.normal
         }
 
-        Component.onCompleted: if (QuickActionsState.open) card.forceActiveFocus()
+        Component.onCompleted: if (QuickActionsState.open) {
+            card.forceActiveFocus()
+            if (QuickActionsState.keyboardEntry) Qt.callLater(() => card.focusRow(false))
+        }
+
+        // the card holds the focus as it opens, so the arrows have to reach the rows from here or they do nothing until Tab
+        function focusRow(last: bool): void {
+            if (!QuickActionsState.open) return
+            const rows = _rows.children.filter(r => r.visible && r.enabled && r.activeFocusOnTab)
+            const row = last ? rows[rows.length - 1] : rows[0]
+            if (row) row.forceActiveFocus(Qt.TabFocusReason)
+        }
+        Keys.onPressed: (e) => {
+            if (e.key !== Qt.Key_Down && e.key !== Qt.Key_Up) return
+            e.accepted = true
+            card.focusRow(e.key === Qt.Key_Up)
+        }
 
         Column {
             id: _rows
