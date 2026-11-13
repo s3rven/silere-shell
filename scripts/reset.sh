@@ -147,6 +147,19 @@ _write_settings() {
     [ -L "$SETTINGS" ] || chmod 0600 -- "$SETTINGS"
 }
 
+# one name per line in, "a, b, c and 4 more" out: a cut mid-name reads as a real key
+_names() {
+    awk 'NF { n++; name[n] = $0 }
+        END {
+            for (i = 1; i <= n; i++) {
+                add = (i == 1 ? "" : ", ") name[i]
+                if (i > 1 && length(out add) > (i < n ? 76 : 90)) { printf "%s and %d more", out, n - i + 1; exit }
+                out = out add
+            }
+            printf "%s", out
+        }'
+}
+
 _preview() {
     local keys edited old caches
     keys="$(_changed_settings)"
@@ -162,11 +175,11 @@ _preview() {
     if ! _settings_readable; then
         printf '  %-11s%s\n' "Settings" "settings.json cannot be read; it is saved, then replaced with the defaults"
     elif [ -n "$keys" ]; then
-        printf '  %-11s%s back to defaults: %s\n' "Settings" "$(_count "$keys")" "$(printf '%s\n' "$keys" | paste -sd ' ' | sed 's/ /, /g' | cut -c1-90)"
+        printf '  %-11s%s back to defaults: %s\n' "Settings" "$(_count "$keys")" "$(_names <<<"$keys")"
     fi
     [ -z "$edited" ] || printf '  %-11s%s edited in this checkout, saved in a Git stash and restored to the installed revision\n' "Files" "$(_count "$edited")"
-    [ -z "$old" ] || printf '  %-11s%s from older versions, set aside: %s\n' "Leftovers" "$(_count "$old")" "$(printf '%s\n' "$old" | paste -sd ' ' | sed 's/ /, /g' | cut -c1-90)"
-    [ -z "$caches" ] || printf '  %-11s%s cleared: %s\n' "Caches" "$(du -sh -- "$CACHE_DIR" 2>/dev/null | cut -f1)" "$(printf '%s\n' "$caches" | paste -sd ' ' | sed 's/ /, /g' | cut -c1-90)"
+    [ -z "$old" ] || printf '  %-11s%s from older versions, set aside: %s\n' "Leftovers" "$(_count "$old")" "$(_names <<<"$old")"
+    [ -z "$caches" ] || printf '  %-11s%s cleared: %s\n' "Caches" "$(du -sh -- "$CACHE_DIR" 2>/dev/null | cut -f1)" "$(_names <<<"$caches")"
     printf '\nKept: notification history (--history clears it), hooks, the Matugen palette, autostart and the service.\n'
     printf 'Everything but caches comes back with silere reset --undo.\n\n'
     printf 'Nothing was changed. silere reset --apply does it.\n'

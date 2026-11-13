@@ -2696,6 +2696,11 @@ test_reset_workflow() (
     fill
     before="$(find "$home" "$repo/shell.qml" -type f | sort | xargs sha256sum)"
 
+    # a long list ends on a whole name and a count, never part of a key
+    source <(sed -n '/^_names()/,/^}/p' "$ROOT/scripts/reset.sh")
+    assert_eq "settingNumber01, settingNumber02, settingNumber03, settingNumber04 and 9 more" \
+        "$(printf 'settingNumber%02d\n' $(seq 13) | _names)" "the reset preview shortens a long list by name"
+
     out="$(run_reset)" || fail "the reset preview failed"
     case "$out" in
         *"2 back to defaults: barHeight, dnd"*) ;;
