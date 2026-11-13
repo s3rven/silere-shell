@@ -392,6 +392,7 @@ ShellRoot {
         }
     }
     Component { id: pillFactory; Pill { visible: true; glyph: "a" } }
+    Component { id: detailPillFactory; Pill { readonly property bool layoutVisible: true; glyph: "a"; text: expanded ? "45% · A long detail" : "45%" } }
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
@@ -3895,10 +3896,132 @@ ShellRoot {
             heldRow.forceLayout()
             held.width = heldRow.width + held.horizontalPadding * 2 + 30
             const pinned = heldRow.x === held.horizontalPadding
+            // as in the first frame of a hover reveal: the reading has grown, the width has not caught up
             held.width = heldRow.width + held.horizontalPadding * 2 - 20
-            root._check(pinned && heldRow.x < held.horizontalPadding && heldRow.width > 0,
-                "a pill holding a wider width keeps its content at its padding, and still grows it from the centre")
+            const revealing = heldRow.x === held.horizontalPadding && held.clip
+            held.collapsed = true
+            const folding = heldRow.x < held.horizontalPadding && heldRow.width > 0
+            held.collapsed = false
+            root._check(pinned && revealing && folding && heldRow.x < held.horizontalPadding,
+                "an open pill keeps its content at its padding while its edge uncovers a longer reading, and folds it into the centre and out of it")
             held.destroy()
+        }
+        {
+            const motionWas = ShellSettings.reduceMotion
+            ShellSettings.reduceMotion = true
+            const narrow = pillFactory.createObject(root, { text: "" })
+            const wide = pillFactory.createObject(root, { text: "A long reading on a wide pill" })
+            const capOf = p => p.children.find(item => item.hot !== undefined && item.selected !== undefined)
+            const caps = [capOf(narrow), capOf(wide)]
+            const at = () => caps.map(c => c.parent.width - c.width)
+            const rest = at()
+            caps.forEach(c => c.hot = true)
+            const hot = at()
+            const shown = caps.every(c => c.opacity === 1 && c.visible)
+            caps.forEach(c => { c.hot = false; c.pressed = true })
+            const pressed = at()
+            root._check(caps.every(c => c !== undefined) && wide.width > narrow.width * 3
+                    && rest.every(d => d === 2) && hot.every(d => d === 0) && shown
+                    && pressed.every(d => Math.abs(d - 0.8) < 1e-6),
+                "the bar's hover capsule settles the same pixel onto a narrow pill and a wide one, and dips less on a press")
+            narrow.destroy()
+            wide.destroy()
+            ShellSettings.reduceMotion = false
+            const lv = pillFactory.createObject(root, { text: "45% · A long output name",
+                levelValue: 1, levelVisible: true, shrinkDelay: 0 })
+            lv._ready = true
+            const lvRow = lv.children.find(item => typeof item.forceLayout === "function")
+            const track = lv.children.find(item => item.height === 2 && item.children.length === 2)
+            const glide = lv.data.find(item => item.precision !== undefined && item._advance !== undefined)
+            lv.text = "45%"
+            lvRow.forceLayout()
+            let worst = 0, steps = 0
+            for (; steps < 12 && glide && glide.running; steps++) {
+                glide._advance(0.016)
+                worst = Math.max(worst, track.children[1].width - track.width)
+            }
+            root._check(track !== undefined && steps > 3 && worst < 1,
+                "a pill's level fill keeps inside its track while the pill shrinks, not " + Math.round(worst) + " px past it")
+            lv.destroy()
+
+            root._check(lv.concealsAs("45% · Speakers", "45%", true) && lv.concealsAs("45%", "", true)
+                    && !lv.concealsAs("100%", "10%", false) && !lv.concealsAs("45% · Speakers", "46%", true)
+                    && !lv.concealsAs("45%", "45% · Speakers", true),
+                "only a reading cut back to its own start as a hover closes is drawn on the way out")
+            const gp = pillFactory.createObject(root)
+            gp.text = Qt.binding(() => gp.expanded ? "45% · Speakers" : "45%")
+            gp._ready = true
+            const gpRow = gp.children.find(item => typeof item.forceLayout === "function")
+            const gpGlide = gp.data.find(item => item.precision !== undefined && item._advance !== undefined)
+            gp.hoverActive = true
+            gpRow.forceLayout()
+            gpGlide._snap()
+            const openW = gp.width
+            discoveryClock.wait(1)
+            gp.hoverActive = false
+            gpRow.forceLayout()
+            const ghost = root._findTrayNode(gp, item => item.text === "45% · Speakers" && item.visible)
+            const drawnShort = root._findTrayNode(gp, item => item !== gp && item.text === "45%" && item.visible)
+            const closing = gp._ghostText === "45% · Speakers" && ghost !== null && drawnShort === null
+                && gpGlide.running && gp.clip
+            for (let i = 0; i < 200 && gpGlide.running; i++) gpGlide._advance(0.016)
+            const settled = gp._ghostText === "" && gp.width < openW && !gp.clip
+                && root._findTrayNode(gp, item => item !== gp && item.text === "45%" && item.visible) !== null
+            gp._expandedBefore = false
+            gp.text = "46%"
+            root._check(closing && settled && gp._ghostText === "",
+                "a hover closing keeps the cut-back reading drawn until the pill's edge has closed over it, and a new value never lingers")
+            gp.destroy()
+
+            // the pointer moving from one pill to the next inside a zone keeps the first one's detail open. The pointer is
+            // stood in for: under a loaded check.sh synthetic moves stopped reaching the zone at all. Measured with real
+            // moves in a standalone walk: aimed at a neighbour's centre, 1 of 3 landed before, 3 of 3 after
+            const valuesWas = ShellSettings.valuesOnHover
+            ShellSettings.valuesOnHover = false
+            const zone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {
+                orderKeys: ["network", "volume"], compact: false, height: 36,
+                widgetComponents: { network: detailPillFactory, volume: detailPillFactory }
+            })
+            const netPill = zone ? root._findTrayNode(zone, item => item.holdOpen !== undefined) : null
+            const volPill = zone ? root._findTrayNode(zone, item => item.holdOpen !== undefined && item !== netPill) : null
+            let held = false, bound = false, closed = false, alone = false
+            if (netPill && volPill && netPill !== volPill) {
+                zone.pointerInside = true
+                bound = netPill.holdOpen && volPill.holdOpen
+                volPill.hoverActive = true
+                volPill._pointerChanged(false)
+                held = volPill.expanded
+                netPill.hoverActive = true
+                zone.pointerInside = false
+                closed = !volPill.holdOpen && !volPill.expanded && !netPill.expanded
+                volPill.hoverActive = true
+                volPill._pointerChanged(false)
+                alone = !volPill.expanded
+            }
+            root._check(bound && held && closed && alone,
+                "a pill's hover detail stays open while the pointer moves on inside its bar zone, and every one closes as it leaves")
+            // a popup opened from the zone takes the pointer; the details it found open wait for it to close
+            let popupHeld = false, popupReleased = false, elsewhere = false
+            if (netPill && volPill && netPill !== volPill) {
+                const openWas = OverlayCoordinator._openCount
+                zone.pointerInside = true
+                volPill.hoverActive = true
+                OverlayCoordinator._openCount = 1
+                zone.pointerInside = false
+                volPill._pointerChanged(false)
+                popupHeld = volPill.expanded && zone.holding
+                OverlayCoordinator._openCount = 0
+                popupReleased = !volPill.expanded && !zone.holding
+                // a popup opened while the pointer was elsewhere holds nothing here
+                OverlayCoordinator._openCount = 1
+                elsewhere = !zone.holding
+                OverlayCoordinator._openCount = openWas
+            }
+            root._check(popupHeld && popupReleased && elsewhere,
+                "a popup opened from a bar zone keeps the details it found open until it closes, and one opened elsewhere holds none")
+            zone?.destroy()
+            ShellSettings.valuesOnHover = valuesWas
+            ShellSettings.reduceMotion = motionWas
         }
         pill.text = "A current label"
         pill.animateText = true

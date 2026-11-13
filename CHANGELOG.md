@@ -20,6 +20,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Moving the pointer along the bar keeps each widget's hover detail open until you leave that part of the bar, so the widget you aim at no longer slides away as the last one closes.
+- Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
+- Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
+- The clock and the media title ease their hover highlight in and out the way the other bar widgets do.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
 - The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
@@ -35,8 +39,11 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- With Auto tighten on, hovering a widget on a crowded bar no longer tightens the whole bar and loosens it again.
 - A screen backlight that disappears no longer flashes the brightness display at 0%.
 - Bar weather comes back as soon as a Wi-Fi sign-in page or a lost internet connection clears, instead of up to half an hour later.
+- Hovering a bar widget that shows more on hover no longer makes its icon jump sideways and briefly disappear.
+- A bar widget's level bar no longer sticks out past the widget while it shrinks.
 - Choosing a search result for Artist, Clock format or style, Theme source, Underline mode, or the battery and temperature warnings scrolls to that row and highlights it, as for every other setting.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.
 - The "Notifications blocked" alert no longer comes back each time Settings rechecks your tools, and its row in Settings › System › Overview stays put while it checks.

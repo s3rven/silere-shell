@@ -85,14 +85,20 @@ Item {
         enabled: root._canInteract
         cursorShape: Qt.PointingHandCursor
         onHoveredChanged: {
-            root._datePeek = false
-            if (hovered) _datePeekDelay.restart()
-            else _datePeekDelay.stop()
+            if (hovered) {
+                if (!root._datePeek) _datePeekDelay.restart()
+            } else {
+                _datePeekDelay.stop()
+                if (!root.holdOpen) root._datePeek = false
+            }
         }
     }
 
+    // the pointer is still over the clock's bar zone, so a revealed date waits for it to leave, as the pills' details do
+    property bool holdOpen: false
+    onHoldOpenChanged: if (!holdOpen && !_hover.hovered) root._datePeek = false
     property bool _datePeek: false
-    readonly property bool _dateRevealed: root._datePeek && _hover.hovered
+    readonly property bool _dateRevealed: root._datePeek && (_hover.hovered || root.holdOpen)
         && ShellSettings.valuesOnHover && root._canInteract
 
     on_CanInteractChanged: if (!root._canInteract) {
@@ -112,20 +118,11 @@ Item {
         CalendarState.toggleAt(root.menuAnchorX, root.screen, root)
     }
 
-    Rectangle {
-        anchors.centerIn: parent
-        width: parent.width
-        height: Metrics.barRowHeight
-        radius: Metrics.hoverRadiusFor(height)
-        color: root._pressed ? Theme.barPressed
-            : root._calendarOpen ? Theme.barSelected : Theme.barHover
-        opacity: root._pressed || root._calendarOpen || root._hov ? 1 : 0
-        visible: opacity > 0.001
-        MotionBehavior on opacity {
-            gate: root._animatable
-            NumberAnimation { duration: Motion.fast }
-        }
-        ColorFade on color { gate: root._animatable }
+    HoverCap {
+        hot: root._hov
+        pressed: root._pressed
+        selected: root._calendarOpen
+        gate: root._animatable
     }
 
     Row {

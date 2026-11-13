@@ -14,6 +14,25 @@ Row {
 
     spacing: 0
 
+    // the pointer anywhere over the zone holds its widgets' hover details open: one closing as the pointer moved on slid
+    // its neighbours out from under it, and aimed at a neighbour's centre, two moves in three landed on the next one over;
+    // not readonly, so a test can stand in for the pointer, which synthetic moves cannot reach reliably under load
+    property bool pointerInside: _zoneHover.hovered || _leaveGrace.running
+    HoverHandler {
+        id: _zoneHover
+        onHoveredChanged: if (hovered) _leaveGrace.stop(); else _leaveGrace.restart()
+    }
+    // a dip below the bar and straight back finds the details as they were, instead of folding and reopening them
+    Timer { id: _leaveGrace; interval: 200 }
+    // a popup opened from here takes the pointer (Hyprland's grab lets only the popup hear it), and the details folding
+    // then shifted the whole zone sideways under it as it faded in; they wait for it to close instead
+    property bool _popupHold: false
+    Connections {
+        target: OverlayCoordinator
+        function onAnyOpenChanged() { zone._popupHold = OverlayCoordinator.anyOpen && zone.pointerInside }
+    }
+    readonly property bool holding: zone.pointerInside || zone._popupHold
+
     function _widgetEnabled(key: string): bool {
         if (key.length === 0) return false
         const meta = ShellSettings.barWidgetMeta[key]
@@ -145,6 +164,12 @@ Row {
                 onSourceComponentChanged: loadedKey = ""
                 onActiveChanged: if (!active) loadedKey = ""
                 onLoaded: loadedKey = _slot.key
+            }
+
+            Binding {
+                target: _loader.item && _loader.item.holdOpen !== undefined ? _loader.item : null
+                property: "holdOpen"
+                value: zone.holding
             }
 
             Binding {

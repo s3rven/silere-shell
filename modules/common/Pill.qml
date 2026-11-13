@@ -49,6 +49,12 @@ Item {
     property color  levelColor: Theme.barAccent
 
     property bool   hoverActive: false
+    // the pointer is still over this pill's bar zone, so a revealed detail waits for it to leave the zone
+    property bool   holdOpen: false
+    onHoldOpenChanged: if (!holdOpen && !_pillHover.hovered) {
+        _hoverRevealTimer.stop()
+        hoverActive = false
+    }
     readonly property bool hoverEnabled: root.enabled && root.visible && root.barActive
         && !root.collapsed && !Idle.isIdle
     readonly property bool canActivate: root.interactive && root.hoverEnabled
@@ -86,6 +92,16 @@ Item {
             : Math.max(root.rowWidth, root._minW) + root.horizontalPadding * 2
         duration: Motion.width
         gate: root._ready && root.barActive
+        onRunningChanged: if (!running) {
+            root._unfolding = false
+            root._ghostText = ""
+        }
+    }
+    // true from a collapse or uncollapse until the width glide that follows it settles
+    property bool _unfolding: false
+    onCollapsedChanged: {
+        root._unfolding = true
+        Qt.callLater(function() { if (root && !_widthGlide.running) root._unfolding = false })
     }
 
     onRowWidthChanged: {
@@ -97,7 +113,34 @@ Item {
         if (rowWidth > _minW) _minW = rowWidth
         _shrinkDelay.restart()
     }
-    onTextChanged: if (text.length === 0) root._releaseHold()
+    // a reading cut back as a hover closes stays drawn past the row while the pill's edge closes over it, as the
+    // reveal uncovered it; blinked out, it left the capsule's empty tail to collapse on its own. Only a cut back to
+    // the reading's own start: any other change is a new value, and a stale one must never show
+    property string _ghostText: ""
+    property string _lastText: ""
+    // the pill's state before this update's handlers: a hover closing changes expanded and text in one batch
+    property bool _expandedBefore: false
+    function concealsAs(before: string, after: string, wasExpanded: bool): bool {
+        return wasExpanded && before.length > after.length && before.indexOf(after) === 0
+    }
+    onTextChanged: {
+        const before = root._lastText
+        root._lastText = root.text
+        root._ghostText = ""
+        if (root._ready && root.motionActive && !root.expanded && !root.animateText && root.segments.length === 0
+                && root.concealsAs(before, root.text, root._expandedBefore)) {
+            root._ghostText = before
+            _ghostExpiry.restart()
+        }
+        if (text.length === 0) root._releaseHold()
+    }
+    // the row relays out a frame later, so the glide that clears the ghost has not started yet; with no glide at all,
+    // as when both readings overflow the text cap, nothing closes over it and it goes after the glide's own length
+    Timer {
+        id: _ghostExpiry
+        interval: Motion.width + 120
+        onTriggered: if (!_widthGlide.running) root._ghostText = ""
+    }
     onShrinkDelayChanged: if (shrinkDelay <= 0) { _shrinkDelay.stop(); _minW = rowWidth }
     onCompactChanged: root._releaseHold()
     // the hold is for readings that flicker; a hover reveal closing, compact, or a new font or scale is
@@ -109,7 +152,10 @@ Item {
         _minW = 0
         _release.restart()
     }
-    onExpandedChanged: if (!expanded) root._releaseHold()
+    onExpandedChanged: {
+        if (!expanded) root._releaseHold()
+        Qt.callLater(function() { if (root) root._expandedBefore = root.expanded })
+    }
     Connections {
         target: Settings
         function onFontChanged() { root._releaseHold() }
@@ -141,6 +187,7 @@ Item {
     Component.onCompleted: {
         _shownGlyph = root.glyph
         _nextGlyph = root.glyph
+        _lastText = root.text
         Qt.callLater(function() { if (root) root._ready = true })
     }
 
@@ -151,6 +198,7 @@ Item {
         _nextGlyph = root.glyph
         _glyphText.scale = 1.0
         _textEl.opacity = 1.0
+        _ghostText = ""
         if (root.animateText) _textEl._shown = root.text
     }
 
@@ -180,39 +228,11 @@ Item {
 
     implicitHeight: Math.max(pillH, parent ? parent.height : 0)
     // only while it eases open into wider text, or the scan sweeps in from off-pill; a standing clip node breaks batching
-    clip: _contentScan.active || row.width > width
+    clip: _contentScan.active || _ghostEl.visible || row.x < 0 || row.x + row.width > width
 
-    Rectangle {
-        id: _hoverCap
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        width: parent.width
-        height: root.pillH
-        radius: Metrics.hoverRadiusFor(height)
-        readonly property bool _hover: root.hovered
-            && ShellSettings.barHoverHighlight
-        color: root.visualPressed ? Theme.barPressed : Theme.barHover
-        opacity: (_hover || root.visualPressed) ? 1.0 : 0.0
-        scale: root.visualPressed ? 0.985
-             : _hover ? 1.0 : 0.96
-        transformOrigin: Item.Center
-        visible: opacity > 0.001
-        MotionBehavior on opacity {
-            id: _capFade
-            NumberAnimation {
-                duration: _capFade.targetValue > 0.5 ? Motion.hoverIn : Motion.hoverOut
-                easing.type: Easing.OutCubic
-            }
-        }
-        MotionBehavior on scale {
-            id: _capScale
-            NumberAnimation {
-                duration: _capScale.targetValue >= 1 ? Motion.hoverIn
-                    : _capScale.targetValue > 0.97 ? Motion.press : Motion.hoverOut
-                easing.type: Easing.OutCubic
-            }
-        }
-        ColorFade on color {}
+    HoverCap {
+        hot: root.hovered && ShellSettings.barHoverHighlight
+        pressed: root.visualPressed
     }
 
     Item {
@@ -239,13 +259,16 @@ Item {
         }
 
         Rectangle {
-            width: Math.round(parent.width * Math.max(0, Math.min(1, root.levelValue)))
+            // the level eases, not the width: the track resizes with the pill on every frame of its glide, and a
+            // width behaviour restarted each frame never moved, leaving the fill up to 126 px past a shrinking pill
+            property real _level: Math.max(0, Math.min(1, root.levelValue))
+            width: Math.round(parent.width * _level)
             height: parent.height
             radius: 1
             color: root.levelColor
             opacity: 0.78
 
-            MotionBehavior on width {
+            MotionBehavior on _level {
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
             ColorFade on color {}
@@ -270,9 +293,13 @@ Item {
     // first rounds twice and drops the text a pixel below every other label on the bar
     Row {
         id: row
-        // centred only while the pill eases open around it; a pill holding or releasing a wider width keeps the
-        // content at its padding, or every shorter reading jumped right by half the slack and back when the hold let go
-        x: Math.round(Math.min((parent.width - width) / 2, root.horizontalPadding))
+        // centred only while the pill grows out of nothing or folds into it. Open, the content keeps its padding and
+        // the pill's edge uncovers a longer reading: centred against it, the glyph jumped half the new text's width in
+        // the first frame of every hover reveal, partly clipped, then glided on (measured 14 of 28 px for "45%").
+        // A held or releasing width keeps the padding too, or each shorter reading jumped right by half the slack
+        x: root.collapsed || root._unfolding
+            ? Math.round(Math.min((parent.width - width) / 2, root.horizontalPadding))
+            : root.horizontalPadding
         height: parent.height
         spacing: Metrics.pillGapFor(root.compact)
 
@@ -311,6 +338,8 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 elide:   Text.ElideRight
                 text:    root.animateText ? _shown : root.text
+                // its start is drawn by the ghost, and two copies blend to a bolder line
+                visible: root._ghostText.length === 0
                 color:   root._hoverTextColor
                 font.pixelSize: Settings.fontSize
                 font.features: root.reserveText.length > 0 ? ({ "tnum": 1 }) : ({})
@@ -400,6 +429,21 @@ Item {
         }
     }
 
+    // beside the row, not in it, so the pill's width already follows the shorter reading
+    ShellText {
+        id: _ghostEl
+        visible: root._ghostText.length > 0
+        x: row.x + (_glyphBox.width > 0 ? _glyphBox.width + row.spacing : 0)
+        anchors.verticalCenter: row.verticalCenter
+        width: Math.min(implicitWidth, root.maxTextWidth)
+        elide: Text.ElideRight
+        text: root._ghostText
+        color: root._hoverTextColor
+        font.pixelSize: Settings.fontSize
+        font.features: _textEl.font.features
+        ColorFade on color {}
+    }
+
     Loader {
         id: _contentScan
         active: root.motionActive && root.contentScanEnabled
@@ -455,14 +499,7 @@ Item {
         enabled: root.hoverEnabled
         margin: 0
         cursorShape: root.interactive || root.adjustable ? Qt.PointingHandCursor : Qt.ArrowCursor
-        onHoveredChanged: {
-            if (hovered) {
-                _hoverRevealTimer.restart()
-            } else {
-                _hoverRevealTimer.stop()
-                root.hoverActive = false
-            }
-        }
+        onHoveredChanged: root._pointerChanged(hovered)
     }
 
     TapHandler {
@@ -470,6 +507,15 @@ Item {
         acceptedButtons: Qt.RightButton
         gesturePolicy: TapHandler.ReleaseWithinBounds
         onTapped: root.secondaryActivated()
+    }
+
+    function _pointerChanged(over: bool): void {
+        if (over) {
+            _hoverRevealTimer.restart()
+            return
+        }
+        _hoverRevealTimer.stop()
+        if (!root.holdOpen) root.hoverActive = false
     }
 
     Timer {

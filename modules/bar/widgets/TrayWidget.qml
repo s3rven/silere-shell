@@ -12,6 +12,8 @@ Item {
     property var screen: null
     property bool compact: ShellSettings.barCompact
     property bool barActive: true
+    // the pointer is still over the tray's bar zone, so a revealed app name waits for it to leave, as the pills do
+    property bool holdOpen: false
     property var trayModel: SystemTray.items
     Component.onCompleted: TrayMenuState.recoverOrphanItems()
     readonly property var _trayItems: root.trayModel
@@ -307,7 +309,7 @@ Item {
                             _labelDwell.restart()
                         } else {
                             _labelDwell.stop()
-                            _tile._dwelled = false
+                            if (!root.holdOpen || !root._canInteract) _tile._dwelled = false
                         }
                     }
                 }

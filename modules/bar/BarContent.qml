@@ -85,6 +85,9 @@ Item {
             _compactModeSettle.stop()
             return
         }
+        // details held open under the pointer are not the bar's layout: measured, they could tighten the whole bar
+        // under the pointer and loosen it again on the way out. It is measured once they have closed
+        if (root._pointerOver || _pointerSettle.running) return
 
         // the title is a zone widget, so an empty centre needs no reserve of its own
         const layoutW = _preferredLayoutWidth
@@ -142,6 +145,15 @@ Item {
         id: _compactSync
         interval: 24
         onTriggered: root._syncAutoCompact()
+    }
+
+    readonly property bool _pointerOver: leftZone.holding || centerZone.holding || rightZone.holding
+    on_PointerOverChanged: if (!_pointerOver) _pointerSettle.restart()
+    Timer {
+        id: _pointerSettle
+        // the details' own close, plus the frame or two a held width takes to release
+        interval: Motion.width + 200
+        onTriggered: root._queueAutoCompact()
     }
 
     Timer {
