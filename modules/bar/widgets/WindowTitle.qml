@@ -464,7 +464,7 @@ Item {
     readonly property real _contentCap: Math.max(0, root._textRoom - root._iconSpan)
     TextMetrics {
         id: _textMetrics
-        font.family: Settings.font
+        font.family: Settings.fontForText(root._displayText)
         font.pixelSize: Settings.fontSize
         text: root._displayText
     }

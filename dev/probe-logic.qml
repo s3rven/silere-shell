@@ -3864,6 +3864,21 @@ ShellRoot {
             "a sleeping update badge rejects a late activation signal")
         updateBadge.destroy()
 
+        {
+            // a write through the opacity behaviour would only start a fade
+            const reduceWas = ShellSettings.reduceMotion
+            ShellSettings.reduceMotion = true
+            for (const name of ["SystemWidget", "KeyboardWidget"]) {
+                const pill = Qt.createComponent("modules/bar/widgets/" + name + ".qml").createObject(barFixtureHost)
+                pill.opacity = 0.5
+                const fading = !pill.show && pill.layoutVisible === true
+                pill.opacity = 0
+                root._check(fading && pill.layoutVisible === false,
+                    name + " keeps its bar slot while it fades out, as the other pills do, and gives it up once faded")
+                pill.destroy()
+            }
+            ShellSettings.reduceMotion = reduceWas
+        }
     }
 
     function _checksUnderline(): void {
@@ -6466,6 +6481,20 @@ ShellRoot {
         ShellSettings.reduceMotion = reduceWas
         titleWidget.destroy()
         slot.destroy()
+        }
+        {
+            const fontWas = ShellSettings.fontFamily
+            ShellSettings.fontFamily = "DejaVu Sans"
+            const glyphTitle = windowTitleFactory.createObject(root, { widthBudget: 10000 })
+            glyphTitle._shownVisible = true
+            glyphTitle._shownShowApp = false
+            glyphTitle._shownTitle = "\uF489 notes.md in a project"
+            const drawn = root._findTrayNode(glyphTitle, item => item.textFormat === Text.StyledText)
+            root._check(Settings.font !== Settings.iconFont && drawn !== null
+                    && Math.abs(glyphTitle._fullTextWidth - Math.ceil(drawn.implicitWidth)) <= 1,
+                "a title carrying an icon glyph is measured in the font it is drawn in, so it elides only where it overflows")
+            glyphTitle.destroy()
+            ShellSettings.fontFamily = fontWas
         }
     }
 
