@@ -17,12 +17,20 @@ Item {
 
     readonly property bool shown: liveId > 0
     property int targetWs: 0
+    // the strip's side flips to before once nothing is urgent, possibly ahead of liveId: a fading arrow keeps its own
+    property bool _shownBefore: false
+    function _latchSide(): void { if (root.shown) root._shownBefore = root.before }
+    onBeforeChanged: Qt.callLater(root._latchSide)
 
     onLiveIdChanged: if (liveId > 0) {
         if (targetWs !== liveId) _pulseSettled = false
         targetWs = liveId
+        Qt.callLater(root._latchSide)
     }
-    Component.onCompleted: if (liveId > 0) targetWs = liveId
+    Component.onCompleted: if (liveId > 0) {
+        targetWs = liveId
+        _shownBefore = before
+    }
 
     implicitWidth: Math.max(rowHeight, Math.ceil(_label.implicitWidth) + 12)
     width: implicitWidth
@@ -67,7 +75,7 @@ Item {
     ShellText {
         id: _label
         anchors.centerIn: parent
-        text: (root.before ? "‹ " : "› ") + root.targetWs
+        text: (root._shownBefore ? "‹ " : "› ") + root.targetWs
         font.pixelSize: Settings.fontLabel
         color: Theme.warning
         opacity: root._pulse * ((_tickHover.hovered) ? 1.0 : 0.9)

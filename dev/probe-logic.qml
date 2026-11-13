@@ -4707,6 +4707,19 @@ ShellRoot {
         urgentTick._jump()
         root._check(urgentJumps === 1, "a fading urgent-workspace indicator cannot jump to its stale target")
         urgentTick.destroy()
+        const sideTick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
+            liveId: 9, rowHeight: 24, barActive: true, before: false
+        })
+        const sideLabel = () => root._findTrayNode(sideTick, item => item.text !== undefined)?.text ?? ""
+        sideTick.before = true
+        sideTick.liveId = 0
+        discoveryClock.wait(1)
+        const fadingSide = sideLabel()
+        sideTick.liveId = 2
+        discoveryClock.wait(1)
+        root._check(fadingSide === "› 9" && sideLabel() === "‹ 2",
+            "a fading urgent-workspace arrow keeps its side while the strip clears it, and the next one takes its own")
+        sideTick.destroy()
         crossingCell.destroy()
         ShellSettings.workspaceShift = shiftWas
         ShellSettings.reduceMotion = reduceMotionWas

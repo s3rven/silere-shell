@@ -39,6 +39,7 @@ settings file carries its own `__version` and migrates separately.
 - Muting the Unknown page in History mutes notifications from senders with no name.
 - The workspace-changed hook runs when you switch between two named Hyprland workspaces and gets the workspace's name, instead of -1338; it is no longer called with -1 while niri restarts.
 - Clicking a notification on a named Hyprland workspace can take you to the app's window on another named workspace, instead of the one already in front of you.
+- The arrow pointing to an urgent workspace off the page no longer flips direction as it fades out.
 - Home's Wi-Fi and VPN lists close when the adapter, NetworkManager or the last VPN profile goes away, instead of staying open under a missing row.
 - A track change while Now Playing scrolls a long title starts the new title from its first letter.
 - Tray menu radio entries are announced as radio buttons, and Now Playing's length label and the tray menu's Hide from bar are no longer offered to screen readers while covered or closed.
