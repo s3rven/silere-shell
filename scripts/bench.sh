@@ -333,6 +333,8 @@ cpu_model="$(awk -F': ' '/^model name/{print $2; exit}' /proc/cpuinfo 2>/dev/nul
 kernel="$(uname -r 2>/dev/null || true)"
 qs_version="$(qs --version 2>/dev/null | first_line || true)"
 qs_version="${qs_version# }"
+# distro builds have no git revision and print an empty one
+qs_version="${qs_version/(revision , /(}"
 version="$(git -C "$repo" describe --tags --always --dirty 2>/dev/null || true)"
 settings_file="${XDG_CONFIG_HOME:-$HOME/.config}/silere-shell/settings.json"
 font_family="$(sed -n 's/.*"fontFamily"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
