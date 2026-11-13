@@ -17,6 +17,11 @@ runs structural, service, UI interaction and layout checks. Probes use private
 configuration directories and isolated session buses when the required tools are
 installed. A skipped probe leaves that part of the change unverified.
 
+Behaviour checks live in `dev/probe-logic.qml`, whose `_run()` calls one function per
+area in order, such as `_checksNotificationHistory()`. Add a check to the function for
+its area, and put back any setting it changes before that function returns: every
+section runs in the same shell.
+
 ## Display scaling and layouts
 
 Interface size and display scale affect different parts of the layout. The fit

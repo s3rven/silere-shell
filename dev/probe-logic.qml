@@ -2916,6 +2916,40 @@ ShellRoot {
     }
 
     function _run(): void {
+        root._checksRailScrollAndMic()
+        root._checksControlFillsAndWidgetCatalog()
+        root._checksWorkspaceScrollAndMenuWarm()
+        root._checksWindowActivationAndMarker()
+        root._checksBarPills()
+        root._checksUnderline()
+        root._checksVisualizerAndRim()
+        root._checksCountdownsAndClockSteps()
+        root._checksSurfaceGatingAndDropdowns()
+        root._checksConfirmButtonsAndCpuSensors()
+        root._checksWorkspaceHandoffAndSettingsFile()
+        root._checksSettingsMarksAndVisualizerProfiles()
+        root._checksNotificationHistory()
+        root._checksSettingsSearchAndText()
+        root._checksWindowTextAndToolOutput()
+        root._checksWindowTitle()
+        root._checksMediaWidgetAndTime()
+        root._checksNowPlayingAndHomeDisplays()
+        root._checksRailWavesAndAudioRoutes()
+        root._checksAudioAndSliders()
+        root._checksUpdatesSysInfoAndGestures()
+        root._checksShellUpdate()
+        root._checksPowerModeAndPresentation()
+        root._checksKeyboardNavigationAndAlerts()
+        root._checksNightLightAndSensors()
+        root._checksBatteryAndHooks()
+        root._checksDispatchAndNotificationOwner()
+        root._checksAccentBalanceAndAnchors()
+        root._checksNotificationStatePruning()
+        root._checksDisplayIdentityAndBluetoothDiscovery()
+        root._checksBluetoothBrightnessAndHookQueue()
+    }
+
+    function _checksRailScrollAndMic(): void {
         root._checkSmoothGlide()
         root._checkPageLayout()
         root._checkAccessibleControls()
@@ -3152,7 +3186,10 @@ ShellRoot {
                 && !cap({ "target.object": "alsa_input.pci-0000_06_00.6.analog-stereo" })
                 && !cap({ "target.object": "bluez_input.F4_9D_8A_18_02_3B.0" }),
             "a stream recording a real source still counts as a microphone in use")
+    }
 
+
+    function _checksControlFillsAndWidgetCatalog(): void {
         const buttonIdle = Theme.buttonFill(Theme.accent, false, false)
         const buttonHover = Theme.buttonFill(Theme.accent, true, false)
         const buttonPress = Theme.buttonFill(Theme.accent, true, true)
@@ -3228,7 +3265,9 @@ ShellRoot {
                 && ShellSettings._defaults.barWidgetOrderRight
                     === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,clock",
             "the widget catalog derives the shipped default layout")
+    }
 
+    function _checksWorkspaceScrollAndMenuWarm(): void {
         const workspaceStrip = workspaceStripFactory.createObject(root)
         const workspaceScrollWas = ShellSettings.wsScrollSwitch
         ShellSettings.wsScrollSwitch = true
@@ -3423,7 +3462,9 @@ ShellRoot {
         root._check(!MenuState.warmRequested && MenuState.warmScreen === null,
             "releasing the warm owner returns the menu loader to idle")
         workspaceStrip.destroy()
+    }
 
+    function _checksWindowActivationAndMarker(): void {
         const kittyGuess = { pid: 1638, cls: "kitty", ref: "c" }
         root._check(WindowActions.focusIsSourceApp(kittyGuess, [
                     { pid: 1638, cls: "kitty", ref: "a", focused: false },
@@ -3585,6 +3626,9 @@ ShellRoot {
             "a page change still places the marker at once")
         glideMarker.destroy()
 
+    }
+
+    function _checksBarPills(): void {
         const pill = pillFactory.createObject(root)
         pill._ready = true
         pill.interactive = true
@@ -3767,6 +3811,9 @@ ShellRoot {
             "a sleeping update badge rejects a late activation signal")
         updateBadge.destroy()
 
+    }
+
+    function _checksUnderline(): void {
         const underline = barUnderlineFactory.createObject(root)
         root._check(underline !== null, "the reactive underline builds")
         if (underline) {
@@ -3911,7 +3958,9 @@ ShellRoot {
             }
         }
         underline.destroy()
+    }
 
+    function _checksVisualizerAndRim(): void {
         const visualizer = mediaVisualizerFactory.createObject(root, { width: 200, height: 20 })
         const edgeGradients = []
         const edgeContext = {
@@ -4028,7 +4077,9 @@ ShellRoot {
         root._check(fadingRim._band === 20,
             "an oversized glow band cannot invert its inner rectangle")
         fadingRim.destroy()
+    }
 
+    function _checksCountdownsAndClockSteps(): void {
         const notificationCard = notificationCardFactory.createObject(root)
         const clock = Qt.createQmlObject("import QtQuick; QtObject { signal tick() }", root)
         const ownWas = notificationCard._ownCountdown.running
@@ -4196,7 +4247,9 @@ ShellRoot {
         root._check(steppedTimer !== null && steppedTimer.interval <= 5000,
             "a notification stamped before the wall clock stepped back keeps its own timeout")
         steppedCard.destroy()
+    }
 
+    function _checksSurfaceGatingAndDropdowns(): void {
         const holdOpenWas = OverlayCoordinator._openCount
         const holdListWas = Notifications.list
         const holdCriticalWas = Notifications.lastCritical
@@ -4329,6 +4382,9 @@ ShellRoot {
         if (firstSelect) firstSelect.destroy()
         if (secondSelect) secondSelect.destroy()
 
+    }
+
+    function _checksConfirmButtonsAndCpuSensors(): void {
         const confirmButton = confirmButtonFactory.createObject(root)
         root._confirmActions = 0
         confirmButton.request()
@@ -4451,7 +4507,9 @@ ShellRoot {
         CpuTemp._detectGeneration = tempGenerationWas
         ShellSettings.osdTempWarn = tempWarningWas
         CpuTemp._started = tempStartedWas
+    }
 
+    function _checksWorkspaceHandoffAndSettingsFile(): void {
         const shiftWas = ShellSettings.workspaceShift
         const reduceMotionWas = ShellSettings.reduceMotion
         ShellSettings.workspaceShift = true
@@ -4681,6 +4739,9 @@ ShellRoot {
         // per-key tracking gates on a completed load, which this offscreen probe never gets
         root._check(Object.keys(ShellSettings.modifiedSections).length === 0,
             "an unmodified settings file marks no settings page")
+    }
+
+    function _checksSettingsMarksAndVisualizerProfiles(): void {
         const savedLoaded = ShellSettings._loaded
         ShellSettings._loaded = true
 
@@ -5009,7 +5070,9 @@ ShellRoot {
                 fastestViz = Math.max(fastestViz, Media.vizProfile(style, preset, false).fps)
         root._check(Media.cavaEnvironment.PIPEWIRE_LATENCY === "1024/48000" && 48000 / 1024 >= 0.9 * fastestViz,
             "cava asks PipeWire for its stock quantum, not 512 frames, and that still feeds the fastest preset")
+    }
 
+    function _checksNotificationHistory(): void {
         // history is restored from JSON an older release wrote, so entry shape is not given
         root._check(Notifications._normalizeEntry(null) === null,
             "a null history entry is dropped")
@@ -5604,6 +5667,9 @@ ShellRoot {
         ShellSettings.dndTo = savedTo
         ShellSettings.dndSchedule = savedDnd
 
+    }
+
+    function _checksSettingsSearchAndText(): void {
         const savedSection = MenuState.settingsSection
         root._check(MenuState._settingsSearchEntries.length === MenuState._flatSections.length
                 && MenuState._settingsSearchEntries.every(row => MenuState._flatSections.indexOf(row.section) >= 0),
@@ -6001,7 +6067,9 @@ ShellRoot {
             "icon resolver keeps a joined emoji grapheme whole")
         root._check(SafeText.boundedText("ab👩🏽‍💻cd", 8) === "ab…",
             "text clipping never splits a joined emoji grapheme")
+    }
 
+    function _checksWindowTextAndToolOutput(): void {
         const longWindowText = "x".repeat(Compositor.maxWindowTitleChars + 20)
         const boundedWindowText = SafeText.singleLineText(
             longWindowText, Compositor.maxWindowTitleChars)
@@ -6204,7 +6272,9 @@ ShellRoot {
         root._check(SafeText.lastNonEmptyLine("", "fallback") === "fallback"
                 && SafeText.lastNonEmptyLine("   \n  \n", "fallback") === "fallback",
             "lastNonEmptyLine falls back on blank output")
+    }
 
+    function _checksWindowTitle(): void {
         const titleWidget = windowTitleFactory.createObject(root, {
             widthBudget: 10000
         })
@@ -6281,7 +6351,9 @@ ShellRoot {
         titleWidget.destroy()
         slot.destroy()
         }
+    }
 
+    function _checksMediaWidgetAndTime(): void {
         const mediaComponent = Qt.createComponent("modules/bar/widgets/MediaWidget.qml")
         const mediaShownWas = Media.shown
         const showMediaWas = ShellSettings.barShowMedia
@@ -6484,6 +6556,9 @@ ShellRoot {
                 && Media.formatRemaining(9999, 302) === "\u22120:00"
                 && Media.formatElapsed(64.9, 485.4) === "1:04",
             "the time left and the elapsed time add up to the length shown, and never run below zero")
+    }
+
+    function _checksNowPlayingAndHomeDisplays(): void {
         const mediaPageComponent = Qt.createComponent("modules/menu/MediaPage.qml")
         const mediaPage = mediaPageComponent.status === Component.Ready
             ? mediaPageComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null
@@ -6615,6 +6690,9 @@ ShellRoot {
             host.close()
             host.destroy()
         }
+    }
+
+    function _checksRailWavesAndAudioRoutes(): void {
         root._check(MenuState.tabPosition(MenuState.mediaTab) === 3
                 && MenuState._validTab(MenuState.mediaTab) === MenuState.mediaTab
                 && MenuState.mediaActive === (MenuState.open && MenuState.activeTab === MenuState.mediaTab)
@@ -6775,6 +6853,9 @@ ShellRoot {
         root._volumeCancelProbe = volumeControl
         root._volumeCancelDeadline = Date.now() + 1000
         _volumeCancelCheck.restart()
+    }
+
+    function _checksAudioAndSliders(): void {
         const near = (a, b) => Math.abs(a - b) < 0.0001
         root._check(near(Audio._out._stepFrom(0.43, 0.05), 0.45)
                 && near(Audio._out._stepFrom(0.43, -0.05), 0.40)
@@ -7141,7 +7222,9 @@ ShellRoot {
             "changing a colour slider wheel key clears the old control's unfinished gesture")
         Scroll.resetControl(oldGradientKey)
         gradient.destroy()
+    }
 
+    function _checksUpdatesSysInfoAndGestures(): void {
         const toolsWas = SystemTools._tools
         const familyWas = SystemTools.packageFamily
         const readyWas = SystemTools.ready
@@ -7948,7 +8031,9 @@ ShellRoot {
         SystemTools.packageFamily = familyWas
         SystemTools.ready = readyWas
         ShellSettings.updatesIncludeAur = includeAurWas
+    }
 
+    function _checksShellUpdate(): void {
         const commitLines = []
         for (let i = 0; i < ShellUpdate.maxCommitDetail + 20; i++)
             commitLines.push("abcdef" + i + " " + "subject".repeat(100))
@@ -8102,7 +8187,9 @@ ShellRoot {
         }
         ShellSettings.barShowShellUpdate = shellUpdateShownWas
         for (const key of Object.keys(checkoutStateWas)) ShellUpdate[key] = checkoutStateWas[key]
+    }
 
+    function _checksPowerModeAndPresentation(): void {
         root._check(PowerProfiles.profileName(0) === "power-saver"
                 && PowerProfiles.profileName(1) === "balanced"
                 && PowerProfiles.profileName(2) === "performance"
@@ -8487,7 +8574,9 @@ ShellRoot {
         Notifications.presentationMode = false
         root._check(Notifications.activeCount === 0,
             "ending presentation mode does not replay retired notification cards")
+    }
 
+    function _checksKeyboardNavigationAndAlerts(): void {
         const keyboard = keyboardFixtureFactory.createObject(root)
         keyboard.input.wait(1)
         const railComponent = Qt.createComponent("file://" + Quickshell.shellDir + "/modules/menu/RailNavItem.qml")
@@ -8779,6 +8868,9 @@ ShellRoot {
         root._check(DateTime._lastMinute === Qt.formatDateTime(new Date(), "yyyyMMddHHmm")
                 && !DateTime._resync,
             "a stale clock catches up to the wall clock on a wake-time event")
+    }
+
+    function _checksNightLightAndSensors(): void {
 
         // auto is a mode, not a value: it must never consume the hand-picked temperature
         const autoWas = ShellSettings.nightLightAuto
@@ -8955,7 +9047,9 @@ ShellRoot {
                 && !CpuTemp._detectionIsCurrent(40),
             "a canceled CPU sensor discovery cannot publish into a newer request")
         CpuTemp._detectGeneration = cpuDetectGenerationWas
+    }
 
+    function _checksBatteryAndHooks(): void {
         root._check(Battery.normalizedPercent(0.64) === 64
                 && Battery.normalizedPercent(1) === 100
                 && Battery.normalizedPercent(1.4) === 100
@@ -9201,6 +9295,9 @@ ShellRoot {
                 : Hooks._runner0.timeoutMs === Hooks.maxRuntimeMs,
             "the in-shell hook timer backstops the wrapper instead of racing it")
 
+    }
+
+    function _checksDispatchAndNotificationOwner(): void {
         // the lua config framework replaces the plain dispatchers, so the two
         // dispatch forms are the difference between switching and doing nothing
         const luaWas = HyprDispatch.useLua
@@ -9459,7 +9556,9 @@ ShellRoot {
             "a notification-owner recheck clears stale conflict state immediately")
         root._check(NotifWatch._sandboxed && !NotifWatch._checked,
             "a sandboxed shell does not report the desktop notification owner as a conflict")
+    }
 
+    function _checksAccentBalanceAndAnchors(): void {
         const hues = [0, 30, 90, 150, 210, 270, 330]
         for (let i = 0; i < hues.length; i++) {
             const expected = hues[i]
@@ -9557,7 +9656,9 @@ ShellRoot {
         QuickActionsState.anchorX = 512
         root._check(QuickActionsState.effectiveAnchorX === 512,
             "an anchorless quick actions open falls back to the published anchor x")
+    }
 
+    function _checksNotificationStatePruning(): void {
         Notifications._seen  = { "41": true, "42": true }
         Notifications._times = { "41": 1000, "42": 2000 }
         Notifications._forgetTrimmed(["41"])
@@ -9697,7 +9798,10 @@ ShellRoot {
         root._check(Notifications.historyCount === 2,
             "a batched popup clear archives every notification")
         Notifications.clearHistory()
+    }
 
+
+    function _checksDisplayIdentityAndBluetoothDiscovery(): void {
         const scanAdapterWas = Bluetooth._scanAdapter
         const dockDisplay = { name: "DP-1", model: "Fixture display", serialNumber: "12345" }
         const reconnectedDisplay = Object.assign({}, dockDisplay, { name: "DP-3" })
@@ -9800,7 +9904,9 @@ ShellRoot {
             "a Bluetooth picker closed before its discovery start lands still stops that discovery")
         Bluetooth._scanAdapter = scanAdapterWas
         Bluetooth._scanRequested = scanRequestedWas
+    }
 
+    function _checksBluetoothBrightnessAndHookQueue(): void {
         root._check(Bluetooth._toggleStep(true, false, false) === "unblock"
                 && Bluetooth._toggleStep(true, true, false) === ""
                 && Bluetooth._toggleStep(false, false, false) === "on"
