@@ -12,7 +12,7 @@ Singleton {
     readonly property bool capsAvailable: root._capsPath.length > 0
     property string _capsPath: ""
     property int _capsFailures: 0
-    readonly property bool _wanted: ShellSettings.barShowKeyboard && !Idle.isQuiet
+    readonly property bool _wanted: ShellSettings.barShowKeyboard && !Idle.isQuiet && !OverviewState.active
     // compositors report xkb's description ("Ukrainian"); the registry beside the keymaps names its code ("ua")
     property var _layoutCodes: ({})
     function layoutCodesFrom(raw: string): var {

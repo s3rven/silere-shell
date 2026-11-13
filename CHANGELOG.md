@@ -45,6 +45,7 @@ settings file carries its own `__version` and migrates separately.
 - Switching outputs at the level just shown still shows the device name in the on-screen display.
 - The bar's on-screen display no longer flashes the accent colour over a battery or temperature alert.
 - Tray menu radio entries are announced as radio buttons, and Now Playing's length label and the tray menu's Hide from bar are no longer offered to screen readers while covered or closed.
+- The Caps Lock light is no longer read while the overview hides the bar.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Home no longer shows an empty Connectivity section on a wired desktop with no Bluetooth and no saved VPN.

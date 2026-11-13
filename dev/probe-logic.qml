@@ -2263,6 +2263,13 @@ ShellRoot {
         InputState._capsReadFailed()
         root._check(!InputState.capsAvailable && !InputState.capsLock && InputState._capsRetry.running,
             "an unplugged Caps Lock sensor clears its stale state and resumes discovery")
+        const overviewWas = OverviewState._hyprActive
+        OverviewState._hyprActive = true
+        const overviewQuiet = OverviewState.active && !InputState._wanted && !InputState._capsRetry.running
+        OverviewState._hyprActive = overviewWas
+        settle()
+        root._check(overviewQuiet && InputState._wanted && InputState._capsRetry.running,
+            "the Caps Lock light is not read while the overview hides the bar, as the bar's other readings are not")
         ShellSettings.barShowKeyboard = false
         InputState.refreshCaps()
         root._check(!lookup.running && !InputState._capsRetry.running,
