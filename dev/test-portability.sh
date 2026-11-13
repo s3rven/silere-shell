@@ -26,6 +26,14 @@ assert_eq() {
     [ "$actual" = "$expected" ] || fail "$label (expected '$expected', got '$actual')"
 }
 
+# CI installs these on purpose: under SILERE_REQUIRE_TOOLS, set by its lint run, a missing one fails the test
+# instead of letting it pass untested
+skip_without() { # tool what-goes-untested
+    command -v "$1" >/dev/null 2>&1 && return 1
+    [ "${SILERE_REQUIRE_TOOLS:-0}" = 1 ] && fail "$1 is not installed, so $2 went untested"
+    printf 'SKIP: %s not installed; %s not tested\n' "$1" "$2"
+}
+
 # kill -0 succeeds on a zombie, and an orphan killed under a PID 1 that never reaps
 # stays one — which is every container job, GitHub Actions included
 _pid_running() { # $1 = pid
@@ -2920,7 +2928,7 @@ test_reset_workflow() (
 
 # a checkout path with quotes, a backslash and spaces still gives the preview a menu shortcut that names it
 test_try_config_quotes_paths() (
-    command -v lua >/dev/null 2>&1 || return 0
+    skip_without lua "the preview's quoted config paths" && return 0
     local fixture="$TMP/try it's \"odd\" \\here" stubs="$TMP/try-stubs" out="$TMP/try-out" cmd kdl
     mkdir -p "$fixture/scripts/lib" "$stubs" "$out"
     cp "$ROOT/scripts/try.sh" "$fixture/scripts/try.sh"
@@ -3095,10 +3103,7 @@ test_startup_failure_report() (
 )
 
 test_fish_completion_scope() (
-    if ! command -v fish >/dev/null 2>&1; then
-        printf 'SKIP: fish not installed; fish completions not tested\n'
-        return 0
-    fi
+    skip_without fish "fish completions" && return 0
     local home="$TMP/fish-home" top bash_top command offered word
     mkdir -p "$home/stubs"
     # the ipc helpers call silere, which must never reach a running shell from here

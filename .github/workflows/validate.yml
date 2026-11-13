@@ -177,7 +177,7 @@ jobs:
     steps:
       - name: Install validation dependencies
         run: |
-          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd actionlint util-linux
+          pacman -Syu --noconfirm git openssh shellcheck quickshell python fontconfig ttf-jetbrains-mono-nerd actionlint util-linux lua fish
           fc-cache -f >/dev/null
 
       # pinned to an immutable sha so a moved tag cannot run unreviewed code
