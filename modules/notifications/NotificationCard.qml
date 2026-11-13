@@ -96,9 +96,12 @@ Item {
 
     Accessible.role: Accessible.Notification
     Accessible.name: card.appNameText.length > 0
-        ? card.appNameText + ": " + card.summaryText : card.summaryText
-    Accessible.description: card.earlierCount > 0
-        ? card.bodyText + ". " + card.earlierCount + " earlier" : card.bodyText
+        ? card.appNameText + ": " + card.titleText : card.titleText
+    Accessible.description: {
+        const parts = card.hasBody ? [card.bodyText] : []
+        if (card.earlierCount > 0) parts.push(card.earlierCount + " earlier")
+        return parts.join(". ")
+    }
     Accessible.focusable: card._canInteract
     Accessible.onPressAction: card.activatePrimary()
     KeyboardFocus { onActivated: card.activatePrimary() }
@@ -116,7 +119,9 @@ Item {
     readonly property string appNameText: Notifications.identityText(notification.appName)
     readonly property string fallbackInitial: SafeText.initial(
         card.appNameText || card.summaryText, "N")
-    readonly property bool hasBody:       bodyText.length > 0
+    // with no summary the body takes the title line, which otherwise drew blank above it
+    readonly property string titleText:   summaryText.trim() || bodyText.trim() || "Notification"
+    readonly property bool hasBody:       bodyText.length > 0 && summaryText.trim().length > 0
     // messages this card folded in from the same app and sender, oldest first
     // dismiss() pins it: the service forgets a thread as soon as its notification closes, mid-exit for a withdrawn card
     property var           _thread:       Notifications.threadFor(card.notifId)
@@ -591,13 +596,10 @@ Item {
                 font.weight: Font.DemiBold
             }
 
-            IconImage {
+            ShellIcon {
                 id: _headerIcon
                 anchors.fill: parent
-                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-                transform: PixelSnap { item: _headerIcon; dpr: _headerIcon._dpr }
-                // without this the themed icon decodes at its native size (often 256px+) to paint 24px
-                implicitSize: 24
+                side: card._iconSide
                 // a deleted temp icon is still a valid path, so only the load failing reveals it
                 property bool _fellBack: false
                 readonly property string _primary: card.hasNotificationImage
@@ -648,8 +650,8 @@ Item {
                     anchors.left:       _critIcon.visible ? _critIcon.right : parent.left
                     anchors.leftMargin: _critIcon.visible ? 6 : 0
                     anchors.right:      parent.right
-                    anchors.rightMargin: 30
-                    text:             card.summaryText
+                    anchors.rightMargin: card._iconSide + 6
+                    text:             card.titleText
                     // glyph, rim and ring already carry urgency; red text on the red-tinted fill only costs contrast
                     color:            Theme.text
                     font.pixelSize:   Settings.fontSize + 1

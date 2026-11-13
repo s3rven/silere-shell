@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
@@ -200,16 +199,12 @@ Item {
                             ColorFade on color {}
                         }
 
-                        IconImage {
+                        ShellIcon {
                             id: _rowIcon
                             anchors.centerIn: parent
                             anchors.alignWhenCentered: false
-                            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-                            transform: PixelSnap { item: _rowIcon; dpr: _rowIcon._dpr }
-                            width: 16
-                            height: 16
+                            side: 16
                             visible: !_row.isAll && status === Image.Ready
-                            implicitSize: 16
                             asynchronous: true
                             property bool _fellBack: false
                             readonly property string _primary: {

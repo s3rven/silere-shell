@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 import "../../config"
 import "../../services"
 import "../common"
@@ -853,14 +852,11 @@ PageShell {
                                         font.weight: Font.DemiBold
                                     }
 
-                                    IconImage {
+                                    ShellIcon {
                                         id: _recentAppIcon
                                         anchors.fill: parent
-                                        readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-                                        transform: PixelSnap { item: _recentAppIcon; dpr: _recentAppIcon._dpr }
                                         visible: status === Image.Ready
-                                        // without this the themed icon decodes at its native size (often 256px+) to paint 16px
-                                        implicitSize: 16
+                                        side: 16
                                         // a deleted temp icon is still a valid path, so only the load failing reveals it
                                         property bool _fellBack: false
                                         readonly property string _primary: _entry._appIconSource
@@ -891,7 +887,8 @@ PageShell {
                                 id: _summary
                                 width: Math.max(0, parent.width
                                     - (_metaRow.visible ? 0 : _entry._rightGutter))
-                                text: _entry.modelData.summary || "Notification"
+                                text: (_entry.modelData.summary || "").trim()
+                                    || (_entry.modelData.body || "").trim() || "Notification"
                                 color: Theme.text
                                 // bottom-most text owes the chevron its corner
                                 rightPadding: _body.visible || _entry._chevronInline ? 0 : 16
@@ -908,7 +905,8 @@ PageShell {
                                 width: parent.width
                                 rightPadding: 16
                                 visible: text.length > 0
-                                text: _entry.modelData.body || ""
+                                text: (_entry.modelData.summary || "").trim().length > 0
+                                    ? _entry.modelData.body || "" : ""
                                 color: Theme.withAlpha(Theme.text, 0.78)
                                 font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.Wrap

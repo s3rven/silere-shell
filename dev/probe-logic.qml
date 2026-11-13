@@ -537,6 +537,30 @@ ShellRoot {
         }
     }
 
+    Component {
+        id: notificationIconWindowFactory
+        FloatingWindow {
+            visible: true
+            implicitWidth: 400
+            implicitHeight: 560
+            property alias card: iconCard
+            property alias input: iconInput
+            TestCase { id: iconInput; when: false }
+            NotificationCard {
+                id: iconCard
+                width: 320
+                notification: ({
+                    actions: [], hints: ({}), appIcon: "/usr/share/pixmaps/silere-probe-absent.png",
+                    image: "", appName: "silere-probe-absent", desktopEntry: "", summary: "Icon probe",
+                    body: "", urgency: 1, expireTimeout: 0, resident: false, transient: false,
+                    hasInlineReply: false
+                })
+                notifId: 2147483642
+                createdAt: Date.now()
+            }
+        }
+    }
+
     property var _timeoutProbe: null
     property var _killProbe: null
     property var _orphanCheck: null
@@ -2992,6 +3016,7 @@ ShellRoot {
         root._checksDispatchAndNotificationOwner()
         root._checksAccentBalanceAndAnchors()
         root._checksNotificationStatePruning()
+        root._checksNotificationTitlesIconsAndLimit()
         root._checksDisplayIdentityAndBluetoothDiscovery()
         root._checksBluetoothBrightnessAndHookQueue()
     }
@@ -10144,6 +10169,70 @@ ShellRoot {
         Notifications.clearHistory()
     }
 
+    function _checksNotificationTitlesIconsAndLimit(): void {
+        const titleTemplate = {
+            actions: [], hints: ({}), appIcon: "", image: "", appName: "Probe", desktopEntry: "",
+            summary: "Task finished", body: "", urgency: 1, expireTimeout: 0,
+            resident: false, transient: false, hasInlineReply: false
+        }
+        const titled = notificationCardFactory.createObject(root, { width: 320, notification: titleTemplate })
+        const bodyOnly = notificationCardFactory.createObject(root, { width: 320,
+            notification: Object.assign({}, titleTemplate, { summary: "", body: "Task finished" }) })
+        const blank = notificationCardFactory.createObject(root, { width: 320,
+            notification: Object.assign({}, titleTemplate, { summary: " ", body: "" }) })
+        root._check(bodyOnly._collapseBasis === titled._collapseBasis
+                && bodyOnly.Accessible.name === "Probe: Task finished"
+                && bodyOnly.Accessible.description === ""
+                && blank.Accessible.name === "Probe: Notification",
+            "a notification with no summary shows its body as the title, not under a blank bold line")
+        bodyOnly._thread = ({ count: 3, lines: ["Started", "Halfway"] })
+        root._check(bodyOnly.earlierCount === 2 && bodyOnly.Accessible.description === "2 earlier",
+            "a threaded notification whose body is its title says only how many came earlier")
+        for (const card of [titled, bodyOnly, blank]) card.destroy()
+
+        const openWas = MenuState.open
+        const filterWas = MenuState.recentFilter
+        MenuState.open = true
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 9301, appName: "silere-probe-absent", summary: "",
+            body: "Task finished", appIcon: "/usr/share/pixmaps/silere-probe-absent.png", time: Date.now() })
+        const host = notificationIconWindowFactory.createObject(root)
+        const pageComponent = Qt.createComponent("modules/menu/RecentPage.qml")
+        const page = pageComponent.status === Component.Ready ? pageComponent.createObject(host.contentItem, {
+            y: 160, width: 332, viewportHeight: 380, active: true, powerOpen: false
+        }) : null
+        const navComponent = Qt.createComponent("modules/menu/RecentNav.qml")
+        const nav = navComponent.status === Component.Ready
+            ? navComponent.createObject(host.contentItem, { x: 200, width: 180, height: 160 }) : null
+        host.input.wait(50)
+        const list = page ? root._findTrayNode(page, item => typeof item.itemAtIndex === "function") : null
+        if (list) list.forceLayout()
+        const row = list ? list.itemAtIndex(0) : null
+        const rowCard = row ? root._findTrayNode(row, item => item.Accessible.role === Accessible.Notification) : null
+        root._check(rowCard !== null && rowCard.Accessible.name === "silere-probe-absent: Task finished"
+                && rowCard.Accessible.description === "",
+            "a history row with no summary reads its body as the title, as its popup did")
+        const iconIn = item => root._findTrayNode(item, node => node.backer !== undefined
+            && String(node.source).indexOf("silere-probe-absent.png") >= 0)
+        const dpr = host.devicePixelRatio
+        const cardIcon = iconIn(host.card)
+        const rowIcon = iconIn(row)
+        const railIcon = iconIn(nav)
+        root._check(cardIcon && rowIcon && railIcon
+                && cardIcon.backer.sourceSize.width === Math.round(24 * dpr)
+                && rowIcon.backer.sourceSize.width === Math.round(16 * dpr)
+                && railIcon.backer.sourceSize.width === Math.round(16 * dpr),
+            "notification, history and app rail icons decode at their device size, as the tray's do")
+        if (nav) nav.destroy()
+        navComponent.destroy()
+        if (page) page.destroy()
+        pageComponent.destroy()
+        host.destroy()
+        Notifications.clearHistory()
+        MenuState.open = openWas
+        MenuState.setRecentFilter(filterWas)
+
+    }
 
     function _checksDisplayIdentityAndBluetoothDiscovery(): void {
         const scanAdapterWas = Bluetooth._scanAdapter
