@@ -351,6 +351,7 @@ Column {
             ToggleRow {
                 glyph: "󰆖"; label: "Balance accent"
                 key: "matugenAccentBalance"
+                description: "Keeps its hue at the presets' brightness"
             }
         }
 
