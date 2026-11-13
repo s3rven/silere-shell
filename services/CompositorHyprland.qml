@@ -310,9 +310,11 @@ QtObject {
             root._layoutTick++
             root._syncLiveTitles()
             root._syncActiveTitle()
-            const missing = root._missingWorkspaceId(Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : [],
-                root._liveToplevels())
+            const wsVals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
+            const missing = root._missingWorkspaceId(wsVals, root._liveToplevels())
+            const monitorless = missing > 0 ? -1 : root.monitorlessWorkspaceId(wsVals)
             if (missing > 0) root._requestWorkspaceRefresh("missing:" + missing)
+            else if (monitorless > 0) root._requestWorkspaceRefresh("monitor:" + monitorless)
             else root._workspaceRefreshKey = ""
             if (!root._refreshAgain) return
             root._refreshAgain = false
@@ -458,6 +460,14 @@ QtObject {
             const c = root._ipcOf(toplevels[i])
             const id = root._wsNumber(c ? c.workspace : null)
             if (id > 0 && !known[id]) return id
+        }
+        return -1
+    }
+    // a workspace quickshell made from its create event has no monitor until a workspace list arrives, so it is never active
+    function monitorlessWorkspaceId(workspaces): int {
+        for (let i = 0; i < workspaces.length; i++) {
+            const ws = workspaces[i]
+            if (ws && ws.id > 0 && !ws.monitor) return ws.id
         }
         return -1
     }
@@ -741,7 +751,7 @@ QtObject {
             }
             if (n === "openwindow" || n === "closewindow") root._setClosed(event.data, n === "closewindow")
             if (n === "openwindow" || n === "closewindow" || n === "movewindowv2"
-                || n === "fullscreen" || n === "changeworkspaceid")
+                || n === "fullscreen" || n === "changeworkspaceid" || n === "createworkspacev2")
                 root.refreshToplevels()
             // a window that never retitles after opening has no windowtitlev2 to arm this on
             if (n === "openwindow" && root._liveTitlesWanted && !Idle.isIdle && !_titleSync.running)

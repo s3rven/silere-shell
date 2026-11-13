@@ -7227,6 +7227,10 @@ ShellRoot {
             root._check(Object.keys(copied).join() === "a1,b2" && copied.a1 !== liveIpc
                     && copied.a1.workspace.id === 2 && copied.a1.focusHistoryID === 3 && copied.b2 === null,
                 "each window's IPC map is copied once, as plain data, under its address")
+            root._check(hypr.monitorlessWorkspaceId([{ id: 2, monitor: { name: "A" } }, null, { id: -98, monitor: null },
+                    { id: 4, monitor: null }]) === 4
+                    && hypr.monitorlessWorkspaceId([{ id: 2, monitor: { name: "A" } }, { id: -98, monitor: null }]) === -1,
+                "a numbered workspace with no monitor is found, so the bar asks for the workspace list again")
             root._check(!hypr._shortcuts.owns && hypr._shortcuts._held.length === 0,
                 "a shell silere run did not start claims no Hyprland global shortcut")
         }
