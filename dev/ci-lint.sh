@@ -505,6 +505,20 @@ else
   ok "layout" "no size, margin or anchor reads effective visibility"
 fi
 
+section "probed geometry is the geometry drawn"
+# these probe checks test a helper; they only mean something while the surface still reads it
+probed_missing=""
+grep -qF 'x: OsdBarState.pillX(' modules/osd/OsdWindow.qml || probed_missing+=$'\n  OsdWindow.qml no longer places its pills with OsdBarState.pillX'
+grep -qF 'StackLayout.columnSpacing' modules/notifications/NotificationPopups.qml || probed_missing+=$'\n  NotificationPopups.qml no longer spaces its stack by StackLayout.columnSpacing'
+grep -qF 'Metrics.rowHeightFor(30)' modules/notifications/NotificationPopups.qml || probed_missing+=$'\n  NotificationPopups.qml no longer sizes its chips with Metrics.rowHeightFor(30)'
+grep -qE '^[[:space:]]*y: root\._rowY$' modules/bar/widgets/Workspaces.qml || probed_missing+=$'\n  Workspaces.qml no longer places its strip at root._rowY'
+grep -qF 'textTop: _content.y + textClip.y' modules/bar/widgets/MediaWidget.qml || probed_missing+=$'\n  MediaWidget.qml no longer tells its visualizer where the title sits'
+if [ -n "$probed_missing" ]; then
+  fail "a probe checks geometry its surface no longer uses:$probed_missing"
+else
+  ok "probed geometry" "the OSD pills, popup stack, workspace strip and media wave read the helpers their checks test"
+fi
+
 section "coordinate mapping in bindings"
 # mapToItem()/mapFromItem() read ancestor geometry in C++, so a binding that
 # calls them captures no dependency and keeps its first, pre-layout answer
