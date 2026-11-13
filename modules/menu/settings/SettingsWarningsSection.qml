@@ -25,14 +25,16 @@ Column {
         ShellSettings.osdBatteryWarn, ShellSettings.underlineBattGlow)
     readonly property string _tempAlertMode: root._alertMode(
         ShellSettings.osdTempWarn, ShellSettings.underlineTempGlow)
+    // the low battery warning also covers Bluetooth devices, so without a battery of its own the switch has to stay reachable
+    readonly property bool _bluetoothOnly: !Battery.available && Bluetooth.available
     readonly property bool _batteryDesktopAlert:
-        Battery.available && ShellSettings.osdBatteryWarn
+        (Battery.available || root._bluetoothOnly) && ShellSettings.osdBatteryWarn
     readonly property bool _tempDesktopAlert:
         !CpuTemp.sensorMissing && ShellSettings.osdTempWarn
     readonly property bool _desktopAlertsEnabled:
         root._batteryDesktopAlert || root._tempDesktopAlert
     readonly property bool _hardwareStatusVisible:
-        !Battery.available && CpuTemp.sensorMissing
+        !Battery.available && !root._bluetoothOnly && CpuTemp.sensorMissing
 
     readonly property var _alertChipModel: ShellSettings.underlineGlow
         ? [
@@ -72,9 +74,19 @@ Column {
         }
     }
 
+    SectionLabel { label: "BATTERY"; first: true; visible: root._bluetoothOnly }
+    SettingsCard {
+        visible: root._bluetoothOnly
+        ToggleRow {
+            glyph: "󰥉"; label: "Low battery warning"
+            description: "Bluetooth devices below " + SystemAlerts.btLowPct + "%"
+            key: "osdBatteryWarn"
+        }
+    }
+
     SectionLabel {
         label: "CPU TEMPERATURE"
-        first: !Battery.available
+        first: !Battery.available && !root._bluetoothOnly
         visible: !CpuTemp.sensorMissing
     }
     SettingsCard {
