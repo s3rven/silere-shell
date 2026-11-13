@@ -5787,6 +5787,18 @@ ShellRoot {
         ShellSettings.dndTo = savedTo
         ShellSettings.dndSchedule = savedDnd
 
+        // an app picked in History goes with the menu, as its search does: the missed-notification badge opens every app
+        const filterWas = { open: MenuState.open, tab: MenuState.activeTab }
+        MenuState.showTab(MenuState.recentTab)
+        MenuState.setRecentFilter("Chat")
+        MenuState.selectTab(MenuState.homeTab)
+        MenuState.selectTab(MenuState.recentTab)
+        const filterKeptWhileOpen = MenuState.recentFilter === "Chat"
+        MenuState.close()
+        const filterKeptWhileClosing = MenuState.recentFilter === "Chat"
+        MenuState.showTab(MenuState.recentTab)
+        root._check(filterKeptWhileOpen && filterKeptWhileClosing && MenuState.open && MenuState.recentFilter === "",
+            "a history app filter survives a tab switch, stays put while the menu closes and is gone when it reopens")
     }
 
     function _checksSettingsSearchAndText(): void {

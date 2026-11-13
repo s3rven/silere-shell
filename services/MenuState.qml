@@ -89,9 +89,13 @@ AnchoredPopupState {
         _settingsSelectOwner = null
         if (previous) previous._setOpen(false)
     }
-    onOpenChanged: if (!open) {
-        closeSettingsSelect()
-        homePicker = ""
+    onOpenChanged: {
+        // on the way in, so a closing History keeps its rows; a missed-notification badge must not land on last time's app
+        if (open) recentFilter = ""
+        else {
+            closeSettingsSelect()
+            homePicker = ""
+        }
     }
 
     // order by user impact and frequency: global appearance first, daily bar surfaces next, then feedback; operational and recovery tools stay last
