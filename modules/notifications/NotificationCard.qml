@@ -389,8 +389,10 @@ Item {
             if (item === card) return true
         return false
     }
-    // an abandoned empty reply lets the card go; one being typed or holding text keeps it
+    // an abandoned empty reply lets the card go; one being typed or holding text keeps it. A card also waits while a
+    // panel is open: the calendar and a menu opened from the bar's right cover the stack's corner, actions included
     readonly property bool _paused: _cardHover.hovered || card.stackHovered || card._keyboardFocused || Idle.isQuiet
+        || ControlSurfaces.anyOpen
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0

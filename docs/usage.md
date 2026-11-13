@@ -56,7 +56,7 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 | Delete | Dismiss the focused notification |
 | Letters in an open dropdown | Jump to a matching row; repeat the letter to cycle |
 
-Focus on a notification expands it and pauses its timeout. In **Settings › Widgets › Show & order**,
+Focus on a notification expands it and pauses its timeout, and every timeout waits while a panel is open. In **Settings › Widgets › Show & order**,
 Tab to a widget's ⋮ grip and press Up or Down to move it.
 
 The bar never takes the keyboard, so tray menus open from a keybind: `silere ipc tray toggle`

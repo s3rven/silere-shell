@@ -957,6 +957,15 @@ ShellRoot {
         fixture.requestActivate()
         fixture.input.wait(60)
         fixture.input.mouseMove(fixture.outside, 5, 5)
+        const menuOpenWas = MenuState.open
+        MenuState.open = false
+        const runningBare = !fixture.card._paused
+        MenuState.open = true
+        const heldUnderPanel = fixture.card._paused
+        MenuState.open = false
+        root._check(runningBare && heldUnderPanel && !fixture.card._paused,
+            "a notification's timeout waits while a panel is open and runs again once it closes")
+        MenuState.open = menuOpenWas
         fixture.card.forceActiveFocus(Qt.TabFocusReason)
         fixture.input.wait(20)
         root._check(fixture.card.activeFocus && fixture.card._paused && fixture.card._expanded,

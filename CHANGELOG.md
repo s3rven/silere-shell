@@ -54,6 +54,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere status` shows the shell's memory and when updates were last checked.
 - Switching workspaces and windows on Hyprland uses less CPU, most of all with many windows open.
 - The media visualizer goes faint where it passes behind the track title, on a tall bar and in large type too.
+- Notification popups wait while the menu, calendar or another panel is open, so one no longer times out behind the calendar with its buttons out of reach.
 
 ### Fixed
 
