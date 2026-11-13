@@ -328,6 +328,11 @@ PageShell {
                 clip: _titleText.x < 0 || _titleScroll.running
                 readonly property real _overflow: Math.max(0, _titleText.implicitWidth - width)
                 readonly property int _slideMs: Math.max(900, Math.round(_overflow / 38 * 1000))
+                // a slide under way keeps the distance it started with
+                on_OverflowChanged: if (_titleScroll.running) {
+                    _titleText.x = 0
+                    _titleScroll.restart()
+                }
 
                 HoverHandler { id: _titleHover }
 
@@ -444,6 +449,7 @@ PageShell {
                 id: _totalLabel
                 // a click swaps the length for the time left, as players do; it lasts the session
                 readonly property bool _remaining: Media.showRemaining && Media.lengthKnown
+                readonly property bool _on: _totalLabel.enabled && _totalLabel.visible && Media.lengthKnown && MenuState.mediaActive
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 width: _seek._timeW
                 horizontalAlignment: Text.AlignRight
@@ -458,8 +464,8 @@ PageShell {
                 Accessible.role: Accessible.Button
                 Accessible.name: _totalLabel._remaining ? "Time left, press to show the length"
                     : "Length, press to show the time left"
-                Accessible.focusable: Media.lengthKnown && MenuState.mediaActive
-                Accessible.onPressAction: if (Media.lengthKnown) Media.showRemaining = !Media.showRemaining
+                Accessible.focusable: _totalLabel._on
+                Accessible.onPressAction: if (_totalLabel._on) Media.showRemaining = !Media.showRemaining
                 KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                 HoverHandler { id: _totalHover; enabled: Media.lengthKnown; margin: 6; cursorShape: Qt.PointingHandCursor }
                 TapHandler { enabled: Media.lengthKnown; margin: 6; onTapped: Media.showRemaining = !Media.showRemaining }

@@ -6766,6 +6766,23 @@ ShellRoot {
                 root._check(!mediaPage._coverWanted,
                     "a departing media page stops cover decoding and retries")
             }
+            // a running scroll stands in for the hover
+            const titleClip = root._findTrayNode(mediaPage, item => item._slideMs !== undefined)
+            const titleScroll = titleClip ? titleClip.data.find(item => item.animations?.length === 4) : null
+            const titleText = titleClip ? root._findTrayNode(titleClip, item => item._unrolled !== undefined) : null
+            let titleRestarts = 0
+            const noteRestart = () => { if (titleScroll.running) titleRestarts++ }
+            if (titleScroll && titleText) {
+                mediaPage._shownTitle = "A long title that scrolls ".repeat(6)
+                titleScroll.running = true
+                titleScroll.runningChanged.connect(noteRestart)
+                titleText.x = -60
+                mediaPage._shownTitle = "The next long title ".repeat(4)
+                titleScroll.runningChanged.disconnect(noteRestart)
+            }
+            root._check(titleScroll && titleText && titleText.x === 0 && titleScroll.running && titleRestarts > 0,
+                "a track change mid-scroll starts the new title's scroll over from its first letter")
+            mediaPage.settleVisuals()
             const host = keyboardFixtureFactory.createObject(root)
             mediaPage.parent = host.contentItem
             ShellSettings.reduceMotion = true

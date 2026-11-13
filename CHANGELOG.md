@@ -36,6 +36,7 @@ settings file carries its own `__version` and migrates separately.
 - The workspace-changed hook runs when you switch between two named Hyprland workspaces and gets the workspace's name, instead of -1338; it is no longer called with -1 while niri restarts.
 - Clicking a notification on a named Hyprland workspace can take you to the app's window on another named workspace, instead of the one already in front of you.
 - Home's Wi-Fi and VPN lists close when the adapter, NetworkManager or the last VPN profile goes away, instead of staying open under a missing row.
+- A track change while Now Playing scrolls a long title starts the new title from its first letter.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Home no longer shows an empty Connectivity section on a wired desktop with no Bluetooth and no saved VPN.
