@@ -22,6 +22,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - On a theme change, workspace markers, the OSD, notification outlines and update status colours change with the rest of the shell instead of trailing it.
+- The night light's sun arc writes durations like the battery does, "1h 5m" rather than "1h 05m".
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
 - Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 - The `silere reset` preview lists whole setting names instead of cutting one off.

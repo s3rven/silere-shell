@@ -107,7 +107,7 @@ Singleton {
     function _dur(mins: real): string {
         const m = Math.max(0, Math.round(mins))
         const hh = Math.floor(m / 60), mm = m % 60
-        return hh > 0 ? (hh + "h " + (mm < 10 ? "0" : "") + mm + "m") : (mm + "m")
+        return hh > 0 ? (hh + "h " + mm + "m") : (mm + "m")
     }
     readonly property string phaseLabel: {
         void root._solarTick

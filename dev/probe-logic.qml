@@ -8880,6 +8880,10 @@ ShellRoot {
     }
 
     function _checksNightLightAndSensors(): void {
+        // the sun arc writes hours and minutes as the battery and uptime do
+        root._check(NightLight._dur(65) === "1h 5m" && NightLight._dur(120) === "2h 0m"
+                && NightLight._dur(45) === "45m" && NightLight._dur(-3) === "0m",
+            "the sun arc writes minutes without a leading zero, as the battery and uptime do")
 
         // auto is a mode, not a value: it must never consume the hand-picked temperature
         const autoWas = ShellSettings.nightLightAuto
