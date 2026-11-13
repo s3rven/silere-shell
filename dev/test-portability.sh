@@ -3165,7 +3165,9 @@ STUB
     assert_eq "opened" "$(SILERE_TEST_OTHER="$other" cli ipc menu toggle 2>/dev/null)" "ipc call through the running copy"
     assert_eq "  function close(): void" "$(SILERE_TEST_OTHER="$other" cli ipc calendar 2>/dev/null | tail -1)" \
         "a target alone lists its calls from the running copy"
-    if SILERE_TEST_OTHER="$other" cli ipc menu frob >/dev/null 2>&1; then fail "a refused call exited 0"; fi
+    if out="$(SILERE_TEST_OTHER="$other" cli ipc menu frob 2>&1)"; then fail "a refused call exited 0"; fi
+    case "$out" in *"menu has no call named frob; silere ipc menu lists them"*) ;;
+        *) fail "a refused call did not say where to look: $out" ;; esac
     out="$(SILERE_TEST_OTHER="$other" cli log 2>/dev/null)" || fail "log did not follow the copy that is running"
     case "$out" in *"-p $other/shell.qml"*) ;; *) fail "log read the wrong shell: $out" ;; esac
     if cli log >/dev/null 2>&1; then fail "log claimed a shell with none running"; fi

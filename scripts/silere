@@ -617,10 +617,13 @@ case "$command_name" in
         # a refused call still exits 0 with its reason on stdout: the shell's own "error:" line, or
         # Quickshell's for a target, function or argument it cannot match; scripts need a failure
         rc=0; out="$(ipc_shell call "$@")" || rc=$?
+        # Quickshell's own refusals name neither the target nor where to look
         case "$out" in
-            error:*|"Target not found."|"Function not found."|"Too few arguments provided"*\
-                |"Too many arguments provided"*|"Unable to parse argument"*)
-                [ "$rc" -ne 0 ] || rc=1 ;;
+            "Target not found.") die "no IPC target named $1; silere ipc lists them" ;;
+            "Function not found.") die "$1 has no call named $2; silere ipc $1 lists them" ;;
+            "Too few arguments provided"*|"Too many arguments provided"*|"Unable to parse argument"*)
+                die "${out%%$'\n'*}; silere ipc $1 shows what $2 takes" ;;
+            error:*) [ "$rc" -ne 0 ] || rc=1 ;;
         esac
         if [ "$rc" -ne 0 ]; then
             [ -z "$out" ] || printf '%s\n' "$out" >&2
