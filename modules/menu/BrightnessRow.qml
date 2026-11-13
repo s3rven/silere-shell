@@ -98,6 +98,7 @@ Item {
                     label: modelData.label
                     status: active ? "Current" : ""
                     selected: active
+                    accessiblePrefix: "Brightness display"
 
                     onTriggered: {
                         ShellSettings.brightnessDevice = modelData.value

@@ -46,6 +46,7 @@ settings file carries its own `__version` and migrates separately.
 - With week numbers on, the calendar's day squares sit on whole pixels at fractional scaling instead of blurring at their sides.
 - The System and Keyboard widgets fade out when switched off, as the other widgets do, instead of disappearing at once.
 - Window titles that contain icon glyphs no longer cut off early with a font other than the default.
+- Home's brightness display choices are named for screen readers.
 - On a computer without a battery, Alerts keeps the low battery warning switch, which also covers Bluetooth devices.
 - An open calendar stays centred on its clock as the clock's date appears or folds away, instead of slipping to one side.
 - With Reduce motion on, a tray menu opened while the app's name showed on hover opens on its icon instead of beside it.

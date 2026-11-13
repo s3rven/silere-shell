@@ -6914,6 +6914,23 @@ ShellRoot {
             host.close()
             host.destroy()
         }
+
+        // the backlight choices name what they choose, as the output and input choices beside them do
+        const backlightsWas = Brightness.devices
+        const backlightReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        Brightness.devices = [{ name: "__silere_probe_panel__" }, { name: "__silere_probe_dock__" }]
+        const brightnessRow = Qt.createComponent(Qt.resolvedUrl("modules/menu/BrightnessRow.qml"))
+            .createObject(barFixtureHost, { width: 320, open: true })
+        const backlightChoice = root._findTrayNode(brightnessRow, item => item.accessiblePrefix !== undefined
+            && item.label === "__silere_probe_dock__")
+        root._check(backlightChoice !== null
+                && backlightChoice.Accessible.name === "Brightness display: __silere_probe_dock__"
+                && backlightChoice.Accessible.role === Accessible.RadioButton && backlightChoice.Accessible.checkable,
+            "a backlight choice on Home is announced as a named, checkable choice")
+        if (brightnessRow) brightnessRow.destroy()
+        Brightness.devices = backlightsWas
+        ShellSettings.reduceMotion = backlightReduceWas
     }
 
     function _checksRailWavesAndAudioRoutes(): void {
