@@ -2306,6 +2306,26 @@ ShellRoot {
         root._check(tick.Accessible.description.indexOf("After") >= 0,
             "the urgent target follows its side of the current page")
         tick.destroy()
+        {
+            const highlightWas = ShellSettings.barHoverHighlight, pulseWas = ShellSettings.wsUrgentPulse
+            ShellSettings.wsUrgentPulse = false
+            const host = keyboardFixtureFactory.createObject(root)
+            const hovered = workspaceUrgentTickFactory.createObject(host.contentItem, {
+                liveId: 4, rowHeight: 24, barActive: true, x: 200, y: 300
+            })
+            const label = root._findTrayNode(hovered, item => item.text !== undefined && item._hot !== undefined)
+            host.requestActivate()
+            ShellSettings.barHoverHighlight = false
+            host.input.mouseMove(hovered, hovered.width / 2, hovered.height / 2)
+            const quiet = label && label.opacity === 0.9 && label.scale === 1
+            ShellSettings.barHoverHighlight = true
+            root._check(quiet && label._hot && label.opacity === 1,
+                "an urgent workspace tick brightens under the pointer only with hover highlights on")
+            hovered.destroy()
+            host.destroy()
+            ShellSettings.barHoverHighlight = highlightWas
+            ShellSettings.wsUrgentPulse = pulseWas
+        }
         for (let i = 0; i < keys.length; i++) ShellSettings[keys[i]] = saved[i]
     }
 
@@ -4163,6 +4183,36 @@ ShellRoot {
                 && stripRow && stripRow.y === tallStrip._rowY && stripRow.height === tallStrip.btnH,
             "the workspace strip takes the bar's height and keeps its row centred in it")
         tallStrip.destroy()
+        {
+            const keys = ["reduceMotion", "neutralTheme", "baseTone", "barOpacity", "highContrast", "wsUrgentPulse"]
+            const saved = keys.map(key => ShellSettings[key])
+            ShellSettings.reduceMotion = true
+            ShellSettings.neutralTheme = true
+            ShellSettings.baseTone = "charcoal"
+            ShellSettings.barOpacity = 0.58
+            ShellSettings.highContrast = false
+            ShellSettings.wsUrgentPulse = false
+            const overWhite = Theme.mix(Qt.color("#ffffff"), Theme.background, Theme.panelOpacity)
+            const overBlack = Theme.mix(Qt.color("#000000"), Theme.background, Theme.panelOpacity)
+            const legible = ink => Math.min(Theme.contrastRatio(ink, overWhite), Theme.contrastRatio(ink, overBlack))
+            const urgentCell = workspaceButtonFactory.createObject(barFixtureHost, {
+                wsId: 7, monitorReady: true, active: false, occupied: true,
+                urgent: true, apps: [], compact: false, iconSize: 14,
+                cellWidth: 26, rowHeight: 24, barActive: true,
+                initialized: true, paging: false, markerCovers: true
+            })
+            const number = root._findTrayNode(urgentCell, item => item.text === "7" && item.font !== undefined)
+            const urgentTick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
+                liveId: 9, rowHeight: 24, barActive: true
+            })
+            const arrow = root._findTrayNode(urgentTick, item => item._hot !== undefined)
+            root._check(legible(Theme.barWarning) < 4.49 && number !== null && arrow !== null
+                    && legible(number.color) >= 4.49 && legible(arrow.color) >= 4.49,
+                "an urgent workspace's number and its off-page arrow are words: a label's contrast on a see-through bar, not a mark's")
+            urgentCell.destroy()
+            urgentTick.destroy()
+            for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+        }
     }
 
     function _checksBarPills(): void {

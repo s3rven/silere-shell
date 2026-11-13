@@ -310,7 +310,7 @@ Item {
                 * root._numberShown * root._pulseOpacity
             scale:   root._blanked ? 0.6 : _tap.pressed ? 0.9 : (root._hoverFx ? 1.12 : 1)
             color:   root.urgent
-                ? Theme.warning
+                ? Theme.barInk(Theme.barWarning, true)
                 : root.active
                 ? Theme.barAccent
                 : (root.occupied

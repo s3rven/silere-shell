@@ -85,9 +85,10 @@ Item {
         anchors.centerIn: parent
         text: (root._shownBefore ? "‹ " : "› ") + root.targetWs
         font.pixelSize: Settings.fontLabel
-        color: Theme.warning
-        opacity: root._pulse * ((_tickHover.hovered) ? 1.0 : 0.9)
-        scale: (_tickHover.hovered && ShellSettings.barHoverHighlight) ? 1.08 : 1.0
+        color: Theme.barInk(Theme.barWarning, true)
+        readonly property bool _hot: _tickHover.hovered && ShellSettings.barHoverHighlight
+        opacity: root._pulse * (_label._hot ? 1.0 : 0.9)
+        scale: _label._hot ? 1.08 : 1.0
         MotionBehavior on scale {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     }
 }
