@@ -5828,6 +5828,20 @@ ShellRoot {
         MenuState.showTab(MenuState.recentTab)
         root._check(filterKeptWhileOpen && filterKeptWhileClosing && MenuState.open && MenuState.recentFilter === "",
             "a history app filter survives a tab switch, stays put while the menu closes and is gone when it reopens")
+        const missedWas = { count: Notifications.missedCount, dnd: ShellSettings.dnd }
+        ShellSettings.dnd = true
+        MenuState.selectTab(MenuState.homeTab)
+        Notifications.missedCount = 3
+        const missedKeptOnHome = Notifications.missedCount === 3
+        MenuState.selectTab(MenuState.recentTab)
+        root._check(missedKeptOnHome && Notifications.missedCount === 0 && Notifications.silencingActive,
+            "opening History ends the missed count while Do Not Disturb stays on, so its badge never opens a page already read")
+        ShellSettings.dnd = missedWas.dnd
+        Notifications.missedCount = missedWas.count
+        MenuState.setRecentFilter("")
+        MenuState.selectTab(filterWas.tab)
+        if (filterWas.open) MenuState.openUnanchored()
+        else MenuState.close()
     }
 
     function _checksSettingsSearchAndText(): void {

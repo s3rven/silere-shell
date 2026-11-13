@@ -107,7 +107,11 @@ Singleton {
 
     Connections {
         target: MenuState
-        function onRecentActiveChanged() { if (MenuState.recentActive) root._syncHistoryRetention() }
+        function onRecentActiveChanged() {
+            if (!MenuState.recentActive) return
+            root._syncHistoryRetention()
+            root.missedCount = 0
+        }
     }
     Connections {
         target: Idle

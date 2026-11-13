@@ -19,6 +19,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
 - The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
 - Silere's own alerts show as Silere Shell, each with an icon for what it is about.
