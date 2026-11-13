@@ -7734,6 +7734,13 @@ ShellRoot {
         root._check(Scroll._processDelta(60, "probe-slider-old-key", 120, 2, 0) === 0,
             "changing a slider wheel key clears the old control's unfinished gesture")
         Scroll.resetControl("probe-slider-old-key")
+        const stopsFor = (min, max, step) => {
+            track.min = min; track.max = max; track.step = step
+            return track._stopCount
+        }
+        root._check(stopsFor(1, 10, 1) === 8 && stopsFor(0, 24, 4) === 5 && stopsFor(50, 105, 5) === 10
+                && stopsFor(0, 1, 0.3) === 3 && stopsFor(0, 1, 0.05) === 0 && stopsFor(0, 1, 0) === 0,
+            "a slider marks the inner stops of a short grid and leaves a fine or continuous one plain")
         track.destroy()
 
         const deviceSlider = quickSliderFactory.createObject(barFixtureHost, {

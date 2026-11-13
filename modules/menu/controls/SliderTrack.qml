@@ -105,6 +105,19 @@ Item {
     readonly property real _ratio: max > min
         ? Math.max(0, Math.min(1, (_shownValue - min) / (max - min))) : 0
 
+    readonly property int _stopCount: {
+        if (root.wavy || !(root.step > 0) || !(root.max > root.min)) return 0
+        const n = (root.max - root.min) / root.step
+        return n <= 12 ? Math.max(0, Math.ceil(n - 0.000001) - 1) : 0
+    }
+    // same parity as the rail in device px, or the dot lands half a pixel off its centre line
+    readonly property real _stopSize: {
+        const rail = Math.round(root.railHeight * root._dpr)
+        let d = Math.max(2, Math.round(2 * root._dpr))
+        if ((rail - d) % 2 !== 0) d = d > 2 ? d - 1 : d + 1
+        return d / root._dpr
+    }
+
     function _clamp(v: real): real {
         const number = Number(v)
         return isFinite(number) ? Math.max(min, Math.min(max, number)) : min
@@ -201,6 +214,7 @@ Item {
         ColorFade on color { gate: root.animate }
 
         Rectangle {
+            id: _fill
             // whole device px, or the fill edge slides out from under the rounded handle x
             width: Metrics.devicePx(parent.width * root._ratio, root._dpr)
             height: parent.height
@@ -212,6 +226,24 @@ Item {
             MotionBehavior on width {
                 gate: root.animate && !_ma.pressed
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+            }
+        }
+
+        Repeater {
+            model: root._stopCount
+            Rectangle {
+                required property int index
+                readonly property real _at: _rail.width * (index + 1) * root.step / (root.max - root.min)
+                width: root._stopSize
+                height: root._stopSize
+                x: Metrics.devicePx(_at - width / 2, root._dpr)
+                y: Metrics.devicePx((_rail.height - height) / 2, root._dpr)
+                radius: width / 2
+                antialiasing: true
+                // read off the fill's animated edge, so a stop changes tone as the fill reaches it
+                color: _at <= _fill.width
+                    ? Theme.withAlpha(Theme.menuControlSolid, 0.55)
+                    : Theme.swatchEdge
             }
         }
 

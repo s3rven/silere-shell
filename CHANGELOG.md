@@ -18,6 +18,7 @@ settings file carries its own `__version` and migrates separately.
 - Music pauses when Bluetooth or USB headphones disconnect or run flat, instead of carrying on through the speakers; Settings › Widgets › Media › Pause when headphones disconnect.
 - A menu page that fails to load, Now Playing included, offers Reload, which reloads the shell and reopens the menu on the same page.
 - The volume icon turns amber while Bluetooth headphones it plays through are below 20%, and its hover shows their charge, unless the Bluetooth widget already shows that one device's charge.
+- Settings sliders that move in a few steps, such as Workspaces shown, Edge gap and the battery and temperature warnings, mark their stops on the track.
 
 ### Changed
 
