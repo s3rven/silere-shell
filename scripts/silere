@@ -116,7 +116,7 @@ run_shell() {
     # measured 55 MB less PSS on a 4-thread laptop at the same CPU, and returning freed pages after a second kept
     # another 10 to 18 MB off after menu use. tcache stays on: turning it off saved nothing and cost CPU.
     # A value the user set, even an empty one, wins. Apps start through the compositor, so only the shell's
-    # own short-lived helpers inherit it
+    # own helpers inherit it, and an app the shell starts itself when the compositor refuses the launch
     export MALLOC_CONF="${MALLOC_CONF-narenas:1,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0}"
     # Hyprland crashes whichever client registers a taken global shortcut last, so only this shell claims
     # silere:menu and silere:tray; previews, smoke starts and probes run qs directly and claim nothing

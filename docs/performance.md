@@ -66,8 +66,8 @@ pool frees is only reused by threads on that pool, so the shell's threads leave 
 
 Any `MALLOC_CONF` you set wins, so the user service and autostart keep yours.
 `MALLOC_CONF=` (empty) goes back to jemalloc's defaults. Apps you open start through the
-compositor and never inherit it. `tcache:false`, which older notes suggest, saved nothing and
-costs CPU.
+compositor and don't inherit it, unless the compositor refuses the launch and Silere starts the
+app itself. `tcache:false`, which older notes suggest, saved nothing and costs CPU.
 
 ## Optional tuning
 
