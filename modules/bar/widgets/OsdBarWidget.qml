@@ -181,6 +181,8 @@ Item {
                 color: OsdBarState.muted
                     ? Theme.withAlpha(Theme.barSubtext, 0.58)
                     : Theme.withAlpha(Theme.barInk(OsdBarState.fillColor, false), 0.88)
+                // each of the three inks fades itself: a faded source colour re-solved all three every frame
+                ColorFade on color { duration: Motion.medium }
             }
         }
 

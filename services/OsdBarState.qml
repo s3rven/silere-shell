@@ -20,7 +20,6 @@ Singleton {
     readonly property bool barConcealed: OverviewState.active || FullscreenState.active
     readonly property alias entries: _entries
     readonly property int activeCount: _entries.count
-    ColorFade on fillColor { duration: Motion.medium }
 
     signal bumped()
     signal entryBumped(string kind)
