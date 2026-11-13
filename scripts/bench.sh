@@ -69,7 +69,7 @@ warm_menu() {
     }
     # qs ipc only looks for shells on its own display, and an ssh session has none: borrow the shell's
     local result display="${WAYLAND_DISPLAY:-}"
-    [ -n "$display" ] || display="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^WAYLAND_DISPLAY=//p')"
+    [ -n "$display" ] || display="$(tr '\0' '\n' 2>/dev/null < "/proc/$pid/environ" | sed -n 's/^WAYLAND_DISPLAY=//p')"
     result="$(WAYLAND_DISPLAY="$display" qs ipc -p "$repo/shell.qml" call menu tab 0 2>/dev/null)" || {
         echo "bench: --warm could not reach the menu over IPC" >&2
         exit 1
