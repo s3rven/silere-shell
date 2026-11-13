@@ -47,6 +47,7 @@ settings file carries its own `__version` and migrates separately.
 - Tray menu radio entries are announced as radio buttons, and Now Playing's length label and the tray menu's Hide from bar are no longer offered to screen readers while covered or closed.
 - The Caps Lock light is no longer read while the overview hides the bar.
 - On a copy of Silere without Git, `silere` no longer says a package manager owns it: `silere link`, `use` and `uninstall` work there, and `silere update` says once that nothing updates it.
+- `silere service remove` and the uninstaller also remove the override `silere use` wrote, so a service installed later starts its own checkout.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Home no longer shows an empty Connectivity section on a wired desktop with no Bluetooth and no saved VPN.
