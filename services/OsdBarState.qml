@@ -115,6 +115,10 @@ Singleton {
         return root._hasBarKind(kind) ? Math.max(500, timeout) : Math.max(5000, timeout)
     }
 
+    function pillX(columnWidth: real, pillWidth: real): real {
+        return (columnWidth - pillWidth) / 2
+    }
+
     function _setExpiry(kind: string): void {
         _expiresAt[kind] = Date.now() + root.holdFor(kind, ShellSettings.osdTimeout)
         _expiresAt = _expiresAt

@@ -114,6 +114,8 @@ PanelWindow {
                 }
 
                 width: pillW
+                // a Column only stacks: unset, a narrower pill hangs off the wider one's left edge
+                x: OsdBarState.pillX(stack.width, width)
                 height: 0
                 visible: osd._active && (_ready || _op > 0.001 || height > 0.5)
                 z: serial

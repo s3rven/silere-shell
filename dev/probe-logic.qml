@@ -1325,6 +1325,11 @@ ShellRoot {
         OsdBarState._hideDeviceName()
         root._check(!OsdBarState.showing && OsdBarState.activeCount === 0,
             "device-name expiry never resurrects dismissed volume feedback")
+        // a level beside an alert: the narrowest and widest pill the OSD draws
+        root._check(OsdBarState.pillX(520, 272) + 272 / 2 === 520 / 2
+                && OsdBarState.pillX(520, 272) % 4 === 0
+                && OsdBarState.pillX(520, 520) === 0,
+            "two OSD pills of different widths share one centre, on the 4px grid")
     }
 
     function _checkWifiDraft(): void {
@@ -8599,6 +8604,10 @@ ShellRoot {
         stackLayoutProbe.slots = []
         firstSlot.destroy()
         secondSlot.destroy()
+        // a lone card starts 8 px under the bar: the window's 2 and the column's 6
+        const chipStep = Metrics.rowHeightFor(30) + StackLayout.columnSpacing
+        root._check((Metrics.popupClearanceOn(null, 2) + 6 + chipStep) % 4 === 0 && chipStep % 4 === 0,
+            "notification cards under the clear chip, and the more chip under them, keep the 4px grid a lone card has")
 
         // qt reads the 12-hour clock off the whole format string: an hour formatted on its
         // own still comes back 0-23 and lands beside a PM that contradicts it

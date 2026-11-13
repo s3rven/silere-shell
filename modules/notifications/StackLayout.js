@@ -1,5 +1,8 @@
 .pragma library
 
+// a multiple of 4 like the chips, or every card under the clear chip lands half an output pixel off at 1.25
+var columnSpacing = 8
+
 // one pass serves every card's position and the viewport height. Reading the live
 // slots here lets the QML binding follow height changes throughout an animation
 function measure(stack, newestFirst) {

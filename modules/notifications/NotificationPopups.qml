@@ -121,7 +121,7 @@ PanelWindow {
         signal triggered()
 
         width:   parent ? parent.width : 0
-        height:  shown ? 30 : 0
+        height:  shown ? Metrics.rowHeightFor(30) : 0
         clip:    true
         enabled: shown
         visible: height > 0.5
@@ -440,7 +440,7 @@ PanelWindow {
             rightMargin: (win._left || win._center) ? 0 : win._shadowPad
             leftMargin:  win._left ? win._shadowPad : 0
         }
-        readonly property int spacing: 6
+        readonly property int spacing: StackLayout.columnSpacing
         // the stack reads outward from the bar, so clear-all stays nearest it and the more chip farthest
         readonly property var _order: win._barBottom
             ? [_moreChip, _cardViewport, _clearChip] : [_clearChip, _cardViewport, _moreChip]

@@ -36,6 +36,8 @@ settings file carries its own `__version` and migrates separately.
 - Clicking a notification on a named Hyprland workspace can take you to the app's window on another named workspace, instead of the one already in front of you.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
+- Two on-screen display pills of different widths, such as a volume change beside a battery warning, share one centre.
+- With two or more notifications showing, the cards sit on whole pixels at fractional scaling, and Clear all and Show more keep an even gap to them.
 - The System and Keyboard widgets fade out when switched off, as the other widgets do, instead of disappearing at once.
 - Window titles that contain icon glyphs no longer cut off early with a font other than the default.
 - On a computer without a battery, Alerts keeps the low battery warning switch, which also covers Bluetooth devices.
