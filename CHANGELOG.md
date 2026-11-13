@@ -14,6 +14,7 @@ settings file carries its own `__version` and migrates separately.
 ### Added
 
 - A menu page that fails to load, Now Playing included, offers Reload, which reloads the shell and reopens the menu on the same page.
+- The volume icon turns amber while Bluetooth headphones it plays through are below 20%, and its hover shows their charge, unless the Bluetooth widget already shows that one device's charge.
 
 ### Changed
 

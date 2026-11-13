@@ -17,6 +17,19 @@ Pill {
 
     readonly property bool _canSwitch: Audio.sinkCount > 1
 
+    // a Bluetooth output about to run out warns here at its desktop alert's mark; a shown Bluetooth pill does only for a lone device
+    function warnsForOutput(bluetoothShown: bool, connected: int): bool {
+        return !(bluetoothShown && connected === 1)
+    }
+    readonly property int _outputBattery: Audio.sinkBluetoothAddress.length > 0
+            && root.warnsForOutput(ShellSettings.barShowBluetooth, Bluetooth.connectedCount)
+        ? Bluetooth.batteryForAddress(Audio.sinkBluetoothAddress) : -1
+    function outputLow(battery: int): bool {
+        return battery >= 0 && battery < SystemAlerts.btLowPct
+    }
+    readonly property bool _outputLow: root.outputLow(root._outputBattery)
+    readonly property string _outputNote: root._outputLow ? "battery " + root._outputBattery + "%" : ""
+
     glyph:      Audio.icon
     accessibleName: !Audio.ready ? "Volume"
         : (Audio.muted ? "Volume muted" : "Volume " + Math.round(Audio.uiVolume * 100) + "%")
@@ -28,7 +41,8 @@ Pill {
     reserveText: "00%"
     readonly property string _level: Math.round(Audio.uiVolume * 100) + "%"
     text: !Audio.ready ? ""
-        : expanded && Audio.sinkName.length > 0 ? root._level + " · " + Audio.sinkName
+        : expanded && Audio.sinkName.length > 0
+            ? root._level + (root._outputLow ? " · " + root._outputNote : "") + " · " + Audio.sinkName
         : (ShellSettings.valuesOnHover && !expanded) ? ""
         : root._level
     maxTextWidth: compact ? 150 : 260

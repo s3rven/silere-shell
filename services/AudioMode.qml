@@ -14,11 +14,7 @@ Singleton {
     }
 
     function deviceIdentity(node): string {
-        if (!node) return ""
-        const address = String((node.properties || {})["api.bluez5.address"] || "")
-        if (/^[0-9a-f]{2}([:_][0-9a-f]{2}){5}$/i.test(address)) return address.replace(/_/g, ":").toLowerCase()
-        const match = /bluez_output[._]([0-9a-f]{2}(?:[_:][0-9a-f]{2}){5})/i.exec(String(node.name || ""))
-        return match ? match[1].replace(/_/g, ":").toLowerCase() : ""
+        return Audio.bluetoothAddress(node)
     }
 
     function kindOf(name: string): string {

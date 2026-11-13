@@ -139,6 +139,15 @@ Singleton {
         return "speaker"
     }
     readonly property string sinkClass: root.deviceClass(sink)
+    function bluetoothAddress(node): string {
+        if (!node) return ""
+        const address = String((node.properties || {})["api.bluez5.address"] || "")
+        if (/^[0-9a-f]{2}([:_][0-9a-f]{2}){5}$/i.test(address)) return address.replace(/_/g, ":").toLowerCase()
+        const match = /bluez_output[._]([0-9a-f]{2}(?:[_:][0-9a-f]{2}){5})/i.exec(String(node.name || ""))
+        return match ? match[1].replace(/_/g, ":").toLowerCase() : ""
+    }
+    readonly property string sinkBluetoothAddress: root.bluetoothAddress(sink)
+
 
     // the level glyphs give way only for a headset, which is the routing worth seeing at a
     // glance; the percentage and the hover level bar still carry the level

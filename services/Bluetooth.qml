@@ -117,6 +117,22 @@ Singleton {
         return Math.max(0, Math.min(100, Math.round(raw > 1 ? raw : raw * 100)))
     }
 
+    function connectedDevice(address: string, devices): var {
+        const wanted = String(address || "").toLowerCase()
+        const list = devices ?? root._devices
+        if (wanted.length === 0) return null
+        for (let i = 0; i < list.length; i++) {
+            const d = list[i]
+            if (d && d.connected && String(d.address || "").toLowerCase() === wanted) return d
+        }
+        return null
+    }
+
+    function batteryForAddress(address: string, devices): int {
+        const device = root.connectedDevice(address, devices)
+        return device ? root.batteryPercent(device) : -1
+    }
+
     readonly property int connectedBattery: {
         for (let i = 0; i < _devices.length; i++) {
             const d = _devices[i]
