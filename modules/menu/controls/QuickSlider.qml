@@ -101,7 +101,8 @@ MenuRow {
         width: Math.ceil(_vm.advanceWidth)
         horizontalAlignment: Text.AlignRight
         text: root.valueText
-        color: Theme.withAlpha(Theme.text, 0.60)
+        color: _track.dragging ? Theme.accent : Theme.withAlpha(Theme.text, 0.60)
+        ColorFade on color {}
         font.pixelSize: Settings.fontLabel
         elide: Text.ElideRight
     }
