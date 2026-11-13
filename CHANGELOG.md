@@ -39,6 +39,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Text no longer has orange and blue fringes on displays at fractional scales such as 125% and 150%.
 - With Auto tighten on, hovering a widget on a crowded bar no longer tightens the whole bar and loosens it again.
 - A screen backlight that disappears no longer flashes the brightness display at 0%.
 - Bar weather comes back as soon as a Wi-Fi sign-in page or a lost internet connection clears, instead of up to half an hour later.

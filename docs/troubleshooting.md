@@ -144,7 +144,8 @@ and drown their text.
 
 ### Text has coloured fringes on a fractionally scaled display
 
-Start Silere with `QSG_DISTANCEFIELD_ANTIALIASING=gray` in its environment.
+Silere draws its text in greyscale unless `QSG_DISTANCEFIELD_ANTIALIASING` is already set in
+its environment. If you see orange or blue edges, remove that variable or set it to `gray`.
 
 ### The desktop goes black in a virtual machine
 

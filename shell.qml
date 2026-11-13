@@ -2,6 +2,9 @@
 // bar and a popup are both visible. The elapsed-time driver avoids that
 // multi-window fallback; DefaultEnv still lets a user or driver override it
 //@ pragma DefaultEnv QSG_USE_SIMPLE_ANIMATION_DRIVER = 1
+// Qt's text defaults to RGB subpixel edges, which a fractional scale resamples onto the wrong subpixels:
+// measured at 125%, a third of the workspace numerals' ink came out orange or blue, and none in grey
+//@ pragma DefaultEnv QSG_DISTANCEFIELD_ANTIALIASING = gray
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
