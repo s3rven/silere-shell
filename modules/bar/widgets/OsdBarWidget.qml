@@ -159,7 +159,7 @@ Item {
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             visible: OsdBarState.hasBar
-            width: visible ? Math.min(80,
+            width: OsdBarState.hasBar ? Math.min(80,
                 Math.max(0, root._availableWidth - root._labelWidth)) : 0
             height: 3
             radius: 1.5

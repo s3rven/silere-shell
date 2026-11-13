@@ -377,7 +377,7 @@ Item {
                         ShellText {
                             anchors.left: parent.left
                             anchors.leftMargin: 10
-                            anchors.right: _groupDot.visible
+                            anchors.right: _groupDot.shown
                                 ? _groupDot.left : _groupChevron.left
                             anchors.rightMargin: 6
                             anchors.verticalCenter: parent.verticalCenter
@@ -401,7 +401,9 @@ Item {
                         // only while collapsed: an expanded group shows its leaves' own dots
                         Rectangle {
                             id: _groupDot
-                            visible: !_grp.expanded && root._groupModified(_grp.modelData)
+                            // what neighbours anchor to: visible also drops whenever the page fades away
+                            readonly property bool shown: !_grp.expanded && root._groupModified(_grp.modelData)
+                            visible: shown
                             anchors.right: _groupChevron.left
                             anchors.rightMargin: 5
                             anchors.verticalCenter: parent.verticalCenter
@@ -545,10 +547,10 @@ Item {
                                     }
 
                                     ShellText {
-                                        anchors.left: _leafGlyph.visible ? _leafGlyph.right : parent.left
-                                        anchors.leftMargin: _leafGlyph.visible ? 8 : 18
-                                        anchors.right: _leafDot.visible ? _leafDot.left : parent.right
-                                        anchors.rightMargin: _leafDot.visible ? 5 : 6
+                                        anchors.left: !root.compact ? _leafGlyph.right : parent.left
+                                        anchors.leftMargin: !root.compact ? 8 : 18
+                                        anchors.right: _leaf.showDot ? _leafDot.left : parent.right
+                                        anchors.rightMargin: _leaf.showDot ? 5 : 6
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: _leaf.modelData.label
                                         elide: Text.ElideRight

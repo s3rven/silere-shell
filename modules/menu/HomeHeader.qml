@@ -30,8 +30,8 @@ Item {
         id: _day
         anchors.top: parent.top
         anchors.left: parent.left
-        anchors.right: _weather.visible ? _weather.left : parent.right
-        anchors.rightMargin: _weather.visible ? 12 : 0
+        anchors.right: _weather.shown ? _weather.left : parent.right
+        anchors.rightMargin: _weather.shown ? 12 : 0
         text: root.weekday
         color: Theme.text
         font.pixelSize: Settings.fontSize + 5
@@ -43,9 +43,11 @@ Item {
         id: _weather
         anchors.right: parent.right
         y: _day.y + Math.round((_day.height - height) / 2)
-        // the day is the header's subject: a reading with no room beside it gives way
-        visible: root.weatherText.length > 0
+        // the day is the header's subject: a reading with no room beside it gives way. The day anchors to
+        // this, not to visible, which also drops whenever the page fades away
+        readonly property bool shown: root.weatherText.length > 0
             && _day.implicitWidth + 12 + implicitWidth <= root.width
+        visible: shown
         text: root.weatherText
         // the glyph is a private-use character, which a screen reader reads as noise
         Accessible.name: visible ? "Weather " + Weather.temperature + Weather.unit + ", " + Weather.condition : ""
@@ -57,8 +59,8 @@ Item {
     ShellText {
         id: _date
         anchors.left: parent.left
-        anchors.right: _uptime.visible && !root._stackMeta ? _uptime.left : parent.right
-        anchors.rightMargin: _uptime.visible && !root._stackMeta ? 12 : 0
+        anchors.right: root.uptimeText.length > 0 && !root._stackMeta ? _uptime.left : parent.right
+        anchors.rightMargin: root.uptimeText.length > 0 && !root._stackMeta ? 12 : 0
         anchors.top: _day.bottom
         anchors.topMargin: 2
         text: root.dateText

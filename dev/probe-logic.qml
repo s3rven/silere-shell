@@ -8318,6 +8318,16 @@ ShellRoot {
         ShellSettings.uiScale = spineScaleWas
         root._check(spines.every(pair => pair[0] > 0 && pair[0] === pair[1]) && spines[1][0] > spines[0][0],
             "a slider row's label stays on the toggle rows' column when large type widens the glyph slot")
+        // a page goes invisible as its fade ends: a row laid out by its own effective visibility shifted then, and back
+        const shade = drawerContentFactory.createObject(barFixtureHost)
+        spineSlider.parent = shade
+        const labelShown = labelX(spineSlider, "Probe slider")
+        shade.visible = false
+        const labelHidden = labelX(spineSlider, "Probe slider")
+        spineSlider.parent = barFixtureHost
+        shade.destroy()
+        root._check(labelShown > 0 && labelHidden === labelShown,
+            "a row keeps its glyph slot while its page is out of sight, so showing the page relays nothing out")
         spineSlider.destroy()
         spineToggle.destroy()
 

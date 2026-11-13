@@ -217,7 +217,7 @@ Column {
                         id: _input
                         activeFocusOnTab: true
                         x: root.fieldHeight - 2
-                        width: Math.max(0, (_clear.visible ? _clear.x : _close.x) - x - 4)
+                        width: Math.max(0, (root.searching ? _clear.x : _close.x) - x - 4)
                         anchors.verticalCenter: parent.verticalCenter
                         visible: root.expanded
                         enabled: root._canSearch && root.expanded

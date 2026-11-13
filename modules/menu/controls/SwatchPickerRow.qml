@@ -49,7 +49,7 @@ Item {
         anchors.leftMargin: 14
         y: Math.round((root._headerH - height) / 2)
         visible: root.glyph.length > 0
-        width: visible ? Metrics.glyphSlotWidth : 0
+        width: root.glyph.length > 0 ? Metrics.glyphSlotWidth : 0
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)
@@ -60,7 +60,7 @@ Item {
         anchors.left: _glyph.right
         anchors.leftMargin: root.glyph.length > 0 ? 10 : 0
         anchors.verticalCenter: _glyph.verticalCenter
-        anchors.right: _readout.visible ? _readout.left
+        anchors.right: root._shownName.length > 0 ? _readout.left
             : (root._stacked ? parent.right : _sr.left)
         anchors.rightMargin: 10
         text:           root.label

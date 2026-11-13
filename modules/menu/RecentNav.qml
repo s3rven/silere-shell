@@ -240,7 +240,9 @@ Item {
 
                     ShellText {
                         id: _rowMuted
-                        visible: !_row.isAll && ShellSettings.notifAppMuted(_row.modelData)
+                        // what neighbours anchor to: visible also drops whenever the page fades away
+                        readonly property bool shown: !_row.isAll && ShellSettings.notifAppMuted(_row.modelData)
+                        visible: shown
                         anchors.right: _rowCount.left
                         anchors.rightMargin: 5
                         anchors.verticalCenter: parent.verticalCenter
@@ -251,9 +253,9 @@ Item {
                     }
 
                     ShellText {
-                        anchors.left: _iconSlot.visible ? _iconSlot.right : parent.left
-                        anchors.leftMargin: _iconSlot.visible ? 7 : 12
-                        anchors.right: _rowMuted.visible ? _rowMuted.left : _rowCount.left
+                        anchors.left: !root.compact ? _iconSlot.right : parent.left
+                        anchors.leftMargin: !root.compact ? 7 : 12
+                        anchors.right: _rowMuted.shown ? _rowMuted.left : _rowCount.left
                         anchors.rightMargin: 6
                         anchors.verticalCenter: parent.verticalCenter
                         text: _row.label

@@ -392,7 +392,7 @@ FittedPopupWindow {
                 ShellText {
                     id: _arrow
                     visible: _entry.sub
-                    width: visible ? implicitWidth : 0
+                    width: _entry.sub ? implicitWidth : 0
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: "󰅂"

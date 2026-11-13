@@ -54,7 +54,7 @@ FittedPopupWindow {
         }
 
         width: parent ? parent.width : 0
-        height: _mainHeight + (_detail.visible ? _detail.implicitHeight + 8 : 0)
+        height: _mainHeight + (_row.detailText.length > 0 ? _detail.implicitHeight + 8 : 0)
         // a blocked row stays readable so its explanation shows
         opacity: _canActivate || error || warning ? 1.0 : Theme.disabledOpacity
         MotionBehavior on opacity { NumberAnimation { duration: Motion.medium } }

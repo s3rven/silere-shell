@@ -491,6 +491,20 @@ else
   ok "Loaders" "lifetime does not depend on Loader.item"
 fi
 
+section "layout and effective visibility"
+# In a binding, visible is effective visibility: it drops whenever any ancestor hides, and a menu page hides as its
+# fade ends (PageShell's visible: opacity > 0.001). A size, margin or anchor chosen by it relaid every row out at
+# each fade's end and start, once into a binding loop. Bind layout to the condition the item declares instead.
+layout_visible="$(grep -RInE --include='*.qml' \
+  '^[[:space:]]*(height|width|implicitHeight|implicitWidth|(left|right|top|bottom)Padding|maximumLineCount|anchors\.(top|bottom|left|right)(Margin)?|spacing)[[:space:]]*:.*(^|[^A-Za-z0-9_])visible([^A-Za-z0-9_]|$)' \
+  shell.qml modules config | grep -v visibleArea || true)"
+if [ -n "$layout_visible" ]; then
+  fail "layout must not read effective visibility (bind to the item's own condition):"
+  printf '%s\n' "$layout_visible"
+else
+  ok "layout" "no size, margin or anchor reads effective visibility"
+fi
+
 section "coordinate mapping in bindings"
 # mapToItem()/mapFromItem() read ancestor geometry in C++, so a binding that
 # calls them captures no dependency and keeps its first, pre-layout answer

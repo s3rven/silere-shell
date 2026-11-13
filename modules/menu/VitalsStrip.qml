@@ -192,7 +192,7 @@ SettingsCard {
             anchors.verticalCenter: parent.verticalCenter
             readonly property bool inline: tile.sub.length === 0
                 || Math.ceil(_labelMetrics.advanceWidth) + 8 + Math.ceil(_detailMetrics.advanceWidth) <= width
-            height: inline || !_detailText.visible ? _labelText.height
+            height: inline || tile.sub.length === 0 || _detailText.width <= 12 ? _labelText.height
                 : _labelText.height + 1 + _detailText.height
 
             ShellText {

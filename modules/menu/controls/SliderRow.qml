@@ -63,7 +63,7 @@ MenuRow {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             visible: root.glyph.length > 0
-            width: visible ? Metrics.glyphSlotWidth : 0
+            width: root.glyph.length > 0 ? Metrics.glyphSlotWidth : 0
             horizontalAlignment: Text.AlignHCenter
             text:           root.glyph
             color:          root.glyphColor

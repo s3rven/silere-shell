@@ -260,7 +260,7 @@ MenuRow {
         Item {
             id: _chevron
             visible: root.expandable
-            width:  visible ? 24 : 0
+            width:  root.expandable ? 24 : 0
             height: parent.height
             readonly property bool _beside: root.showSwitch || root.reserveSwitchSlot || root.valueText.length > 0
             anchors.right: _beside ? undefined : parent.right

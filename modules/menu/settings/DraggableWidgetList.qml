@@ -584,7 +584,7 @@ Item {
                 anchors.left: parent.left
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
-                width: visible ? 18 : 0
+                width: root.width >= 180 ? 18 : 0
                 horizontalAlignment: Text.AlignHCenter
                 text: _row.meta.glyph
                 color: _row.checked
@@ -621,7 +621,7 @@ Item {
                 id: _chevron
                 visible: _row.isTray
                 anchors.right: _dragGrip.left
-                width: visible ? 22 : 0
+                width: _row.isTray ? 22 : 0
                 height: parent.height
 
                 Accessible.role: Accessible.Button

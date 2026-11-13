@@ -647,8 +647,8 @@ Item {
 
                 ShellText {
                     id: _summary
-                    anchors.left:       _critIcon.visible ? _critIcon.right : parent.left
-                    anchors.leftMargin: _critIcon.visible ? 6 : 0
+                    anchors.left:       card.isCritical ? _critIcon.right : parent.left
+                    anchors.leftMargin: card.isCritical ? 6 : 0
                     anchors.right:      parent.right
                     anchors.rightMargin: card._iconSide + 6
                     text:             card.titleText
@@ -699,7 +699,7 @@ Item {
             Item {
                 visible: card.hasProgress
                 width:   parent.width
-                height:  visible ? 10 : 0
+                height:  card.hasProgress ? 10 : 0
 
                 Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
@@ -938,7 +938,7 @@ Item {
                     font.letterSpacing:  0.6
                     elide:          Text.ElideRight
                     width: Math.min(implicitWidth, Math.max(0, parent.width - _capDot.implicitWidth - _capTime.implicitWidth - parent.spacing * 2
-                        - (_capThread.visible ? _capThreadDot.implicitWidth + _capThread.implicitWidth + parent.spacing * 2 : 0)))
+                        - (card.earlierCount > 0 ? _capThreadDot.implicitWidth + _capThread.implicitWidth + parent.spacing * 2 : 0)))
                 }
 
                 ShellText {

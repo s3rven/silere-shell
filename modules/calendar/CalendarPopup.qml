@@ -586,9 +586,9 @@ FittedPopupWindow {
                         }
 
                         ShellText {
-                            anchors.left: _weatherTemp.visible ? _weatherTemp.right : _weatherGlyph.right
+                            anchors.left: Weather.hasData ? _weatherTemp.right : _weatherGlyph.right
                             anchors.leftMargin: 8
-                            anchors.right: _weatherRange.visible ? _weatherRange.left : parent.right
+                            anchors.right: Weather.hasData ? _weatherRange.left : parent.right
                             anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
                             text: Weather.loading && Weather.failed ? "Updating…"
