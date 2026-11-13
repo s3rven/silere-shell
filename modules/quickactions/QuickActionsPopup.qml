@@ -169,6 +169,21 @@ FittedPopupWindow {
         }
     }
 
+    // between the groups: what holds notifications back, what the machine is doing, the radios
+    component GroupBreak: Item {
+        readonly property bool groupBreak: true
+        width: parent ? parent.width : 0
+        height: 11
+        Hairline {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            color: Theme.menuDivider
+        }
+    }
+
     PopupShadow { card: card }
 
     FloatingPopupCard {
@@ -231,7 +246,9 @@ FittedPopupWindow {
                     : Notifications.presentationMode ? "Presenting" : "Off"
                 onTriggered: Idle.toggleKeepAwake()
             }
+            GroupBreak { visible: _nightRow.visible || _powerRow.visible }
             QuickActionRow {
+                id: _nightRow
                 visible: NightLight.toolAvailable
                 glyph: NightLight.enabled ? "󰖔" : "󰖙"
                 label: "Night Light"
@@ -243,6 +260,7 @@ FittedPopupWindow {
                 onTriggered: NightLight.toggle()
             }
             QuickActionRow {
+                id: _powerRow
                 visible: PowerProfiles.available
                 glyph: PowerProfiles.glyph.length > 0 ? PowerProfiles.glyph : "󰾅"
                 label: "Power Mode"
@@ -259,7 +277,9 @@ FittedPopupWindow {
                          : "Unavailable"
                 onTriggered: PowerProfiles.cycle()
             }
+            GroupBreak { visible: _wifiRow.visible || _btRow.visible || _airRow.visible }
             QuickActionRow {
+                id: _wifiRow
                 visible: Network.toolAvailable && Network.hasWifiDevice
                 enabled: QuickActionsState.wifiControllable
                 glyph: Network.wifiEnabled ? "󰤨" : "󰤭"
@@ -271,6 +291,7 @@ FittedPopupWindow {
                 onTriggered: Network.toggleWifi()
             }
             QuickActionRow {
+                id: _btRow
                 visible: Bluetooth.available
                 enabled: QuickActionsState.btControllable
                 glyph: Bluetooth.enabled ? "󰂯" : "󰂲"
@@ -282,6 +303,7 @@ FittedPopupWindow {
                 onTriggered: Bluetooth.toggle()
             }
             QuickActionRow {
+                id: _airRow
                 visible: QuickActionsState.airplaneAvailable
                 glyph: "󰀝"
                 label: "Airplane Mode"
