@@ -6843,6 +6843,44 @@ ShellRoot {
             KeyboardBrightness._readError = keyboardErrorWas
             DisplayBrightness.displays = externalWas
             Brightness.ready = backlightWas
+            // a wired desktop with no Bluetooth and no saved VPN: the VPN row waits for a profile, so the card has no row
+            const vpnWas = { profiles: Vpn.profiles, list: Vpn._listError, action: Vpn._actionError }
+            home._wifiAvailable = false
+            home._btAvailable = false
+            Vpn.profiles = []
+            Vpn._listError = ""
+            Vpn._actionError = ""
+            const cardHasRow = Network.hasVpn || home._signInShown
+            const emptyHidden = home._connShown === cardHasRow && home._vpnShown === Network.hasVpn
+            Vpn.profiles = [{ uuid: "probe-uuid", name: "Probe VPN", active: false }]
+            const savedShown = home._connShown === (cardHasRow || Vpn.available) && home._vpnShown === home._connShown
+            Vpn.profiles = vpnWas.profiles
+            Vpn._listError = vpnWas.list
+            Vpn._actionError = vpnWas.action
+            root._check(emptyHidden && savedShown,
+                "Home's Connectivity card shows only while one of its rows does: a VPN list that could be read is not a row")
+            home._wifiAvailable = true
+            home._togglePicker("wifi")
+            home._wifiAvailable = false
+            const wifiPickerGone = home._picker === ""
+            home._togglePicker("vpn")
+            if (vpn) vpn.expandable = false
+            root._check(wifiPickerGone && vpn && home._picker === "",
+                "Home's Wi-Fi and VPN pickers close when their adapter or NetworkManager goes away")
+            const vpnStateWas = Network._vpnState
+            Vpn.profiles = []
+            Vpn._listError = ""
+            Vpn._actionError = ""
+            Network._vpnState = ({ active: true, name: "probe VPN", uuid: "" })
+            home._togglePicker("vpn")
+            const vpnPickerOpen = home._picker === "vpn"
+            Network._vpnState = ({ active: false, name: "", uuid: "" })
+            root._check(vpnPickerOpen && home._picker === "",
+                "Home's VPN picker closes with its row when the tunnel goes and no saved profile is left")
+            Network._vpnState = vpnStateWas
+            Vpn.profiles = vpnWas.profiles
+            Vpn._listError = vpnWas.list
+            Vpn._actionError = vpnWas.action
             home.destroy()
             host.close()
             host.destroy()

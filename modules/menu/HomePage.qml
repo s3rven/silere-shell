@@ -30,15 +30,17 @@ PageShell {
         || DisplayBrightness.displays.some(d => !d.unreadable && !DisplayBrightness.disabled(d.key))
         || (ShellSettings.ddcBrightnessEnabled && DisplayBrightness.lastError.length > 0)
     readonly property bool _avShown: Audio.ready || root._displayShown
-    readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || Network.hasVpn
-        || (SystemTools.hasNmcli && Network.toolAvailable)
+    // nothing to pick without a saved profile, so the row waits for one; a failed read leaves none, and the picker shows that error
+    readonly property bool _vpnShown: Network.hasVpn
+        || (Vpn.available && (Vpn.profiles.length > 0 || Vpn.lastError.length > 0))
+    readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || _vpnShown
     function _bottom(item, shown: bool): real {
         return item.y + (shown ? item.height : 0)
     }
     // icon inset + glyph slot + gap, where every Home row's text and slider begin
     readonly property int _rowTextX: 14 + Metrics.glyphSlotWidth + 10
-    readonly property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
-    readonly property bool _btAvailable: Bluetooth.available
+    property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
+    property bool _btAvailable: Bluetooth.available
     readonly property bool _signInShown: Network.signInNeeded && Network.canOpenSignIn
     readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
@@ -132,10 +134,9 @@ PageShell {
         function onWifiEnabledChanged() {
             if (root._picker === "wifi" && !Network.wifiEnabled) root._closePicker()
         }
-        function onToolAvailableChanged() {
-            if (root._picker === "wifi" && !Network.toolAvailable) root._closePicker()
-        }
     }
+    on_WifiAvailableChanged: if (root._picker === "wifi" && !root._wifiAvailable) root._closePicker()
+    on_VpnShownChanged: if (root._picker === "vpn" && !root._vpnShown) root._closePicker()
     Connections {
         target: Bluetooth
         enabled: root.active
@@ -320,10 +321,7 @@ PageShell {
                 InlinePicker { id: _vpnAbove; mirror: _vpnPicker }
                 ControlRow {
                     id: _vpnRow
-                    // nothing to pick without a saved profile, so the row waits for one
-                    // a failed read leaves no profiles, and the picker is what shows that error
-                    visible: Network.hasVpn
-                        || (Vpn.available && (Vpn.profiles.length > 0 || Vpn.lastError.length > 0))
+                    visible: root._vpnShown
                     property bool copied: false
                     active: Network.hasVpn
                     glyph: "󰦝"
@@ -333,6 +331,7 @@ PageShell {
                     passive: !expandable && Network.vpnAddress.length === 0
                     expandable: SystemTools.hasNmcli && Network.toolAvailable
                     expanded: root._picker === "vpn"
+                    onExpandableChanged: if (!expandable && expanded) root._closePicker()
                     onExpandToggled: root._togglePicker("vpn")
                     onActivated: {
                         if (Network.vpnAddress.length === 0) {
