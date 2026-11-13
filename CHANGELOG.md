@@ -40,6 +40,7 @@ settings file carries its own `__version` and migrates separately.
 - Notification history settings and muted apps have their own History page under Settings › Feedback, so Notifications fits without scrolling.
 - Settings › System › Overview lists device checks under one row that opens on its own when a check needs attention.
 - Quick Actions sets its toggles in three groups, with a line between what holds notifications back, what the computer is doing, and the radios; a group with nothing to show takes its line with it.
+- Quick Actions and tray menu rows answer a hover or a press on the same timing as the menu's rows: a press shows at once and a hover fades out a little slower than it came.
 - Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
 - Settings options that fold away when you switch something off now ease to a stop, instead of the rows below them landing at full speed.
 - The uninstaller lists what it kept and how to stop the shell that is still running.

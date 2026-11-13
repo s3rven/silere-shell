@@ -270,16 +270,11 @@ FittedPopupWindow {
                 color: Theme.menuDivider
             }
 
-            Rectangle {
+            HoverFill {
                 visible: !_entry.sep
                 anchors.fill: parent
-                radius: Theme.radiusControl
-                antialiasing: true
-                color: !_entry.on ? "transparent"
-                    : _entryTap.pressed ? Theme.withAlpha(Theme.menuHover, 0.13)
-                    : (_rowHover.hovered || _flyout.opened)
-                        ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
-                ColorFade on color {}
+                hovered: _entry.on && (_rowHover.hovered || _flyout.opened)
+                pressed: _entry.on && _entryTap.pressed
             }
 
             HoverHandler {
@@ -651,13 +646,10 @@ FittedPopupWindow {
                         onActivated: _hideRow.hide()
                     }
 
-                    Rectangle {
+                    HoverFill {
                         anchors.fill: parent
-                        radius: Theme.radiusControl
-                        antialiasing: true
-                        color: _hideTap.pressed ? Theme.withAlpha(Theme.menuHover, 0.13)
-                            : _hideHover.hovered ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
-                        ColorFade on color {}
+                        hovered: _hideHover.hovered
+                        pressed: _hideTap.pressed
                     }
 
                     HoverHandler { id: _hideHover; cursorShape: Qt.PointingHandCursor }

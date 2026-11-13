@@ -77,15 +77,10 @@ FittedPopupWindow {
             onTapped: _row._activate()
         }
 
-        Rectangle {
+        HoverFill {
             anchors.fill: parent
-            radius: Theme.radiusControl
-            antialiasing: true
-            color: _row._pressed
-                ? Theme.withAlpha(Theme.accent, 0.14)
-                : (_rowHover.hovered)
-                    ? Theme.withAlpha(Theme.menuHover, 0.08) : "transparent"
-            ColorFade on color {}
+            hovered: _rowHover.hovered
+            pressed: _row._pressed
         }
 
         ShellText {
