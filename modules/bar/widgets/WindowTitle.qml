@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Widgets
 import "../../../config"
 import "../../../services"
 import "../../common"
@@ -553,14 +552,11 @@ Item {
             opacity: root._op
             visible: root._op > 0
 
-            IconImage {
+            ShellIcon {
                 id: _icon
                 visible: root._iconShown
                 anchors.verticalCenter: parent.verticalCenter
-                width: root._iconSize
-                height: root._iconSize
-                // decode at the drawn size, not the theme's 256px original
-                implicitSize: root._iconSize
+                side: root._iconSize
                 source: root._iconSource
                 asynchronous: true
             }

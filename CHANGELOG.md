@@ -77,6 +77,7 @@ settings file carries its own `__version` and migrates separately.
 - Screen readers announce rows under Settings › Feedback › History › Muted apps as "Mute popups from" and the app's name, not the bare name.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.
 - The "Notifications blocked" alert no longer comes back each time Settings rechecks your tools, and its row in Settings › System › Overview stays put while it checks.
+- Notification, History and app rail icons, Home's app volume icons and the window title's app icon are sharp at fractional scales such as 125%.
 - Muting the Unknown page in History mutes notifications from senders with no name.
 - The workspace-changed hook runs when you switch between two named Hyprland workspaces and gets the workspace's name, instead of -1338; it is no longer called with -1 while niri restarts.
 - Clicking a notification on a named Hyprland workspace can take you to the app's window on another named workspace, instead of the one already in front of you.

@@ -1,6 +1,4 @@
 import QtQuick
-import Quickshell
-import Quickshell.Widgets
 import "../../../config"
 import "../../common"
 
@@ -61,15 +59,11 @@ MenuRow {
             ColorFade on color {}
         }
 
-        IconImage {
+        ShellIcon {
             id: _icon
             anchors.centerIn: parent
             anchors.alignWhenCentered: false
-            readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-            transform: PixelSnap { item: _icon; dpr: _icon._dpr }
-            width: 16
-            height: 16
-            implicitSize: 16
+            side: 16
             asynchronous: true
             visible: status === Image.Ready
             source: root.glyphSource
