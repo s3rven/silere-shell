@@ -35,6 +35,7 @@ settings file carries its own `__version` and migrates separately.
 - Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - Home's volume and brightness percentages take the accent while you drag them, as Settings sliders do.
+- Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
 - `silere doctor` names the package for more missing tools, and its columns line up.

@@ -201,7 +201,7 @@ PageShell {
         const changed = root._shownSection !== MenuState.settingsSection
         if (changed) root._holdBodyHeight()
         root._shownSection = MenuState.settingsSection
-        _detail.opacity = 1
+        _detail._fade = 1
         _detail._shift = 0
         _detail._lift = 0
         if (changed) root.sectionSwapped()
@@ -270,9 +270,13 @@ PageShell {
         width:  root.width
         visible: !_search.searching
         height: _detailHeader.height + _bodyGap + _detailBody.height
+        // a section change moves the body alone: the header frame and the search beside it are the same on every
+        // page, so they hold still while the title, mark and description fade through with the body
+        property real _fade: 1
         property real _shift: 0
         property real _lift: 0
-        transform: Translate { x: _detail._shift; y: _detail._lift }
+        // shorter than a tab's exit: the panel stays put, and the next page still has to build before it can enter
+        readonly property int _exitMs: Motion.ms(90)
         // the outgoing controls stay painted for the exit, but must not change settings after the sidebar has selected a different section
         enabled: !_search.searching && root._shownSection === MenuState.settingsSection
             && root.contentReady && !root._awaitingSectionEnter
@@ -308,9 +312,9 @@ PageShell {
         SequentialAnimation {
             id: _detailSwap
             ParallelAnimation {
-                NumberAnimation { target: _detail; property: "opacity"; to: 0.0; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
-                NumberAnimation { target: _detail; property: "_shift"; to: -Motion.pageOffset * root._sectionDirection; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
-                NumberAnimation { target: _detail; property: "_lift"; to: -Motion.pageLift; duration: Motion.pageOut; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+                NumberAnimation { target: _detail; property: "_fade"; to: 0.0; duration: _detail._exitMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+                NumberAnimation { target: _detail; property: "_shift"; to: -Motion.pageOffset * root._sectionDirection; duration: _detail._exitMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
+                NumberAnimation { target: _detail; property: "_lift"; to: -Motion.pageLift; duration: _detail._exitMs; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardAccel }
             }
             ScriptAction {
                 script: {
@@ -330,7 +334,7 @@ PageShell {
             root._awaitingSectionEnter = false
             _sectionEnterDefer.stop()
             if (!root.active || !MenuState.open || root.powerOpen || !root._motionAllowed) {
-                _detail.opacity = 1
+                _detail._fade = 1
                 _detail._shift = 0
                 _detail._lift = 0
                 return
@@ -343,21 +347,23 @@ PageShell {
             target: _detailBody
             function onStatusChanged() {
                 if (!root.contentReady) return
-                _sectionEnterDefer.restart()
+                // a turn later, so a panel resize the new height starts is already counted
+                Qt.callLater(() => _sectionEnterDefer.restart())
                 if (root._revealKey !== "") _revealDelay.restart()
             }
         }
 
+        // the panel gets a head start only when it is actually resizing: keyed off the body's height, this
+        // held every page an extra 55 ms on an empty pane while the panel sat still at the nav's height
         Timer {
             id: _sectionEnterDefer
-            interval: Math.abs(_detailBody.height - _detailBody._heldH) > 64
-                ? Motion.ms(55) : 0
+            interval: Motion.layoutGliding ? Motion.ms(55) : 0
             onTriggered: _detail._startSectionEnter()
         }
 
         ParallelAnimation {
             id: _detailEnter
-            NumberAnimation { target: _detail; property: "opacity"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
+            NumberAnimation { target: _detail; property: "_fade"; to: 1.0; duration: Motion.pageIn; easing.type: Easing.OutQuad }
             NumberAnimation { target: _detail; property: "_shift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
             NumberAnimation { target: _detail; property: "_lift"; to: 0.0; duration: Motion.pageIn; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.emphasizedDecel }
         }
@@ -392,6 +398,7 @@ PageShell {
                 ShellText {
                     id: _hdrIcon
                     anchors.centerIn: parent
+                    opacity: _detail._fade
                     text: _detailHeader._meta.glyph
                     color: Theme.mix(Theme.accent, Theme.text, 0.10)
                     font.pixelSize: Settings.fontSize + 2
@@ -408,6 +415,7 @@ PageShell {
                 y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
                 height: implicitHeight
                 spacing: 1
+                opacity: _detail._fade
 
                 ShellText {
                     id: _hdrTitle
@@ -426,6 +434,7 @@ PageShell {
                 anchors.left: _hdrText.left
                 anchors.right: _hdrText.right
                 y: Math.round(_hdrText.y + _hdrText.height)
+                opacity: _detail._fade
                 text: _detailHeader._meta.description
                 color: Theme.withAlpha(Theme.subtext, 0.86)
                 font.pixelSize: Settings.fontCaption

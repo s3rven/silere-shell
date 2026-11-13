@@ -12689,9 +12689,9 @@ ShellRoot {
                 root._check(settings.contentReady, "settings content finishes its initial load")
                 body.active = false
                 settings._awaitingSectionEnter = true
-                detail.opacity = 0
+                detail._fade = 0
                 detail._startSectionEnter()
-                root._check(settings._awaitingSectionEnter && detail.opacity === 0,
+                root._check(settings._awaitingSectionEnter && detail._fade === 0,
                     "a settings section waits for its loader before starting its reveal")
                 body.active = true
                 interval = 500
@@ -12702,13 +12702,13 @@ ShellRoot {
                 const settings = root._motionSettings
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const revealed = settings.contentReady && !settings._awaitingSectionEnter
-                        && detail.opacity === 1 && detail._shift === 0
+                        && detail._fade === 1 && detail._shift === 0
                         && detail._lift === 0
                 if (root._motionNotYet(revealed)) break
                 root._check(revealed, "a ready settings section completes its reveal")
                 MenuState.close()
                 MenuState.setSettingsSection("clock")
-                root._check(settings._shownSection === "clock" && detail.opacity === 1
+                root._check(settings._shownSection === "clock" && detail._fade === 1
                         && detail._lift === 0,
                     "a settings change while the menu is closed settles without a fade")
 
@@ -12753,7 +12753,7 @@ ShellRoot {
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const body = detail.children.find(child => child.sourceComponent !== undefined)
                 root._check(root._motionSectionSwaps === 0 && body.item === root._motionBodyItem
-                        && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0,
+                        && detail._fade === 1 && detail._shift === 0 && detail._lift === 0,
                     "returning mid-fade keeps the settings body and reverses to a settled reveal")
                 const exit = detail.data.find(item => item.animations?.length === 2)
                 let exits = 0
@@ -12839,14 +12839,14 @@ ShellRoot {
                 const settings = root._motionSettings
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
                 const settled = settings.contentReady && !settings._awaitingSectionEnter
-                    && detail.opacity === 1 && detail._shift === 0 && detail._lift === 0
+                    && detail._fade === 1 && detail._shift === 0 && detail._lift === 0
                 if (root._motionNotYet(settled)) break
                 root._check(settled && settings._shownSection === "workspaces"
                         && root._motionSectionSwaps === 1 && detail.enabled,
                     "a rapid settings sequence reveals only its latest destination")
                 MenuState.setSettingsSection("clock")
                 ShellSettings.reduceMotion = true
-                root._check(settings._shownSection === "clock" && detail.opacity === 1
+                root._check(settings._shownSection === "clock" && detail._fade === 1
                         && detail._shift === 0 && detail._lift === 0,
                     "reduced motion settles an interrupted settings transition at its destination")
                 MenuState.close()
