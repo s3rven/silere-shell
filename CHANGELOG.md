@@ -57,6 +57,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- While a fullscreen window covers the bar, night light keeps to its schedule and the shell's other timers keep running; with motion on they could stop until you left fullscreen. The bar's motion and visualizer rest under it.
 - The bar's status colours (microphone in use, low battery, Caps Lock, a hot CPU, an urgent workspace, an alert shown in the bar) stay readable on a see-through bar over a bright wallpaper; they dropped to about 2:1 there.
 - Errors, warnings and success marks in translucent popups stay readable with a white window behind a dark menu, or a dark window behind a light one (as low as 1.5:1 before).
 - With pure white text (matugen at `--contrast 1`), captions in translucent popups no longer turn black on a dark theme.

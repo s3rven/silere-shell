@@ -54,6 +54,33 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
     }
 
+    // the bar's layer sits under a fullscreen window and only the overlay surfaces named here draw above it
+    Binding {
+        target: Motion
+        property: "unseen"
+        value: Compositor.activeFullscreen && Quickshell.screens.length === 1 && !ControlSurfaces.anyOpen
+            && OsdBarState.activeCount === 0 && Notifications.popupModel.values.length === 0
+    }
+
+    // a fade caught in flight as the bar is covered finishes on this pixel's frames
+    property bool _framePump: false
+    Connections {
+        target: Motion
+        function onUnseenChanged() {
+            if (!Motion.unseen) return
+            root._framePump = true
+            _framePumpHold.restart()
+        }
+    }
+    Timer { id: _framePumpHold; interval: 700; onTriggered: root._framePump = false }
+    Variants {
+        model: root._framePump && !root.smokeTest && Quickshell.screens.length > 0 ? [Quickshell.screens[0]] : []
+        delegate: FramePump {
+            required property ShellScreen modelData
+            targetScreen: modelData
+        }
+    }
+
     // reading a member instantiates a lazy singleton; every service declaring `armed` is read here or in an arm function above
     Component.onCompleted: {
         if (root.smokeTest) return

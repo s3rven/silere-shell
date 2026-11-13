@@ -7,7 +7,7 @@ Behavior {
 
     property bool gate: true
 
-    enabled: gate && !ShellSettings.reduceMotion && !Idle.isIdle
+    enabled: gate && !ShellSettings.reduceMotion && !Idle.isIdle && !Motion.unseen
 
     // branch timings on targetValue: a flag-bound duration updates only after the job starts
 

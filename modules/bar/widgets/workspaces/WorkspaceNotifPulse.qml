@@ -19,7 +19,7 @@ Item {
     }
 
     function play(isCritical: bool): void {
-        if (!root.barActive || ShellSettings.reduceMotion || Idle.isIdle) {
+        if (!root.barActive || ShellSettings.reduceMotion || Idle.isIdle || Motion.unseen) {
             root.finished()
             return
         }
@@ -69,6 +69,12 @@ Item {
         }
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settle()
+        }
+    }
+    Connections {
+        target: Motion
+        function onUnseenChanged() {
+            if (Motion.unseen) root._settle()
         }
     }
 

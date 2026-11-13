@@ -198,6 +198,12 @@ Item {
         }
     }
     Connections {
+        target: Motion
+        function onUnseenChanged() {
+            if (Motion.unseen) root._settleMotion()
+        }
+    }
+    Connections {
         target: Idle
         function onIsIdleChanged() {
             if (Idle.isIdle) root._settleMotion()

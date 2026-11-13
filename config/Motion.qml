@@ -5,7 +5,12 @@ import Quickshell
 import "../services"
 
 Singleton {
+    id: root
+
     readonly property bool _rm: ShellSettings.reduceMotion
+
+    // set by shell.qml while a fullscreen window hides all the shell draws: an animation in flight then stops every Timer
+    property bool unseen: false
 
     function ms(base: int): int { return _rm ? 0 : base }
 
@@ -14,7 +19,7 @@ Singleton {
     readonly property bool layoutGliding: layoutGlides > 0
 
     // idle and reduce motion both mean "no visible motion"; taking both as arguments keeps it testable without a live idle state
-    function allowsMotion(idle: bool, reduceMotion: bool): bool { return !idle && !reduceMotion }
+    function allowsMotion(idle: bool, reduceMotion: bool): bool { return !idle && !reduceMotion && !root.unseen }
 
     readonly property int instant: _rm ? 0 : 80
     readonly property int fast:    _rm ? 0 : 130

@@ -13,7 +13,7 @@ SequentialAnimation {
     property real   restValue: 0.0
     property bool   active:    false
 
-    running: active && !ShellSettings.reduceMotion && duration > 0
+    running: active && !ShellSettings.reduceMotion && !Motion.unseen && duration > 0
     loops: Animation.Infinite
     onRunningChanged: if (!running && target && targetProperty) target[targetProperty] = restValue
     onDurationChanged: {

@@ -30,7 +30,7 @@ Item {
     onWheelEnabledChanged: if (!root.wheelEnabled) root._resetWheel()
     Component.onDestruction: root._resetWheel()
     readonly property bool motionActive: root.barActive && root.visible && !root.collapsed
-        && !Idle.isIdle && !ShellSettings.reduceMotion
+        && !Idle.isIdle && !ShellSettings.reduceMotion && !Motion.unseen
     property bool   animateGlyph: true
     property bool   animateText: false
     property int    glyphPixelSize: Settings.iconSize + 2

@@ -46,7 +46,7 @@ Item {
 
     onTextChanged: {
         if (_shown === text) return
-        if (!_ready || !visible || !animate || ShellSettings.reduceMotion) {
+        if (!_ready || !visible || !animate || ShellSettings.reduceMotion || Motion.unseen) {
             _settle()
             return
         }
@@ -61,6 +61,12 @@ Item {
         target: ShellSettings
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion && root._ready) root._settle()
+        }
+    }
+    Connections {
+        target: Motion
+        function onUnseenChanged() {
+            if (Motion.unseen && root._ready) root._settle()
         }
     }
 

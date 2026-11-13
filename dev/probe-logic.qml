@@ -474,6 +474,7 @@ ShellRoot {
         printErrors: false
     }
     Component { id: pulseLoopFactory; PulseLoop {} }
+    Component { id: motionHostFactory; Item { property real v: 0; MotionBehavior on v { NumberAnimation { duration: 2000 } } } }
     Component {
         id: windowTitleFactory
         WindowTitle {
@@ -4105,6 +4106,26 @@ ShellRoot {
         root._check(!pulseLoop.running && pulseTarget.value === 1,
             "a live pulse settles instead of restarting as a zero-duration infinite loop")
         pulseLoop.destroy()
+
+        // under a fullscreen window nothing draws a frame, and a job left in flight there stops every Timer
+        ShellSettings.reduceMotion = false
+        const unseenWas = Motion.unseen
+        const motionHost = motionHostFactory.createObject(root)
+        const unseenGlide = smoothGlideFactory.createObject(root, { target: 0, duration: 240 })
+        unseenGlide.target = 360
+        const unseenPulse = pulseLoopFactory.createObject(root, {
+            target: pulseTarget, targetProperty: "value", active: true, duration: 50, restValue: 1
+        })
+        const pulsing = unseenPulse.running
+        Motion.unseen = true
+        motionHost.v = 100
+        root._check(motionHost.v === 100 && unseenGlide.value === 360
+                && pulsing && !unseenPulse.running && pulseTarget.value === 1 && !Motion.allowsMotion(false, false),
+            "while a fullscreen window hides the shell, changes land at once, glides snap and loops rest")
+        Motion.unseen = unseenWas
+        motionHost.destroy()
+        unseenGlide.destroy()
+        unseenPulse.destroy()
         ShellSettings.reduceMotion = pulseReduceWas
 
         const workspaceMarker = workspaceMarkerFactory.createObject(root)

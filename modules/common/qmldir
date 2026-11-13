@@ -23,6 +23,7 @@ ShellFlickable 1.0 ShellFlickable.qml
 ShellListView 1.0 ShellListView.qml
 ScreenDismiss 1.0 ScreenDismiss.qml
 KeepAwakeSurface 1.0 KeepAwakeSurface.qml
+FramePump 1.0 FramePump.qml
 FittedPopupWindow 1.0 FittedPopupWindow.qml
 WaveLine 1.0 WaveLine.qml
 KeyboardFocus 1.0 KeyboardFocus.qml

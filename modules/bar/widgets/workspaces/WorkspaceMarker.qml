@@ -39,7 +39,7 @@ Item {
 
     function _motionAllowed(): bool {
         return root.visible && root.shown && root.barActive
-            && !ShellSettings.reduceMotion && !Idle.isIdle
+            && !ShellSettings.reduceMotion && !Idle.isIdle && !Motion.unseen
     }
     function _settleMotion(): void {
         _specialPulse.retire()
@@ -311,6 +311,12 @@ Item {
         target: ShellSettings
         function onReduceMotionChanged() {
             if (ShellSettings.reduceMotion) root._settleMotion()
+        }
+    }
+    Connections {
+        target: Motion
+        function onUnseenChanged() {
+            if (Motion.unseen) root._settleMotion()
         }
     }
     Connections {

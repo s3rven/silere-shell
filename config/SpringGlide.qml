@@ -13,7 +13,7 @@ QtObject {
     property real damping: 0.62
 
     property real _velocity: 0
-    readonly property bool _moving: root.gate && !ShellSettings.reduceMotion && !Idle.isIdle
+    readonly property bool _moving: root.gate && !ShellSettings.reduceMotion && !Idle.isIdle && !Motion.unseen
 
     function _snap(): void {
         _tick.running = false

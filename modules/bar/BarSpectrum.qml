@@ -20,7 +20,7 @@ Item {
     height: Math.max(10, Math.min(20, Math.round((parent ? parent.height : 0) * 0.32)))
 
     readonly property bool wanted: ShellSettings.mediaVisualizerPosition === "underline"
-        && ShellSettings.mediaProgress && !ShellSettings.reduceMotion && !Idle.isQuiet
+        && ShellSettings.mediaProgress && !ShellSettings.reduceMotion && !Idle.isQuiet && !Motion.unseen
         && Media.shown && Media.playing && Media.cavaReady
         && Monitors.isActive(root.screen)
 
