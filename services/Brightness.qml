@@ -295,6 +295,8 @@ Singleton {
         root._currentValid = value >= 0
         if (root._currentValid) root.currentBrightness = value
         else {
+            // not ready before the zero, or the OSD shows a vanished backlight as 0%
+            root._syncReady()
             root.currentBrightness = 0
             root._queueReprobe()
         }
@@ -321,6 +323,7 @@ Singleton {
             root._maxValid = value > 0
             if (root._maxValid) root.maxBrightness = value
             else {
+                root._syncReady()
                 root.maxBrightness = 0
                 root._queueReprobe()
             }
@@ -328,8 +331,8 @@ Singleton {
         }
         onLoadFailed: {
             root._maxValid = false
-            root.maxBrightness = 0
             root._syncReady()
+            root.maxBrightness = 0
             root._queueReprobe()
         }
     }

@@ -7983,6 +7983,23 @@ ShellRoot {
         Brightness._applyBrightnessRead(70)
         root._check(Brightness.currentBrightness === 70 && Brightness.ready,
             "brightness readback resumes once queued writes have finished")
+        const vanishWas = { max: Brightness.maxBrightness, armed: OsdBarState._armed }
+        OsdBarState._armed = true
+        Idle._returned.stop()
+        Brightness.maxBrightness = 100
+        Brightness._reprobeAttempts = 3
+        OsdBarState._clearEntries()
+        Brightness._applyBrightnessRead(40)
+        const liveOsd = OsdBarState._entryIndex("brightness") >= 0
+        OsdBarState._clearEntries()
+        Brightness._applyBrightnessRead(-1)
+        const lostQuiet = !Brightness.ready && OsdBarState._entryIndex("brightness") < 0
+        Brightness._applyBrightnessRead(40)
+        root._check(liveOsd && lostQuiet && Brightness.ready && OsdBarState._entryIndex("brightness") < 0,
+            "a backlight that stops answering and comes back shows no brightness OSD, a change while it answers does")
+        OsdBarState._clearEntries()
+        OsdBarState._armed = vanishWas.armed
+        Brightness.maxBrightness = vanishWas.max
         Brightness.currentBrightness = brightnessReadWas.level
         Brightness.pendingPercent = brightnessReadWas.pending
         Brightness._currentValid = brightnessReadWas.currentValid
