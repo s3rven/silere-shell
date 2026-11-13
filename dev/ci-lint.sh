@@ -948,14 +948,16 @@ else
 fi
 
 section "installer environment defaults"
-if ! grep -qF '${MALLOC_CONF-' scripts/silere \
+# the allocator default must yield to any value the user set, an empty one included: `-`, never `:-`
+if grep -qF 'export MALLOC_CONF="${MALLOC_CONF-narenas:1' scripts/silere \
+    && ! grep -qF '${MALLOC_CONF:-' scripts/silere \
     && grep -qF 'unset QSG_TRANSIENT_IMAGES' scripts/silere \
     && ! grep -qE 'QSG_TRANSIENT_IMAGES[[:space:]]*=' scripts/silere scripts/install.sh \
     && grep -qF 'exec "$shell_bin" --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml"' scripts/silere \
     && grep -qF 'LAUNCH_CMD="exec $ROOT_EXEC/scripts/silere\" run --startup"' scripts/install.sh \
     && grep -qF 'set -- run "$@"' scripts/silere \
     && [ "$(grep -Fc 'ln -s "/usr/share/$_pkgname/scripts/silere"' packaging/aur/PKGBUILD)" -eq 2 ]; then
-  ok "launcher" "shared exec path clears transient images and refuses duplicates"
+  ok "launcher" "shared exec path sets a yielding allocator default, clears transient images and refuses duplicates"
 else
   fail "source, compositor, and packaged launchers must share silere run"
 fi

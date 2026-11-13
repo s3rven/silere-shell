@@ -112,6 +112,12 @@ run_shell() {
     export SILERE_WATCH_FILES="${SILERE_WATCH_FILES-0}"
     # without it a shell that starts before PipeWire never connects; nothing changes once it has
     export QS_PIPEWIRE_IMMEDIATE_RECONNECT=1
+    # jemalloc's default of four arenas per CPU leaves freed memory stranded across the shell's threads: one arena
+    # measured 55 MB less PSS on a 4-thread laptop at the same CPU, and returning freed pages after a second kept
+    # another 10 to 18 MB off after menu use. tcache stays on: turning it off saved nothing and cost CPU.
+    # A value the user set, even an empty one, wins. Apps start through the compositor, so only the shell's
+    # own short-lived helpers inherit it
+    export MALLOC_CONF="${MALLOC_CONF-narenas:1,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0}"
     # Hyprland crashes whichever client registers a taken global shortcut last, so only this shell claims
     # silere:menu and silere:tray; previews, smoke starts and probes run qs directly and claim nothing
     export SILERE_GLOBAL_SHORTCUTS=1

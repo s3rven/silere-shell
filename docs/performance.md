@@ -49,26 +49,40 @@ CPU percentages use the measured elapsed time, including collection overhead, ra
 than assuming every sample takes exactly one second. JSON reports include both the
 requested `sample_seconds` and the measured `elapsed_seconds`.
 
+## Memory allocator
+
+Quickshell uses jemalloc, which by default keeps four memory pools per CPU thread. Memory one
+pool frees is only reused by threads on that pool, so the shell's threads leave it stranded.
+`silere run` starts the shell with one pool that hands freed memory back after a second:
+`MALLOC_CONF=narenas:1,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0`.
+
+| On a 4-thread laptop, mean of two runs | jemalloc default | Silere's default |
+|---|---|---|
+| After startup | 161 MB | 107 MB |
+| After one menu open | 178 MB | 123 MB |
+| After 30 menu open-and-close cycles | 181 MB | 122 MB |
+| 30 s after 100 notifications | 205 MB | 146 MB |
+| CPU during the 30 cycles | 61% of a core | 58% |
+
+Any `MALLOC_CONF` you set wins, so the user service and autostart keep yours.
+`MALLOC_CONF=` (empty) goes back to jemalloc's defaults. Apps you open start through the
+compositor and never inherit it. `tcache:false`, which older notes suggest, saved nothing and
+costs CPU.
+
 ## Optional tuning
 
-**Two settings for the user service save about 10 MB.** Neither is on by default, because they
-fit one setup rather than every desktop. Add what suits you with
-`systemctl --user edit silere-shell.service`:
+**If your session sets a KDE platform theme**, the shell loads KDE's libraries for nothing:
+about 4 MB. Add this with `systemctl --user edit silere-shell.service`:
 
 ```ini
 [Service]
-# fewer allocator caches: about 6 MB less at start and 7 MB less once the menu has opened
-Environment=MALLOC_CONF=narenas:1,tcache:false,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0
-# only if your session sets a KDE platform theme: about 4 MB less
 Environment=QT_QPA_PLATFORMTHEME=
 Environment=QT_QUICK_CONTROLS_STYLE=
 Environment=QS_ICON_THEME=your-icon-theme
 ```
 
-| Setting | The trade-off |
-|---|---|
-| Allocator | No difference above noise in 25 menu cycles. It suits one small process, not a heavy multithreaded one. |
-| KDE theme off | The shell draws its own UI, and apps it opens go through the compositor and keep their theme. The icon theme becomes a fixed name here, so change it if you change your theme. |
+The shell draws its own UI, and apps it opens go through the compositor and keep their theme.
+The icon theme becomes a fixed name here, so change it if you change your theme.
 
 ## Measuring a whole session
 

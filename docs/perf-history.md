@@ -19,6 +19,7 @@ warm across opens. Warm is the state a session spends its day in.
 | Ref | CPU | Rendering GPU | Kernel | Quickshell | Qt |
 |---|---|---|---|---|---|
 | A | AMD Ryzen 7 8845HS, 16T | Radeon 780M iGPU, 2560x1600@240 | 7.2.0-cachyos | 0.3.1 | 6.11.2 |
+| B | Intel Core i5-6200U, 4T | Intel HD 520, 1920x1080@60 | 7.3.0-4-cachyos | 0.3.2 | 6.12.0 |
 
 Hardware not already listed takes a new letter.
 
@@ -143,3 +144,20 @@ boundary, with the visualizer stopped and no second Quickshell instance running.
 
 Raw reports: [cold](perf/1.7.0-cold.json) · [warm](perf/1.7.0-warm.json). They were collected
 from runtime commit `de39889` while the release metadata and notes were being prepared.
+
+## Reference B
+
+A 2015 laptop, run the way the installer set it up: started by Hyprland, KDE platform theme
+set (with no KDE libraries installed) and on battery. Its rows compare only with each other.
+Each pair comes from one restart, both samples steady, the visualizer stopped and no other
+Quickshell running.
+
+| Ref | Version | Date | State | Allocator | PSS | RSS avg | CPU | Threads | FDs |
+|---|---|---|---|---|---|---|---|---|---|
+| B | 1.7.0 | 2026-11-13 | cold | default | 159 MB | 212 MB | 0.1% | 17 | 53 |
+| B | 1.7.0 | 2026-11-13 | warm | default | 179 MB | 231 MB | 0.1% | 18 | 54 |
+| B | 1.7.0 | 2026-11-13 | cold | one pool, 1 s decay | 106 MB | — | — | 17 | 53 |
+| B | 1.7.0 | 2026-11-13 | warm | one pool, 1 s decay | 121 MB | — | — | 18 | 54 |
+
+"One pool, 1 s decay" is the `MALLOC_CONF` that `silere run` sets from the release after 1.7.0;
+the 1.7.0 rows above it ran with jemalloc's defaults.

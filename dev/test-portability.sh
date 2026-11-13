@@ -1124,8 +1124,9 @@ test_shared_launcher() (
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES=/chosen/vendor.json \
         bash "$ROOT/scripts/silere" run --verbose
-    grep -qFx 'malloc=' "$capture" \
-        || fail "shared launcher added an allocator override"
+    # one arena when the user set nothing: jemalloc's per-CPU arenas strand freed memory across the shell's threads
+    grep -qE '^malloc=narenas:1(,|$)' "$capture" \
+        || fail "shared launcher did not default the allocator to one arena"
     # the second window to draw a cached image gets an empty texture with it set
     grep -qFx 'images=' "$capture" \
         || fail "shared launcher set QSG_TRANSIENT_IMAGES"
@@ -1160,6 +1161,11 @@ test_shared_launcher() (
         || fail "shared launcher inherited QSG_TRANSIENT_IMAGES from a legacy service"
     grep -qFx 'malloc=' "$capture" \
         || fail "shared launcher did not preserve an empty allocator override"
+    local custom_capture="$TMP/launcher-custom-malloc.out"
+    MALLOC_CONF='narenas:4,background_thread:true' PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$custom_capture" \
+        bash "$ROOT/scripts/silere" run
+    grep -qFx 'malloc=narenas:4,background_thread:true' "$custom_capture" \
+        || fail "shared launcher replaced the user's own allocator setting"
     grep -qFx 'egl=' "$capture" \
         || fail "shared launcher did not preserve an empty EGL override"
     grep -qFx 'locale=C' "$capture" \
