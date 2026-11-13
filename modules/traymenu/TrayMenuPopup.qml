@@ -292,6 +292,7 @@ FittedPopupWindow {
                 }
             }
             Accessible.role: _entry.sep ? Accessible.Separator
+                : _entry.btnType === 2 ? Accessible.RadioButton
                 : _entry.checkable ? Accessible.CheckBox : Accessible.MenuItem
             Accessible.name: _entry.label
             Accessible.checked: _entry.checked
@@ -641,7 +642,7 @@ FittedPopupWindow {
 
                     Accessible.role: Accessible.MenuItem
                     Accessible.name: "Hide from bar"
-                    Accessible.focusable: true
+                    Accessible.focusable: _hideRow.enabled
                     Accessible.onPressAction: _hideRow.hide()
                     KeyboardFocus {
                         listNavigation: true

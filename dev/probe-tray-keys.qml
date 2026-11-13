@@ -108,6 +108,13 @@ ShellRoot {
         root.key(Qt.Key_Right, 500)
         root.check(root.focused() === "Dark" && root.openFlyouts() === "Settings,Theme",
             "a nested submenu opens on its first entry, and both stay open")
+        const radio = root.find(tray.stage, item => item.label === "Dark" && item.btnType !== undefined)
+        const checkmark = root.find(tray.stage, item => item.label === "Follow system" && item.btnType !== undefined)
+        root.check(radio && checkmark && radio.Accessible.role === Accessible.RadioButton
+                && checkmark.Accessible.role === Accessible.CheckBox
+                && radio.Accessible.checkable && checkmark.Accessible.checkable
+                && radio.Accessible.checked && checkmark.Accessible.checked,
+            "a radio entry is announced as a checked radio button and a checkmark entry as a checked check box")
         root.key(Qt.Key_Escape, 400)
         root.check(TrayMenuState.open && root.focused() === "Theme" && root.openFlyouts() === "Settings",
             "Escape closes only the innermost submenu and returns to its entry")
@@ -154,8 +161,30 @@ ShellRoot {
         root.key(Qt.Key_Down)
         root.key(Qt.Key_Down)
         root.check(root.focused() === "Quit", "Down skips a separator")
+        const hideRow = root.find(tray.popupCard, item => item.trayId !== undefined)
+        const hideOffered = hideRow !== null && hideRow.Accessible.focusable
         root.key(Qt.Key_Return, 400)
         root.check(!TrayMenuState.open, "Enter on an entry without a submenu closes the menu")
+        root.check(hideOffered && !hideRow.Accessible.focusable,
+            "Hide from bar stops offering itself to assistive tech once its menu closes")
+
+        // a name peek folds as its menu opens; reduced motion folds it in one step, which left the
+        // menu the name's width off its icon until it closed
+        ShellSettings.valuesOnHover = true
+        ShellSettings.reduceMotion = true
+        lab._dwelled = true
+        root.wait(400)
+        const peeked = lab.width
+        root.trayWidget._openMenu(lab.modelData, lab)
+        root.wait(400)
+        const icon = lab.mapToItem(null, lab._iconX + root.trayWidget.iconSize / 2, 0).x
+        root.check(TrayMenuState.open && lab.width < peeked && Math.abs(TrayMenuState.effectiveAnchorX - icon) < 1,
+            "a menu opened on a peeked name stays on its icon as the name folds ("
+                + TrayMenuState.effectiveAnchorX + " for an icon at " + icon + ")")
+        TrayMenuState.close()
+        lab._dwelled = false
+        ShellSettings.reduceMotion = false
+        root.wait(300)
 
         root.call()
         root.check(TrayMenuState.open, "tray toggle opens the menu again")

@@ -37,6 +37,7 @@ settings file carries its own `__version` and migrates separately.
 - Clicking a notification on a named Hyprland workspace can take you to the app's window on another named workspace, instead of the one already in front of you.
 - Home's Wi-Fi and VPN lists close when the adapter, NetworkManager or the last VPN profile goes away, instead of staying open under a missing row.
 - A track change while Now Playing scrolls a long title starts the new title from its first letter.
+- Tray menu radio entries are announced as radio buttons, and Now Playing's length label and the tray menu's Hide from bar are no longer offered to screen readers while covered or closed.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Home no longer shows an empty Connectivity section on a wired desktop with no Bluetooth and no saved VPN.
