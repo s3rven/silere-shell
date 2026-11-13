@@ -3464,6 +3464,7 @@ if [ "${1:-}" = list ]; then
     printf '  Process ID: %s\n  Config path: %s/shell.qml\n' \
         "$SILERE_TEST_BENCH_PID" "$SILERE_TEST_BENCH_ROOT"
 elif [ "${1:-}" = ipc ]; then
+    [ -z "${SILERE_TEST_BENCH_DISPLAY_LOG:-}" ] || printf 'display=%s\n' "${WAYLAND_DISPLAY-}" >> "$SILERE_TEST_BENCH_CALLS"
     printf '%s\n' "$*" >> "$SILERE_TEST_BENCH_CALLS"
     if [[ "$*" == *'call menu tab 0' ]]; then printf '%s\n' "${SILERE_TEST_BENCH_REPLY:-ok}"; fi
 else
@@ -3520,6 +3521,18 @@ SH
     fi
     [[ "$out" == *'could not open Home: error: idle'* ]] \
         || fail "benchmark did not explain a refused warm-up"
+
+    # an ssh session has no WAYLAND_DISPLAY and qs ipc filters by display, so the warm-up borrows the shell's
+    local shell_pid
+    env WAYLAND_DISPLAY=wayland-bench sleep 30 &
+    shell_pid=$!
+    : > "$SILERE_TEST_BENCH_CALLS"
+    env -u WAYLAND_DISPLAY PATH="$stubs:$PATH" SILERE_TEST_BENCH_PID="$shell_pid" SILERE_TEST_BENCH_DISPLAY_LOG=1 \
+        bash "$ROOT/scripts/bench.sh" 1 --warm --json >/dev/null || fail "warm benchmark without a display failed"
+    kill "$shell_pid" 2>/dev/null || true
+    wait "$shell_pid" 2>/dev/null || true
+    [ "$(grep -c '^display=wayland-bench$' "$SILERE_TEST_BENCH_CALLS")" -eq 2 ] \
+        || fail "warm benchmark did not borrow the shell's display for both IPC calls"
 )
 
 test_doctor_json() (

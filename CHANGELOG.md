@@ -41,6 +41,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- `scripts/bench.sh --warm` works from an SSH session.
 - Text no longer has orange and blue fringes on displays at fractional scales such as 125% and 150%.
 - With Auto tighten on, hovering a widget on a crowded bar no longer tightens the whole bar and loosens it again.
 - A screen backlight that disappears no longer flashes the brightness display at 0%.
