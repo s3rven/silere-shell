@@ -1899,6 +1899,10 @@ ShellRoot {
         ShellSettings.setNotifAppMuted("Chat", false)
         root._check(!Notifications.mutesPopup(a1) && ShellSettings.notifAppMuted("Team, Inc."),
             "unmuting one app leaves the others muted")
+        ShellSettings.setNotifAppMuted("Unknown", true)
+        root._check(Notifications.mutesPopup({ appName: " ", urgency: 1 })
+                && !Notifications.mutesPopup({ appName: "Probe", urgency: 1 }),
+            "muting history's Unknown page mutes the senders with no name it lists")
         ShellSettings.notifCriticalBypass = bypassWas
         ShellSettings.notifMutedApps = mutedWas
 

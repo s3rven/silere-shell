@@ -721,8 +721,9 @@ Singleton {
                          privateScreen: bool, criticalBypass: bool): bool {
         return !privateScreen && ((!quiet && !fullscreen) || (critical && criticalBypass))
     }
+    // the rail's key: a sender with no name is muted from the Unknown page
     function mutesPopup(notification): bool {
-        if (!notification || !ShellSettings.notifAppMuted(root.identityText(notification.appName)))
+        if (!notification || !ShellSettings.notifAppMuted(root.identityText(notification.appName) || "Unknown"))
             return false
         return notification.urgency !== NotificationUrgency.Critical || !ShellSettings.notifCriticalBypass
     }
