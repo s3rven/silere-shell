@@ -1526,10 +1526,19 @@ ShellRoot {
             const context = [neutral, hc, opacity, tone, color].join("/")
             root._check(Qt.colorEqual(Theme.accent, Qt.color(color))
                     && Theme.contrastRatio(Theme.barAccent, Theme.background) >= (hc ? 6.99 : 4.49)
-                    && marker && Qt.colorEqual(marker.tint, Theme.barAccent),
+                    && marker && Qt.colorEqual(marker.tint, Theme.barAccentMark),
                 "bar indicators stay readable without changing the chosen accent: " + context)
             const barOverWhite = Theme.mix(Qt.color("#ffffff"), Theme.background, Theme.panelOpacity)
             const barOverBlack = Theme.mix(Qt.color("#000000"), Theme.background, Theme.panelOpacity)
+            let mark = Infinity
+            for (const ink of [Theme.barAccentMark, Theme.barError, Theme.barWarning, Theme.barSuccess])
+                for (const bar of [barOverWhite, barOverBlack]) mark = Math.min(mark, Theme.contrastRatio(ink, bar))
+            root._check(mark >= (hc ? 4.49 : 2.99),
+                "the bar's marks and status glyphs hold a shape's contrast over light and dark wallpapers: "
+                    + context + " contrast " + mark)
+            // a mark asks less than a label, so it keeps at least the colour the label does
+            root._check(Theme.lchOf(Theme.barAccentMark).C >= Theme.lchOf(Theme.barAccent).C - 0.5,
+                "a bar mark keeps at least its label's colour: " + context)
             root._check(Theme.contrastRatio(Theme.barAccent, barOverWhite) >= (hc ? 6.99 : 4.49)
                     && Theme.contrastRatio(Theme.barText, barOverWhite) >= (hc ? 6.99 : 4.49)
                     && Theme.contrastRatio(Theme.barText, barOverBlack) >= (hc ? 6.99 : 4.49)
@@ -1555,6 +1564,166 @@ ShellRoot {
         if (marker) marker.destroy()
         MatugenTheme._palette = paletteWas
         // restore motion last so returning to the original palette is immediate
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
+    // contrast used to be bought with an srgb blend toward white, which greys a colour on the way
+    function _checkContrastKeepsHue(): void {
+        const hueGap = (a, b) => { const d = Math.abs(Theme.lchOf(a).h - Theme.lchOf(b).h); return Math.min(d, 360 - d) }
+        // a see-through bar over a white wallpaper: the mid grey a label has to clear by 4.5:1
+        const grey = Qt.color("#717273"), dark = Qt.color("#060708")
+        // what the srgb blend left of the same ink at the same contrast
+        const blended = ink => {
+            let low = 0, high = 1
+            for (let i = 0; i < 12; i++) {
+                const middle = (low + high) / 2
+                if (Theme.contrastRatio(Theme.blend(ink, Qt.color("white"), middle), grey) >= 4.5) high = middle
+                else low = middle
+            }
+            return Theme.blend(ink, Qt.color("white"), high)
+        }
+        for (const hex of ["#b4d087", "#8fd6a8", "#e6c26a", "#ffb4a8", "#b9c3ff", "#d9b9ff"]) {
+            const ink = Qt.color(hex)
+            const lifted = Theme._readableAcross(ink, dark, grey, 4.5)
+            root._check(Theme.contrastRatio(lifted, grey) >= 4.49 && hueGap(lifted, ink) < 4
+                    && Theme.lchOf(lifted).C >= Theme.lchOf(blended(ink)).C - 0.3,
+                "a lifted accent keeps its hue and no less colour than a blend toward white: " + hex
+                    + " -> " + lifted + " chroma " + Theme.lchOf(lifted).C.toFixed(1))
+        }
+        const green = Theme._readableAcross(Qt.color("#b4d087"), dark, grey, 4.5)
+        root._check(Theme.lchOf(green).C >= 20 && Theme.lchOf(blended(Qt.color("#b4d087"))).C < 8,
+            "a green accent lifted to a label's contrast is still green, where the blend left an off-white: "
+                + green + " chroma " + Theme.lchOf(green).C.toFixed(1))
+        for (const hex of ["#ffb4a8", "#b9c3ff", "#d9b9ff", "#dd92a2", "#d4ad77"]) {
+            const ink = Qt.color(hex)
+            const mark = Theme._readableAcross(ink, dark, grey, 3.0)
+            root._check(Theme.contrastRatio(mark, grey) >= 2.99 && hueGap(mark, ink) < 4
+                    && Theme.lchOf(mark).C >= Theme.lchOf(ink).C * 0.8,
+                "a mark's 3:1 leaves an accent its colour on a see-through bar: " + hex
+                    + " -> " + mark + " chroma " + Theme.lchOf(mark).C.toFixed(1))
+        }
+        // the same split on the live theme: a see-through bar's mark keeps the accent its label has to give up
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent", "highContrast",
+            "baseTone", "barOpacity"]
+        const saved = keys.map(key => ShellSettings[key])
+        ShellSettings.reduceMotion = true
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = false
+        ShellSettings.highContrast = false
+        ShellSettings.baseTone = "charcoal"
+        ShellSettings.barOpacity = 0.58
+        for (const hex of ["#b9c3ff", "#ffb4a8", "#c99fd3"]) {
+            ShellSettings.neutralAccent = hex
+            const accent = Theme.lchOf(Theme.accent), mark = Theme.lchOf(Theme.barAccentMark)
+            root._check(mark.C >= accent.C * 0.8 && Theme.lchOf(Theme.barAccent).C < accent.C * 0.5
+                    && hueGap(Theme.barAccentMark, Theme.accent) < 4,
+                "a see-through bar's marks keep the accent's colour: " + hex + " -> " + Theme.barAccentMark
+                    + " chroma " + mark.C.toFixed(1) + " of " + accent.C.toFixed(1))
+        }
+        // an alert's tint arrives on the bar as a value: the icon and level are marks, the words a label
+        const overWhite = Theme.mix(Qt.color("#ffffff"), Theme.background, Theme.panelOpacity)
+        const alert = Qt.color("#dd92a2")
+        root._check(Theme.contrastRatio(Theme.barInk(alert, false), overWhite) >= 2.99
+                && Theme.contrastRatio(Theme.barInk(alert, true), overWhite) >= 4.49
+                && Theme.contrastRatio(alert, overWhite) < 2.5
+                && Theme.lchOf(Theme.barInk(alert, false)).C >= Theme.lchOf(alert).C * 0.8,
+            "an alert's tint is lifted for the bar it lands on, as a mark and as a label")
+        ShellSettings.barOpacity = 1
+        root._check(Qt.colorEqual(Theme.barAccentMark, Theme.accent) && Qt.colorEqual(Theme.barAccent, Theme.accent)
+                && Qt.colorEqual(Theme.barInk(alert, false), alert) && Qt.colorEqual(Theme.barInk(alert, true), alert),
+            "an opaque bar leaves the accent and an alert's tint alone, mark and label")
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+        // dark ink on a pale surface walks down, not up, and a translucent ink keeps its alpha
+        const pale = Qt.color("#eeeeee")
+        const down = Theme.readableText(Qt.color("#c9a227"), pale, 4.5)
+        const sheer = Theme.readableText(Qt.rgba(0.6, 0.6, 0.65, 0.85), Qt.color("#68696b"), 3.0)
+        root._check(Theme.contrastRatio(down, pale) >= 4.49 && Theme.lchOf(down).L < Theme.lchOf(Qt.color("#c9a227")).L
+                && hueGap(down, Qt.color("#c9a227")) < 4 && Math.abs(sheer.a - 0.85) < 0.001
+                && Theme.contrastRatio(sheer, Qt.color("#68696b")) >= 2.99,
+            "ink on a pale surface darkens along its hue, and a translucent ink keeps its alpha")
+        const grayInk = Theme.readableText(Qt.color("#777777"), Qt.color("#777777"), 4.5)
+        root._check(Theme.lchOf(grayInk).C < 1.5 && Theme.contrastRatio(grayInk, Qt.color("#777777")) >= 4.49,
+            "a colourless ink stays colourless when lifted")
+    }
+
+    // ink on a see-through popup has two backdrops to survive, a white window and a dark one. Solved against
+    // the worse alone, white text put that backdrop at mid grey, where black beats white by a hair
+    function _checkGlassInks(): void {
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "highContrast", "baseTone", "barOpacity",
+            "surfaceBlur", "popupMatchBarOpacity", "matugenAccentBalance", "matugenAccentRole", "matugenDepth"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = true
+        ShellSettings.surfaceBlur = true
+        ShellSettings.popupMatchBarOpacity = true
+        ShellSettings.barOpacity = 0.58
+        ShellSettings.highContrast = false
+        ShellSettings.matugenAccentBalance = false
+        ShellSettings.matugenAccentRole = "primary"
+        const palettes = [
+            // matugen at --contrast 1: pure white text
+            { background: "#101410", surface: "#1c211b", text: "#ffffff", subtext: "#d6dcd0", accent: "#e8f4e0",
+              error: "#ffece9", warning: "#d0f8ff", success: "#e6f3de" },
+            { background: "#1a1110", surface: "#271d1c", text: "#f1dfdc", subtext: "#d8c2be", accent: "#ffb4a8",
+              error: "#ffb4ab", warning: "#dec48c", success: "#e7bdb6" },
+            { background: "#121318", surface: "#1e1f25", text: "#e3e1e9", subtext: "#c6c5d0", accent: "#b9c3ff",
+              error: "#ffb4ab", warning: "#e5bad8", success: "#c3c5dd" },
+            { background: "#fbf8ff", surface: "#efedf4", text: "#1b1b21", subtext: "#46464f", accent: "#525a92",
+              error: "#ba1a1a", warning: "#77536d", success: "#5b5d72" },
+            { background: "#fff8f6", surface: "#fceae6", text: "#231918", subtext: "#534341", accent: "#904a40",
+              error: "#ba1a1a", warning: "#725b2e", success: "#775651" }
+        ]
+        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
+        for (const neutral of [false, true]) for (const palette of palettes)
+        for (const depth of ["none", "deeper"]) {
+            ShellSettings.neutralTheme = neutral
+            ShellSettings.neutralAccentAuto = true
+            ShellSettings.matugenDepth = depth
+            ShellSettings.baseTone = depth === "none" ? "graphite" : "black"
+            MatugenTheme._palette = palette
+            const context = (neutral ? "neutral/" : "wallpaper/") + palette.accent + "/" + depth
+            let lowest = Infinity, lowestInk = ""
+            const inks = { subtext: Theme.subtext, detail: Theme.menuTextDetail, dependency: Theme.menuTextWarning,
+                error: Theme.error, warning: Theme.warning, success: Theme.success }
+            for (const backdrop of [white, black]) {
+                const control = Theme._controlOverBackdrop(Theme.background, Theme.text, Theme.popupOpacity, backdrop)
+                for (const name in inks) {
+                    const contrast = Theme.contrastRatio(inks[name], control)
+                    if (contrast < lowest) { lowest = contrast; lowestInk = name }
+                }
+            }
+            root._check(Theme.glass && lowest >= 2.99,
+                "captions and status colours on glass read over a white window and a dark one: " + context
+                    + " " + lowestInk + " " + lowest)
+            // a dark menu's caption is lighter than its base and a light menu's darker, whatever the backdrop
+            const lightBase = Theme.luminance(Theme.background) > 0.5
+            root._check((Theme.luminance(Theme.subtext) > Theme.luminance(Theme.background)) !== lightBase
+                    && (Theme.luminance(Theme.menuTextDetail) > Theme.luminance(Theme.background)) !== lightBase,
+                "captions on glass stay on their text's side of the base: " + context)
+        }
+        // an opaque popup leaves every status colour exactly as the palette gave it
+        ShellSettings.popupMatchBarOpacity = false
+        ShellSettings.neutralTheme = false
+        // dim enough that a glass solve would lift it
+        const dim = Object.assign({}, palettes[1], { error: "#6a3b3d" })
+        MatugenTheme._palette = dim
+        root._check(!Theme.glass && Qt.colorEqual(Theme.error, dim.error)
+                && Qt.colorEqual(Theme.subtext, Theme._tSubtextSolid),
+            "an opaque popup keeps the palette's own status colours and caption")
+        // matugen --contrast -1: its caption arrives near 4:1, and the hierarchy sink took it under 3:1
+        const quiet = { background: "#16121b", surface: "#221e28", text: "#a8a0ae", subtext: "#87808e",
+            accent: "#a974ff", error: "#ff5449", warning: "#af82ae", success: "#a188ac" }
+        for (const depth of ["none", "deep", "deeper"]) {
+            MatugenTheme._palette = quiet
+            ShellSettings.matugenDepth = depth
+            const caption = Theme.contrastRatio(Theme.subtext, Theme.menuControlSolid)
+            root._check(caption >= 2.99 && Theme.contrastRatio(Theme._tSubtextSolid, Theme.menuControlSolid) < 2.999
+                    && Theme.contrastRatio(Theme.text, Theme.menuControlSolid)
+                        > Theme.contrastRatio(Theme.subtext, Theme.menuControlSolid),
+                "a low-contrast palette's caption stops sinking where it still reads, under its label: "
+                    + depth + " " + caption)
+        }
+        MatugenTheme._palette = paletteWas
         for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
     }
 
@@ -1687,6 +1856,13 @@ ShellRoot {
             "a Bluetooth device's glyph warns below the charge its low-battery alert fires at")
         if (bt) bt.destroy()
         btComponent.destroy()
+        const volComponent = Qt.createComponent("modules/bar/widgets/Volume.qml")
+        const vol = volComponent.status === Component.Ready ? volComponent.createObject(barFixtureHost) : null
+        root._check(vol !== null && vol.outputLow(SystemAlerts.btLowPct - 1) && !vol.outputLow(SystemAlerts.btLowPct)
+                && !vol.outputLow(-1),
+            "the volume glyph warns below the same mark when its output is a Bluetooth device")
+        if (vol) vol.destroy()
+        volComponent.destroy()
         MenuState.selectTab(was.tab)
         MenuState._previousTab = was.previous
         if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
@@ -2135,13 +2311,23 @@ ShellRoot {
 
     function _checkAccentPills(): void {
         const was = ShellSettings.barAccentPills
-        const pill = pillFactory.createObject(root, { text: "48%", glyphColor: Theme.text })
+        // a see-through bar and a dark accent, so the mark, the label and the menu's accent are three colours
+        const themeKeys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent", "barOpacity"]
+        const themeWas = themeKeys.map(key => ShellSettings[key])
+        ShellSettings.reduceMotion = true
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = false
+        ShellSettings.neutralAccent = "#23509a"
+        ShellSettings.barOpacity = 0.58
+        const pill = pillFactory.createObject(root, { text: "48%" })
         ShellSettings.barAccentPills = false
-        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.text),
+        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barText),
             "bar icons rest at the neutral text colour by default")
         ShellSettings.barAccentPills = true
-        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barAccent)
-                && Qt.colorEqual(pill.textColor, Theme.subtext),
+        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barAccentMark)
+                && !Qt.colorEqual(Theme.barAccentMark, Theme.barAccent)
+                && Qt.colorEqual(pill.levelColor, Theme.barAccentMark)
+                && Qt.colorEqual(pill.textColor, Theme.barSubtext),
             "accent widget icons tint the glyph and leave the text alone")
         pill.glyphColor = Theme.subtext
         const inactive = Qt.colorEqual(pill._restGlyphColor, Theme.subtext)
@@ -2152,6 +2338,7 @@ ShellRoot {
             "accent widget icons keep inactive, warning and error glyphs meaningful")
         pill.destroy()
         ShellSettings.barAccentPills = was
+        for (let i = themeKeys.length - 1; i >= 0; i--) ShellSettings[themeKeys[i]] = themeWas[i]
     }
 
     function _checkSystemWidget(): void {
@@ -3218,6 +3405,8 @@ ShellRoot {
         root._checkMenuContrast()
         root._checkAccentContrast()
         root._checkLightPalette()
+        root._checkContrastKeepsHue()
+        root._checkGlassInks()
         root._check(MenuState.adjacentTab(MenuState.homeTab, false, 1) === MenuState.recentTab
                 && MenuState.adjacentTab(MenuState.recentTab, false, 1) === MenuState.settingsTab
                 && MenuState.adjacentTab(MenuState.settingsTab, false, 1) === MenuState.homeTab
@@ -4251,7 +4440,7 @@ ShellRoot {
         Notifications.presentationMode = true
         Notifications.missedCount = 2
         root._check(statusGlyph("󰐨 ").expanded && !statusGlyph("󱒃 ").expanded
-                && statusGlyph("󰂛 ").expanded && Qt.colorEqual(statusGlyph("󰂛 ").color, Theme.barAccent)
+                && statusGlyph("󰂛 ").expanded && Qt.colorEqual(statusGlyph("󰂛 ").color, Theme.barAccentMark)
                 && statusClock.accessibleName.indexOf(", 2 missed notifications") >= 0,
             "presentation mode shows a quiet glyph and the bell takes the accent for held-back notifications")
         Idle.keepAwake = true
@@ -4264,6 +4453,36 @@ ShellRoot {
         ShellSettings.dnd = statusDndWas
         Notifications.missedCount = statusMissedWas
         statusClock.destroy()
+        {
+            const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent", "barOpacity", "highContrast"]
+            const saved = keys.map(key => ShellSettings[key])
+            ShellSettings.reduceMotion = true
+            ShellSettings.neutralTheme = true
+            ShellSettings.neutralAccentAuto = false
+            ShellSettings.neutralAccent = "#23509a"
+            ShellSettings.barOpacity = 0.58
+            ShellSettings.highContrast = false
+            Notifications.presentationMode = true
+            Notifications.missedCount = 2
+            const markClock = clockFactory.createObject(root)
+            const bell = root._findTrayNode(markClock, item => item.text === "󰂛 " && item.expanded !== undefined)
+            const activeCell = workspaceButtonFactory.createObject(barFixtureHost, {
+                wsId: 2, monitorReady: true, active: true, occupied: true,
+                urgent: false, apps: [], compact: false, iconSize: 14,
+                cellWidth: 26, rowHeight: 24, barActive: true,
+                initialized: true, paging: false, markerCovers: false
+            })
+            const activeDot = root._findTrayNode(activeCell, item => item.objectName === "workspace-dot")
+            root._check(!Qt.colorEqual(Theme.barAccentMark, Theme.barAccent)
+                    && bell !== null && bell.expanded && Qt.colorEqual(bell.color, Theme.barAccentMark)
+                    && activeDot !== null && Qt.colorEqual(activeDot.color, Theme.barAccentMark),
+                "on a see-through bar the missed-notification bell and the active workspace dot keep the accent a label gives up")
+            markClock.destroy()
+            activeCell.destroy()
+            Notifications.presentationMode = false
+            Notifications.missedCount = statusMissedWas
+            for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+        }
 
         const updateBadge = updatesWidgetFactory.createObject(barFixtureHost)
         updateBadge.show = true
@@ -4295,6 +4514,25 @@ ShellRoot {
                 pill.destroy()
             }
             ShellSettings.reduceMotion = reduceWas
+        }
+        {
+            const capsWas = { path: InputState._capsPath, caps: InputState.capsLock }
+            InputState._capsPath = "/sys/class/leds/silere-probe::capslock/brightness"
+            InputState.capsLock = true
+            const keys = Qt.createComponent("modules/bar/widgets/KeyboardWidget.qml").createObject(barFixtureHost)
+            root._check(InputState.layout.length > 0
+                    || (keys.text === "CAPS" && keys.accessibleName === "Keyboard, Caps Lock on"),
+                "a keyboard pill lit only by its Caps Lock light reads and speaks without an empty layout slot")
+            keys.destroy()
+            InputState._capsPath = capsWas.path
+            InputState.capsLock = capsWas.caps
+        }
+        {
+            const vol = Qt.createComponent("modules/bar/widgets/Volume.qml").createObject(barFixtureHost)
+            root._check(vol !== null && vol.warnsForOutput(false, 1) && vol.warnsForOutput(true, 2)
+                    && !vol.warnsForOutput(true, 1),
+                "the volume glyph warns for a dying headset unless a shown Bluetooth pill reads that lone device's charge")
+            if (vol) vol.destroy()
         }
     }
 

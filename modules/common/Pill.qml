@@ -46,7 +46,7 @@ Item {
     property real   contentScanWidth: 10.0
     property real   levelValue: -1.0
     property bool   levelVisible: false
-    property color  levelColor: Theme.barAccent
+    property color  levelColor: Theme.barAccentMark
 
     property bool   hoverActive: false
     // the pointer is still over this pill's bar zone, so a revealed detail waits for it to leave the zone
@@ -281,8 +281,8 @@ Item {
     // "pills follow theming": tint only glyphs resting at the neutral text color up
     // to the bar accent, so inactive, warning and error states keep their own meaning
     function _glyphTint(c: color, hot: bool): color {
-        const rest = ShellSettings.barAccentPills && Qt.colorEqual(c, Theme.barText) ? Theme.barAccent : c
-        return hot ? Theme.mix(rest, Theme.barAccent, 0.20) : rest
+        const rest = ShellSettings.barAccentPills && Qt.colorEqual(c, Theme.barText) ? Theme.barAccentMark : c
+        return hot ? Theme.mix(rest, Theme.barAccentMark, 0.20) : rest
     }
     readonly property color _restGlyphColor: _glyphTint(glyphColor, false)
     readonly property color _hoverGlyphColor: _glyphTint(glyphColor, _contentHot)

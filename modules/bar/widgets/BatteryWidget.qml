@@ -33,7 +33,7 @@ Pill {
     levelValue:     Battery.pct > 0 ? Battery.pct / 100 : -1
     levelVisible:   Battery.pct > 0 && ShellSettings.valuesOnHover
                     && ShellSettings.hoverLevelBar && !expanded
-    levelColor:     Qt.colorEqual(Battery.barIconColor, Theme.barText) ? Theme.barAccent : Battery.barIconColor
+    levelColor:     Qt.colorEqual(Battery.barIconColor, Theme.barText) ? Theme.barAccentMark : Battery.barIconColor
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: layoutVisible

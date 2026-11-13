@@ -180,7 +180,7 @@ Item {
             // red is for a screen another app is capturing; a mode the user chose stays quiet
             CollapsingText {
                 text:     "󱒃 "
-                color:    Theme.error
+                color:    Theme.barError
                 animate:  root._animatable
                 expanded: Compositor.screenSharing
             }
@@ -198,7 +198,7 @@ Item {
             }
             CollapsingText {
                 text:     "󰂛 "
-                color:    root._missed ? Theme.barAccent : root._cSub
+                color:    root._missed ? Theme.barAccentMark : root._cSub
                 animate:  root._animatable
                 expanded: Notifications.effectiveDnd || root._missed
             }

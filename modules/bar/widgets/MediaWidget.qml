@@ -91,7 +91,7 @@ Item {
             radius: height / 2
             antialiasing: true
             opacity: Media.lengthKnown ? 1.0 : 0.75
-            color: Theme.withAlpha(Theme.barAccent,
+            color: Theme.withAlpha(Theme.barAccentMark,
                 Media.lengthKnown ? 0.22 : 0.80)
         }
 
@@ -104,7 +104,7 @@ Item {
             height: 1.5
             radius: height / 2
             antialiasing: true
-            color: Theme.barAccent
+            color: Theme.barAccentMark
         }
     }
 
@@ -155,7 +155,7 @@ Item {
                 anchors.centerIn: parent
                 text: root._playGlyph
                 color: Media.playing
-                    ? Theme.withAlpha(Theme.barAccent, 0.92)
+                    ? Theme.withAlpha(Theme.barAccentMark, 0.92)
                     : Theme.withAlpha(Theme.barSubtext, 0.72)
                 font.pixelSize: Settings.iconSize + 1
                 scale: _tap.pressed ? 0.84 : Media.playing ? 1.0 : 0.92

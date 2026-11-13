@@ -62,7 +62,7 @@ Row {
                 height: width
                 radius: width / 2
                 antialiasing: true
-                color: Theme.barAccent
+                color: Theme.barAccentMark
                 transform: PixelSnap { item: _countBadge; dpr: root._dpr }
                 OutlineBorder {
                     radius: parent.radius

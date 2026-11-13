@@ -35,7 +35,7 @@ Item {
         height: 24
         radius: 12
         antialiasing: true
-        color: root.critical ? Theme.error : Theme.accent
+        color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.10
         visible: opacity > 0.01
     }
@@ -46,7 +46,7 @@ Item {
         height: 14
         radius: 7
         antialiasing: true
-        color: root.critical ? Theme.error : Theme.accent
+        color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.22
         visible: opacity > 0.01
     }
@@ -57,7 +57,7 @@ Item {
         height: 7
         radius: 3.5
         antialiasing: true
-        color: root.critical ? Theme.error : Theme.accent
+        color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.50
         visible: opacity > 0.01
     }

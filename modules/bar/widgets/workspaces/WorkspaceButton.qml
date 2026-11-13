@@ -338,8 +338,8 @@ Item {
                 * (root._hoverFx && !root.urgent ? Math.min(1, root._dotAlpha + 0.18)
                     : root._dotAlpha)
                 * root._pulseOpacity
-            color: root.urgent ? Theme.warning
-                 : root.active ? Theme.barAccent
+            color: root.urgent ? Theme.barWarning
+                 : root.active ? Theme.barAccentMark
                  : root.occupied ? Theme.barSubtext : "transparent"
             scale: _tap.pressed ? 0.9 : (root._hoverFx ? 1.2 : 1.0)
             OutlineBorder {
@@ -375,7 +375,7 @@ Item {
             width: Metrics.devicePx(Math.max(6, root.iconSize * 0.5), root._dpr)
             height: Metrics.devicePx(2, root._dpr)
             radius: height / 2
-            color: Theme.warning
+            color: Theme.barWarning
             visible: root.urgent && !root.active && root._iconCell
             transform: PixelSnap { item: _urgentMark; dpr: root._dpr }
         }

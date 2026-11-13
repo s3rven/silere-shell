@@ -151,7 +151,7 @@ Item {
             horizontalAlignment: Text.AlignHCenter
             transformOrigin:     Item.Center
             text:           OsdBarState.icon
-            color:          OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor
+            color:          OsdBarState.hasBar ? Theme.barText : Theme.barInk(OsdBarState.fillColor, false)
             font.pixelSize: Settings.iconSize + 2
             ColorFade on color { duration: Motion.medium }
         }
@@ -180,7 +180,7 @@ Item {
                 radius: parent.radius
                 color: OsdBarState.muted
                     ? Theme.withAlpha(Theme.barSubtext, 0.58)
-                    : Theme.withAlpha(OsdBarState.fillColor, 0.88)
+                    : Theme.withAlpha(Theme.barInk(OsdBarState.fillColor, false), 0.88)
             }
         }
 
@@ -194,7 +194,7 @@ Item {
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.barSubtext, 0.7)
-                                : (OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor)
+                                : (OsdBarState.hasBar ? Theme.barText : Theme.barInk(OsdBarState.fillColor, true))
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
             ColorFade on color { duration: Motion.medium }

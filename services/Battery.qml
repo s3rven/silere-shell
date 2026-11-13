@@ -37,19 +37,22 @@ Singleton {
     readonly property int pulseDuration: critical ? Motion.ms(650) : Motion.ms(2000)
     property real alertPulse: 0
 
-    function _stateColor(idle: color, active: color, rest: color): color {
+    function _stateColor(idle: color, active: color, rest: color,
+                         good: color, bad: color, low: color): color {
         if (!available)                               return idle
-        if (onAc && full)                             return Theme.success
+        if (onAc && full)                             return good
         if (held)                                     return idle
         if (charging)                                 return active
-        if (pct < _critPct)                           return Theme.error
-        if (pct < ShellSettings.batteryLowThreshold)  return Theme.warning
+        if (pct < _critPct)                           return bad
+        if (pct < ShellSettings.batteryLowThreshold)  return low
         return rest
     }
-    readonly property color iconColor: _stateColor(Theme.subtext, Theme.accent, Theme.accent)
+    readonly property color iconColor: _stateColor(Theme.subtext, Theme.accent, Theme.accent,
+        Theme.success, Theme.error, Theme.warning)
     // the bar's own tokens, lifted for contrast over the bar; a battery at rest is neutral like every other
     // reading, so "pills follow theming" decides whether it takes the accent
-    readonly property color barIconColor: _stateColor(Theme.barSubtext, Theme.barAccent, Theme.barText)
+    readonly property color barIconColor: _stateColor(Theme.barSubtext, Theme.barAccentMark, Theme.barText,
+        Theme.barSuccess, Theme.barError, Theme.barWarning)
 
     readonly property string icon: {
         if (!available)                    return "󰂎"

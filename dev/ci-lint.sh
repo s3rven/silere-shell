@@ -2112,6 +2112,24 @@ else
   ok "window copies" "the window models share one IPC copy per window per reply"
 fi
 
+# The menu's status colours are solved for a card. The bar sits over the wallpaper, see-through,
+# and has its own (barError, barWarning, barSuccess, barAccentMark), solved over a white wallpaper
+# and a black one. The underline glows instead of drawing a glyph, and the tray's attention tile
+# is a fill, so both keep the menu's.
+bar_status="$(grep -rnE 'Theme\.(error|warning|success)\b' --include='*.qml' modules/bar modules/common/Pill.qml 2>/dev/null \
+  | grep -vE '^modules/bar/BarUnderline\.qml:' || true)"
+# an alert's tint reaches the in-bar OSD as a value, so it is lifted where it is drawn
+osd_tint="$(grep -nE 'OsdBarState\.fillColor' modules/bar/widgets/OsdBarWidget.qml | grep -v 'Theme\.barInk(OsdBarState\.fillColor' || true)"
+if [ -n "$osd_tint" ]; then
+  fail "the in-bar OSD draws an alert's tint through Theme.barInk:"
+  printf '%s\n' "$osd_tint"
+elif [ -n "$bar_status" ]; then
+  fail "bar widgets take status colours from Theme.barError, barWarning and barSuccess, not the menu's:"
+  printf '%s\n' "$bar_status"
+else
+  ok "bar status" "bar widgets use the status colours solved for the bar"
+fi
+
 # Quickshell's Hyprland bindings do not always mirror the compositor: hyprland reports
 # unfocus as an empty activewindowv2 address, quickshell's parser bails on it, and
 # Hyprland.activeToplevel then keeps the last focused window forever. The Hyprland

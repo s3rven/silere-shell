@@ -14,7 +14,7 @@ StatusActionPill {
     glyph: Updates.checkBroken ? "󰀦" : Updates.icon
     accessibleName: Updates.statusText.length > 0
         ? "System updates, " + Updates.statusText : "System updates"
-    glyphColor: Updates.checkBroken ? Theme.warning : Theme.barAccent
+    glyphColor: Updates.checkBroken ? Theme.barWarning : Theme.barAccentMark
     text: expanded ? (Updates.lastFailed ? Updates.statusText + " · " + Updates.lastError : Updates.statusText)
         : Updates.count > 0 ? String(Updates.count) : ""
 

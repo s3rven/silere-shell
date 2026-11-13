@@ -36,7 +36,7 @@ Pill {
     readonly property int _tempLevel: root._temp < 0 ? 0 : CpuTemp.critical ? 2 : CpuTemp.hot ? 1 : 0
     readonly property int severity: Math.max(root._cpuLevel, root._memLevel, root._tempLevel)
     function _levelTint(level: int): color {
-        return level === 2 ? Theme.error : level === 1 ? Theme.warning : Theme.barText
+        return level === 2 ? Theme.barError : level === 1 ? Theme.barWarning : Theme.barText
     }
 
     function percent(value: real): string {

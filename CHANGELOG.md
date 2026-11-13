@@ -24,6 +24,7 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with one allocator pool that returns freed memory after a second, unless you set your own `MALLOC_CONF`.
+- A see-through bar keeps the accent's colour on its marks: the active workspace, widget icons, levels and the visualizer. They are held to a shape's 3:1 contrast instead of a label's 4.5:1, which at low bar opacity left only an off-white.
 - A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.
 - Moving the pointer along the bar keeps each widget's hover detail open until you leave that part of the bar, so the widget you aim at no longer slides away as the last one closes.
 - Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
@@ -54,6 +55,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- The bar's status colours (microphone in use, low battery, Caps Lock, a hot CPU, an urgent workspace, an alert shown in the bar) stay readable on a see-through bar over a bright wallpaper; they dropped to about 2:1 there.
+- Errors, warnings and success marks in translucent popups stay readable with a white window behind a dark menu, or a dark window behind a light one (as low as 1.5:1 before).
+- With pure white text (matugen at `--contrast 1`), captions in translucent popups no longer turn black on a dark theme.
+- Captions from a low-contrast matugen palette (`--contrast` below 0) no longer sink under 3:1.
 - `scripts/bench.sh --warm` works from an SSH session.
 - Text no longer has orange and blue fringes on displays at fractional scales such as 125% and 150%.
 - With Auto tighten on, hovering a widget on a crowded bar no longer tightens the whole bar and loosens it again.
@@ -92,6 +97,7 @@ settings file carries its own `__version` and migrates separately.
 - With week numbers on, the calendar's day squares sit on whole pixels at fractional scaling instead of blurring at their sides.
 - The System and Keyboard widgets fade out when switched off, as the other widgets do, instead of disappearing at once.
 - Window titles that contain icon glyphs no longer cut off early with a font other than the default.
+- The keyboard widget no longer shows a stray space before CAPS, or reads an empty layout to screen readers, when the compositor reports no layout.
 - Home's brightness display choices are named for screen readers.
 - On a computer without a battery, Alerts keeps the low battery warning switch, which also covers Bluetooth devices.
 - An open calendar stays centred on its clock as the clock's date appears or folds away, instead of slipping to one side.

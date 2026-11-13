@@ -35,7 +35,7 @@ Pill {
         return battery >= 0 && battery < SystemAlerts.btLowPct
     }
     readonly property bool _batteryLow: root.lowCharge(root._battery)
-    glyphColor: root._batteryLow ? Theme.warning : root._linked ? Theme.barText : Theme.barSubtext
+    glyphColor: root._batteryLow ? Theme.barWarning : root._linked ? Theme.barText : Theme.barSubtext
     textColor:  Theme.barSubtext
     animateText: false
     maxTextWidth: compact ? 130 : 220

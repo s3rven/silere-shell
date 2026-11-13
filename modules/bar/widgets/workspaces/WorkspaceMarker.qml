@@ -35,7 +35,7 @@ Item {
     readonly property PixelSnap _lineSnap: PixelSnap { item: root._bar ? root : null; dpr: root._dpr }
     transform: Translate { x: root.layoutOffsetX; y: root._bar ? root._lineSnap.y : 0 }
     readonly property real centerX: x + width / 2 + layoutOffsetX
-    readonly property color tint: root.urgent ? Theme.warning : Theme.barAccent
+    readonly property color tint: root.urgent ? Theme.barWarning : Theme.barAccentMark
 
     function _motionAllowed(): bool {
         return root.visible && root.shown && root.barActive

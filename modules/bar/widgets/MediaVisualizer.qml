@@ -57,7 +57,7 @@ Canvas {
 
     Connections {
         target: Theme
-        function onBarAccentChanged() { if (_viz._paintable) _viz.requestPaint() }
+        function onBarAccentMarkChanged() { if (_viz._paintable) _viz.requestPaint() }
     }
 
     property var   _fill:   null
@@ -218,7 +218,7 @@ Canvas {
         var base  = rim ? height - _rimEdge : height
         var slot  = (x1 - x0) / n
         var maxPx = height * 0.75
-        var ac    = Theme.barAccent
+        var ac    = Theme.barAccentMark
         if (slot <= 0) return
 
         var cy = _cy

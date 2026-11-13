@@ -34,7 +34,8 @@ Pill {
     accessibleName: !Audio.ready ? "Volume"
         : (Audio.muted ? "Volume muted" : "Volume " + Math.round(Audio.uiVolume * 100) + "%")
           + (Audio.sinkName.length > 0 ? ", " + Audio.sinkName : "")
-    glyphColor: Audio.muted ? Theme.barSubtext : Theme.barText
+          + (root._outputLow ? ", " + root._outputNote : "")
+    glyphColor: Audio.muted ? Theme.barSubtext : root._outputLow ? Theme.barWarning : Theme.barText
     textColor:  Theme.barSubtext
     interactive: Audio.ready
     // two digits is the common case; reserving "100%" left a character of air after every reading
@@ -48,7 +49,7 @@ Pill {
     maxTextWidth: compact ? 150 : 260
     levelValue: Audio.ready ? Audio.uiVolume : -1
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
-    levelColor: Audio.muted ? Theme.barSubtext : Theme.barAccent
+    levelColor: Audio.muted ? Theme.barSubtext : Theme.barAccentMark
 
     wheelKey: "audio:" + (Audio.sink ? String(Audio.sink.id) : "")
 

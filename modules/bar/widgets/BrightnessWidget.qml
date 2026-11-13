@@ -38,7 +38,7 @@ Pill {
     }
     levelValue: canControl ? Brightness.pct : -1
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
-    levelColor: Theme.barAccent
+    levelColor: Theme.barAccentMark
 
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 

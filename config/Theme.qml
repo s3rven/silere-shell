@@ -44,8 +44,10 @@ Singleton {
     readonly property color _tBackground: _n ? _pal.background : _matuBg
     readonly property color _tText:       _hc ? (paletteLight ? "#000000" : "#ffffff") : _textBase
     readonly property color _tSubtextSolid: _hc ? mix(_subtextBase, _tText, 0.32) : _subtextBase
-    readonly property color _tSubtext:    popupOpacity < 1
-        ? root.readableText(_tSubtextSolid, _glassWorst, 3.0) : _tSubtextSolid
+    // the sink above is Silere's own, so it stops where a caption still reads: a palette made at
+    // matugen's lowest contrast arrives near 4:1 and used to leave here under 3:1
+    readonly property color _tSubtext:    popupOpacity < 1 ? root._glassInk(_tSubtextSolid, 3.0)
+        : root.readableText(_tSubtextSolid, _glassWorst, 3.0)
     readonly property color _tSurface:    _hc ? mix(_surfaceBase, _tText, 0.035) : _surfaceBase
 
     // one eased source instead of one fade per call site: everything below is a plain
@@ -86,10 +88,28 @@ Singleton {
     readonly property color _tBarAccent: root._readableAcross(_tAccent, _barDark, _barLight, _hc ? 7.0 : 4.5)
     property color barAccent: root._tBarAccent
     PaletteFade on barAccent { gate: root._paletteReady }
+    // the same accent where it is a shape, not a word: the active workspace mark, a widget's glyph, a
+    // level. At a label's 4.5:1 over a see-through bar only white is left of most hues; a mark needs 3:1
+    readonly property color _tBarAccentMark: root._readableAcross(_tAccent, _barDark, _barLight, _barMarkMinimum)
+    property color barAccentMark: root._tBarAccentMark
+    PaletteFade on barAccentMark { gate: root._paletteReady }
     property color barText: root._readableAcross(_tText, _barDark, _barLight, _hc ? 7.0 : 4.5)
     property color barSubtext: root._readableAcross(_tSubtextSolid, _barDark, _barLight, _hc ? 7.0 : 3.0)
     PaletteFade on barText    { gate: root._paletteReady }
     PaletteFade on barSubtext { gate: root._paletteReady }
+    // a status glyph on the bar: the menu's own red or amber is solved for a card, and over a pale
+    // wallpaper behind a see-through bar it drops to 2:1. A glyph asks 3:1, not a label's 4.5
+    readonly property real _barMarkMinimum: _hc ? 4.5 : 3.0
+    property color barError:   root._readableAcross(_tErrorBase,   _barDark, _barLight, _barMarkMinimum)
+    property color barWarning: root._readableAcross(_tWarningBase, _barDark, _barLight, _barMarkMinimum)
+    property color barSuccess: root._readableAcross(_tSuccessBase, _barDark, _barLight, _barMarkMinimum)
+    PaletteFade on barError   { gate: root._paletteReady }
+    PaletteFade on barWarning { gate: root._paletteReady }
+    PaletteFade on barSuccess { gate: root._paletteReady }
+    // a colour handed to the bar from elsewhere, such as an alert's tint: as a mark, or as a word
+    function barInk(c: color, label: bool): color {
+        return root._readableAcross(c, _barDark, _barLight, label ? (_hc ? 7.0 : 4.5) : _barMarkMinimum)
+    }
     readonly property color barHover: withAlpha(mix(barText, accent, 0.30), _hc ? 0.13 : 0.07)
     readonly property color barPressed: withAlpha(accent, _hc ? 0.26 : 0.18)
     readonly property color barSelected: withAlpha(accent, _hc ? 0.20 : 0.12)
@@ -98,9 +118,14 @@ Singleton {
     // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real
     readonly property color _warnAnchor: "#d4ad77"
     readonly property color _okAnchor:   "#94bd8b"
-    readonly property color _tError:    _n ? "#dd92a2" : MatugenTheme.error
-    readonly property color _tWarning:  _n ? _warnAnchor : _semanticInk(_warnAnchor, MatugenTheme.warning)
-    readonly property color _tSuccess:  _n ? _okAnchor   : _semanticInk(_okAnchor,   MatugenTheme.success)
+    readonly property color _tErrorBase:   _n ? "#dd92a2" : MatugenTheme.error
+    readonly property color _tWarningBase: _n ? _warnAnchor : _semanticInk(_warnAnchor, MatugenTheme.warning)
+    readonly property color _tSuccessBase: _n ? _okAnchor   : _semanticInk(_okAnchor,   MatugenTheme.success)
+    // a status colour is read as a glyph or a short word on a card; over glass it has to hold
+    // through a white window behind a dark menu and a dark one behind a light menu
+    readonly property color _tError:    root._glassInk(_tErrorBase,   3.0)
+    readonly property color _tWarning:  root._glassInk(_tWarningBase, 3.0)
+    readonly property color _tSuccess:  root._glassInk(_tSuccessBase, 3.0)
     // both anchors are pale, which only reads on a dark base
     function _semanticInk(anchor: color, tint: color): color {
         const ink = tintKeepingChroma(anchor, tint, 0.30)
@@ -191,6 +216,14 @@ Singleton {
     readonly property color _glassWorst: root._controlOverWorst(_tBackground, _tText, popupOpacity)
     readonly property color _glassDark: root._controlOverBackdrop(_tBackground, _tText,
         popupOpacity, Qt.rgba(0, 0, 0, 1))
+    readonly property color _glassLight: root._controlOverBackdrop(_tBackground, _tText,
+        popupOpacity, Qt.rgba(1, 1, 1, 1))
+    // ink on a see-through popup. Solved against the worst backdrop alone, the stronger of white
+    // and black can be the wrong one: white text puts that backdrop at mid grey, where black
+    // out-contrasts white by a hair, and a dark menu's captions turned black over a dark window
+    function _glassInk(ink: color, minimum: real): color {
+        return popupOpacity < 1 ? root._readableAcross(ink, _glassLight, _glassDark, minimum) : ink
+    }
     function _solveGlassFloor(base: color, ink: color, minimum: real): real {
         let low = 0, high = 1
         for (let i = 0; i < 10; i++) {
@@ -257,10 +290,14 @@ Singleton {
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
     // solved on the target palette and faded, not re-solved every frame; glass asks less, or detail outshines labels
     readonly property real _detailMinimum: popupOpacity < 1 ? 3.0 : 4.5
-    readonly property color _tMenuTextDetail: root.readableText(
-        withAlpha(_tSubtext, _hc ? 1.0 : 0.85), _glassWorst, _detailMinimum)
-    readonly property color _tMenuTextWarning: root.readableText(
-        withAlpha(mix(_tSubtext, _tWarning, 0.30), _hc ? 1.0 : 0.85), _glassWorst, _detailMinimum)
+    readonly property color _tMenuTextDetail: root._detailInk(
+        withAlpha(_tSubtext, _hc ? 1.0 : 0.85))
+    readonly property color _tMenuTextWarning: root._detailInk(
+        withAlpha(mix(_tSubtext, _tWarning, 0.30), _hc ? 1.0 : 0.85))
+    function _detailInk(ink: color): color {
+        return popupOpacity < 1 ? root._glassInk(ink, _detailMinimum)
+            : root.readableText(ink, _glassWorst, _detailMinimum)
+    }
     property color menuTextDetail: _tMenuTextDetail
     property color menuTextWarning: _tMenuTextWarning
     PaletteFade on menuTextDetail  { gate: root._paletteReady }
