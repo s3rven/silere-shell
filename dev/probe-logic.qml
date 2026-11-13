@@ -1354,6 +1354,36 @@ ShellRoot {
                 && OsdBarState.pillX(520, 272) % 4 === 0
                 && OsdBarState.pillX(520, 520) === 0,
             "two OSD pills of different widths share one centre, on the 4px grid")
+
+        // a repeat inside the commit window after a close is an echo, unless it reads differently
+        const repeatWas = { armed: OsdBarState._armed, motion: ShellSettings.reduceMotion }
+        OsdBarState._armed = true
+        ShellSettings.reduceMotion = true
+        OsdBarState._upsertEntry("battery", "", 0.05, "Critical Battery · 5%", false, Theme.error)
+        OsdBarState._upsertEntry("power", "", 0, "Balanced", false, Theme.accent)
+        OsdBarState._upsertEntry("volume", "", 0.45, "45%", false, Theme.accent)
+        OsdBarState._closeEntry(OsdBarState._entryIndex("power"))
+        OsdBarState._closeEntry(OsdBarState._entryIndex("volume"))
+        OsdBarState.showAlert("power", "", 0, "Balanced", Theme.accent)
+        const alertColourKept = String(OsdBarState.fillColor) === String(Theme.error)
+        OsdBarState.show("volume", "", 0.45, "45%", false)
+        root._check(alertColourKept && String(OsdBarState.fillColor) === String(Theme.error)
+                && OsdBarState.kind === "battery"
+                && OsdBarState.entries.get(OsdBarState._entryIndex("power")).closing
+                && OsdBarState.entries.get(OsdBarState._entryIndex("volume")).closing,
+            "a dropped repeat leaves the colour of the bar OSD's shown pill alone")
+        OsdBarState._clearEntries()
+        OsdBarState._upsertEntry("volume", "", 0.45, "45%", false, Theme.accent)
+        OsdBarState._closeEntry(OsdBarState._entryIndex("volume"))
+        OsdBarState.show("volume", "", 0.45, "45%", false)
+        const echoDropped = OsdBarState.entries.get(OsdBarState._entryIndex("volume")).closing
+        OsdBarState.show("volume", "", 0.45, "Speakers · 45%", false)
+        root._check(echoDropped && OsdBarState.label === "Speakers · 45%"
+                && !OsdBarState.entries.get(OsdBarState._entryIndex("volume")).closing,
+            "an output switch at the level just shown still announces its name, while the level's echo stays dropped")
+        OsdBarState._clearEntries()
+        OsdBarState._armed = repeatWas.armed
+        ShellSettings.reduceMotion = repeatWas.motion
     }
 
     function _checkWifiDraft(): void {

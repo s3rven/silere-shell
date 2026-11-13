@@ -42,6 +42,8 @@ settings file carries its own `__version` and migrates separately.
 - The arrow pointing to an urgent workspace off the page no longer flips direction as it fades out.
 - Home's Wi-Fi and VPN lists close when the adapter, NetworkManager or the last VPN profile goes away, instead of staying open under a missing row.
 - A track change while Now Playing scrolls a long title starts the new title from its first letter.
+- Switching outputs at the level just shown still shows the device name in the on-screen display.
+- The bar's on-screen display no longer flashes the accent colour over a battery or temperature alert.
 - Tray menu radio entries are announced as radio buttons, and Now Playing's length label and the tray menu's Hide from bar are no longer offered to screen readers while covered or closed.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.

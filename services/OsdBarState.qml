@@ -68,8 +68,8 @@ Singleton {
         return t <= now || t - now > root._maxSpanMs
     }
 
-    function _sig(kind: string, value: real, muted: bool): string {
-        return kind + ":" + Math.round(value * 100) + (muted ? ":m" : "")
+    function _sig(kind: string, value: real, muted: bool, label: string): string {
+        return kind + ":" + Math.round(value * 100) + (muted ? ":m" : "") + ":" + label
     }
 
     function _hasBarKind(kind: string): bool {
@@ -153,7 +153,7 @@ Singleton {
     }
 
     function _upsertEntry(kind: string, icon: string, value: real, label: string, muted: bool, fillColor: color): bool {
-        const sig = _sig(kind, value, muted)
+        const sig = _sig(kind, value, muted, label)
         const idx = _entryIndex(kind)
         const serial = ++_serial
         const data = {
@@ -166,8 +166,7 @@ Singleton {
             hasBar: _hasBarKind(kind),
             clamped: Math.max(0, Math.min(1, value)),
             closing: false,
-            serial: serial,
-            sig: sig
+            serial: serial
         }
 
         if (idx >= 0) {
@@ -192,7 +191,7 @@ Singleton {
 
         _removeAt[e.kind] = Date.now() + _removeDelay
         _removeAt = _removeAt
-        _closingSig[e.kind] = e.sig
+        _closingSig[e.kind] = _sig(e.kind, e.value, e.muted, e.label)
         _closingSig = _closingSig
         _commitClose[e.kind] = Date.now() + _commitCloseWindow
 
@@ -210,7 +209,7 @@ Singleton {
     function _applyValues(kind: string, icon: string, value: real, label: string, muted: bool, color: color): bool {
         const idx = _entryIndex(kind)
         const live = idx >= 0 && !_entries.get(idx).closing
-        if (!live && _closingSig[kind] === _sig(kind, value, muted)
+        if (!live && _closingSig[kind] === _sig(kind, value, muted, label)
             && !_due(_commitClose[kind] || 0, Date.now())) return false
         if (!_upsertEntry(kind, icon, value, label, muted, color)) return false
         if (live && !root.rapid && !ShellSettings.reduceMotion && !Idle.isIdle) {
@@ -228,7 +227,6 @@ Singleton {
         if (MenuState.homeActive && kind !== "microphone") return
 
         const refreshFullscreen = ShellSettings.osdBarIntegrated && !root._hasActiveBarEntry()
-        root.fillColor = Theme.accent
         if (_applyValues(kind, icon, value, label, muted, Theme.accent) && refreshFullscreen)
             FullscreenState.refresh()
     }
@@ -236,7 +234,6 @@ Singleton {
     function showAlert(kind: string, icon: string, value: real, label: string, fillColor: color): void {
         if (!_armed
                 || !root._presentationAllowed(Idle.isIdle, ShellSettings.osdEnabled)) return
-        root.fillColor = fillColor
         _applyValues(kind, icon, value, label, false, fillColor)
     }
 
