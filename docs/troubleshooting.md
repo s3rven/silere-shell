@@ -36,10 +36,10 @@ if you installed elsewhere. To create the command link, run that same script wit
 
 ### It installed but nothing appears
 
-Silere runs on Hyprland and niri only. On either of those it is nearly always the autostart
-line — run `~/.config/silere-shell/scripts/silere run` to check. If the bar comes up, run the
-installer again, which adds it to a Hyprland config, or add this to your compositor's startup and
-restart it. Use the full path: the compositor's `PATH` often lacks `~/.local/bin`.
+Silere runs on Hyprland and niri only. On those, the cause is nearly always the autostart line.
+Run `~/.config/silere-shell/scripts/silere run` to check. If the bar comes up, run the installer
+again, or add this to your compositor's startup. Use the full path, because the compositor's
+`PATH` often lacks `~/.local/bin`.
 
 ```lua
 -- ~/.config/hypr/hyprland.lua
@@ -79,7 +79,7 @@ again after that, `silere log` shows the error.
 
 `silere reset` covers this and the rest of what can go wrong at once: settings, edited files,
 leftovers and caches, with `silere reset --undo` to put them back. To deal with the files alone,
-preview them with `bash scripts/repair.sh`. Running it with `--apply` saves the edits in a
+preview them with `silere repair`. Running it with `--apply` saves the edits in a
 reversible Git stash and restores the shipped files; `--undo` restores the latest saved
 repair.
 
@@ -165,10 +165,6 @@ Another daemon already owns `org.freedesktop.Notifications`. Silere names it in 
 few seconds after start and under Settings › System › Overview, and `silere doctor`
 reports it too. Stop that daemon and run `silere restart`.
 
-Sandboxed tests skip this conflict alert because the desktop's running shell is expected
-to own notifications. A warning from an older test instance does not mean that the live
-shell lost its notification server. Check the current owner with `silere doctor`.
-
 ### Icons or text use the wrong font
 
 Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cache with
@@ -179,16 +175,12 @@ Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cac
 First check Settings › Widgets › Show & order: the tray must be enabled and the app must say
 Shown. Show all apps restores hidden apps without resetting the bar layout.
 
-Older user services may set `QSG_TRANSIENT_IMAGES`. [Qt's texture factory](https://github.com/qt/qtdeclarative/blob/6.11/src/quick/util/qquickpixmapcache.cpp#L125-L131)
-discards image data after its first texture upload with this variable present, even
-when its value is `0` or empty.
-Later windows can get a blank icon that still reports as loaded. `silere run` clears
-this variable, and `silere doctor` warns about affected services.
-
-If you use `silere-shell.service`, remove its `Environment=QSG_TRANSIENT_IMAGES=…`
-line and set `ExecStart` to the absolute path of `scripts/silere` followed by `run`.
-Then run `systemctl --user daemon-reload` and `silere restart`. A QML reload cannot
-change the running process's environment.
+Otherwise an old user service probably sets `QSG_TRANSIENT_IMAGES`, which makes
+[Qt drop image data](https://github.com/qt/qtdeclarative/blob/6.11/src/quick/util/qquickpixmapcache.cpp#L125-L131)
+after the first window uses it, whatever its value. `silere doctor` warns about it. Remove the
+`Environment=QSG_TRANSIENT_IMAGES=…` line from `silere-shell.service`, set `ExecStart` to the
+absolute path of `scripts/silere` followed by `run`, then run `systemctl --user daemon-reload`
+and `silere restart`.
 
 ## Devices and network
 

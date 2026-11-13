@@ -6,277 +6,238 @@
 
 | Panel | Action |
 |---|---|
-| Main menu | Click the active workspace. |
-| Quick actions | Right-click the active workspace. |
-| Calendar | Click the clock. |
-| Now Playing | Right-click the media widget. |
-| Wi-Fi or Bluetooth list | Click its bar widget; when the radio is off, this opens Home. |
+| Main menu | Click the active workspace |
+| Quick actions | Right-click the active workspace |
+| Calendar | Click the clock |
+| Now Playing | Right-click the media widget |
+| Wi-Fi or Bluetooth list | Click its bar widget (opens Home while the radio is off) |
 
-Clicking outside a popup closes it. The installer offers **Super + /** as a menu shortcut
-on Hyprland and prints the line to add on niri; any keybind can run `silere ipc menu toggle`.
-
-## Keyboard
-
-Use **Tab / Shift+Tab** to move between controls, **Enter / Space** to activate them,
-and arrows to navigate lists or adjust sliders. Sliders also accept Home/End and
-Page Up/Down. **Ctrl+Tab / Ctrl+Shift+Tab** move between the menu's pages, and **Ctrl+F**
-searches notification history and Settings. Escape steps back through an open picker or
-search, then closes the popup; the mouse back button does the same in the menu. Controls
-expose the same actions to accessibility tools.
-
-In an open dropdown, type to jump to a row, repeat an initial to cycle matches, and use
-Backspace to correct the search. Home, End, Page Up and Page Down move further through the list.
-Drag the scrollbar on long pages and lists; hovering it makes the handle wider.
-
-Keyboard focus expands a notification and pauses its timeout. **Delete** dismisses the
-focused notification, and edits text normally while you write a reply.
-
-In Settings › Show & order, Tab to a widget's ⋮ grip and press Up or Down to move it
-along the bar, into the next zone past either end.
-
-The bar itself never takes the keyboard, so tray menus open from a keybind:
-`silere ipc tray toggle` opens the first tray app's menu on its first entry. Right or Enter
-opens a submenu, Left or Escape steps back out of one, and on the menu's own level Left and
-Right move to the next app's menu.
+Clicking outside a popup closes it. The installer offers **Super + /** for the menu on Hyprland
+and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`; on Hyprland,
+[`global, silere:menu`](scripting.md#keybinds-on-hyprland) answers faster.
 
 ## The bar
 
-| Area | Pointer controls |
+| Widget | Click | Right-click | Middle-click | Scroll | Hover |
+|---|---|---|---|---|---|
+| Workspaces | Switch; on the active one, open the menu | Active one: quick actions | Send the focused window there | Switch (turn on in Widgets › Workspaces) | |
+| Clock | Calendar | | Add seconds, the date, or both | | |
+| Window title | | | | | Scroll a title that is cut short |
+| System monitor | Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |
+| Media | Play or pause | Now Playing | Jump to the player | Change track | |
+| Network | Wi-Fi list | nm-connection-editor, or nmtui | | | Network, signal, VPN, problems, traffic |
+| Bluetooth | Bluetooth list | blueman-manager | | | Connected device and its battery |
+| Keyboard layout | Next layout on every keyboard | | | | Full layout name |
+| Volume | Mute | pwvucontrol or pavucontrol | Next output | Volume | Active output |
+| Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | |
+| Brightness | Its slider in Home | | | Brightness | |
+| Battery | Power Mode in Home | | | | Time left or charging state |
+| Updates | Package details | Check again | | | |
+| Shell update | Settings › System › Overview | | | | |
+| Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name |
+
+- **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**. The microphone appears while an app is listening.
+- **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge below 20% turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
+- **Workspace markers:** rings are empty workspaces and dots have windows. With app icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page.
+- **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
+
+## Keyboard
+
+| Keys | What they do |
 |---|---|
-| workspaces | **click** switches · on the active workspace, **click** opens the menu and **right-click** opens quick actions · **middle-click** sends the focused window there · **scroll** switches too, once you turn it on under Settings › Widgets › Workspaces |
-| clock | **click** opens the calendar · **middle-click** cycles through adding seconds, the date, or both |
-| calendar | **scroll** changes the month · **click** the header to jump back to today · **click** an adjacent-month date to open that month · choose week start, week numbers and today's weather under Settings › Widgets › Clock |
-| window title | **hover** a title that is cut short to scroll through the rest · turn on the app icon under Settings › Widgets › Indicators |
-| system monitor | optional, under Settings › Widgets › Indicators · shows CPU, memory and temperature, amber or red while one stays high · **click** opens Home, where **click** on CPU or Memory opens your system monitor app · **right-click** opens that app directly |
-| media | **click** plays or pauses · **scroll** changes track · **middle-click** jumps to the player · **right-click** opens Now Playing |
-| network | **hover** shows the network and signal, an active VPN, a connection problem, and traffic while data flows · **click** opens the Wi-Fi list in Home, or Home when Wi-Fi is off · **right-click** opens nm-connection-editor, or nmtui in a terminal |
-| bluetooth | **hover** shows the connected device and its battery, or how many are connected · with **Reveal values on hover** off, one device's charge sits beside its glyph, which turns amber below 20% · **click** opens the Bluetooth list in Home, or Home when Bluetooth is off · **right-click** opens blueman-manager |
-| keyboard layout | **hover** shows the full layout name · **click** switches every keyboard to the next layout · CAPS appears while Caps Lock is on |
-| volume | **hover** shows the active output · **scroll** changes volume · **click** mutes · **middle-click** moves to the next output · **right-click** opens pwvucontrol or pavucontrol · in the menu, expand it for output, input and per-app levels |
-| microphone | **click** mutes · **scroll** changes the input level · **middle-click** moves to the next input · **right-click** opens pwvucontrol or pavucontrol · it appears while an app is listening |
-| brightness | **scroll** changes brightness · **click** opens its slider in Home, with the device choices when more than one backlight drives a screen |
-| battery | **hover** shows the time remaining or charging status · **click** opens Power Mode in Home, or system readings when power profiles are unavailable |
-| updates | **click** opens package details in Settings › System › Overview · **right-click** rechecks for packages |
-| shell update | **click** opens Settings › System › Overview |
-| tray | **hover** names the app while **Reveal values on hover** is on · **click** opens a menu-only app's menu, otherwise jumps to its window or activates it · **right-click** opens its menu, with Hide from bar at the end · **middle-click** runs the app's secondary action · **scroll** is passed through to the app |
+| Tab, Shift+Tab | Move between controls |
+| Enter, Space | Activate |
+| Arrows | Move through lists, adjust sliders |
+| Home, End, Page Up, Page Down | Jump further in lists and sliders |
+| Ctrl+Tab, Ctrl+Shift+Tab | Next or previous menu page |
+| Ctrl+F | Search notification history or Settings |
+| Escape, or the mouse back button | Step back out of a picker or search, then close |
+| Delete | Dismiss the focused notification |
+| Letters in an open dropdown | Jump to a matching row; repeat the letter to cycle |
 
-Empty workspaces use rings; filled dots have windows. With app icons enabled, `+N`
-counts additional apps and an amber underline marks urgency. An arrow and workspace
-number point to an urgent workspace outside the current page.
+Focus on a notification expands it and pauses its timeout. In **Settings › Widgets › Show & order**,
+Tab to a widget's ⋮ grip and press Up or Down to move it.
 
-On a crowded bar, window and media titles shorten to leave room for controls.
-**Compact widgets** and **Auto tighten** under **Bar › Spacing** control density, and
-the bar grows when larger text needs more height.
+The bar never takes the keyboard, so tray menus open from a keybind: `silere ipc tray toggle`
+opens the first app's menu. Right or Enter opens a submenu, Left or Escape leaves it, and Left
+and Right on the top level move between apps.
 
 ## Notifications
 
-On a popup, **click** runs the default action, **right-click** or **drag sideways**
-dismisses, and **middle-click** jumps to the sending app. A reply action opens a text
-field when the sender supports it. Messages from the same app and sender join one
-card; **hover** shows the earlier lines. Turn off **Group conversations** under
-**Feedback › Notifications** to give every message its own card again.
+| On a popup | Result |
+|---|---|
+| Click | Run the default action |
+| Right-click, or drag sideways | Dismiss |
+| Middle-click | Jump to the sending app |
+| Hover a grouped card | Show the earlier messages |
+
+Messages from the same app and sender share one card. Turn this off with **Group conversations**
+under **Feedback › Notifications**. A reply field appears when the sender supports replies.
 
 ### History
 
 | Action | Result |
 |---|---|
-| Type in Search, or press Ctrl+F | Find an app, title or message. |
-| Click an app in the sidebar | Show only that app's notifications. |
-| Click an entry | Read it in full. |
-| Right-click an entry | Remove it from history. |
-| Middle-click an entry | Jump to the sending app. |
-| Click Clear twice | Remove the entries currently shown. |
-| Click Mute | Hold back the selected app's popups. |
-| Press Escape | Clear search, then close. |
-| Press Enter or Down in Search | Focus the first matching notification. |
-| Press Up or Down on a notification | Move between entries; Up from the first returns to Search. |
-| Press Delete on a notification | Remove it and keep focus on the next entry, or the preceding entry at the end. |
+| Type in Search, or press Ctrl+F | Find an app, title or message |
+| Click an app in the sidebar | Show only that app, until the menu closes |
+| Click an entry | Read it in full |
+| Right-click an entry, or press Delete | Remove it |
+| Middle-click an entry | Jump to the sending app |
+| Click Clear twice | Remove the entries shown |
+| Click Mute | Hold back that app's popups |
+| Up, Down | Move between entries and back to Search |
 
-Search ignores case and accents, so `cafe` finds `Café`, and its words can match across
-the sender, title and message. Selecting an app in the rail narrows the results further.
-With no results, **Clear search** keeps the field ready for another query, and an empty
-app filter offers **Show all notifications**.
-
-History keeps every message, grouped or not. A notification the same app repeats word
-for word keeps one row, dated by its latest arrival. **Keep history for**, under
-**Feedback › Notifications › History**, removes entries older than a day, week or month;
-**Until cleared** keeps them, subject to the history count limit. Shortening the period
-removes older entries at once and also applies when saved history is restored; popups
-already on screen stay open.
+- Search ignores case and accents (`cafe` finds `Café`) and matches across sender, title and message.
+- A notification repeated word for word keeps one row, dated by its latest arrival.
+- **Keep history for**, under **Feedback › History**, removes entries older than a day, week or month. **Until cleared** keeps them up to the history limit.
+- When history is full, the app with the most entries loses its oldest one first, so one busy chat can't push the rest out.
 
 ### Quieting notifications
 
-A muted app's notifications skip the popup and go straight to history, without counting
-as missed. Critical ones follow **Let critical through**, as under Do Not Disturb. Unmute
-an app from its history page or under **Feedback › Notifications › Muted apps**.
+| To | Use |
+|---|---|
+| Hold back one app | **Mute** on its history page. Its popups go straight to history. Unmute there or under **Feedback › History › Muted apps**. |
+| Hold back everything | **Do Not Disturb** in Home. **Let critical through** decides about critical ones, for muted apps too. |
+| Hide content while presenting | **Presentation Mode**, in Quick Actions or under Do Not Disturb's options. It hides notification content, critical ones and cards already on screen included, and keeps the screen awake until you turn it off. |
+| Keep popups off a shared screen | On by default where Hyprland or niri send cast events. A red mark sits beside the clock while you share. Turn off with **Hide while sharing screen** under **Feedback › Notifications**. |
 
-On Hyprland and niri versions that send cast events, popups wait in history while you
-share or record your screen, and a red share mark sits beside the clock. Hyprland ignores
-brief screenshot captures. Switch this off with **Hide while sharing screen** under
-**Feedback › Notifications**.
-
-**Presentation Mode**, in Quick Actions and under Do Not Disturb's options in Home, hides
-notification content on every compositor, critical notifications and cards already on
-screen included, and keeps the screen awake until you turn it off.
-
-While popups are held back, the bell beside the clock takes the accent colour once one arrives.
+While popups are held back, the bell beside the clock takes the accent colour when one arrives,
+until you open History.
 
 ## Home
 
 ### Connections
 
-| Connection | Actions |
+| Item | Actions |
 |---|---|
-| Wi-Fi | Click a saved or open network to join. A personal network opens a password field; the eye button shows or hides the password. |
-| Connected Wi-Fi | Click twice to disconnect. |
-| Saved Wi-Fi | Right-click, middle-click or press Delete twice to forget it; disconnect first if it is connected. |
-| Bluetooth | Click to pair or connect; click a connected device twice to disconnect. |
-| Paired Bluetooth | Right-click, middle-click or press Delete twice to forget it; disconnect first if it is connected. |
-| Active VPN | Click its address to copy IPv4, or IPv6 on an IPv6-only tunnel. |
+| Wi-Fi network | Click a saved or open network to join. A personal network asks for its password. |
+| Connected Wi-Fi | Click twice to disconnect |
+| Saved Wi-Fi | Right-click, middle-click or press Delete twice to forget |
+| Bluetooth device | Click to pair or connect; click a connected one twice to disconnect |
+| Paired Bluetooth device | Right-click, middle-click or press Delete twice to forget |
+| Active VPN | Click its address to copy it |
 
-Disconnect, forget and power confirmations expire after three seconds.
+Confirmations expire after three seconds. Disconnect before forgetting a connected network or
+device.
 
-Expand **VPN** to connect or disconnect saved NetworkManager profiles. **Network settings**
-in the Wi-Fi list opens `nm-connection-editor`, or `nmtui` in a terminal, for hidden
-networks, enterprise Wi-Fi and IP/DNS configuration.
+- **VPN:** expand it to connect saved NetworkManager profiles.
+- **Network settings**, in the Wi-Fi list, opens `nm-connection-editor` (or `nmtui`) for hidden networks, enterprise Wi-Fi and IP or DNS settings.
+- **Pair with a passkey** opens `blueman-manager` for devices that need a PIN.
+- **Controller** above the device list picks one of several Bluetooth adapters for this session.
 
-For Bluetooth devices needing a PIN or confirmation, **Pair with a passkey** opens
-`blueman-manager`. Install Blueman to enable that action.
+### Sound, light and power
 
-With several Bluetooth controllers, choose **Controller** above the device list or under
-**Settings › System › Devices**. The choice lasts for this session; **Automatic** follows
-the system default, and removing the selected controller falls back to an available one.
+| Control | How it works |
+|---|---|
+| Output device | Expand Volume and choose **Output**. A Bluetooth headset gets **Listening** and **Calls** profiles (needs `wpctl` and `pw-dump`). |
+| Several backlights | Expand the brightness slider, or set **Brightness display** under **Settings › System › Devices** |
+| External monitors | Turn on **External brightness** under **Settings › System › Devices**. Needs `ddcutil` and DDC/CI switched on in the monitor's menu. |
+| Keyboard light | Appears when UPower exposes one. Its steps follow the hardware. |
+| CPU row | Names the busiest process while the CPU is busy. Click to open your system monitor. |
+| Battery | Click it in the system readings for health, stored energy and power draw, per battery or UPS |
+| Charge limit | In the battery details when UPower supports it. Needs `busctl`; Lenovo needs UPower 1.90.10 or newer. |
 
-### Sound
-
-Expand Volume and select **Output** to change the output device. A Bluetooth headset that
-offers both profiles gets **Listening** for playback and **Calls** for its microphone; this
-needs `wpctl` and `pw-dump`. Volume controls pause while the headset changes modes, and an
-error restores them and offers sound settings.
-
-### Brightness and lighting
-
-On a laptop with several backlights, expand Home's brightness slider to choose the display
-it controls. **Brightness display** under **Settings › System › Devices** is the same choice.
-
-Turn on **External brightness** under **Settings › System › Devices** to control DDC/CI
-monitors with `ddcutil`. Enable DDC/CI in the monitor's own menu first. Each display it finds
-gets a slider in Home, and opening Devices retries the detection. A display that never answers
-is named in the warning; switch off its control there to end the warning.
-
-Home also shows **Keyboard light** when UPower exposes a controllable keyboard backlight.
-Its steps follow the hardware, **Off** included. With several lights, choose one under
-**Settings › System › Devices**. Changes use UPower's normal permissions; Silere does not
-request administrative access.
-
-### Battery
-
-Click **Battery** in Home's system readings for battery health, stored energy, and power
-use or charging power. With several batteries or a UPS, each is listed with its own charge,
-and readings UPower cannot supply stay hidden.
-
-Where UPower can limit charging, the details also show **Charge limit**. Turned on, the
-battery stops short of full to slow its wear, and the row says where it stops when the
-laptop reports that. It needs `busctl`, and Lenovo's conservation mode needs UPower 1.90.10
-or newer. The switch also shows a limit set in firmware or by another tool.
+None of these ask for administrator rights.
 
 ## Now Playing
 
-Drag the playback slider to seek precisely. After resting the pointer on it, scroll to
-seek in five-second steps; the arrow keys do the same when it has keyboard focus.
-Shift+arrow or Page Up/Down seeks 50 seconds, and Home/End jumps to the start or end.
-Seeking works when the player supports it.
+| To seek | Use |
+|---|---|
+| Anywhere | Drag the slider |
+| 5 seconds | Scroll on the slider, or the arrow keys |
+| 50 seconds | Shift+arrow, or Page Up and Page Down |
+| Start or end | Home, End |
 
-Click the track's length at the right of the slider to count down the time left instead,
-and click again for the length. With the audio visualizer on, the slider's wave swells
-with the music. With several players open, pick the one to control under **Players**.
+Click the track length to show the time left instead. With several players open, choose one under
+**Players**.
+
+When Bluetooth or USB headphones disconnect or run flat during playback, Silere pauses the player
+instead of letting it carry on through the speakers. Switching outputs yourself never pauses.
+Turn this off with **Pause when headphones disconnect** under **Settings › Widgets › Media**. The
+headphone jack isn't covered.
 
 ## Calendar and weather
 
-**Weather** under **Widgets › Clock** is off by default. When on, the calendar and Home ask
-[Open-Meteo](https://open-meteo.com/) for today's forecast as they open and reuse the answer
-for 30 minutes. It sends the coordinates of your time zone's main city, rounded to about a
-kilometre, the place Night Light follows, and units follow your locale. Click the calendar
-row to retry after a failure.
+In the calendar, scroll to change month, click the header to return to today, and click a date
+from the next or previous month to go there. Week start, week numbers and weather are under
+**Settings › Widgets › Clock**.
 
-**Show on bar** puts the temperature beside the clock and refreshes it every 30 minutes
-while you are active. While a refresh fails, the bar and Home leave the old reading out;
-the calendar still shows it, marked as the previous reading.
+**Weather** is off by default. When on, the calendar and Home fetch today's forecast from
+[Open-Meteo](https://open-meteo.com/) and reuse it for 30 minutes. The request carries your time
+zone's main city, rounded to about a kilometre, the same place Night Light uses. **Show on bar**
+adds the temperature beside the clock. After a failed refresh the calendar shows the previous
+reading, marked as old; click it to retry.
 
 ## Settings
 
-Open **Settings** in the menu. Most changes apply immediately and are saved to
-`~/.config/silere-shell/settings.json`, or the corresponding `$XDG_CONFIG_HOME` path.
-The file stores only values that differ from the defaults, and a dot beside a page
-means that page has changes.
+Most changes apply at once. Only values that differ from the defaults are saved, in
+`~/.config/silere-shell/settings.json`. A dot beside a page marks one you've changed.
 
-| Group | Pages |
-|---|---|
-| Appearance | **Theme** for colours, opacity, blur and shadows; **Interface** for text, scale and accessibility |
-| Bar | **Layout**, **Underline** and **Spacing** |
-| Widgets | **Show & order**, then each widget's own options |
-| Feedback | **Notifications**, the **OSD** and **Alerts** |
-| System | **Overview** for updates, diagnostics and recovery; **Devices** for displays, lighting, Bluetooth and the programs Silere runs |
+| Group | Page | Covers |
+|---|---|---|
+| Appearance | Theme | Colours, opacity, blur and shadows |
+| | Interface | Text, scale and accessibility |
+| Bar | Layout | Position, size, shape and hover |
+| | Underline | Line and event glow |
+| | Spacing | Gaps and dividers |
+| Widgets | Show & order | Choose and reorder bar widgets |
+| | Workspaces | Markers, labels and app icons |
+| | Clock | Date, time, calendar and weather |
+| | Media | Track details and visualizer |
+| | Indicators | Window title, status and system |
+| Feedback | Notifications | Popups and quiet hours |
+| | History | Saved notifications and muted apps |
+| | OSD | Volume and brightness feedback |
+| | Alerts | Battery and temperature limits |
+| System | Overview | Updates, diagnostics and recovery |
+| | Devices | Displays, lighting, Bluetooth and programs |
 
-Press **Ctrl+F**, or click the search icon beside the page title, to find a setting. It
-matches each row's name, everyday words such as `zoom` or `night light`, configuration
-names such as `notifHistoryDays`, and a typo such as `brigthness`. Enter opens the top
-result, Up and Down walk the others, and Escape closes search before the menu. Search
-resets when you leave Settings.
+**Ctrl+F**, or the search icon beside the page title, finds a setting by its name, an everyday
+word (`zoom`, `night light`), its key (`notifHistoryDays`) or a typo (`brigthness`). Enter opens
+the top result.
 
-### Displays and docking
+### Displays
 
-With more than one screen, **Settings › System › Devices** chooses where popups and the
-OSD appear and turns the bar on or off per display. These choices follow a display across
-dock connector changes when its model and serial identify it uniquely; otherwise they stay
-with the connector.
+With more than one screen, **Settings › System › Devices** chooses where popups and the OSD
+appear and which displays have a bar. A display identified by model and serial keeps its choices
+across dock changes; otherwise they stay with the connector.
 
 ### Screen lock
 
-Under **Settings › System › Devices**, choose an installed lock program or **Custom command**,
-then enter the program and its arguments and press Enter or **Save**. **Revert**, Escape or
-leaving the page discards the draft, and saving does not lock the screen.
+Under **Settings › System › Devices**, pick an installed lock program or **Custom command**, then
+press Enter or **Save**.
 
-Custom commands run directly, without a shell: quote arguments that contain spaces, as in
-`swaylock --image "/home/me/Lock screen.png"`, use an absolute path instead of `~`, and use
-a script for shell operators or variables. An empty saved command disables the lock action.
-
-**Lock & sleep** suspends only once the session confirms it is locked, and cancels sleep if
-locking fails or times out. Set your idle daemon's lock-before-sleep action separately for
-lid-close and other suspend requests.
+- Custom commands run without a shell: quote arguments with spaces, use absolute paths instead of `~`, and use a script for pipes or variables.
+- An empty command disables the lock action.
+- **Lock & sleep** suspends only after the session reports it is locked. Set your idle daemon's own lock-before-sleep for lid close.
 
 ### Resetting
 
-To reset one setting, delete its key from `settings.json`. To reset them all, use
-**Restore defaults** in Overview. It covers every setting, Do Not Disturb and night light
-included, and keeps notification history and wallpaper colours. **Undo restore**, right
-below it, puts them back.
+Delete a key from `settings.json` to reset one setting, or use **Restore default settings** in
+**Settings › System › Overview** for all of them. **Undo restore** puts them back. Notification
+history and wallpaper colours are kept.
 
-When the menu won't open, or you want more than settings back to normal:
+When the menu won't open, reset from a terminal:
 
 ```bash
-silere reset                    # shows what it would change, and changes nothing
-silere reset --apply            # settings, edited files, leftovers and caches, then a restart
-silere reset --apply --history  # also clears notification history; this part can't be undone
-silere reset --undo             # puts back what the last reset replaced
+silere reset                    # show what would change, change nothing
+silere reset --apply            # settings, edited files, leftovers and caches, then restart
+silere reset --apply --history  # also clear notification history (can't be undone)
+silere reset --undo             # put back what the last reset replaced
 ```
 
-It saves a settings file that won't parse rather than discarding it, and writes through a link
-if you keep `settings.json` in a dotfiles repo. Hooks, the Matugen palette, autostart and the
-service stay as they are. To do it by hand, stop Silere, back up `settings.json`, replace its
-contents with `{ "__version": 4 }`, then start Silere again.
+A settings file that won't parse is saved, not discarded. Hooks, the Matugen palette, autostart
+and the service are left alone. To reset by hand, stop Silere, back up `settings.json`, replace
+its contents with `{ "__version": 4 }` and start Silere again.
 
-[The scripting guide](scripting.md) lists IPC calls, setting names and event hooks.
+[The scripting guide](scripting.md) lists IPC calls, setting names and hooks.
 
 ## Updates and diagnostics
 
-Use **Settings › System › Overview** to check for Silere releases, review the notes
-and confirm installation. From a terminal, `silere update` checks and
-`silere update --apply` installs. See [updates and recovery](updates.md) for rollback,
-automatic checks, local edits and development checkouts.
+**Settings › System › Overview** checks for releases, shows the notes and installs them. From a
+terminal, `silere update` checks and `silere update --apply` installs. See
+[updates and recovery](updates.md) for rollback and automatic checks.
 
-Overview's **Device checks** show audio, lighting and radio state with recovery actions.
-**Copy diagnostic report** collects runtime versions, tool availability, and device counts
-and states, without device names, addresses, network names or screen serials.
-`silere doctor --json` prints the same report in a terminal; its device state is `null`
-when no compatible shell is running or the optional Python parser is missing.
+**Device checks** in Overview show audio, lighting and radio state with fixes. **Copy diagnostic
+report** collects versions, tools and device states, without names, addresses or serials.
+`silere doctor --json` prints the same report in a terminal.
