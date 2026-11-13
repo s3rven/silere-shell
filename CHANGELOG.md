@@ -31,6 +31,8 @@ settings file carries its own `__version` and migrates separately.
 - Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
 - The clock and the media title ease their hover highlight in and out the way the other bar widgets do.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
+- A Settings slider for History limit applies the value you let go at; taking it down and back by dragging, scrolling or with the arrow keys no longer deletes history on the way.
+- Scrolling or using the arrow keys on Night light's temperature, an external display's brightness or the Now Playing seek bar applies once you stop, not at every step.
 - The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
 - Silere's own alerts show as Silere Shell, each with an icon for what it is about.

@@ -77,11 +77,23 @@ Item {
     KeyboardFocus {
         interactive: root._canInteract
         adjustable: true
-        onStepped: (direction, multiplier) => root.nudge(direction, multiplier)
-        onBounded: maximum => { if (root._canInteract && !root.dragging) root._setFromUser(maximum ? root.max : root.min) }
+        onStepped: (direction, multiplier) => { root._keyHeld = true; root.nudge(direction, multiplier) }
+        onBounded: maximum => { root._keyHeld = true; if (root._canInteract && !root.dragging) root._setFromUser(maximum ? root.max : root.min) }
+    }
+    Keys.onReleased: event => { if (!event.isAutoRepeat) { root._keyHeld = false; _stepRest.restart() } }
+    onActiveFocusChanged: if (!root.activeFocus) { root._keyHeld = false; _stepRest.restart() }
+
+    // committing on release, a step applies once steps rest with no key held: a held key pauses before it repeats
+    property bool _stepPending: false
+    property bool _keyHeld: false
+    Timer { id: _stepRest; interval: Scroll.sliderRestMs; onTriggered: root._settleSteps() }
+    function _settleSteps(): void {
+        if (!root._stepPending || root._keyHeld) return
+        root._stepPending = false
+        root.changed(root._shownValue)
     }
 
-    onValueChanged: if (!root.dragging) _shownValue = value
+    onValueChanged: if (!root.dragging && !root._stepPending) _shownValue = value
     onInteractionKeyChanged: root.cancelInteraction()
     onWheelKeyChanged: {
         Scroll.resetControl(root._previousWheelKey)
@@ -96,8 +108,9 @@ Item {
 
     function cancelInteraction(): void {
         Scroll.resetControl(root.wheelKey)
-        if (!root.dragging) return
+        if (!root.dragging && !root._stepPending) return
         root._gestureActive = false
+        root._stepPending = false
         root._grab = 0
         root._shownValue = root.value
     }
@@ -140,7 +153,11 @@ Item {
         const next = _clamp(_snap(v))
         if (Math.abs(next - _shownValue) < 0.000001) return
         _shownValue = next
-        if (!(commitOnRelease && root.dragging)) changed(next)
+        if (!commitOnRelease) changed(next)
+        else if (!root.dragging) {
+            root._stepPending = true
+            _stepRest.restart()
+        }
     }
     // grabbing the handle only picks it up: the value moves once the pointer does. A reading off the step grid,
     // such as a volume another app set to 67%, otherwise snapped to 65% on a plain click of the handle
@@ -149,6 +166,7 @@ Item {
     function _press(px: real): void {
         if (!root._canInteract) return
         root._gestureActive = true
+        root._stepPending = false
         const off = px - root._thumbCenter
         const onHandle = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2
         root._grab = onHandle ? off : 0

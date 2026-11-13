@@ -8151,6 +8151,22 @@ ShellRoot {
         root._check(trackChanged > 0.8 && !track.dragging,
             "a fresh seek after a track change commits normally")
         trackChanged = -1
+        track.value = 0.15
+        track.nudge(1, 1)
+        const steppedTo = track.shownValue
+        track.value = 0.16
+        const seekWaits = trackChanged === -1 && track.shownValue === steppedTo && steppedTo > 0.16
+        discoveryClock.wait(Scroll.sliderRestMs + 60)
+        const seekLanded = trackChanged === steppedTo
+        trackChanged = -1
+        track.nudge(1, 1)
+        track._press(85)
+        discoveryClock.wait(Scroll.sliderRestMs + 60)
+        const dragHeld = trackChanged === -1
+        track._release()
+        root._check(seekWaits && seekLanded && dragHeld && trackChanged > 0.8,
+            "a stepped seek holds its target while playback moves and seeks there once the steps rest, unless a drag takes over")
+        trackChanged = -1
         track._press(85)
         track.visible = false
         track._release()
@@ -11086,6 +11102,36 @@ ShellRoot {
         root._check(limitTrack !== null && limitTrack.width > 0 && limitShownLow === "5"
                 && Notifications.historyCount === 12 && ShellSettings.notifHistoryLimit === 100,
             "a history limit dragged down and back keeps every row; only the value let go of applies")
+        ShellSettings.notifHistoryLimit = 50
+        const stepHost = keyboardFixtureFactory.createObject(root)
+        const stepped = popupsComponent.createObject(stepHost.contentItem, { y: 220, width: 360 })
+        const stepTrack = root._findTrayNode(stepped, item => typeof item._press === "function")
+        let passedLow = false
+        if (stepTrack) {
+            for (let i = 0; i < 9; i++) stepTrack.nudge(-1, 1)
+            passedLow = stepTrack.shownValue === 5
+            for (let i = 0; i < 9; i++) stepTrack.nudge(1, 1)
+            stepHost.requestActivate()
+            stepHost.input.wait(40)
+            stepTrack.forceActiveFocus(Qt.TabFocusReason)
+            stepHost.input.keyPress(Qt.Key_Home)
+            stepHost.input.wait(Scroll.sliderRestMs + 60)
+            passedLow = passedLow && stepTrack.shownValue === 5
+            stepHost.input.keyPress(Qt.Key_PageUp)
+            stepHost.input.wait(Scroll.sliderRestMs + 60)
+            stepHost.input.keyRelease(Qt.Key_PageUp)
+            stepHost.input.wait(Scroll.sliderRestMs + 60)
+            stepHost.input.keyRelease(Qt.Key_Home)
+            passedLow = passedLow && ShellSettings.notifHistoryLimit === 55
+            stepHost.input.keyPress(Qt.Key_Left)
+            stepHost.button.forceActiveFocus(Qt.TabFocusReason)
+            stepHost.input.wait(Scroll.sliderRestMs + 60)
+            stepHost.input.keyRelease(Qt.Key_Left)
+        }
+        root._check(passedLow && Notifications.historyCount === 12 && ShellSettings.notifHistoryLimit === 50,
+            "a history limit wheeled or keyed down and back keeps every row; where the steps rest applies")
+        stepped.destroy()
+        stepHost.destroy()
         if (popups) popups.destroy()
         popupsComponent.destroy()
         Notifications.clearHistory()
