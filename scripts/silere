@@ -12,6 +12,7 @@ source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/completions.sh"
 source "$ROOT/scripts/lib/ui.sh"
+source "$ROOT/scripts/lib/instances.sh"
 
 usage() {
     # bold the command column when colors are on; the text itself stays plain. Callers
@@ -153,21 +154,15 @@ user_qs() {
 }
 
 running_pid() {
-    local pid=""
     command -v qs >/dev/null 2>&1 || return 1
-    pid="$(user_qs list -p "$ROOT/shell.qml" 2>/dev/null \
-        | sed -n 's/^  Process ID: \([0-9][0-9]*\)$/\1/p')" || true
-    pid="${pid%%$'\n'*}"
-    [ -n "$pid" ] || return 1
-    printf '%s\n' "$pid"
+    _silere_shell_pid "$ROOT/shell.qml"
 }
 
 # the shell on screen may run from another copy, such as an installed one beside a dev checkout;
 # one other Silere is unambiguous, two are not
 other_shell() {
     local paths p found=""
-    paths="$(user_qs list --all --json 2>/dev/null \
-        | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')" || true
+    paths="$(_silere_running_configs)"
     while IFS= read -r p; do
         [ -n "$p" ] && [ "$p" != "$ROOT/shell.qml" ] && [ -x "$(dirname "$p")/scripts/silere" ] || continue
         [ -z "$found" ] || return 1
@@ -381,13 +376,12 @@ use_checkout() {
     # systemd replaces the unit's own shell; an unsupervised one from another copy has to stop first
     if [ "$unit_known" -eq 0 ] || ! systemctl --user is-active --quiet silere-shell.service 2>/dev/null; then
         local paths p
-        paths="$(user_qs list --all --json 2>/dev/null \
-            | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')" || true
+        paths="$(_silere_running_configs)"
         while IFS= read -r p; do
             [ -n "$p" ] && [ "$p" != "$target/shell.qml" ] && [ -x "$(dirname "$p")/scripts/silere" ] || continue
             user_qs kill -p "$p" >/dev/null 2>&1 || true
             for _ in $(seq 50); do
-                [[ "$(user_qs list -p "$p" 2>/dev/null)" == *"Process ID"* ]] || break
+                _silere_shell_running "$p" || break
                 sleep 0.1
             done
         done <<< "$paths"

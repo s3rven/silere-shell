@@ -1410,6 +1410,7 @@ test_update_refuses_dirty_apply() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1565,6 +1566,7 @@ test_update_reporting() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     printf 'v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1871,6 +1873,7 @@ test_update_rejects_broken_stage() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     # The gate runs whatever type-checker the staged tree ships, so the fixture
     # owns the verdict without ever replacing the live script mid-execution.
     printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
@@ -2001,6 +2004,7 @@ test_update_restarts_running_shell() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     printf '#!/bin/sh\nexit 0\n' > "$seed/scripts/test-qml-headless.sh"
     # the shell it starts outlives the updater: holding the updater's lock would block every later check
     cat > "$seed/scripts/silere" <<'EOF'
@@ -2146,6 +2150,7 @@ test_fresh_install_pins_release() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     printf 'release\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -2285,6 +2290,7 @@ test_update_apply_binds_to_confirmed_release() (
     cp "$ROOT/scripts/lib/xdg.sh" "$seed/scripts/lib/xdg.sh"
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
+    cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
     printf 'upstream v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"

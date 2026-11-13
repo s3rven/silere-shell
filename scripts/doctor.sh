@@ -12,6 +12,7 @@ source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/ui.sh"
 source "$ROOT/scripts/lib/unit.sh"
+source "$ROOT/scripts/lib/instances.sh"
 
 if [ "$#" -gt 0 ]; then
     if [ "$#" -eq 1 ] && [[ "$1" = -h || "$1" = --help ]]; then
@@ -240,8 +241,7 @@ if [ "$qs_usable" -eq 1 ]; then
     while IFS= read -r _cfg; do
         [ -n "$_cfg" ] && [ "$_cfg" != "$ROOT/shell.qml" ] && [ -x "$(dirname "$_cfg")/scripts/silere" ] || continue
         other_silere="$(dirname "$_cfg")"; break
-    done < <(env -u LC_ALL qs list --all --json 2>/dev/null \
-        | sed -n 's/^ *"config_path": "\(.*\)",\{0,1\}$/\1/p')
+    done < <(_silere_running_configs)
 fi
 
 if [ "$qs_usable" -eq 1 ]; then
@@ -252,8 +252,7 @@ if [ "$qs_usable" -eq 1 ]; then
     fi
     if "${ipc_probe[@]}" >/dev/null 2>&1; then
         ok "shell IPC" "Silere is running and answers"
-        shell_pid="$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null \
-            | sed -n 's/^  Process ID: \([0-9][0-9]*\)$/\1/p' | head -n 1)"
+        shell_pid="$(_silere_shell_pid "$ROOT/shell.qml" || true)"
         shell_nice="$(ps -o ni= -p "${shell_pid:-0}" 2>/dev/null | tr -d ' ')" || shell_nice=""
         if [ "${shell_nice:-0}" -gt 0 ] 2>/dev/null; then
             warn "shell priority" "running at nice $shell_nice, so the bar and menus stutter under load; start it with silere run"

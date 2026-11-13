@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/unit.sh"
+source "$ROOT/scripts/lib/instances.sh"
 cd "$ROOT"
 
 CACHE_HOME="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" || {
@@ -248,10 +249,7 @@ _restart_unsupervised_shell() {
 }
 
 _unsupervised_shell_runs() {
-    case "$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null || true)" in
-        *"Process ID: "[0-9]*) return 0 ;;
-    esac
-    return 1
+    _silere_shell_running "$ROOT/shell.qml"
 }
 
 # A completed update is only known-good once the shell is up on it: the unit when it owns this checkout's shell,

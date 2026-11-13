@@ -9,6 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/ui.sh"
+source "$ROOT/scripts/lib/instances.sh"
 
 _usage() {
     cat <<'EOF'
@@ -99,9 +100,7 @@ _count() {
 
 _shell_is_up() {
     command -v qs >/dev/null 2>&1 || return 1
-    local instances
-    instances="$(env -u LC_ALL qs list -p "$ROOT/shell.qml" 2>/dev/null || true)"
-    case "$instances" in *"Process ID: "[0-9]*) return 0 ;; *) return 1 ;; esac
+    _silere_shell_running "$ROOT/shell.qml"
 }
 
 # stopped first: a shell left running could write its old settings over the reset. Refused before anything changes

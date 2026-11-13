@@ -39,6 +39,7 @@ DEFAULT_DIR="$(readlink -m -- "$CONFIG_HOME/silere-shell")" || {
 }
 
 source "$SCRIPT_DIR/lib/ui.sh"
+source "$SCRIPT_DIR/lib/instances.sh"
 TTY_HINT="interactive install requires a TTY — run it from a terminal, or pass --yes to accept the defaults"
 
 _reject_unsafe_path() {
@@ -1757,7 +1758,7 @@ started=false
 if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scripts/silere" ] \
         && [ "$_no_start" = 0 ] && ! _assume_yes && [ "${SILERE_SANDBOX:-0}" != "1" ]; then
     # another quickshell config (an older silere elsewhere, or another shell) would end up beside this one
-    qs_configs="$(env -u LC_ALL qs list --all 2>/dev/null | sed -n 's/^  Config path: //p')" || qs_configs=""
+    qs_configs="$(_silere_running_configs)"
     other_configs="$(printf '%s\n' "$qs_configs" | grep -Fxv -e "$ROOT/shell.qml" -e '')" || other_configs=""
     if [ -z "$other_configs" ]; then
         start_prompt="Start silere now?"
