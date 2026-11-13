@@ -299,8 +299,24 @@ Singleton {
             : root.readableText(ink, _glassWorst, _detailMinimum)
     }
     property color menuTextDetail: _tMenuTextDetail
+    // the quiet caption: hints, counts, a card's meta, a thread's earlier lines. Fainter than a detail, still 3:1. Alpha on
+    // subtext, applied after any solve, took these to 2:1 on a light popup over a dark window, and no ink half made of its
+    // backdrop reaches 3:1 there, so the tone is mixed opaque toward the base first, then solved over either backdrop
+    // On glass a mid tone cannot read over both a white and a black window, so the solve lands at an extreme; it is
+    // capped at the detail tone, never louder than the descriptions it sits among. An opaque panel keeps the quiet tone
+    readonly property color _tMenuTextQuiet: root._quietInk(mix(_tBackground, _tSubtext, _hc ? 0.85 : 0.54),
+        _tMenuTextDetail)
+    function _quietInk(nominal: color, cap: color): color {
+        const solved = root._captionInk(nominal)
+        return root.contrastRatio(solved, _tBackground) > root.contrastRatio(cap, _tBackground) ? cap : solved
+    }
+    function _captionInk(ink: color): color {
+        return popupOpacity < 1 ? root._glassInk(ink, 3.0) : root.readableText(ink, _glassWorst, 3.0)
+    }
+    property color menuTextQuiet: _tMenuTextQuiet
     property color menuTextWarning: _tMenuTextWarning
     PaletteFade on menuTextDetail  { gate: root._paletteReady }
+    PaletteFade on menuTextQuiet   { gate: root._paletteReady }
     PaletteFade on menuTextWarning { gate: root._paletteReady }
 
     function luminance(c: color): real {

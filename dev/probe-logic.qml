@@ -1695,7 +1695,7 @@ ShellRoot {
             const context = (neutral ? "neutral/" : "wallpaper/") + palette.accent + "/" + depth
             let lowest = Infinity, lowestInk = ""
             const inks = { subtext: Theme.subtext, detail: Theme.menuTextDetail, dependency: Theme.menuTextWarning,
-                error: Theme.error, warning: Theme.warning, success: Theme.success }
+                quiet: Theme.menuTextQuiet, error: Theme.error, warning: Theme.warning, success: Theme.success }
             for (const backdrop of [white, black]) {
                 const control = Theme._controlOverBackdrop(Theme.background, Theme.text, Theme.popupOpacity, backdrop)
                 for (const name in inks) {
@@ -1706,6 +1706,9 @@ ShellRoot {
             root._check(Theme.glass && lowest >= 2.99,
                 "captions and status colours on glass read over a white window and a dark one: " + context
                     + " " + lowestInk + " " + lowest)
+            root._check(Theme.contrastRatio(Theme.menuTextQuiet, Theme.background)
+                    <= Theme.contrastRatio(Theme.menuTextDetail, Theme.background) + 0.01,
+                "a quiet caption is never louder than the descriptions it sits among: " + context)
             // a dark menu's caption is lighter than its base and a light menu's darker, whatever the backdrop
             const lightBase = Theme.luminance(Theme.background) > 0.5
             root._check((Theme.luminance(Theme.subtext) > Theme.luminance(Theme.background)) !== lightBase

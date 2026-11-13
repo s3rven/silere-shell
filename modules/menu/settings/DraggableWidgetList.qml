@@ -448,7 +448,7 @@ Item {
                     : _zoneHeader.zone === "center" ? "Center" : "Right")
                     + " · " + _zoneHeader.shown + " shown"
                 color: _zoneHeader.hot
-                    ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.54)
+                    ? Theme.accent : Theme.menuTextQuiet
                 font.pixelSize: Settings.fontMicro
                 font.weight: Font.DemiBold
                 ColorFade on color {}
@@ -808,7 +808,7 @@ Item {
                 height: root._emptyH
                 verticalAlignment: Text.AlignVCenter
                 text: "No tray apps running"
-                color: Theme.withAlpha(Theme.subtext, 0.46)
+                color: Theme.menuTextQuiet
                 font.pixelSize: Settings.fontCaption
             }
 
@@ -990,7 +990,7 @@ Item {
             // pointer words: the grip's arrow keys are in its accessible description and the usage guide
             text: "Drag to reorder · toggle to show or hide"
             elide: Text.ElideRight
-            color: Theme.withAlpha(Theme.subtext, 0.58)
+            color: Theme.menuTextQuiet
             font.pixelSize: Settings.fontCaption
         }
 

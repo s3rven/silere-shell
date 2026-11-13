@@ -113,7 +113,7 @@ Rectangle {
                         width: Math.min(implicitWidth, Math.max(0, parent.width * 0.46 - 8))
                         text: root.meta
                         elide: Text.ElideRight
-                        color: Theme.withAlpha(Theme.subtext, 0.5)
+                        color: Theme.menuTextQuiet
                         font.pixelSize: Settings.fontCaption
                     }
                 }
@@ -179,7 +179,7 @@ Rectangle {
                 opacity: root.detail.length > 0 ? 1 : 0
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)
-                    : Theme.withAlpha(Theme.subtext, 0.58)
+                    : Theme.menuTextQuiet
                 font.pixelSize: Settings.fontCaption
                 lineHeight: 1.15
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }

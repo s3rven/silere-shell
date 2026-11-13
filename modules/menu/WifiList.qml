@@ -294,7 +294,7 @@ Item {
                                 text: _entry._connecting ? "Connecting…"
                                     : !_entry._failed ? "Password" : Network.wifiErrorText
                                 color: _entry._failed ? Theme.withAlpha(Theme.error, 0.7)
-                                                      : Theme.withAlpha(Theme.subtext, 0.45)
+                                                      : Theme.menuTextQuiet
                                 font.pixelSize: Settings.fontSize
                             }
                         }

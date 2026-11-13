@@ -134,6 +134,7 @@ settings file carries its own `__version` and migrates separately.
 - With Do Not Disturb on, a notification that lands on the open History page in front of you no longer counts as missed.
 - `silere repair` and the updater quote a checkout path with spaces in the commands they suggest, so the commands paste back as written.
 - Shell completions for `silere service` offer only what fits: install, status or remove, then `--dry-run` after install.
+- Quiet captions stay readable on a light, see-through panel over a dark window: a notification's earlier lines, the Overview's status details, and the hints and counts in Settings › Show & order (as low as 2:1 before).
 
 ## Releases
 

@@ -679,7 +679,7 @@ Item {
                         required property string modelData
                         width: _earlier.width
                         text: modelData
-                        color: Theme.withAlpha(Theme.menuTextMuted, 0.50)
+                        color: Theme.menuTextQuiet
                         font.pixelSize: Settings.fontLabel
                         maximumLineCount: 1
                         elide: Text.ElideRight

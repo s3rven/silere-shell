@@ -745,7 +745,7 @@ FittedPopupWindow {
                                 text: "Reloading Silere usually brings it back; silere log has the details"
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
-                                color: Theme.withAlpha(Theme.subtext, 0.54)
+                                color: Theme.menuTextQuiet
                                 font.pixelSize: Settings.fontCaption
                             }
 
