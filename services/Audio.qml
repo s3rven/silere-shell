@@ -183,6 +183,8 @@ Singleton {
     }
     // the class can resolve after the node does, once its properties arrive
     onSinkClassChanged: if (root.sink && root.sink.name === root._heardSink) root._heardHeadset = root.sinkClass === "headset"
+    // a pipewire restart empties the graph and can name the speakers before the headphones are back
+    onSinkCountChanged: if (root.sinkCount === 0) root._heardSink = ""
     readonly property bool _lostStillLinked: root._lostAddress.length > 0
         && Bluetooth.connectedDevice(root._lostAddress) !== null
     on_LostStillLinkedChanged: {

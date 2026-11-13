@@ -222,7 +222,7 @@ expect "the session manager comes back" 'ready=1 sink=lab-a '
 expect "the OSD times out" 'osd=none'
 stop_daemons
 stays "losing PipeWire claims no mute" 'muted=0 osd=none'
-expect "PipeWire is gone" 'ready=0 sink=none source=none vol=none'
+expect "PipeWire is gone, and the last output with it" 'ready=0 sink=none source=none vol=none .*heard=none'
 start_daemons
 add_node lab-a Audio/Sink
 set_default lab-a

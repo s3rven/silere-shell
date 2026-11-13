@@ -18,6 +18,7 @@ ShellRoot {
                 + " vol=" + (Audio.ready ? Math.round(Audio.uiVolume * 100) : "none")
                 + " muted=" + (Audio.muted ? 1 : 0)
                 + " osd=" + (OsdBarState.activeCount > 0 ? OsdBarState.label : "none")
+                + " heard=" + (Audio._heardSink || "none")
         }
     }
 }
