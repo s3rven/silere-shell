@@ -33,6 +33,12 @@ PageShell {
         restoreMode: Binding.RestoreBindingOrValue
     }
 
+    // the header holds its place while the body scrolls under it; the loader's y carries a departing page's scroll
+    readonly property real _pin: root.scroller && !_search.searching
+        ? Math.max(0, root.scroller.contentY - root.scroller.originY - (root._pageLoader ? root._pageLoader.y : 0))
+        : 0
+    readonly property real pinnedHeight: _detailHeader.height + _detail._bodyGap / 2
+
     property string _shownSection: MenuState.settingsSection
     // assigned once to drop the binding: live, it swaps the section the instant MenuState changes,
     // so the first transition fades out content that was already replaced
@@ -51,8 +57,9 @@ PageShell {
 
     SettingsSearch {
         id: _search
+        readonly property bool pinnedToViewport: true
         width: root.width
-        y: expanded ? 0 : Math.max(0, (_detailHeader._mainH - toggleHeight) / 2)
+        y: root._pin + (expanded ? 0 : Math.max(0, (_detailHeader._mainH - toggleHeight) / 2))
         // centred on the title, so its outline lands wherever the title's line height puts it
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         transform: PixelSnap { item: _search; dpr: _search._dpr }
@@ -86,11 +93,9 @@ PageShell {
         sequence: "Ctrl+F"
         context: Qt.ApplicationShortcut
         enabled: _search.shown
+        // the field is pinned, so the page keeps its place until a query replaces it
         onActivated: {
-            if (root.scroller) {
-                root.scroller.cancelFlick()
-                root.scroller.contentY = root.scroller.originY
-            }
+            if (root.scroller) root.scroller.cancelFlick()
             _search.focusSearch()
         }
     }
@@ -370,6 +375,9 @@ PageShell {
 
         Item {
             id: _detailHeader
+            readonly property bool pinnedToViewport: true
+            y: root._pin
+            z: 1
             width: parent.width
             readonly property real _mainH: _search.expanded ? _search.fieldHeight
                 : Math.max(Metrics.rowHeightFor(32), _hdrText.implicitHeight, _search.toggleHeight)
@@ -482,18 +490,33 @@ PageShell {
             }
         }
 
-        Loader {
-            id: _detailBody
-            property real _heldH: 0
-            y:      _detailHeader.height + _detail._bodyGap
-            width:  parent.width
-            // the first section built in a session costs ~47ms of shared-control
-            // compilation; hold the outgoing height so the pane cannot collapse to 0
-            // while the replacement incubates
-            height: item ? item.implicitHeight : _heldH
-            // yield while building sections even with reduced motion, so input stays responsive
-            asynchronous: true
-            sourceComponent: root._sectionComponents[root._shownSection] ?? _secTheme
+        // cut only while pinned, and wider than the body so focus rings and bleeds at its sides survive
+        Item {
+            id: _bodyClip
+            readonly property int _bleed: 16
+            x: -_bleed
+            y: root._pin + root.pinnedHeight
+            width: parent.width + _bleed * 2
+            height: Math.max(0, _detailHeader.height + _detail._bodyGap + _detailBody.height - y) + _bleed
+            clip: root._pin > 0
+            opacity: _detail._fade
+
+            Loader {
+                id: _detailBody
+                property real _heldH: 0
+                x:      _bodyClip._bleed
+                y:      _detailHeader.height + _detail._bodyGap - _bodyClip.y
+                width:  _detail.width
+                // the first section built in a session costs ~47ms of shared-control
+                // compilation; hold the outgoing height so the pane cannot collapse to 0
+                // while the replacement incubates
+                height: item ? item.implicitHeight : _heldH
+                // inside the cut, so the line under a pinned header stays where it is while the body moves
+                transform: Translate { x: _detail._shift; y: _detail._lift }
+                // yield while building sections even with reduced motion, so input stays responsive
+                asynchronous: true
+                sourceComponent: root._sectionComponents[root._shownSection] ?? _secTheme
+            }
         }
 
         Component {

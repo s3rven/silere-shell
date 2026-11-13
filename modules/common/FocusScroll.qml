@@ -10,15 +10,24 @@ Item {
     property real revealHeight: root.revealTarget ? root.revealTarget.height : 0
     visible: false
 
+    function _pinnedWithin(viewport): bool {
+        for (let it = root.revealTarget; it && it !== viewport; it = it.parent)
+            if (it.pinnedToViewport === true) return true
+        return false
+    }
+
     function reveal(): void {
         if (!root.enabled || !root.control || !root.control.activeFocus
                 || !root.control.enabled || !root.control.visible || !root.revealTarget) return
         for (let viewport = root.revealTarget.parent; viewport; viewport = viewport.parent) {
             if (viewport.contentY === undefined || !viewport.contentItem || viewport.height <= 0) continue
+            if (root._pinnedWithin(viewport)) continue
             viewport.cancelFlick()
             const p = root.revealTarget.mapToItem(viewport.contentItem, 0, root.revealY)
             const top = Number(viewport.originY || 0)
-            const wanted = p.y < viewport.contentY || root.revealHeight > viewport.height ? p.y
+            // a header pinned over the viewport's top hides what sits under it
+            const inset = Math.max(0, Number(viewport.revealTopInset) || 0)
+            const wanted = p.y < viewport.contentY + inset || root.revealHeight > viewport.height - inset ? p.y - inset
                 : p.y + root.revealHeight > viewport.contentY + viewport.height
                     ? p.y + root.revealHeight - viewport.height : viewport.contentY
             viewport.contentY = Math.max(top,

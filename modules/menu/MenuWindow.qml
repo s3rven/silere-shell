@@ -525,6 +525,9 @@ FittedPopupWindow {
                     + panel.pageBottomInset
                 interactive: !panel.powerOpen && panel.activeTab !== 2
                     && _contentSettle.overflows
+                // settings pins its header over the top of the viewport, so a revealed row has to land below it
+                readonly property real revealTopInset: panel.activeTab === 1 && settingsLoader.item
+                    ? panel.pageTopInset + (settingsLoader.item.pinnedHeight ?? 0) : 0
 
                 function clampToContent(): void {
                     const maxY = Math.max(0, contentHeight - height)
@@ -542,11 +545,12 @@ FittedPopupWindow {
                     const top = Math.min(rowTop, choicesTop)
                     const bottom = Math.max(rowTop + row.height, choicesTop + (choices ? choices.height : 0))
                     const margin = 8
+                    const inset = contentFlick.revealTopInset
                     let target = contentY
-                    if (bottom - top + margin * 2 > height)
-                        target = rowTop - margin
-                    else if (top - margin < target)
-                        target = top - margin
+                    if (bottom - top + margin * 2 > height - inset)
+                        target = rowTop - margin - inset
+                    else if (top - margin < target + inset)
+                        target = top - margin - inset
                     else if (bottom + margin > target + height)
                         target = bottom + margin - height
                     contentY = Math.max(0,
@@ -857,6 +861,8 @@ FittedPopupWindow {
 
             ListEdgeLines {
                 anchors.fill: contentFlick
+                // the top line marks where scrolled rows are cut, which is under the settings header when it is pinned
+                anchors.topMargin: Math.max(0, contentFlick.revealTopInset - 1)
                 list: contentFlick
                 visible: panel.activeTab !== 2 && _contentSettle.ready
                 z: 4

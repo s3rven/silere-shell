@@ -187,6 +187,21 @@ ShellRoot {
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: toggleRowFactory; ToggleRow { width: 320; label: "Probe toggle" } }
     Component { id: sliderRowFactory; SliderRow { width: 320; label: "Probe slider"; glyph: "󰕰" } }
+    Component {
+        id: insetScrollFactory
+        Flickable {
+            property real revealTopInset: 40
+            property alias target: _insetTarget
+            property alias pinnedTarget: _insetPinned
+            width: 200; height: 100; contentWidth: 200; contentHeight: 600
+            Item { id: _insetTarget; y: 300; width: 200; height: 20; activeFocusOnTab: true; FocusScroll {} }
+            Item {
+                readonly property bool pinnedToViewport: true
+                y: 500; width: 200; height: 20
+                Item { id: _insetPinned; width: 200; height: 20; activeFocusOnTab: true; FocusScroll {} }
+            }
+        }
+    }
     Component { id: systemWidgetFactory; SystemWidget {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
@@ -12431,6 +12446,29 @@ ShellRoot {
                     const scroller = flickableFactory.createObject(root)
                     scroller.interactive = Qt.binding(() => scroller.height < 150)
                     page.scroller = scroller
+                    const pinHeader = detail.children.find(child => child.pinnedToViewport === true)
+                    const pinClip = detail.children.find(child => child._bleed !== undefined)
+                    scroller.contentY = 120
+                    const pinnedNow = pinHeader && pinClip && pinHeader.y === 120 && pageSearch.y >= 120
+                        && pinClip.clip && pinClip.y === 120 + page.pinnedHeight
+                    scroller.contentY = 0
+                    root._check(pinnedNow && pinHeader.y === 0 && !pinClip.clip,
+                        "a scrolled settings page holds its header and search in place and cuts the body below them")
+                    const insetView = insetScrollFactory.createObject(f.contentItem)
+                    insetView.target.forceActiveFocus(Qt.TabFocusReason)
+                    f.input.wait(30)
+                    const shownBelow = insetView.contentY === 220
+                    insetView.contentY = 400
+                    insetView.forceActiveFocus()
+                    insetView.target.forceActiveFocus(Qt.TabFocusReason)
+                    f.input.wait(30)
+                    const revealedUnder = insetView.contentY === 260
+                    insetView.contentY = 0
+                    insetView.pinnedTarget.forceActiveFocus(Qt.TabFocusReason)
+                    f.input.wait(30)
+                    root._check(shownBelow && revealedUnder && insetView.contentY === 0,
+                        "keyboard focus reveals a row below a pinned header and leaves the header's own controls alone")
+                    insetView.destroy()
                     scroller.contentY = 200
                     scroller.flick(0, -1000)
                     const previousHeight = page.implicitHeight
@@ -12456,9 +12494,12 @@ ShellRoot {
                     scroller.flick(0, -1000)
                     f.input.keyClick(Qt.Key_F, Qt.ControlModifier)
                     const pageInput = root._findTrayNode(pageSearch, item => item.maximumLength !== undefined)
-                    root._check(pageSearch.expanded && pageInput.activeFocus
-                            && !scroller.flicking && scroller.contentY === scroller.originY,
-                        "Ctrl+F stops scrolling and reveals the settings search field before focusing it")
+                    const heldAt = scroller.contentY
+                    f.input.wait(30)
+                    root._check(pageSearch.expanded && pageInput.activeFocus && !scroller.flicking
+                            && heldAt > scroller.originY && scroller.contentY === heldAt
+                            && pageSearch.y >= heldAt - scroller.originY,
+                        "Ctrl+F stops scrolling and focuses the pinned settings search where the page stands")
                     page.scroller = null
                     scroller.destroy()
                     pageSearch.query = "font"
@@ -12685,7 +12726,7 @@ ShellRoot {
                 const settings = root._motionSettings
                 if (root._motionNotYet(settings.contentReady)) break
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
                 root._check(settings.contentReady, "settings content finishes its initial load")
                 body.active = false
                 settings._awaitingSectionEnter = true
@@ -12706,6 +12747,25 @@ ShellRoot {
                         && detail._lift === 0
                 if (root._motionNotYet(revealed)) break
                 root._check(revealed, "a ready settings section completes its reveal")
+                // a section change moves the body alone; the header frame and the search toggle hold still
+                const sectionBody = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
+                const headerTitle = root._findTrayNode(detail, item => item.font !== undefined
+                    && item.font.weight === Font.DemiBold && item.text === settings._sectionMeta[settings._shownSection]?.label)
+                detail._fade = 0.5
+                root._check(detail.transform.length === 0 && sectionBody.transform.length === 1
+                        && detail.opacity === 1 && sectionBody.parent.opacity === 0.5
+                        && headerTitle !== null && headerTitle.parent.opacity === 0.5,
+                    "a section change fades the header's words with the body but moves only the body")
+                detail._fade = 1
+                const enterDefer = detail.data.find(item => item.interval !== undefined && item.triggered !== undefined)
+                const glidesWere = Motion.layoutGlides
+                Motion.layoutGlides = 0
+                const stillInterval = enterDefer ? enterDefer.interval : -1
+                Motion.layoutGlides = glidesWere + 1
+                const glidingInterval = enterDefer ? enterDefer.interval : -1
+                Motion.layoutGlides = glidesWere
+                root._check(stillInterval === 0 && glidingInterval === Motion.ms(55),
+                    "a new section enters at once unless the panel is resizing under it")
                 MenuState.close()
                 MenuState.setSettingsSection("clock")
                 root._check(settings._shownSection === "clock" && detail._fade === 1
@@ -12737,7 +12797,7 @@ ShellRoot {
                         && root._findTrayNode(settings, item => item.key === "updatesWidget") !== null,
                     "the system overview builds update controls and diagnostics in one page")
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
                 root._motionBodyItem = body.item
                 root._motionSectionSwaps = 0
                 settings.sectionSwapped.connect(() => root._motionSectionSwaps++)
@@ -12751,7 +12811,7 @@ ShellRoot {
             case 5: {
                 const settings = root._motionSettings
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = detail.children.find(child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
                 root._check(root._motionSectionSwaps === 0 && body.item === root._motionBodyItem
                         && detail._fade === 1 && detail._shift === 0 && detail._lift === 0,
                     "returning mid-fade keeps the settings body and reverses to a settled reveal")
