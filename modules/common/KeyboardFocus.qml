@@ -114,12 +114,14 @@ Item {
         _focusScroll.reveal()
     }
 
-    Item {
+    // built only for the control holding the focus: a Shape on every control of a panel was a
+    // third of what this costs each one as the panel opens
+    Loader {
         y: root.ringY
         width: parent.width
         height: root.ringHeight
-        visible: root.ringShown && root.canInteract && root.control.activeFocus
-        OutlineBorder {
+        active: root.ringShown && root.canInteract && root.control.activeFocus
+        sourceComponent: OutlineBorder {
             radius: root.radius
             outlineWidth: 2
             outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)

@@ -8649,6 +8649,11 @@ ShellRoot {
         root._check(keyboard.actions === 1 && keyboard.button.activeFocusOnTab,
             "a real Enter key activates the shared button through its normal action")
         const keyOwner = root._findTrayNode(keyboard.button, item => item.canInteract !== undefined && item.handleKey !== undefined)
+        const toggleOwner = root._findTrayNode(keyboard.toggle, item => item.canInteract !== undefined && item.handleKey !== undefined)
+        const ringOf = owner => owner ? owner.children.find(child => child.sourceComponent !== undefined) : undefined
+        root._check(!!ringOf(keyOwner) && !!ringOf(keyOwner).item && ringOf(keyOwner).item._stroke !== undefined
+                && !!ringOf(toggleOwner) && ringOf(toggleOwner).item === null,
+            "only the focused control builds its focus ring")
         keyOwner.interactive = false
         keyboard.input.wait(1)
         root._check(!keyboard.button.activeFocus && !keyboard.button.activeFocusOnTab,
@@ -8656,6 +8661,8 @@ ShellRoot {
         keyboard.input.keyClick(Qt.Key_Tab)
         root._check(keyboard.toggle.activeFocus,
             "Tab skips hidden and disabled controls and focuses the next usable row")
+        root._check(ringOf(keyOwner).item === null && !!ringOf(toggleOwner).item,
+            "the focus ring moves with the focus and is freed behind it")
         keyboard.input.keyClick(Qt.Key_Space)
         root._check(keyboard.toggle.checked, "Space toggles the focused setting")
         keyboard.slider.forceActiveFocus(Qt.TabFocusReason)
