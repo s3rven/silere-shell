@@ -15,6 +15,7 @@ Item {
     property real cardInset: 1
     property real cardLeftBleed: 0
     property bool reserveExpandSlot: false
+    readonly property bool expandable: Brightness.devices.length > 1
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
@@ -57,7 +58,7 @@ Item {
         value: Brightness.pendingPercent / 100
         valueText: Brightness.pendingPercent + "%"
         adjustable: Brightness.controllable
-        expandable: Brightness.devices.length > 1
+        expandable: root.expandable
         expanded: root.open
         reserveExpandSlot: root.reserveExpandSlot
         onExpandToggled: root.open = !root.open

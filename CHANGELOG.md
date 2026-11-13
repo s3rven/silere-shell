@@ -91,6 +91,7 @@ settings file carries its own `__version` and migrates separately.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.
 - Notification popups' app icon and close button grow with UI scale above 100%, instead of shrinking beside the larger title.
+- Home's volume and brightness sliders are the same length when only the volume row has options to open, such as on a laptop with a microphone and one output.
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
 - Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 - The `silere reset` preview lists whole setting names instead of cutting one off.

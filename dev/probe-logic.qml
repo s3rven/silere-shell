@@ -1688,6 +1688,16 @@ ShellRoot {
         const slider = requested ? root._findTrayNode(requested, item => item.accessibleName === "Brightness") : null
         root._check(home._picker === "" && requested && !requested.open && slider,
             "the brightness shortcut closes the other picker and reveals its single-backlight slider")
+        const presentationWas = Audio._profilePresentation
+        Audio._profilePresentation = { ready: true, micReady: true, volume: 0.5, effectiveVolume: 0.5, muted: false,
+            name: "Probe output", micVolume: 0.5, micEffectiveVolume: 0.5, micMuted: false, sourceName: "Probe input" }
+        const volumeRow = root._findTrayNode(home, item => item._hasApps !== undefined && item.closeInline !== undefined)
+        const brightnessRow = root._findTrayNode(home, item => item._hasApps === undefined
+            && item.closeInline !== undefined && item.reserveExpandSlot !== undefined)
+        root._check(volumeRow && brightnessRow && volumeRow.visible && volumeRow.expandable && Audio.sinkCount < 2
+                && !brightnessRow.expandable && brightnessRow.reserveExpandSlot && !volumeRow.reserveExpandSlot,
+            "a volume chevron that only a microphone opens keeps the brightness track the same length")
+        Audio._profilePresentation = presentationWas
         Brightness.devices = [{ name: "__silere_widget_probe__" }, { name: "__silere_second_backlight__" }]
         MenuState.homePicker = "brightness"
         root._check(requested && requested.open && Brightness.currentBrightness === 50,

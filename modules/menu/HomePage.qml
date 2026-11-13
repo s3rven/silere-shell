@@ -194,7 +194,7 @@ PageShell {
                 VolumeRow {
                     id: _volumeRow
                     visible: Audio.ready
-                    reserveExpandSlot: _brightnessRow.visible && Brightness.devices.length > 1
+                    reserveExpandSlot: _brightnessRow.visible && _brightnessRow.expandable
                     onOpenChanged: if (open) {
                         root._closePicker()
                         _brightnessRow.closeInline()
@@ -203,7 +203,7 @@ PageShell {
                 BrightnessRow {
                     id: _brightnessRow
                     visible: root._brightnessAvailable
-                    reserveExpandSlot: _volumeRow.visible && Audio.sinkCount > 1
+                    reserveExpandSlot: _volumeRow.visible && _volumeRow.expandable
                     onOpenChanged: if (open) {
                         root._closePicker()
                         _volumeRow.closeInline()

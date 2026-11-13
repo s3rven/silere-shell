@@ -34,6 +34,7 @@ Item {
     readonly property bool _hasInput:   Audio.micReady || Audio.sourceCount > 0
     readonly property bool _hasApps:    Audio.playbackCount > 0
     readonly property bool _canExpand:  root._hasOutputs || root._hasInput || root._hasApps
+    readonly property bool expandable: root._canExpand
 
     readonly property var _tabs: {
         const out = []
