@@ -23,21 +23,20 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
-- The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with one allocator pool that returns freed memory after a second, unless you set your own `MALLOC_CONF`.
-- A see-through bar keeps the accent's colour on its marks: the active workspace, widget icons, levels and the visualizer. They are held to a shape's 3:1 contrast instead of a label's 4.5:1, which at low bar opacity left only an off-white.
+- The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with leaner memory settings, unless you set your own `MALLOC_CONF`.
+- A see-through bar keeps the accent's colour on its marks: the active workspace, widget icons, levels and the visualizer. At low bar opacity they had faded to off-white.
 - A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.
 - Moving the pointer along the bar keeps each widget's hover detail open until you leave that part of the bar, so the widget you aim at no longer slides away as the last one closes.
 - Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
 - Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
 - The clock and the media title ease their hover highlight in and out the way the other bar widgets do.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
-- A Settings slider for History limit applies the value you let go at; taking it down and back by dragging, scrolling or with the arrow keys no longer deletes history on the way.
 - Scrolling or using the arrow keys on Night light's temperature, an external display's brightness or the Now Playing seek bar applies once you stop, not at every step.
-- The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
+- A rollback to 1.7 keeps the headphone pause setting.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
 - Silere's own alerts show as Silere Shell, each with an icon for what it is about.
 - Notification history opens on every app each time the menu opens, so an app picked earlier no longer hides the notifications you came for.
-- Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.
+- Home and the other panels build faster: keyboard focus rings and Home's sound options wait until they are needed.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - Home's volume and brightness percentages take the accent while you drag them, as Settings sliders do.
 - A long Settings page keeps its title and search at the top while the rest scrolls under them, and Ctrl+F opens search without jumping back to the top.
@@ -57,9 +56,10 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- A Settings slider for History limit applies the value you let go at; taking it down and back by dragging, scrolling or with the arrow keys no longer deletes history on the way.
 - While a fullscreen window covers the bar, night light keeps to its schedule and the shell's other timers keep running; with motion on they could stop until you left fullscreen. The bar's motion and visualizer rest under it.
 - The bar's status colours (microphone in use, low battery, Caps Lock, a hot CPU, an urgent workspace, an alert shown in the bar) stay readable on a see-through bar over a bright wallpaper; they dropped to about 2:1 there.
-- Errors, warnings and success marks in translucent popups stay readable with a white window behind a dark menu, or a dark window behind a light one (as low as 1.5:1 before).
+- Errors, warnings and success marks in translucent popups stay readable with a white window behind a dark menu, or a dark window behind a light one (as low as 1.6:1 before).
 - With pure white text (matugen at `--contrast 1`), captions in translucent popups no longer turn black on a dark theme.
 - Captions from a low-contrast matugen palette (`--contrast` below 0) no longer sink under 3:1.
 - `scripts/bench.sh --warm` works from an SSH session.
