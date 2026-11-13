@@ -3184,6 +3184,21 @@ STUB
     true
 )
 
+# status answers the two questions people ask it: how much memory, and whether update checks still run
+test_cli_status_readings() (
+    local stubs="$TMP/status-stubs" home="$TMP/status-home" out
+    mkdir -p "$stubs" "$home/cache/silere-shell" "$home/state"
+    # this subshell stands in for the shell, so there is a real smaps_rollup to read
+    printf '#!/bin/sh\n[ "$1" = list ] && printf "Instance t:\\n  Process ID: %s\\n" "%s"\nexit 0\n' '%s' "$BASHPID" > "$stubs/qs"
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
+    chmod +x "$stubs/qs" "$stubs/systemctl"
+    echo $(( $(date +%s) - 600 )) > "$home/cache/silere-shell/update-checked"
+    out="$(env -u LC_ALL PATH="$stubs:$PATH" HOME="$home" XDG_CACHE_HOME="$home/cache" XDG_STATE_HOME="$home/state" \
+        bash "$ROOT/scripts/silere" status 2>&1)" || fail "silere status failed: $out"
+    [[ "$out" == *"Shell: running (pid $BASHPID, "[0-9]*" MB PSS)"* ]] || fail "status left out the shell's memory: $out"
+    [[ "$out" == *"Update: up to date, checked 10 min ago"* ]] || fail "status left out when updates were last checked: $out"
+)
+
 test_cli_use_switches_checkout() (
     local t="$TMP/use" out dropin
     mkdir -p "$t/stubs" "$t/other/scripts" "$t/home/.local/bin" "$t/config"
@@ -3669,6 +3684,7 @@ test_launcher_uses_real_name
 test_startup_failure_report
 test_cli_restart_and_log
 test_cli_ipc_resolution
+test_cli_status_readings
 test_cli_use_switches_checkout
 test_pooled_motion_scope
 test_benchmark_json

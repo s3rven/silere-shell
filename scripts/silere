@@ -424,7 +424,7 @@ is_packaged() {
 }
 
 print_update_status() {
-    local cache_home cache_dir flag count target error
+    local cache_home cache_dir flag count target error checked age
     cache_home="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" \
         || die "HOME must be absolute"
     cache_dir="$cache_home/silere-shell"
@@ -439,8 +439,18 @@ print_update_status() {
     fi
     error="$(sed -n '2p' "$cache_dir/update-error" 2>/dev/null \
         | LC_ALL=C tr -d '\001-\037\177' | cut -c 1-512 || true)"
+    checked="$(sed -n '1p' "$cache_dir/update-checked" 2>/dev/null || true)"
     if [ -n "$error" ]; then
         printf 'Update: %slast check failed%s — %s\n' "$RED" "$R" "$error"
+    elif [[ "$checked" =~ ^[0-9]{1,12}$ ]]; then
+        # a timer that stopped running reads as up to date forever without the age
+        age=$(( $(date +%s) - checked ))
+        if [ "$age" -lt 120 ]; then age="just now"
+        elif [ "$age" -lt 7200 ]; then age="$((age / 60)) min ago"
+        elif [ "$age" -lt 172800 ]; then age="$((age / 3600)) h ago"
+        else age="$((age / 86400)) days ago"
+        fi
+        printf 'Update: up to date, checked %s\n' "$age"
     elif [ -s "$cache_dir/update-checked" ]; then
         printf 'Update: no pending release from the last check\n'
     else
@@ -556,7 +566,9 @@ case "$command_name" in
         info="$(version_info)" || die "could not read updater state"
         human_version
         if shell_pid="$(running_pid)"; then
-            printf 'Shell: %srunning%s (pid %s)\n' "$GREEN" "$R" "$shell_pid"
+            # the figure docs/performance.md quotes; top's RSS also counts the Qt and GPU libraries every process shares
+            pss="$(sed -n 's/^Pss: *\([0-9][0-9]*\) kB$/\1/p' "/proc/$shell_pid/smaps_rollup" 2>/dev/null || true)"
+            printf 'Shell: %srunning%s (pid %s%s)\n' "$GREEN" "$R" "$shell_pid" "${pss:+, $((pss / 1024)) MB PSS}"
         elif other="$(other_shell)"; then
             printf 'Shell: %srunning from another copy%s, %s; silere use switches to this one\n' \
                 "$YELLOW" "$R" "$(dirname "$other")"
