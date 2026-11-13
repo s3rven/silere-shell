@@ -3130,6 +3130,31 @@ test_fish_completion_scope() (
             ! grep -qx -- "$word" <<<"$offered" || fail "fish offers silere $command $word"
         done
     done
+    # service takes one of its words, and only install takes --dry-run, once
+    ! grep -qxE 'install|status|remove' <<<"$(fish_complete 'silere service install ')" \
+        || fail "fish offers another service word after silere service install"
+    grep -qx -- '--dry-run' <<<"$(fish_complete 'silere service install -')" \
+        || fail "fish does not offer --dry-run after silere service install"
+    ! grep -qx -- '--dry-run' <<<"$(fish_complete 'silere service status -')" \
+        || fail "fish offers --dry-run after silere service status"
+    ! grep -qx -- '--dry-run' <<<"$(fish_complete 'silere service install --dry-run -')" \
+        || fail "fish offers --dry-run twice"
+)
+
+# the bash completion for service follows its grammar: one word, then --dry-run only after install
+test_bash_service_completion() (
+    local got
+    bash_complete() { # words...
+        # shellcheck source=/dev/null
+        source "$ROOT/scripts/completions/silere.bash"
+        COMP_WORDS=("$@"); COMP_CWORD=$(( $# - 1 )); _silere; printf '%s\n' "${COMPREPLY[@]}" | sort | paste -sd ' '
+    }
+    got="$(bash_complete silere service '')"
+    assert_eq "install remove status" "$got" "bash completes silere service"
+    got="$(bash_complete silere service install '')"
+    assert_eq "--dry-run" "$got" "bash completes silere service install"
+    got="$(bash_complete silere service status '')"
+    assert_eq "" "$got" "bash completes nothing after silere service status"
 )
 
 test_cli_restart_and_log() (
@@ -3828,6 +3853,7 @@ test_other_bars_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
 test_fish_completion_scope
+test_bash_service_completion
 test_cli_restart_and_log
 test_cli_ipc_resolution
 test_cli_status_readings

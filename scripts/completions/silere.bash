@@ -19,7 +19,11 @@ _silere() {
             update) [ "$COMP_CWORD" -eq 2 ] && words=(--apply --rollback) ;;
             repair) words=(--apply --undo --yes) ;;
             reset) words=(--apply --undo --history --yes) ;;
-            service) words=(install status remove --dry-run) ;;
+            service)
+                # one of its words, then --dry-run only after install
+                if [ "$COMP_CWORD" -eq 2 ]; then words=(install status remove)
+                elif [ "$COMP_CWORD" -eq 3 ] && [ "${COMP_WORDS[2]}" = install ]; then words=(--dry-run)
+                fi ;;
             ipc)
                 if [ "$COMP_CWORD" -eq 2 ]; then
                     while IFS= read -r line; do

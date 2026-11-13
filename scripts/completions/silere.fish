@@ -89,5 +89,5 @@ complete -c silere -n __silere_setting_value -a '(__silere_setting_values)'
 
 complete -c silere -n '__fish_seen_subcommand_from run' -l supervised -d 'Start through the user service'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a service -d 'Manage supervised startup'
-complete -c silere -n '__fish_seen_subcommand_from service' -a 'install status remove'
-complete -c silere -n '__fish_seen_subcommand_from service' -l dry-run -d 'Preview service installation'
+complete -c silere -n '__fish_seen_subcommand_from service; and not __fish_seen_subcommand_from install status remove' -a 'install status remove'
+complete -c silere -n '__fish_seen_subcommand_from service; and __fish_seen_subcommand_from install; and not contains -- --dry-run (commandline -opc)' -l dry-run -d 'Preview service installation'
