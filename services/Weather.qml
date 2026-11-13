@@ -238,11 +238,15 @@ Singleton {
     function _barTick(): void {
         if (!root.failed || Date.now() - root._triedAt >= root.maxAgeMs) root.request(false)
     }
-    // offline is the common failure, and it ends with the connection, not on the next tick
+    // offline is the common failure, and it ends with the connection or a sign-in page clearing, not on the next tick
     Connections {
         target: Network
         function onConnectedChanged() {
             if (Network.connected && root.failed && (_barRefresh.running || CalendarState.open)) root.request(false)
+        }
+        function onConnectivityIssueChanged() {
+            if (Network.connected && Network.connectivityIssue.length === 0 && root.failed
+                    && (_barRefresh.running || CalendarState.open)) root.request(false)
         }
     }
 

@@ -2501,6 +2501,35 @@ ShellRoot {
             root._check(!Weather.loading && !Weather.failed && !Weather.hasData,
                 "disabling weather clears a retried request and its previous reading")
 
+            const onlineWas = { clock: ShellSettings.barShowClock, weather: ShellSettings.clockShowWeather,
+                issue: Network.connectivityIssue }
+            const settleDeadline = Date.now() + 1000
+            while ((lookup.running || Weather._discardLookup) && Date.now() < settleDeadline) discoveryClock.wait(10)
+            lookup.command = ["sleep", "2"]
+            Weather._place = null
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather.loading = false
+            Weather.failed = true
+            Weather._triedAt = Date.now()
+            ShellSettings.barShowClock = true
+            ShellSettings.clockShowWeather = true
+            const offlineWaits = !Weather.loading && !lookup.running
+            Network.connectivityIssue = "portal"
+            const portalWaits = !Weather.loading
+            Network.connectivityIssue = ""
+            const signedIn = Weather.loading && lookup.running
+            root._check(offlineWaits && portalWaits && signedIn === Network.connected,
+                "a bar weather refresh that failed behind a sign-in page retries once the internet answers, connected "
+                    + Network.connected)
+            Network.connectivityIssue = onlineWas.issue
+            ShellSettings.clockShowWeather = onlineWas.weather
+            ShellSettings.barShowClock = onlineWas.clock
+            ShellSettings.weatherEnabled = false
+            if (lookup.running) lookup.running = false
+            lookup.command = commandWas
+            Weather._place = placeWas
+
             discoveryClock.wait(30)
             let lookupStarts = 0
             const countLookupStart = () => { if (lookup.running) lookupStarts++ }
