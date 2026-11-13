@@ -3861,6 +3861,18 @@ ShellRoot {
             "a page change still places the marker at once")
         glideMarker.destroy()
 
+        const lineHost = Qt.createQmlObject("import QtQuick; Item { y: 2 }", root)
+        const lineMarker = workspaceMarkerFactory.createObject(lineHost, { style: "bar" })
+        lineMarker._dpr = 1.25
+        const lineTop = lineMarker.mapToItem(null, 0, 0).y * 1.25
+        const lineBottom = lineMarker.mapToItem(null, 0, lineMarker.height).y * 1.25
+        root._check(Math.abs(lineTop - Math.round(lineTop)) < 0.01
+                && Math.abs(lineBottom - Math.round(lineBottom)) < 0.01
+                && Math.round(lineBottom - lineTop) === 4,
+            "the line marker sits on whole device pixels at 1.25, four of them tall")
+        lineMarker.destroy()
+        lineHost.destroy()
+
         const hitCell = workspaceButtonFactory.createObject(root, {
             wsId: 3, monitorReady: true, active: false, occupied: true,
             urgent: false, apps: [], compact: false, iconSize: 14,

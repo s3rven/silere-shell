@@ -104,6 +104,7 @@ settings file carries its own `__version` and migrates separately.
 - Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 - The `silere reset` preview lists whole setting names instead of cutting one off.
 - A click at the top or bottom edge of the bar above or below a workspace number, or between two numbers, switches to that workspace instead of doing nothing.
+- The Line workspace marker has sharp edges at fractional scales such as 125%.
 
 ## Releases
 

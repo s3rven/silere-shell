@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../../../config"
 import "../../../../services"
 
@@ -29,7 +30,10 @@ Item {
 
     // the row's leading trim, applied as a shift so it moves with the cells without retargeting the slide
     property real layoutOffsetX: 0
-    transform: Translate { x: root.layoutOffsetX }
+    property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    // a 3 px line spans 3.75 device px at 1.25: a whole-pixel height on a snapped top keeps both edges hard
+    readonly property PixelSnap _lineSnap: PixelSnap { item: root._bar ? root : null; dpr: root._dpr }
+    transform: Translate { x: root.layoutOffsetX; y: root._bar ? root._lineSnap.y : 0 }
     readonly property real centerX: x + width / 2 + layoutOffsetX
     readonly property color tint: root.urgent ? Theme.warning : Theme.barAccent
 
@@ -61,7 +65,7 @@ Item {
     // settled width for the caller to centre on; feeding the animated one back into targetX restarts the slide every frame
     readonly property real markerWidth: _bar ? Math.max(14, cellWidth - 8) : _sprite
     width:  _bar ? root._widthGlide.value : markerWidth
-    height: _bar ? 3 : _sprite
+    height: _bar ? Metrics.devicePx(3, root._dpr) : _sprite
     // keep the line two pixels clear of the cell edge so its halo is not clipped by the bar
     y: _bar ? rowHeight - 5 : (rowHeight - height) / 2
     opacity: shown ? (_bar ? 0.98 : 0.92) : 0
@@ -173,9 +177,9 @@ Item {
     // a compact second rail distinguishes a special workspace without changing the main target
     Rectangle {
         anchors.horizontalCenter: parent.horizontalCenter
-        y: -3
+        y: -Metrics.devicePx(3, root._dpr)
         width:  Math.max(7, parent.width * 0.42)
-        height: 2
+        height: Metrics.devicePx(2, root._dpr)
         radius: height / 2
         antialiasing: true
         color: root.tint
