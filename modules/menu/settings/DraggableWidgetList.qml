@@ -670,16 +670,19 @@ Item {
                 width: Metrics.glyphSlotWidth
                 height: parent.height
 
+                // a screen reader names it a button, so pressing it does what its name says
                 Accessible.role: Accessible.Button
                 Accessible.name: "Move " + _row.meta.label
-                Accessible.description: "Up and Down arrows move it along the bar"
+                Accessible.description: "Enter or Down moves it along the bar, Up back"
                 Accessible.focusable: root._draggingKey.length === 0
+                Accessible.onPressAction: if (Accessible.focusable) root._moveBy(_row.key, 1)
                 KeyboardFocus {
                     id: _gripFocus
                     interactive: control ? control.Accessible.focusable : false
                     listNavigation: true
                     customNavigation: true
                     onNavigated: direction => root._moveBy(_row.key, direction)
+                    onActivated: { if (control) control.Accessible.pressAction() }
                 }
                 Keys.onPressed: event => root._tabKey(event, _dragGrip)
                 // the row eases to its new place, and a move across a zone header can carry it out of view

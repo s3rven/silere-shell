@@ -12167,6 +12167,11 @@ ShellRoot {
             "each widget's grip is a keyboard stop a screen reader names as moving that widget")
         ShellSettings.setBarWidgetLayout(ShellSettings.barWidgetOrderLeftKeys, ShellSettings.barWidgetOrderCenterKeys,
             ["clock"].concat(ShellSettings.barWidgetOrderRightKeys.filter(k => k !== "clock")))
+        if (grip) grip.Accessible.pressAction()
+        const pressedOn = where("clock").zone === "right" && where("clock").index === 1
+        ShellSettings.setBarWidgetLayout(ShellSettings.barWidgetOrderLeftKeys, ShellSettings.barWidgetOrderCenterKeys,
+            ["clock"].concat(ShellSettings.barWidgetOrderRightKeys.filter(k => k !== "clock")))
+        root._check(pressedOn, "pressing a widget's grip, as a screen reader does, moves it one place along the bar")
         const toggleOf = key => root._findTrayNode(settings, item => item.Accessible.role === Accessible.CheckBox
             && item.Accessible.name === ShellSettings.barWidgetMeta[key].label)
         // clock is built last, so first on the right its drawn neighbour is not its built one. The fixture has
