@@ -6553,6 +6553,16 @@ ShellRoot {
         MenuState.selectTab(MenuState.recentTab)
         root._check(missedKeptOnHome && Notifications.missedCount === 0 && Notifications.silencingActive,
             "opening History ends the missed count while Do Not Disturb stays on, so its badge never opens a page already read")
+        const missedInFront = Notifications.missedOnArrival(true, false, "Chat")
+        MenuState.setRecentFilter("Mail")
+        const missedBehindFilter = Notifications.missedOnArrival(true, false, "Chat")
+        const shownUnderOwnFilter = Notifications.missedOnArrival(true, false, " Mail ")
+        MenuState.setRecentFilter("")
+        MenuState.selectTab(MenuState.homeTab)
+        root._check(!missedInFront && missedBehindFilter && !shownUnderOwnFilter
+                && Notifications.missedOnArrival(true, false, "Chat")
+                && Notifications.missedOnArrival(false, true, "Chat") && !Notifications.missedOnArrival(false, false, "Chat"),
+            "a silenced notification whose row lands on the History page in front of you is not missed; behind another app's filter it is")
         ShellSettings.dnd = missedWas.dnd
         Notifications.missedCount = missedWas.count
         MenuState.setRecentFilter("")

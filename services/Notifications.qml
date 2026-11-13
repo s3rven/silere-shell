@@ -141,6 +141,16 @@ Singleton {
         return order
     }
 
+    // a silenced notification is missed unless its row lands on the History page in front of you;
+    // one history does not keep is missed only when it is transient and leaves no trace at all
+    function missedOnArrival(archived: bool, transient: bool, appName): bool {
+        if (!archived) return transient
+        if (!MenuState.recentActive) return true
+        const filter = MenuState.recentFilter
+        const name = String(root.identityText(appName)).trim()
+        return filter.length > 0 && filter !== (name.length > 0 ? name : "Unknown")
+    }
+
     function identityText(value): string {
         return SafeText.singleLineText(value, root._maxIdentityChars)
     }
@@ -1271,7 +1281,7 @@ Singleton {
             if (!root.allowsPopup(n.urgency === NotificationUrgency.Critical,
                     root.effectiveDnd, root.fullscreenSilenced,
                     root.screenShareSilenced, ShellSettings.notifCriticalBypass)) {
-                if (root._archiveNotification(n, n.id, Date.now()) || n.transient)
+                if (root.missedOnArrival(root._archiveNotification(n, n.id, Date.now()), n.transient, n.appName))
                     root.missedCount++
                 n.expire()
                 return
