@@ -1,6 +1,7 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 import Quickshell.Io
 
 AnchoredPopupState {
@@ -403,6 +404,51 @@ AnchoredPopupState {
             return
         }
         root.showTabAt(root.mediaTab, source, screen)
+    }
+
+    // a page compiled after its files changed can fail against types compiled at start; only a new engine clears them
+    PersistentProperties {
+        id: _reloadReturn
+        reloadableId: "silereMenuReload"
+        property int tab: -1
+        property string section: ""
+        onReloaded: if (_reloadReturn.tab >= 0) Qt.callLater(root._returnAfterReload)
+    }
+    property bool reloadPending: false
+    function reloadShell(): void {
+        if (root.reloadPending) return
+        _reloadReturn.tab = root.open ? root.activeTab : -1
+        _reloadReturn.section = root.settingsSection
+        root.reloadPending = true
+        root.close()
+        _reloadFallback.restart()
+    }
+    // an open menu torn down by a reload logs a warning per live binding; the shell calls this once it has unloaded
+    function reloadNow(): void {
+        if (!root.reloadPending) return
+        root.reloadPending = false
+        _reloadFallback.stop()
+        Qt.callLater(() => Quickshell.reload(false))
+    }
+    Timer {
+        id: _reloadFallback
+        interval: 1500
+        onTriggered: root.reloadNow()
+    }
+    function _returnAfterReload(): void {
+        const tab = _reloadReturn.tab
+        _reloadReturn.tab = -1
+        if (tab < 0) return
+        root.setSettingsSection(_reloadReturn.section)
+        root._unanchor()
+        root.showTab(tab)
+    }
+    Connections {
+        target: Quickshell
+        function onReloadFailed() {
+            _reloadReturn.tab = -1
+            root.reloadPending = false
+        }
     }
 
     readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"

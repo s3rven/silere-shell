@@ -641,10 +641,9 @@ FittedPopupWindow {
                       : panel.activeTab === 2 ? recentLoader.status !== Loader.Ready
                       : false
                     readonly property bool _pageError:
-                        panel.activeTab === 1
-                            ? settingsLoader.status === Loader.Error
-                                || settingsLoader.item?.contentError === true
-                      : panel.activeTab === 2 ? recentLoader.status === Loader.Error
+                        panel.activeTab === 1 ? settingsLoader.failed
+                      : panel.activeTab === 2 ? recentLoader.failed
+                      : panel.activeTab === MenuState.mediaTab ? mediaLoader.failed
                       : false
                     // a build shorter than this reads as a flicker, not as feedback
                     property bool _pageSlow: false
@@ -678,7 +677,7 @@ FittedPopupWindow {
                             tabContent._pageSlow || tabContent._pageError
                         opacity: _pagePlaceholder._shown ? 1 : 0
                         visible: opacity > 0.001
-                        enabled: false
+                        enabled: tabContent._pageError
                         z: 5
 
                         MotionBehavior on opacity {
@@ -739,11 +738,27 @@ FittedPopupWindow {
                                 width: Math.max(1, _pagePlaceholder.width - 24)
                                 horizontalAlignment: Text.AlignHCenter
                                 visible: tabContent._pageError
-                                text: "The menu is still usable; check the shell log for details"
+                                text: "Reloading Silere usually brings it back; silere log has the details"
                                 wrapMode: Text.WordWrap
                                 maximumLineCount: 2
                                 color: Theme.withAlpha(Theme.subtext, 0.54)
                                 font.pixelSize: Settings.fontCaption
+                            }
+
+                            Item {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                visible: tabContent._pageError
+                                width: _reloadButton.width
+                                height: _reloadButton.height + 8
+
+                                ActionButton {
+                                    id: _reloadButton
+                                    anchors.bottom: parent.bottom
+                                    glyph: "󰑐"
+                                    label: "Reload"
+                                    accessibleName: "Reload Silere"
+                                    onTriggered: MenuState.reloadShell()
+                                }
                             }
                         }
                     }

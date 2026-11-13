@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- A menu page that fails to load, Now Playing included, offers Reload, which reloads the shell and reopens the menu on the same page.
+
 ### Changed
 
 - Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.

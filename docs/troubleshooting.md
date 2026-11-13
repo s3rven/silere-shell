@@ -68,6 +68,13 @@ new revision. From a working terminal, `silere update --rollback` restores the p
 revision, and restarts the shell when a systemd user unit runs it. Otherwise, run
 `silere restart` afterwards. See [updates and recovery](updates.md).
 
+### A menu page says it couldn't load
+
+Panels load from disk the first time they open, so files that changed while the shell
+was running (a package upgrade, a `git pull` or a local edit) can fail against the version
+still running. Press **Reload** on the page, or run `silere restart`. If the page fails
+again after that, `silere log` shows the error.
+
 ### A shell update is blocked by local edits
 
 `silere reset` covers this and the rest of what can go wrong at once: settings, edited files,

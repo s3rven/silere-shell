@@ -278,7 +278,10 @@ ShellRoot {
 
     PopupLoader {
         id: _menuPopup
-        onUnloaded: _collectAfterUnload.restart()
+        onUnloaded: {
+            _collectAfterUnload.restart()
+            MenuState.reloadNow()
+        }
         warm: !root.smokeTest && MenuState.warmRequested
         wantOpen: !root.smokeTest && MenuState.open
         requestedScreen: root.smokeTest ? null : MenuState.triggerScreen
@@ -290,7 +293,7 @@ ShellRoot {
 
     // a hover prepares the menu for a click, but a keybind gives no warning: compiled off the GUI thread once startup has
     // settled, the first open is as quick as the rest (~160 to ~90 ms) for 1-2 MB nearly every session spends anyway.
-    // It also fixes the menu to the release this shell started on, before an update can change the files underneath
+    // It also pins the menu's own file to the release this shell started on; the pages it loads by URL still compile from disk on first open
     Timer {
         interval: 3000
         running: !root.smokeTest

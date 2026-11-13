@@ -4424,6 +4424,28 @@ ShellRoot {
         if (firstSelect) firstSelect.destroy()
         if (secondSelect) secondSelect.destroy()
 
+        // a page that failed to load offers a reload: the menu closes first, then comes back where it was
+        const reloadWas = { open: MenuState.open, tab: MenuState.activeTab, section: MenuState.settingsSection }
+        MenuState.setSettingsSection("popups")
+        MenuState.showTab(MenuState.settingsTab)
+        MenuState.reloadShell()
+        const reloadClosed = !MenuState.open && MenuState.reloadPending
+        // nothing may really reload the probe: with nothing pending, the shell's unload call and the fallback stand aside
+        MenuState.reloadPending = false
+        MenuState.setSettingsSection("theme")
+        MenuState._returnAfterReload()
+        const reloadReturned = MenuState.open && MenuState.activeTab === MenuState.settingsTab
+            && MenuState.settingsSection === "popups"
+        MenuState.close()
+        MenuState._returnAfterReload()
+        const reloadReturnedOnce = !MenuState.open
+        MenuState.reloadNow()
+        root._check(reloadClosed && reloadReturned && reloadReturnedOnce,
+            "reloading from a failed page closes the menu, then reopens it once on the same tab and page")
+        MenuState.selectTab(reloadWas.tab)
+        MenuState.setSettingsSection(reloadWas.section)
+        if (reloadWas.open) MenuState.openUnanchored()
+        else MenuState.close()
     }
 
     function _checksConfirmButtonsAndCpuSensors(): void {
@@ -6622,6 +6644,13 @@ ShellRoot {
     }
 
     function _checksNowPlayingAndHomeDisplays(): void {
+        // Now Playing loads by url as Settings and History do, and the menu's reload page reads this for all three
+        const brokenPage = pageLoaderFactory.createObject(root)
+        const loadedClean = brokenPage !== null && brokenPage.status === Loader.Ready && brokenPage.failed === false
+        if (brokenPage) brokenPage.source = "modules/menu/no-such-page.qml"
+        root._check(loadedClean && brokenPage.status === Loader.Error && brokenPage.failed === true,
+            "a page loader reports a page that failed to load, and not one that loaded")
+        if (brokenPage) brokenPage.destroy()
         const mediaPageComponent = Qt.createComponent("modules/menu/MediaPage.qml")
         const mediaPage = mediaPageComponent.status === Component.Ready
             ? mediaPageComponent.createObject(root, { width: 332, active: false, powerOpen: false }) : null

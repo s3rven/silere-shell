@@ -19,6 +19,7 @@ Loader {
     property real _heldWidth: 0
     property real _heldScroll: 0
     property bool _holdLayout: false
+    readonly property bool failed: root.status === Loader.Error || root.item?.contentError === true
 
     width: root._holdLayout ? root._heldWidth : root.layoutWidth
     // the shared scroller resets for the incoming page. Compensate only the departing page so its visible rows do not jump back to the top mid-fade
