@@ -437,6 +437,13 @@ def run_latency(lab, args, arms):
     return results
 
 
+def cpu_seconds(pid):
+    # utime and stime, the 14th and 15th fields; the name in parentheses can hold spaces, so split after it
+    with open(f"/proc/{pid}/stat") as f:
+        fields = f.read().rsplit(")", 1)[1].split()
+    return (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+
+
 def run_cycles(lab, args, arms):
     plan = [(name, tree, mode) for name, tree in arms.items() for mode in ("home", "every page")] * args.n
     random.Random(args.seed).shuffle(plan)
@@ -445,6 +452,7 @@ def run_cycles(lab, args, arms):
         lab.start_shell(tree)
         time.sleep(8)
         rows = [read_process(lab.shell.pid)]
+        cpu_before = cpu_seconds(lab.shell.pid)
         for _ in range(args.cycles):
             lab.timed_open("silere-menu", "menu", "tab", "0")
             time.sleep(0.45)
@@ -455,15 +463,17 @@ def run_cycles(lab, args, arms):
             lab.close_wait("silere-menu", "menu", "close")
             time.sleep(0.35)
             rows.append(read_process(lab.shell.pid))
+        # the shell's own CPU across the cycles, their fades included: what one open and close costs
+        cpu_ms = (cpu_seconds(lab.shell.pid) - cpu_before) * 1000 / args.cycles
         time.sleep(60)
         settled = read_process(lab.shell.pid)
         late = range(len(rows) // 2, len(rows))
         growth = slope(list(late), [rows[i]["pss_anon"] for i in late]) * 1024
         results.setdefault(f"{name}, {mode}", []).append({"anon": [round(r["pss_anon"], 1) for r in rows], "settled_anon": settled["pss_anon"],
-                                                          "kb_per_cycle": round(growth, 1), "fds": [rows[0]["fds"], rows[-1]["fds"]], "errors": len(lab.errors())})
+                                                          "kb_per_cycle": round(growth, 1), "cpu_ms_per_cycle": round(cpu_ms, 1), "fds": [rows[0]["fds"], rows[-1]["fds"]], "errors": len(lab.errors())})
         print(f"{name}, {mode}: Pss_Anon {rows[0]['pss_anon']:.1f} at start, {rows[1]['pss_anon']:.1f} after one, {rows[-1]['pss_anon']:.1f} after "
               f"{args.cycles}, {settled['pss_anon']:.1f} settled; {growth:+.1f} KB per cycle over the second half; "
-              f"fds {rows[0]['fds']} to {rows[-1]['fds']}; JS heap {rows[-1]['js']:.1f} MB", flush=True)
+              f"fds {rows[0]['fds']} to {rows[-1]['fds']}; JS heap {rows[-1]['js']:.1f} MB; {cpu_ms:.0f} ms CPU per cycle", flush=True)
         lab.stop_shell()
         time.sleep(1)
     return results

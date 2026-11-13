@@ -100,7 +100,8 @@ bash dev/bench-lab.sh soak --hours 6                                  # memory o
 Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
 IPC client, as a keybind does, to the surface's first frame in the compositor. A `cycles` or `soak` run judges
 growth on `Pss_Anon`, the shell's own heap, because another Quickshell running at the same time moves shared
-pages out of its PSS. Run one at a time on a quiet machine, and compare numbers only within one machine.
+pages out of its PSS. A `cycles` run also reports the shell's CPU per open and close, its fades included.
+Run one at a time on a quiet machine, and compare numbers only within one machine.
 
 ## Animation driver
 
