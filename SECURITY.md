@@ -27,8 +27,10 @@ Out of scope: Quickshell, the compositor, and anything requiring an attacker who
 already runs code as the user.
 
 Notification icons and images accept Quickshell's in-memory image provider, icon names
-from the installed icon theme, and files inside the system icon directories, which only
-root can write to. Any other filesystem path supplied by the sender is refused.
+from the installed icon theme, and files under `/usr/share`, `/usr/lib`, `/usr/lib64`, the
+icon folders in `/usr/local/share`, the Flatpak icon exports and NixOS's system profile,
+which only root can write to. The Nix store is not among them, since any user can add a
+path there. Any other filesystem path supplied by the sender is refused.
 
 ## Update trust
 

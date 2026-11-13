@@ -6102,6 +6102,15 @@ ShellRoot {
                 && IconResolver.senderImageSource("/home/user/Pictures/shot.png") === ""
                 && IconResolver.senderImageSource("/usr/share/icons/../../../dev/zero") === "",
             "notify-send's image-path shows a system icon file and nothing outside those directories")
+        root._check(IconResolver.senderIconSource("/usr/lib/kitty/logo/kitty.png") === "file:///usr/lib/kitty/logo/kitty.png"
+                && IconResolver.senderImageSource("image://icon//usr/share/discord/discord.png")
+                    === "file:///usr/share/discord/discord.png"
+                && IconResolver.senderIconSource("/usr/libexec/x.png") === ""
+                && IconResolver.senderIconSource("/usr/local/bin/x.png") === ""
+                && IconResolver.senderIconSource("/usr/lib/../../tmp/fifo.png") === ""
+                && IconResolver.senderIconSource("/var/tmp/fifo.png") === ""
+                && IconResolver.senderIconSource("/nix/store/0000-user-added/icon.png") === "",
+            "an icon a terminal or packaged app passes from its own root-owned folder shows, and nothing a user could plant")
         root._check(IconResolver.senderImageSource("image://icon//usr/share/pixmaps/app.png")
                     === "file:///usr/share/pixmaps/app.png"
                 && IconResolver.senderImageSource("IMAGE://Icon//home/user/app.png") === ""
@@ -6126,9 +6135,9 @@ ShellRoot {
         root._check(IconResolver.senderIconSource("/usr/share/icons/../../../dev/zero") === ""
                 && IconResolver.senderIconSource("file:///usr/share/icons/%2e%2e/%2e%2e/%2e%2e/dev/zero") === ""
                 && IconResolver.senderIconSource("file://host/usr/share/icons/app.png") === ""
-                && IconResolver.senderIconSource("/usr/share/iconsx/app.png") === ""
+                && IconResolver.senderIconSource("/usr/sharex/app.png") === ""
                 && IconResolver.senderIconSource("/tmp/usr/share/icons/app.png") === "",
-            "a notification icon path cannot climb or reach past the system icon directories")
+            "a notification icon path cannot climb or reach past the root-owned system folders")
         root._check(IconResolver.localSource("/tmp/icon #?.png")
                 === "file:///tmp/icon%20%23%3F.png",
             "icon resolver encodes local file paths")

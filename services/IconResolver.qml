@@ -153,8 +153,9 @@ Singleton {
     }
 
     // only root can create files here, so a sender cannot plant a fifo or device node behind an icon path
-    readonly property var _systemIconRoots: ["/usr/share/icons/", "/usr/share/pixmaps/",
-        "/usr/local/share/icons/", "/usr/local/share/pixmaps/", "/var/lib/flatpak/exports/share/icons/"]
+    readonly property var _systemIconRoots: ["/usr/share/", "/usr/lib/", "/usr/lib64/",
+        "/usr/local/share/icons/", "/usr/local/share/pixmaps/", "/var/lib/flatpak/exports/share/icons/",
+        "/run/current-system/sw/share/"]
 
     function _systemIconFile(value: string): string {
         let path = value
