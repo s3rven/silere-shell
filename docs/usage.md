@@ -21,7 +21,7 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 | Widget | Click | Right-click | Middle-click | Scroll | Hover |
 |---|---|---|---|---|---|
 | Workspaces | Switch; on the active one, open the menu | Active one: quick actions | Send the focused window there | Switch (turn on in Widgets › Workspaces) | |
-| Clock | Calendar | | Add seconds, the date, or both | | |
+| Clock | Calendar | | Add seconds, the date, or both | | The date, while it is off |
 | Window title | | | | | Scroll a title that is cut short |
 | System monitor | Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |
 | Media | Play or pause | Now Playing | Jump to the player | Change track | |
@@ -32,13 +32,14 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 | Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | |
 | Brightness | Its slider in Home | | | Brightness | |
 | Battery | Power Mode in Home | | | | Time left or charging state |
-| Updates | Package details | Check again | | | |
+| Updates | Package details | Check again | | | Status, and the error of a failed check |
 | Shell update | Settings › System › Overview | | | | |
-| Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name |
+| Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name, unless widgets are compact |
 
 - **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**. The microphone appears while an app is listening.
 - **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge below 20% turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
 - **Workspace markers:** rings are empty workspaces and dots have windows. With app icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page.
+- **Hover:** what the table's last column shows needs **Reveal values on hover** under **Bar › Layout**, on by default.
 - **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
 
 ## Keyboard
