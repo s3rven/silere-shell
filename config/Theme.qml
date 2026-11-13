@@ -277,19 +277,40 @@ Singleton {
         return (Math.max(front, back) + 0.05) / (Math.min(front, back) + 0.05)
     }
 
-    function readableText(foreground: color, background: color, minimum: real): color {
-        if (root.contrastRatio(foreground, background) >= minimum) return foreground
-        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
-        const target = root.contrastRatio(white, background) >= root.contrastRatio(black, background)
-            ? white : black
+    // contrast is bought with lightness alone. Blending toward white in srgb greys a colour on the
+    // way: at the 4.5:1 a see-through bar asks, a wallpaper accent arrived as an off-white. Walking
+    // L* holds the hue and whatever chroma the gamut still has at that lightness
+    function _solveInk(foreground: color, lighter: bool, passes: var): color {
+        const l = lchOf(foreground)
+        const span = (lighter ? 100 : 0) - l.L
+        const alpha = foreground.a
+        const tinted = t => {
+            const out = lchColor(l.L + span * t, l.C, l.h)
+            return Qt.rgba(out.r, out.g, out.b, alpha)
+        }
+        // contrast reads luminance, and an opaque ink's luminance is its L* whatever chroma it keeps:
+        // search on a grey of each lightness and fit the hue into the gamut once, at the end
+        const probe = alpha >= 1 ? (t => _labColor(l.L + span * t, 0, 0)) : tinted
         let low = 0, high = 1
         for (let i = 0; i < 10; i++) {
             const middle = (low + high) / 2
-            if (root.contrastRatio(blend(foreground, target, middle), background) >= minimum)
-                high = middle
+            if (passes(probe(middle))) high = middle
             else low = middle
         }
-        return blend(foreground, target, high)
+        let out = tinted(high)
+        // the fitted colour rounds to its own 8-bit channels, a hair off the grey's
+        for (let i = 0; i < 8 && high < 1 && !passes(out); i++) {
+            high = Math.min(1, high + 1 / 512)
+            out = tinted(high)
+        }
+        return out
+    }
+
+    function readableText(foreground: color, background: color, minimum: real): color {
+        if (root.contrastRatio(foreground, background) >= minimum) return foreground
+        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
+        const lighter = root.contrastRatio(white, background) >= root.contrastRatio(black, background)
+        return root._solveInk(foreground, lighter, ink => root.contrastRatio(ink, background) >= minimum)
     }
 
     // a knob over glass has to survive both a dark wallpaper and a white window.
@@ -300,14 +321,7 @@ Singleton {
         }
         if (contrast(foreground) >= minimum) return foreground
         const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
-        const target = contrast(white) >= contrast(black) ? white : black
-        let low = 0, high = 1
-        for (let i = 0; i < 10; i++) {
-            const middle = (low + high) / 2
-            if (contrast(blend(foreground, target, middle)) >= minimum) high = middle
-            else low = middle
-        }
-        return blend(foreground, target, high)
+        return root._solveInk(foreground, contrast(white) >= contrast(black), ink => contrast(ink) >= minimum)
     }
 
     // shared focus-ring weight: button-family controls (2px) vs embedded row/track indicators (1px)

@@ -24,6 +24,7 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with one allocator pool that returns freed memory after a second, unless you set your own `MALLOC_CONF`.
+- A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.
 - Moving the pointer along the bar keeps each widget's hover detail open until you leave that part of the bar, so the widget you aim at no longer slides away as the last one closes.
 - Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
 - Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
