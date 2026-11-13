@@ -624,6 +624,8 @@ PageShell {
                 width: parent.width
                 batteryExpanded: root._picker === "battery"
                 onBatteryActivated: root._togglePicker("battery")
+                // a UPower restart takes the row away: its details close with it, or Escape had nothing left to shut
+                onBatteryOpenableChanged: if (!batteryOpenable && root._picker === "battery") root._closePicker()
             }
         }
     }

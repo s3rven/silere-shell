@@ -33,7 +33,7 @@ SettingsCard {
     }
     function _introRows(): void {
         // the page is still faded out when it turns active, so effective visibility cannot pick the rows
-        const rows = Battery.available ? [_cpu, _memory, _disk, _battery] : [_cpu, _memory, _disk]
+        const rows = root.batteryShown ? [_cpu, _memory, _disk, _battery] : [_cpu, _memory, _disk]
         for (let i = 0; i < rows.length; i++) rows[i].intro(Motion.ms(40 + 35 * i))
     }
     readonly property int _rowH: Metrics.rowHeightFor(40)
@@ -320,14 +320,15 @@ SettingsCard {
 
     InlinePicker { id: _batteryAbove; mirror: _batteryPicker }
 
-    // a battery with no reading to add still opens for its charge limit switch
-    readonly property bool _batteryOpenable: Battery.hasDetails || BatteryLimit.devices.length > 0
+    property bool batteryShown: Battery.available
+    // a battery with no reading to add still opens for its charge limit switch; a battery UPower lost does not
+    readonly property bool batteryOpenable: batteryShown && (Battery.hasDetails || BatteryLimit.devices.length > 0)
 
     Vital {
         id: _battery
         live: root.active
-        visible: Battery.available
-        openable: root._batteryOpenable
+        visible: root.batteryShown
+        openable: root.batteryOpenable
         actionDescription: "Shows battery details"
         onActivated: root.batteryActivated()
         glyph: Battery.icon
@@ -341,7 +342,7 @@ SettingsCard {
 
     InlinePicker {
         id: _batteryPicker
-        open: root.batteryExpanded && root._batteryOpenable
+        open: root.batteryExpanded && root.batteryOpenable
         content: Component { BatteryDetails {} }
     }
 }

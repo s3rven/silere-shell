@@ -1924,6 +1924,17 @@ ShellRoot {
         home._togglePicker("battery")
         root._check(home._picker === "battery" && requested && requested.sizeText !== undefined,
             "battery details opened at the foot of Home bring the system readings into view")
+        const vitals = root._findTrayNode(home, item => item.batteryOpenable !== undefined && item.batteryShown !== undefined)
+        const limitsWas = BatteryLimit.devices
+        BatteryLimit.devices = [{ path: "/org/freedesktop/UPower/devices/battery_PROBE", nativePath: "PROBE",
+            on: false, stopsAt: 80 }]
+        if (vitals) vitals.batteryShown = true
+        const detailsOpen = vitals !== null && vitals.batteryOpenable && home._picker === "battery"
+        if (vitals) vitals.batteryShown = false
+        root._check(detailsOpen && !vitals.batteryOpenable && home._picker === "",
+            "battery details close with a battery UPower lost, so the next Escape is not spent on them")
+        if (vitals) vitals.batteryShown = Qt.binding(() => Battery.available)
+        BatteryLimit.devices = limitsWas
         home._closePicker()
         home.controlRequested.disconnect(noteChoices)
 

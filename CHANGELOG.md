@@ -125,6 +125,7 @@ settings file carries its own `__version` and migrates separately.
 - The `silere reset` preview lists whole setting names instead of cutting one off.
 - A click at the top or bottom edge of the bar above or below a workspace number, or between two numbers, switches to that workspace instead of doing nothing.
 - The Line workspace marker has sharp edges at fractional scales such as 125%.
+- Battery details on Home close when the battery goes away, as on a UPower restart, instead of taking the next Escape.
 
 ## Releases
 
