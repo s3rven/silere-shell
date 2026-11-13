@@ -34,6 +34,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Choosing a search result for Artist, Clock format or style, Theme source, Underline mode, or the battery and temperature warnings scrolls to that row and highlights it, as for every other setting.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.
 - The "Notifications blocked" alert no longer comes back each time Settings rechecks your tools, and its row in Settings › System › Overview stays put while it checks.
 - Muting the Unknown page in History mutes notifications from senders with no name.

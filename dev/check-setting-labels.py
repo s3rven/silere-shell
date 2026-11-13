@@ -8,7 +8,7 @@ def row_labels():
     found = {}
     for f in sorted(glob.glob('modules/menu/settings/*.qml')):
         text = open(f, encoding='utf-8').read()
-        for m in re.finditer(r'\bkey:\s*"(\w+)"', text):
+        for m in re.finditer(r'\b(?:key|searchKey):\s*"(\w+)"', text):
             depth, start = 0, m.start()
             while start > 0:
                 start -= 1

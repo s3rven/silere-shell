@@ -4,6 +4,7 @@ Item {
     id: root
 
     property string glyph:         ""
+    property string searchKey:     ""
     // SettingsCard writes these four; a row must never set them itself
     property real   topRadius:     0
     property real   bottomRadius:  0

@@ -115,7 +115,8 @@ PageShell {
         const stack = [top]
         while (stack.length > 0) {
             const it = stack.pop()
-            if (it !== top && it.key === key && it.topRadius !== undefined) return it
+            if (it !== top && (it.key === key || it.searchKey === key) && it.topRadius !== undefined
+                    && root._shownWithin(it, top)) return it
             const kids = it.children || []
             for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i])
         }

@@ -10,6 +10,7 @@ Column {
     SettingsCard {
         ToggleRow {
             glyph: "󰎇"; label: "Artist"
+            searchKey: "mediaWidgetFormat"
             checked: ShellSettings.mediaWidgetFormat === "artist-title"
             onToggled: nextChecked => ShellSettings.mediaWidgetFormat =
                 nextChecked ? "artist-title" : "title"

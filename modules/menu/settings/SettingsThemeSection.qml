@@ -35,6 +35,7 @@ Column {
     SettingsCard {
         ChoiceChipRow {
             glyph: "󰉦"; label: "Source"
+            searchKey: "neutralTheme"
             currentValue: ShellSettings.neutralTheme ? "neutral" : "wallpaper"
             model: [
                 { value: "neutral",   label: "Neutral"   },

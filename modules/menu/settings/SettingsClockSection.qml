@@ -22,6 +22,7 @@ Column {
     SettingsCard {
         ChoiceChipRow {
             glyph: "󰔟"; label: "Format"
+            searchKey: "clock12h"
             currentValue: ShellSettings.clock12h ? "12h" : "24h"
             model: [
                 { value: "24h", label: root._sample("HH:mm") },
@@ -41,6 +42,7 @@ Column {
             expanded: ShellSettings.clockShowDate
             ChoiceChipRow {
                 glyph: "󰸗"; label: "Style"
+                searchKey: "compactDate"
                 currentValue: ShellSettings.compactDate ? "compact" : "normal"
                 model: [
                     { value: "normal",  label: root._dayName + root._dateCore },

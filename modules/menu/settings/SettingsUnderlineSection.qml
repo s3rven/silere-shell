@@ -58,6 +58,7 @@ Column {
             expanded: root._enabled
             ChoiceChipRow {
                 glyph: "󰗈"; label: "Mode"
+                searchKey: "underlineGlow"
                 currentValue: root._style
                 model: [
                     { value: "static", label: "Line" },

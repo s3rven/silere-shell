@@ -53,6 +53,7 @@ Column {
         visible: Battery.available
         ChoiceChipRow {
             glyph: "󱃍"; label: "Low battery warning"
+            searchKey: "osdBatteryWarn"
             currentValue: root._battAlertMode
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdBatteryWarn", "underlineBattGlow")
@@ -93,6 +94,7 @@ Column {
         visible: !CpuTemp.sensorMissing
         ChoiceChipRow {
             glyph: "󰔏"; label: "High temperature warning"
+            searchKey: "osdTempWarn"
             currentValue: root._tempAlertMode
             model: root._alertChipModel
             onChosen: (v) => root._setAlertMode(v, "osdTempWarn", "underlineTempGlow")
