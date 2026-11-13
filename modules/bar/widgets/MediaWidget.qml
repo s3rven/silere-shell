@@ -10,8 +10,16 @@ Item {
     id: root
 
     property bool compact: ShellSettings.barCompact
-    implicitWidth: root.show ? Math.min(_content.implicitWidth + root._pillPad * 2,
-        root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity) : 0
+    implicitWidth: _widthGlide.value
+    // a glide, not a behaviour: on a crowded bar the fit limit moves on every frame of a neighbour's own glide, and a
+    // behaviour restarted each frame held the title at its old width, then ran one late curve after the bar settled
+    SmoothGlide {
+        id: _widthGlide
+        target: root.show ? Math.min(_content.implicitWidth + root._pillPad * 2,
+            root.layoutWidthLimit >= 0 ? root.layoutWidthLimit : Infinity) : 0
+        duration: Motion.width
+        gate: root.barActive
+    }
     implicitHeight: parent ? parent.height : Metrics.barHeight
     clip: true
     enabled: root.show
@@ -55,10 +63,6 @@ Item {
         _trackTransition.stop()
         textClip._shown = Media.label
         textClip.opacity = 1.0
-    }
-
-    MotionBehavior on implicitWidth {
-        NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
 
     // the clock's hover cap: every other clickable bar widget shows one, so a bare title read as a label
@@ -111,7 +115,7 @@ Item {
         anchors.bottomMargin: Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
         anchors.horizontalCenter: parent.horizontalCenter
         // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on
-        // every resize, and parent.width tracks root.implicitWidth's own MotionBehavior every frame
+        // every resize, and parent.width tracks root.implicitWidth's own glide every frame
         width: 8 * Math.round(parent.width / 8)
         // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
         readonly property bool _wanted: root._visualizerActive

@@ -6853,6 +6853,24 @@ ShellRoot {
             ShellSettings.reduceMotion = false
             root._check(!clip.needsScroll,
                 "a fully squeezed-out media label runs no invisible marquee animation")
+            // as when a neighbour's glide narrows the fit limit on every frame of a crowded bar
+            const mediaGlide = mediaWidget.data.find(item => item._advance !== undefined)
+            const squeezeStart = Math.floor(preferred) - 4
+            mediaWidget.layoutWidthLimit = squeezeStart
+            contentRow.forceLayout()
+            mediaGlide?._snap()
+            const squeezeFrom = mediaWidget.implicitWidth
+            let followed = 0
+            for (let i = 1; i <= 10; i++) {
+                const before = mediaWidget.implicitWidth
+                mediaWidget.layoutWidthLimit = squeezeStart - i * 6
+                contentRow.forceLayout()
+                mediaGlide?._advance(0.016)
+                if (mediaWidget.implicitWidth < before) followed++
+            }
+            root._check(mediaGlide !== undefined && squeezeFrom === squeezeStart && followed === 10
+                    && mediaWidget.implicitWidth >= squeezeStart - 60,
+                "a media title follows a fit limit that moves on every frame, rather than holding until it stops")
             mediaWidget.destroy()
         }
         mediaComponent.destroy()

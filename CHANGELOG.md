@@ -44,6 +44,7 @@ settings file carries its own `__version` and migrates separately.
 - Bar weather comes back as soon as a Wi-Fi sign-in page or a lost internet connection clears, instead of up to half an hour later.
 - Hovering a bar widget that shows more on hover no longer makes its icon jump sideways and briefly disappear.
 - A bar widget's level bar no longer sticks out past the widget while it shrinks.
+- On a crowded bar, the media title resizes along with the widgets beside it instead of after them.
 - Choosing a search result for Artist, Clock format or style, Theme source, Underline mode, or the battery and temperature warnings scrolls to that row and highlights it, as for every other setting.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.
 - The "Notifications blocked" alert no longer comes back each time Settings rechecks your tools, and its row in Settings › System › Overview stays put while it checks.
