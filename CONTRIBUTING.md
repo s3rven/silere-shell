@@ -7,6 +7,24 @@ AI-assisted PRs are welcome, and so is hand-written code. Neither is better here
 what you send and make sure it works. I build Silere the same way — see
 [On AI assistance](README.md#on-ai-assistance).
 
+## Where help counts most
+
+I use Silere every day on one laptop screen with Hyprland, so other setups get much less
+testing than mine. The most useful help comes from whatever you run that I don't:
+
+- niri, more than one monitor, mixed display scales, or an NVIDIA card driving the screen.
+  Tell me what looks or acts wrong, with the output of `silere doctor`.
+- A keyboard backlight, a desktop with no battery, or a Bluetooth or audio device that
+  behaves oddly. Those paths have no hardware here.
+- A package for your distribution. `packaging/aur/PKGBUILD` is a starting point for
+  Arch-based ones; a Nix flake, a Fedora COPR or anything else would be new.
+- A note in [`docs/troubleshooting.md`](docs/troubleshooting.md) for a problem you solved
+  on your own setup, so the next person finds it.
+
+Issues marked [help wanted](https://github.com/s3rven/silere-shell/labels/help%20wanted)
+or [good first issue](https://github.com/s3rven/silere-shell/labels/good%20first%20issue)
+are open for anyone to pick up. Say so in the issue and it's yours.
+
 ## Before you open it
 
 Keep each change focused and preserve unrelated working tree edits. Before submitting
@@ -48,7 +66,11 @@ widget each have a chain to follow.
 Split commits by concern. Use signed commits with a one-line, lowercase, imperative
 subject, such as `fix weather response validation`.
 
-## Questions
+## Questions and feedback
 
 Loose ideas and questions are fine in
-[Discussions](https://github.com/s3rven/silere-shell/discussions).
+[Discussions](https://github.com/s3rven/silere-shell/discussions). So is plain feedback:
+if you tried Silere, tell me [how it went](https://github.com/s3rven/silere-shell/discussions/3), even if it's only "it works" or "I switched to
+something else, and here's why". That's the one thing no test here can tell me.
+
+Everyone taking part is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).
