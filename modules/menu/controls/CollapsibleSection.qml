@@ -30,7 +30,7 @@ Item {
     enabled: expanded
     visible: expanded || height > 0.5
 
-    Disclosure on height { symmetric: root.symmetric }
+    Disclosure on height { id: _fold; symmetric: root.symmetric }
 
     Column {
         id: _content
@@ -38,7 +38,8 @@ Item {
 
         y: 0
         opacity: root.expanded ? 1.0 : 0.0
-        // match the height's timing; a symmetric pair shares one curve so its opacities sum to 1
+        // match the height's timing and curve both ways: an accelerating fade kept the rows nearly opaque while
+        // the decelerating fold cut them off. A symmetric pair shares one curve so its opacities sum to 1
         MotionBehavior on opacity {
             id: _contentFade
             NumberAnimation {
@@ -46,7 +47,7 @@ Item {
                     ? Motion.medium : Motion.fast
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: root.symmetric || _contentFade.targetValue > 0.5
-                    ? Motion.emphasizedDecel : Motion.emphasizedAccel
+                    ? Motion.emphasizedDecel : _fold.exitCurve
             }
         }
     }
