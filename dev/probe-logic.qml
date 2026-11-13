@@ -9922,9 +9922,27 @@ ShellRoot {
         NotifWatch.conflict = "stale-daemon"
         NotifWatch.recheck()
         root._check(NotifWatch.conflict === "",
-            "a notification-owner recheck clears stale conflict state immediately")
+            "a notification-owner recheck that cannot ask the bus clears stale conflict state immediately")
         root._check(NotifWatch._sandboxed && !NotifWatch._checked,
             "a sandboxed shell does not report the desktop notification owner as a conflict")
+        const ownerToolsWas = SystemTools._tools
+        const ownerReadyWas = SystemTools.ready
+        SystemTools._tools = Object.assign({}, ownerToolsWas, { busctl: true })
+        SystemTools.ready = true
+        NotifWatch._sandboxed = false
+        NotifWatch.conflict = "mako"
+        let ownerAlerts = 0
+        const countOwnerAlert = () => ownerAlerts++
+        NotifWatch.conflictChanged.connect(countOwnerAlert)
+        NotifWatch.recheck()
+        const ownerKept = NotifWatch._checked && NotifWatch.conflict === "mako" && ownerAlerts === 0
+        NotifWatch.conflictChanged.disconnect(countOwnerAlert)
+        NotifWatch._sandboxed = true
+        SystemTools._tools = ownerToolsWas
+        SystemTools.ready = ownerReadyWas
+        NotifWatch.recheck()
+        root._check(ownerKept && !NotifWatch._checked && NotifWatch.conflict === "",
+            "a tool rescan keeps the known notification owner until the bus answers, so its alert does not fire again")
     }
 
     function _checksAccentBalanceAndAnchors(): void {

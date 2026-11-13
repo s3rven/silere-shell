@@ -11,7 +11,7 @@ Singleton {
     property bool   _checked: false
     property int    _generation: 0
     // test shells share the desktop bus, where the real notification owner is expected
-    readonly property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
+    property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     readonly property bool armed: SystemTools.hasBusctl
 
     function _check(): void {
@@ -25,8 +25,9 @@ Singleton {
         _delay.stop()
         if (_proc.running) _proc.running = false
         root._checked = false
-        root.conflict = ""
         root._check()
+        // the last answer stands until the next one lands: clearing it raised the alert again on every tool rescan
+        if (!root._checked) root.conflict = ""
     }
 
     Component.onCompleted: _check()
@@ -70,6 +71,7 @@ Singleton {
         onExited: {
             if (_proc._generation !== root._generation) return
             const name = SafeText.singleLineText(_out.text, 64).trim()
+            if (name === root.conflict) return
             root.conflict = name
             if (name.length === 0) return
             console.warn("silere-shell: notifications are owned by '" + name +
