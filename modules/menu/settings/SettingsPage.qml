@@ -135,6 +135,12 @@ PageShell {
         return ""
     }
 
+    // a revealed row sits a third of the way down, and never under the header pinned over the viewport's top:
+    // the settings-file error banner can make that header taller than a third at the smallest panel
+    function revealOffset(viewHeight: real, topInset: real): real {
+        return Math.max(viewHeight / 3, Math.max(0, topInset))
+    }
+
     function _revealPending(): void {
         const top = _detailBody.item
         if (root._revealKey === "" || root._revealSection !== root._shownSection
@@ -148,7 +154,8 @@ PageShell {
         }
         if (!row || !root._shownWithin(row, top)) return
         root.scroller.cancelFlick()
-        root._revealY = row.mapToItem(root.scroller.contentItem, 0, 0).y - root.scroller.height / 3
+        root._revealY = row.mapToItem(root.scroller.contentItem, 0, 0).y
+            - root.revealOffset(root.scroller.height, Number(root.scroller.revealTopInset) || 0)
         _revealHold.restart()
         root._applyRevealY()
         const flash = _revealFlash.createObject(row, {

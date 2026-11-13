@@ -13067,6 +13067,9 @@ ShellRoot {
                     scroller.contentY = 0
                     root._check(pinnedNow && pinHeader.y === 0 && !pinClip.clip,
                         "a scrolled settings page holds its header and search in place and cuts the body below them")
+                    root._check(page.revealOffset(600, 50) === 200 && page.revealOffset(120, 50) === 50
+                            && page.revealOffset(300, -4) === 100,
+                        "a search result lands a third of the way down, or below a pinned header taller than that")
                     const insetView = insetScrollFactory.createObject(f.contentItem)
                     insetView.target.forceActiveFocus(Qt.TabFocusReason)
                     f.input.wait(30)
