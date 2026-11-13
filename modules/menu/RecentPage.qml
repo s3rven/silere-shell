@@ -393,10 +393,97 @@ PageShell {
             }
         }
 
+        CollapsibleSection {
+            id: _silenceNote
+            readonly property string reason: Notifications.dnd ? "Do Not Disturb"
+                : Notifications.effectiveDnd ? "Quiet hours"
+                : Notifications.fullscreenSilenced ? "Fullscreen"
+                : Notifications.presentationMode ? "Presentation Mode"
+                : Notifications.screenShareSilenced ? "Sharing screen" : ""
+            // the text stays put while the band folds away
+            property string _shown: reason
+            onReasonChanged: if (reason.length > 0) _shown = reason
+            readonly property bool endable: _shown === "Do Not Disturb" || _shown === "Presentation Mode"
+            anchors.top: _header.bottom
+            expanded: reason.length > 0
+
+            function end(): void {
+                if (Notifications.dnd) Notifications.setDnd(false, 0)
+                else if (Notifications.presentationMode) Notifications.presentationMode = false
+            }
+
+            Item {
+                width: parent.width
+                height: _silenceBand.height + 8
+
+                Rectangle {
+                    id: _silenceBand
+                    y: 8
+                    width: parent.width
+                    height: Metrics.snap4Up(Math.max(Metrics.rowHeightFor(32), _silenceEnd.height) + 8)
+                    radius: Theme.radiusInline
+                    antialiasing: true
+                    color: Theme.withAlpha(Theme.accent, 0.08)
+
+                    OutlineBorder {
+                        radius: _silenceBand.radius
+                        outlineColor: Theme.withAlpha(Theme.accent, 0.24)
+                    }
+
+                    ShellText {
+                        id: _silenceGlyph
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "󰂛"
+                        color: Theme.accent
+                        font.pixelSize: Settings.fontSize
+                    }
+
+                    ShellText {
+                        id: _silenceLabel
+                        anchors.left: _silenceGlyph.right
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(implicitWidth, Math.max(0, _silenceEnd.x - x - 8))
+                        text: _silenceNote._shown
+                        elide: Text.ElideRight
+                        color: Theme.withAlpha(Theme.text, 0.88)
+                        font.pixelSize: Settings.fontLabel
+                    }
+
+                    ShellText {
+                        anchors.left: _silenceLabel.right
+                        anchors.leftMargin: 8
+                        anchors.right: _silenceEnd.left
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Notifications.dnd && Notifications.dndUntil > 0
+                            ? Notifications.dndUntilText : "Popups held"
+                        elide: Text.ElideRight
+                        color: Theme.menuTextDetail
+                        font.pixelSize: Settings.fontCaption
+                    }
+
+                    ActionButton {
+                        id: _silenceEnd
+                        anchors.right: parent.right
+                        anchors.rightMargin: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: _silenceNote.endable
+                        width: visible ? implicitWidth : 0
+                        label: "Turn off"
+                        accessibleName: "Turn off " + _silenceNote._shown
+                        onTriggered: _silenceNote.end()
+                    }
+                }
+            }
+        }
+
         Rectangle {
             id: _searchBox
             width: parent.width
-            anchors.top: _header.bottom
+            anchors.top: _silenceNote.bottom
             anchors.topMargin: visible ? 8 : 0
             visible: root.hasHistory
             height: visible ? Metrics.rowHeightFor(36) : 0

@@ -11997,6 +11997,32 @@ ShellRoot {
         root._check(page !== null, "history builds for keyboard navigation")
         if (page) {
             page.settleVisual(true)
+            const silence = root._findTrayNode(page, item => item.endable !== undefined && typeof item.end === "function")
+            const silenceWas = { dnd: ShellSettings.dnd, until: ShellSettings.dndUntil, schedule: ShellSettings.dndSchedule,
+                from: ShellSettings.dndFrom, to: ShellSettings.dndTo, presenting: Notifications.presentationMode }
+            ShellSettings.dndSchedule = false
+            Notifications.presentationMode = false
+            const quietAtFirst = silence && !silence.expanded
+            Notifications.setDnd(true, 0)
+            const dndBand = silence && silence.expanded && silence._shown === "Do Not Disturb" && silence.endable
+            if (silence) silence.end()
+            const dndEnded = !ShellSettings.dnd && silence && !silence.expanded
+            Notifications.presentationMode = true
+            const presenting = silence && silence.expanded && silence._shown === "Presentation Mode" && silence.endable
+            if (silence) silence.end()
+            const presentingEnded = !Notifications.presentationMode && silence && !silence.expanded
+                && silence._shown === "Presentation Mode"
+            ShellSettings.dndFrom = DateTime.hour24
+            ShellSettings.dndTo = (DateTime.hour24 + 1) % 24
+            ShellSettings.dndSchedule = true
+            const scheduled = silence && silence.expanded && silence._shown === "Quiet hours" && !silence.endable
+            ShellSettings.dndSchedule = silenceWas.schedule
+            ShellSettings.dndFrom = silenceWas.from
+            ShellSettings.dndTo = silenceWas.to
+            Notifications.setDnd(silenceWas.dnd, silenceWas.until)
+            Notifications.presentationMode = silenceWas.presenting
+            root._check(quietAtFirst && dndBand && dndEnded && presenting && presentingEnded && scheduled,
+                "history says while popups are held, ends Do Not Disturb or Presentation Mode from there, and only names quiet hours")
             host.requestActivate()
             host.input.wait(40)
             const field = root._findTrayNode(page, item => item.Accessible.name === "Search notifications")
