@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.

@@ -165,6 +165,18 @@ Item {
         width: parent.width
         expanded: root.open
 
+        // built while they show, as InlinePicker's are: Home builds this row closed on nearly every
+        // open, and the options were 90 of its 129 items
+        Loader {
+            width: parent.width
+            active: root._optionsShown
+            sourceComponent: _optionsComponent
+        }
+    }
+
+    Component {
+        id: _optionsComponent
+
         Column {
             id: _optCol
             width: parent.width

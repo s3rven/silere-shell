@@ -818,6 +818,21 @@ ShellRoot {
         }
         choices.destroy()
 
+        // Home builds this row on every open with its options closed; their controls wait for the first look
+        const chipsIn = item => root._findTrayNode(item, node => node.currentValue !== undefined
+            && node.model !== undefined && node.chosen !== undefined)
+        const volumeReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const volumeRow = Qt.createComponent(Qt.resolvedUrl("modules/menu/VolumeRow.qml")).createObject(barFixtureHost, { width: 320 })
+        const closedChips = chipsIn(volumeRow)
+        volumeRow.open = true
+        const openChips = chipsIn(volumeRow)
+        volumeRow.open = false
+        root._check(volumeRow !== null && closedChips === null && openChips !== null && chipsIn(volumeRow) === null,
+            "the volume row builds its options only while they show")
+        volumeRow.destroy()
+        ShellSettings.reduceMotion = volumeReduceWas
+
         const quick = quickSliderFactory.createObject(root, { expandable: true })
         let expansions = 0
         quick.expandToggled.connect(() => { expansions++; quick.expanded = !quick.expanded })
