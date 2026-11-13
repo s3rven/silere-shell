@@ -21,6 +21,8 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- An open calendar stays centred on its clock as the clock's date appears or folds away, instead of slipping to one side.
+- With Reduce motion on, a tray menu opened while the app's name showed on hover opens on its icon instead of beside it.
 - On a theme change, workspace markers, the OSD, notification outlines and update status colours change with the rest of the shell instead of trailing it.
 - The night light's sun arc writes durations like the battery does, "1h 5m" rather than "1h 05m".
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.

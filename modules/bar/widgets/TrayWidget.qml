@@ -56,9 +56,17 @@ Item {
         }
     }
 
-    onXChanged: root._syncMenuAnchors()
-    onYChanged: root._syncMenuAnchors()
-    onImplicitWidthChanged: root._syncMenuAnchors()
+    // a name peek folds as the menu opens, and a resize is read before the zone lays out around it:
+    // under reduced motion the menu stayed the name's width off its icon. So while one is open only
+    // afterAnimating measures, once the frame is laid out
+    onXChanged: if (!TrayMenuState.open) root._syncMenuAnchors()
+    onYChanged: if (!TrayMenuState.open) root._syncMenuAnchors()
+    onImplicitWidthChanged: if (!TrayMenuState.open) root._syncMenuAnchors()
+    Connections {
+        target: root.Window.window
+        enabled: TrayMenuState.open
+        function onAfterAnimating() { root._syncMenuAnchors() }
+    }
 
     // an item without its own menu still opens one, holding only the hide entry
     function _openMenu(item, tile, keyboard): void {
@@ -137,6 +145,10 @@ Item {
                 property real attnPulse: 1.0
                 property bool _attentionSettled: false
                 property bool _dwelled: false
+                Connections {
+                    target: root
+                    function onHoldOpenChanged() { if (!root.holdOpen && !_iconHover.hovered) _tile._dwelled = false }
+                }
 
                 onNeedsAttentionChanged: _attentionSettled = false
                 onModelDataChanged: {
@@ -171,9 +183,9 @@ Item {
                 }
 
                 Component.onCompleted: _tile.syncMenuAnchor()
-                onXChanged: _tile.syncMenuAnchor()
-                onYChanged: _tile.syncMenuAnchor()
-                on_IconXChanged: _tile.syncMenuAnchor()
+                onXChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
+                onYChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
+                on_IconXChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
 
                 Timer {
                     id: _labelDwell

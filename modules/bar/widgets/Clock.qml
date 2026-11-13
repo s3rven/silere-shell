@@ -32,10 +32,18 @@ Item {
         }
     }
 
-    onXChanged: root._syncMenuAnchor()
-    onYChanged: root._syncMenuAnchor()
-    onWidthChanged: root._syncMenuAnchor()
+    // a resize is read before the zone lays out around it, so a centred clock gaining or losing its
+    // date put the open calendar half that width off. While it is open only afterAnimating measures,
+    // once the frame is laid out
+    onXChanged: if (!root._calendarOpen) root._syncMenuAnchor()
+    onYChanged: if (!root._calendarOpen) root._syncMenuAnchor()
+    onWidthChanged: if (!root._calendarOpen) root._syncMenuAnchor()
     Component.onCompleted: root._syncMenuAnchor()
+    Connections {
+        target: root.Window.window
+        enabled: root._calendarOpen
+        function onAfterAnimating() { root._syncMenuAnchor() }
+    }
 
     readonly property bool mirrored: ShellSettings.barWidgetOrderLeftKeys.indexOf("clock") !== -1
 

@@ -338,6 +338,26 @@ ShellRoot {
         }
     }
     property var _barPointerWindow: null
+    // the clock in a centred zone, the layout where its resize moves its middle least and its anchor most
+    Component {
+        id: clockAnchorFactory
+        Window {
+            visible: true
+            width: 600; height: 60
+            color: Theme.panel
+            property alias clock: anchorClock
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                Item { width: 40; height: 20 }
+                Clock { id: anchorClock; screen: null }
+            }
+        }
+    }
+    property var _clockAnchorWindow: null
+    property int _clockAnchorStep: 0
+    property bool _clockAnchorReduceWas: false
+    property bool _clockAnchorDateWas: false
     Component {
         id: settingsSearchWindowFactory
         Window {
@@ -12529,9 +12549,56 @@ ShellRoot {
             f.close()
             f.destroy()
             root._barPointerWindow = null
-            Qt.callLater(root._finish)
+            Qt.callLater(root._runClockAnchorCheck)
         }
     }
+
+    // reduced motion makes the resize one step, the case where a stale read stayed put until the calendar closed
+    function _runClockAnchorCheck(): void {
+        root._clockAnchorReduceWas = ShellSettings.reduceMotion
+        root._clockAnchorDateWas = ShellSettings.clockShowDate
+        ShellSettings.reduceMotion = true
+        ShellSettings.clockShowDate = false
+        root._clockAnchorStep = 0
+        root._clockAnchorWindow = clockAnchorFactory.createObject(root)
+        root._check(root._clockAnchorWindow !== null, "the clock anchor fixture creates an offscreen window")
+        if (root._clockAnchorWindow) _clockAnchorSettle.restart()
+        else Qt.callLater(root._finish)
+    }
+
+    Timer {
+        id: _clockAnchorSettle
+        interval: 200
+        onTriggered: {
+            const clock = root._clockAnchorWindow.clock
+            const middle = clock.mapToItem(null, clock.width / 2, 0).x
+            const held = CalendarState.open && Math.abs(CalendarState.effectiveAnchorX - middle) < 1
+            if (root._clockAnchorStep === 0) {
+                clock._openCalendar()
+                root._check(CalendarState.open && CalendarState.anchorSource === clock,
+                    "a clock in a centred zone opens the calendar from itself")
+                root._clockAnchorWidth = clock.width
+                ShellSettings.clockShowDate = true
+            } else if (root._clockAnchorStep === 1) {
+                root._check(held && clock.width > root._clockAnchorWidth,
+                    "a centred clock gaining its date keeps the open calendar on its middle")
+                ShellSettings.clockShowDate = false
+            } else {
+                root._check(held, "a centred clock losing its date keeps the open calendar on its middle")
+                CalendarState.close()
+                root._clockAnchorWindow.close()
+                root._clockAnchorWindow.destroy()
+                root._clockAnchorWindow = null
+                ShellSettings.clockShowDate = root._clockAnchorDateWas
+                ShellSettings.reduceMotion = root._clockAnchorReduceWas
+                Qt.callLater(root._finish)
+                return
+            }
+            root._clockAnchorStep++
+            restart()
+        }
+    }
+    property real _clockAnchorWidth: 0
 
     function _finish(): void {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
