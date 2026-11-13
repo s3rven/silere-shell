@@ -153,9 +153,7 @@ Item {
             text:           OsdBarState.icon
             color:          OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor
             font.pixelSize: Settings.iconSize + 2
-            MotionBehavior on color {
-                ColorAnimation { duration: Motion.medium }
-            }
+            ColorFade on color { duration: Motion.medium }
         }
 
         Rectangle {
@@ -199,9 +197,7 @@ Item {
                                 : (OsdBarState.hasBar ? Theme.barText : OsdBarState.fillColor)
             font.pixelSize: Settings.fontSize
             font.weight:    Font.Medium
-            MotionBehavior on color {
-                ColorAnimation { duration: Motion.medium }
-            }
+            ColorFade on color { duration: Motion.medium }
         }
     }
 

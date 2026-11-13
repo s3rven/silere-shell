@@ -218,7 +218,7 @@ PanelWindow {
                             // two device pixels at 1.25: one reads as a broken hairline over whatever is behind a floating card
                             outlineWidth: 1.5
                             outlineColor: _osdPillFill._outlineColor
-                            MotionBehavior on outlineColor {ColorAnimation { duration: Motion.medium } }
+                            ColorFade on outlineColor { duration: Motion.medium }
                         }
 
                         Row {
@@ -240,7 +240,7 @@ PanelWindow {
                                 text:           card.icon
                                 color:          card.hasBar ? Theme.text : card.fillColor
                                 font.pixelSize: Settings.fontSize + 4
-                                MotionBehavior on color {ColorAnimation { duration: Motion.medium } }
+                                ColorFade on color { duration: Motion.medium }
                             }
 
                             Rectangle {
@@ -292,9 +292,7 @@ PanelWindow {
                                     : Theme.text
                                 font.pixelSize: Settings.fontSize
 
-                                MotionBehavior on color {
-                                    ColorAnimation { duration: Motion.medium }
-                                }
+                                ColorFade on color { duration: Motion.medium }
                             }
                         }
                     }

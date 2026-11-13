@@ -772,6 +772,19 @@ else
   ok "motion" "every animation duration routes through Motion"
 fi
 
+section "colour motion"
+# A colour read from Theme moves on its own while the palette eases, so a fade of it
+# restarts on every frame of the shift and lands late; ColorFade stands down for that.
+# The palette's own fade is the only other place a colour may animate.
+raw_colour="$(grep -RInE '\bColorAnimation\b' --include='*.qml' shell.qml modules config services \
+  | grep -vE '^config/(ColorFade|PaletteFade)\.qml:' || true)"
+if [ -n "$raw_colour" ]; then
+  fail "colour animations belong to ColorFade, which waits out a palette shift:"
+  printf '%s\n' "$raw_colour"
+else
+  ok "motion" "every colour fade waits out a palette shift"
+fi
+
 section "motion timing direction"
 # A duration or easing that branches on the flag moving the value runs one flip late:
 # Qt starts the Behavior's job before a binding on that flag re-evaluates, so every

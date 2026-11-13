@@ -154,7 +154,7 @@ Item {
         opacity: root.gem ? 0.28 + root._energy * 0.30 : root._energy * 0.60
         scale: 1.0 + root._energy * (root.gem ? 0.035 : 0.10)
         visible: !root._bar && opacity > 0.01
-        MotionBehavior on color   {ColorAnimation { duration: Motion.color } }
+        ColorFade on color {}
     }
 
     Rectangle {
@@ -203,7 +203,7 @@ Item {
         rotation: root.gem ? 45 : 0
         antialiasing: true
         color: root.tint
-        MotionBehavior on color {ColorAnimation { duration: Motion.color } }
+        ColorFade on color {}
 
         Rectangle {
             anchors.fill: parent

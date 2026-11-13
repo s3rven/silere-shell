@@ -54,6 +54,13 @@ ShellRoot {
         color: Theme.menuControl
         ColorFade on color {}
     }
+    // the same fill at the slower pace the OSD's colours keep
+    Rectangle {
+        id: slowFadeProbe
+        visible: false
+        color: Theme.menuControl
+        ColorFade on color { id: slowFade; duration: Motion.medium }
+    }
     QtObject {
         id: invalidProbeAnchor
         property string menuAnchorX: "not-a-number"
@@ -4904,6 +4911,8 @@ ShellRoot {
         root._check(Theme.glass && Qt.colorEqual(glassFadeProbe.color, Theme.menuControl)
                 && !Qt.colorEqual(solidFill, Theme.menuControl),
             "turning blur on switches faded control fills to glass at once instead of fading through a light grey")
+        root._check(Qt.colorEqual(slowFadeProbe.color, Theme.menuControl) && slowFade.duration === Motion.medium,
+            "a colour fade given its own pace still stands down for a palette shift")
         ShellSettings.reduceMotion = reduceGlassWas
         // a machine whose compositor blocks blur never frosts, so only the solid half applies there
         const glassOn = Compositor.blurBlocker.length > 0 || Theme.glass

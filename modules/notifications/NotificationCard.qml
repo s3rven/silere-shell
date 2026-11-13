@@ -1071,9 +1071,7 @@ Item {
             outlineColor: card.isCritical
                 ? Theme.withAlpha(Theme.error,  0.62)
                 : Theme.outline
-            MotionBehavior on outlineColor {
-                ColorAnimation { duration: Motion.medium }
-            }
+            ColorFade on outlineColor { duration: Motion.medium }
         }
     }
 

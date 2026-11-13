@@ -60,9 +60,7 @@ Rectangle {
                 text: root.glyph
                 color: root.statusColor
                 font.pixelSize: Settings.fontSize + 4
-                MotionBehavior on color {
-                    ColorAnimation { duration: Motion.medium }
-                }
+                ColorFade on color { duration: Motion.medium }
 
                 transform: Rotation {
                     id: _rot
@@ -127,9 +125,7 @@ Rectangle {
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     color: Theme.withAlpha(root.statusColor, 0.9)
                     font.pixelSize: Settings.fontCaption
-                    MotionBehavior on color {
-                        ColorAnimation { duration: Motion.medium }
-                    }
+                    ColorFade on color { duration: Motion.medium }
                 }
             }
 
