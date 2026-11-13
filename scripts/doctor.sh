@@ -156,7 +156,11 @@ elif [ "$git_install" -eq 1 ]; then
 elif [ -r "$ROOT/release.json" ]; then
     version="$(_manifest_value version)"
     info "version" "${version:-package build}"
-    info "installation" "package-managed at $ROOT"
+    if [ -r "$ROOT/package-version" ]; then
+        info "installation" "package-managed at $ROOT"
+    else
+        info "installation" "copy without Git at $ROOT"
+    fi
 else
     info "version" "unknown"
     info "installation" "$ROOT"

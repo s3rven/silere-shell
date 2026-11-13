@@ -2659,7 +2659,16 @@ test_plain_copy_is_not_package_managed() (
     [ ! -e "$home/cache/silere-shell/update-error" ] || fail "silere update recorded a check failure for a plain copy"
     out="$(cli link)" || fail "silere link refused a plain copy: $out"
     assert_eq "$copy/scripts/silere" "$(readlink "$home/.local/bin/silere")" "silere link on a plain copy"
+    # no session to read: doctor's systemctl, busctl and compositor queries all fail here
+    doctor() {
+        (unset DBUS_SESSION_BUS_ADDRESS HYPRLAND_INSTANCE_SIGNATURE NIRI_SOCKET WAYLAND_DISPLAY
+            XDG_RUNTIME_DIR="$home/run" cli doctor) | grep ' installation '
+    }
+    mkdir -p "$home/run"
+    case "$(doctor)" in *"copy without Git at $copy") ;; *) fail "silere doctor on a plain copy said: $(doctor)" ;; esac
+
     printf '9.9.9\n' > "$copy/package-version"
+    case "$(doctor)" in *"package-managed at $copy") ;; *) fail "silere doctor on a packaged copy said: $(doctor)" ;; esac
     out="$(cli version)" || fail "silere version failed on a packaged copy"
     case "$out" in *"9.9.9 (managed by "*) ;; *) fail "silere version on a packaged copy said: $out" ;; esac
     rm -f "$home/.local/bin/silere"
@@ -2682,6 +2691,10 @@ test_aur_removal_notes() (
         *"~/.config/systemd/user/silere-shell.service"*) ;;
         *) fail "the AUR removal notes do not name the service silere service install writes" ;;
     esac
+    local page
+    page="$(post_install | sed -n 's/.*Settings > System > \([A-Za-z]*\).*/\1/p')"
+    grep -qF "label: \"${page:-?}\", section:" "$ROOT/services/MenuState.qml" \
+        || fail "the AUR install notes send people to a Settings page that does not exist: ${page:-none}"
 )
 
 test_unit_identity() (

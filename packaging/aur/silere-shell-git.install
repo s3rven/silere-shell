@@ -20,7 +20,7 @@ post_install() {
   ~/.config/matugen/config.toml, and refuses an entry it does not own.
   run matugen once after that. the palette is user-writable and reloads
   live; without it Silere uses its bundled fallback. the same command is
-  behind Settings > System > Maintenance.
+  behind Settings > System > Overview.
 
   cava needs no setup: Silere supplies a temporary profile while its audio
   visualizer is visible and never changes your personal cava config.
