@@ -9459,6 +9459,53 @@ ShellRoot {
                 : Hooks._runner0.timeoutMs === Hooks.maxRuntimeMs,
             "the in-shell hook timer backstops the wrapper instead of racing it")
 
+        // a run is counted by its budget stamp; the hook file does not exist, so nothing it names can start
+        const hookPresentWas = Hooks._present
+        const hookRunTimesWas = Hooks._runTimes
+        const hookCriticalTimesWas = Hooks._criticalTimes
+        const battStateWas = Battery._notificationState
+        Hooks._runTimes = []
+        Hooks._criticalTimes = []
+        Hooks._present = { "battery-critical": true }
+        let wobbleState = null
+        for (const pct of [11, 9.9, 10.1, 9.9, 10.2, 9.8]) {
+            wobbleState = Battery.notificationStateFor(wobbleState, true, pct, true, false, false, 20, 10)
+            Battery._notificationState = wobbleState
+        }
+        root._check(Hooks._runTimes.length === 1,
+            "the battery-critical hook runs once per settled crossing, not again as the level wobbles across the line")
+        Hooks._present = hookPresentWas
+        Battery._notificationState = battStateWas
+
+        const updateCountWas = Updates.count
+        Updates.count = 5
+        Hooks._runTimes = []
+        Hooks._present = { "update-available": true }
+        Updates.count = 2
+        const updateDropRuns = Hooks._runTimes.length
+        Updates.count = 4
+        root._check(updateDropRuns === 0 && Hooks._runTimes.length === 1,
+            "an update-available hook found by a rescan fires on the next rise, never on a falling count")
+        Hooks._present = hookPresentWas
+        Updates.count = updateCountWas
+
+        Hooks._runTimes = []
+        Hooks._workspaceKey = "stale"
+        Hooks._present = { "workspace-changed": true }
+        root._check(Hooks._workspaceKey === Hooks._workspaceKeyOf(Compositor.focusedWorkspaceRef,
+                    Compositor.activeWorkspace(Compositor.focusedMonitor)),
+            "a workspace-changed hook found by a rescan starts from the workspace already shown")
+        const threeWs = { wsId: 3, name: "3", output: "DP-1", active: true }
+        const mailWs = { wsId: -1338, name: "mail", output: "DP-1", active: true }
+        const chatWs = { wsId: -1338, name: "chat", output: "DP-1", active: true }
+        for (const [ref, ws] of [[3, threeWs], [-1338, mailWs], [-1338, chatWs], [-1338, chatWs], [-1, null]])
+            Hooks._workspaceSeen(ref, ws)
+        root._check(Hooks._runTimes.length === 3
+                && Hooks._workspaceArgument(threeWs) === "3" && Hooks._workspaceArgument(chatWs) === "chat",
+            "the workspace-changed hook hears a switch between two named workspaces, gets the number or the name, and stays quiet for a lost workspace")
+        Hooks._present = hookPresentWas
+        Hooks._runTimes = hookRunTimesWas
+        Hooks._criticalTimes = hookCriticalTimesWas
     }
 
     function _checksDispatchAndNotificationOwner(): void {

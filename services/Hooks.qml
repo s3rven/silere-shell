@@ -226,10 +226,11 @@ Singleton {
         }
     }
 
+    // the settled crossing the critical alert uses: raw critical flips again on a wobbling reading or a UPower restart
     Connections {
         target: root._present["battery-critical"] === true ? Battery : null
-        function onCriticalChanged() {
-            if (Battery.critical) root.fire("battery-critical", [Math.round(Battery.pct)])
+        function onAlertWarningChanged() {
+            if (Battery.alertWarning === "critical") root.fire("battery-critical", [Math.round(Battery.pct)])
         }
     }
 
@@ -246,8 +247,11 @@ Singleton {
     }
 
     property int _lastUpdateCount: 0
+    readonly property bool _updatesHooked: root._present["update-available"] === true
+    // a hook found by a rescan starts from the count already shown, or the next drop reads as a rise
+    on_UpdatesHookedChanged: if (root._updatesHooked) root._lastUpdateCount = Updates.count
     Connections {
-        target: root._present["update-available"] === true ? Updates : null
+        target: root._updatesHooked ? Updates : null
         function onCountChanged() {
             const rose = Updates.count > root._lastUpdateCount
             root._lastUpdateCount = Updates.count
@@ -255,14 +259,29 @@ Singleton {
         }
     }
 
+    property string _workspaceKey: ""
+    readonly property bool _workspaceHooked: root._present["workspace-changed"] === true
+    on_WorkspaceHookedChanged: if (root._workspaceHooked) root._workspaceKey = root._workspaceKeyOf(
+        Compositor.focusedWorkspaceRef, Compositor.activeWorkspace(Compositor.focusedMonitor))
     Connections {
-        target: root._present["workspace-changed"] === true ? Compositor : null
+        target: root._workspaceHooked ? Compositor : null
         // niri's ref is an internal id; wsId is the number on screen on both backends. Read a tick later:
         // the ref can move before the monitor's active workspace does, and the hook would get the old one
         function onFocusedWorkspaceRefChanged() { Qt.callLater(root._fireWorkspaceChanged) }
+        function onWorkspacesChanged() { Qt.callLater(root._fireWorkspaceChanged) }
+    }
+    // hyprland 0.57 gives every named workspace the same ref, so only the name tells two apart
+    function _workspaceKeyOf(ref: int, ws): string { return ref + "\n" + (ws ? String(ws.name ?? "") : "") }
+    function _workspaceArgument(ws): string { return !ws ? "" : ws.wsId > 0 ? String(ws.wsId) : String(ws.name ?? "") }
+    function _workspaceSeen(ref: int, ws): void {
+        const key = root._workspaceKeyOf(ref, ws)
+        if (key === root._workspaceKey) return
+        root._workspaceKey = key
+        const argument = root._workspaceArgument(ws)
+        if (argument.length > 0) root.fire("workspace-changed", [argument])
     }
     function _fireWorkspaceChanged(): void {
-        root.fire("workspace-changed", [Compositor.activeWorkspaceId(Compositor.focusedMonitor)])
+        root._workspaceSeen(Compositor.focusedWorkspaceRef, Compositor.activeWorkspace(Compositor.focusedMonitor))
     }
 
     Component.onCompleted: if (ConfigStore.ready) root.rescan()

@@ -106,11 +106,16 @@ Singleton {
         return root._be.monitorName(screen)
     }
 
-    function activeWorkspaceId(output): int {
+    function activeWorkspace(output): var {
         const ws = root.workspaces
         for (let i = 0; i < ws.length; i++)
-            if (ws[i].output === output && ws[i].active) return ws[i].wsId
-        return -1
+            if (ws[i].output === output && ws[i].active) return ws[i]
+        return null
+    }
+
+    function activeWorkspaceId(output): int {
+        const ws = root.activeWorkspace(output)
+        return ws ? ws.wsId : -1
     }
 
     function focusWorkspace(wsId, output): void {

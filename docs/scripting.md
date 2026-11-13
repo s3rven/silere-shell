@@ -188,7 +188,7 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | `notification` | app name, summary, `critical` or `normal` |
 | `theme-changed` | accent colour |
 | `update-available` | count |
-| `workspace-changed` | workspace id |
+| `workspace-changed` | workspace number, or the name of a named workspace |
 
 `update-available` fires when the count rises, and only while Settings › System › Overview tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by
