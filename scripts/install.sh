@@ -1226,7 +1226,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
         install_has_changes=true
         _warn "local Silere edits detected; the installer will not remove them"
         [ -x "$INSTALL_DIR/scripts/repair.sh" ] \
-            && _warn "preview a safe restore with: bash $INSTALL_DIR/scripts/repair.sh"
+            && _warn "preview a safe restore with: bash $(printf '%q' "$INSTALL_DIR/scripts/repair.sh")"
     fi
     if _dry; then
         _would "update $INSTALL_DIR to the latest signed release"

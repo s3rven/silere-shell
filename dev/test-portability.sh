@@ -1909,7 +1909,9 @@ EOF
 test_repair_workflow() (
     export GIT_CONFIG_GLOBAL=/dev/null
     export GIT_CONFIG_NOSYSTEM=1
-    local repo="$TMP/repair" linked="$TMP/repair-linked" preview
+    # a space in the path: the hints must paste back as the command they name
+    local repo="$TMP/repair it" linked="$TMP/repair-linked" preview hint
+    local -a argv
     mkdir -p "$repo/scripts"
     cp "$ROOT/scripts/repair.sh" "$repo/scripts/repair.sh"
     cp "$ROOT/.gitignore" "$repo/.gitignore"
@@ -1928,14 +1930,18 @@ test_repair_workflow() (
     preview="$(cd "$TMP" && bash "$repo/scripts/repair.sh")"
     grep -qF 'Nothing was changed' <<<"$preview" \
         || fail "repair preview did not state that it was side-effect free"
-    grep -qF "bash $repo/scripts/repair.sh --apply" <<<"$preview" \
-        || fail "repair preview hinted at a command that only works from the checkout: $preview"
+    hint="$(sed -n 's/.*`\(bash [^`]*\)`.*/\1/p' <<<"$preview")"
+    eval "argv=($hint)"
+    [ "${#argv[@]}" = 3 ] && [ "${argv[1]}" = "$repo/scripts/repair.sh" ] && [ "${argv[2]}" = --apply ] \
+        || fail "repair preview hinted at a command that does not paste back as itself: $preview"
     assert_eq "customized" "$(<"$repo/tracked.qml")" "repair preview tracked file"
     [ -f "$repo/custom.qml" ] || fail "repair preview removed an untracked file"
 
     preview="$(cd "$TMP" && bash "$repo/scripts/repair.sh" --apply --yes)"
-    grep -qF "bash $repo/scripts/repair.sh --undo" <<<"$preview" \
-        || fail "repair apply hinted at an undo that only works from the checkout: $preview"
+    hint="$(sed -n 's/.*`\(bash [^`]*\)`.*/\1/p' <<<"$preview")"
+    eval "argv=($hint)"
+    [ "${#argv[@]}" = 3 ] && [ "${argv[1]}" = "$repo/scripts/repair.sh" ] && [ "${argv[2]}" = --undo ] \
+        || fail "repair apply hinted at an undo that does not paste back as itself: $preview"
     assert_eq "shipped" "$(<"$repo/tracked.qml")" "repair apply tracked file"
     [ ! -e "$repo/custom.qml" ] || fail "repair apply left an untracked source file"
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair apply personal settings"

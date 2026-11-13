@@ -336,7 +336,7 @@ _rollback_applied_update() {
     [ "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" = "$JOURNAL_TO" ] \
         || _fail "the checkout moved since the update — roll back manually"
     _has_local_changes \
-        && _fail "local changes block the rollback — run: bash $ROOT/scripts/repair.sh --apply"
+        && _fail "local changes block the rollback — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
     _reset_preserving_user_files "$JOURNAL_FROM" \
         || _fail "could not restore $JOURNAL_FROM"
     _clear_apply_transaction \

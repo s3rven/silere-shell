@@ -130,6 +130,7 @@ settings file carries its own `__version` and migrates separately.
 - Enter on a widget's grip in Settings › Widgets, or a screen reader's press, moves the widget one place along the bar.
 - On Hyprland, a second Silere started from a hook, or from an app the shell launched itself, no longer crashes at start.
 - With Do Not Disturb on, a notification that lands on the open History page in front of you no longer counts as missed.
+- `silere repair` and the updater quote a checkout path with spaces in the commands they suggest, so the commands paste back as written.
 
 ## Releases
 
