@@ -6782,6 +6782,29 @@ ShellRoot {
             hypr._workspaceRefreshKey = refreshKeyWas
             hypr._workspaceRefreshTries = refreshTriesWas
             hypr._eventSeq = seqWas
+            const replyWindows = [0, 1, 2].map(i => Qt.createQmlObject(
+                "import QtQuick; QtObject { property string address: \"c" + i + "\"; property var lastIpcObject: ({}) }", root))
+            let copyRebuilds = 0
+            const countCopyRebuild = () => copyRebuilds++
+            hypr._ipcCopiesChanged.connect(countCopyRebuild)
+            hypr._ipcWatch.model = replyWindows
+            discoveryClock.wait(1)
+            const listRebuilds = copyRebuilds
+            for (const w of replyWindows) w.lastIpcObject = { address: "0x" + w.address, focusHistoryID: 1 }
+            const rebuiltInReply = copyRebuilds - listRebuilds
+            discoveryClock.wait(1)
+            hypr._ipcCopiesChanged.disconnect(countCopyRebuild)
+            hypr._ipcWatch.model = Qt.binding(() => hypr._liveToplevels({}))
+            discoveryClock.wait(1)
+            for (const w of replyWindows) w.destroy()
+            root._check(listRebuilds === 1 && rebuiltInReply === 0 && copyRebuilds === 2,
+                "a new window list and a burst of window replies each rebuild the shared window copies once, after the event")
+            const liveIpc = { address: "0xa1", workspace: { id: 2, name: "2" }, focusHistoryID: 3 }
+            const copied = hypr.ipcCopiesOf([{ address: "a1", lastIpcObject: liveIpc }, null,
+                { address: "", lastIpcObject: { address: "0x0" } }, { address: "b2", lastIpcObject: null }])
+            root._check(Object.keys(copied).join() === "a1,b2" && copied.a1 !== liveIpc
+                    && copied.a1.workspace.id === 2 && copied.a1.focusHistoryID === 3 && copied.b2 === null,
+                "each window's IPC map is copied once, as plain data, under its address")
             root._check(!hypr._shortcuts.owns && hypr._shortcuts._held.length === 0,
                 "a shell silere run did not start claims no Hyprland global shortcut")
         }

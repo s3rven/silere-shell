@@ -2100,6 +2100,18 @@ else
   ok "closed windows" "toplevel models skip windows hyprland already closed"
 fi
 
+# every client reply re-runs the window models once per window (focusHistoryID moves on all of
+# them), so a model that copies each window's IPC map costs window-count-squared copies per switch
+model_copies="$(awk '/^    readonly property var (workspaces|workspaceToplevels|toplevels|activeToplevel): \{/ { inside = 1 }
+  inside && /_ipcOf\(|lastIpcObject/ { print FILENAME ":" FNR ": " $0 }
+  inside && /^    \}$/ { inside = 0 }' services/CompositorHyprland.qml </dev/null)"
+if [ -n "$model_copies" ]; then
+  fail "the Hyprland window models must read _ipcCopies, never copy a window's IPC map themselves:"
+  printf '%s\n' "$model_copies"
+else
+  ok "window copies" "the window models share one IPC copy per window per reply"
+fi
+
 # Quickshell's Hyprland bindings do not always mirror the compositor: hyprland reports
 # unfocus as an empty activewindowv2 address, quickshell's parser bails on it, and
 # Hyprland.activeToplevel then keeps the last focused window forever. The Hyprland

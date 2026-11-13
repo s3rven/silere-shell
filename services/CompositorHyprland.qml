@@ -416,7 +416,7 @@ QtObject {
     function _withoutClosed(tops, closed): var {
         return tops.filter(t => !(t && t.address && closed["0x" + t.address] === true))
     }
-    // an empty closed set lists every window quickshell holds, ghosts included: only the eviction asks for that
+    // an empty closed set lists every window quickshell holds, ghosts included: only the eviction and the copies ask for that
     function _liveToplevels(closed = root._closedAddrs): var {
         return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], closed)
     }
@@ -428,6 +428,27 @@ QtObject {
     property int _workspaceRefreshTries: 0
     // a plain copy: a lastIpcObject kept in a variable makes Qt watch the toplevel, and Qt can free that watch mid-update
     function _ipcOf(t): var { return t && t.lastIpcObject ? JSON.parse(JSON.stringify(t.lastIpcObject)) : null }
+    // copied once per reply: inside the models, every reply re-ran them once per window and a switch made window-count-squared copies
+    property var _ipcCopies: ({})
+    function ipcCopiesOf(tops): var {
+        const out = Object.create(null)
+        for (let i = 0; i < tops.length; i++) {
+            const t = tops[i]
+            if (t && t.address) out[t.address] = root._ipcOf(t)
+        }
+        return out
+    }
+    function _syncIpcCopies(): void { root._ipcCopies = root.ipcCopiesOf(root._liveToplevels({})) }
+    property Instantiator _ipcWatch: Instantiator {
+        model: root._liveToplevels({})
+        delegate: Connections {
+            required property var modelData
+            target: modelData
+            function onLastIpcObjectChanged() { Qt.callLater(root._syncIpcCopies) }
+        }
+        onObjectAdded: Qt.callLater(root._syncIpcCopies)
+        onObjectRemoved: Qt.callLater(root._syncIpcCopies)
+    }
 
     function _missingWorkspaceId(workspaces, toplevels): int {
         const known = {}
@@ -479,9 +500,10 @@ QtObject {
         // hyprland keeps a workspace object alive after its last window closes, so existence is
         // not occupancy; count real toplevels or an emptied workspace stays lit like a full one
         const tops = root._liveToplevels()
+        const copies = root._ipcCopies
         const winCount = {}
         for (let i = 0; i < tops.length; i++) {
-            const c = root._ipcOf(tops[i])
+            const c = tops[i] ? copies[tops[i].address] : null
             if (!c || !c.address) continue
             const id = root._wsNumber(c.workspace)
             if (id > 0) winCount[id] = (winCount[id] ?? 0) + 1
@@ -517,10 +539,11 @@ QtObject {
             wsOut[ws.name ?? ""] = output
         }
         const tops = root._liveToplevels()
+        const copies = root._ipcCopies
         const out = []
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
-            const c = root._ipcOf(t)
+            const c = t ? copies[t.address] : null
             if (!c || !c.address) continue
             const wsName = c.workspace ? String(c.workspace.name ?? "") : ""
             // -1 is reserved for a window with no workspace, which window matching skips
