@@ -6798,6 +6798,29 @@ ShellRoot {
         ShellSettings.reduceMotion = reduceWas
         titleWidget.destroy()
         slot.destroy()
+        {
+            // first: switching it on settles the title back onto the compositor's
+            ShellSettings.reduceMotion = true
+            const host = keyboardFixtureFactory.createObject(root)
+            const cut = windowTitleFactory.createObject(host.contentItem, { widthBudget: 10000, barActive: true, y: 200 })
+            cut.layoutWidthLimit = 120
+            cut._shownVisible = true
+            cut._shownShowApp = false
+            cut._shownTitle = "A window title far too long for the bar to show it whole"
+            cut._widthGlide._snap()
+            cut._op = 1
+            const drawn = root._findTrayNode(cut, item => item.textFormat === Text.StyledText)
+            host.requestActivate()
+            host.input.mouseMove(cut, 30, cut.height / 2)
+            const end = drawn && drawn.elide === Text.ElideLeft && !cut._marqueeLive
+            host.input.mouseMove(host.contentItem, 400, 20)
+            const start = drawn && drawn.elide === Text.ElideRight
+            root._check(cut._overflow > 2 && end && start,
+                "under Reduce motion a cut-short title shows its end under the pointer instead of scrolling, and its start again after")
+            ShellSettings.reduceMotion = reduceWas
+            cut.destroy()
+            host.destroy()
+        }
         }
         {
             const fontWas = ShellSettings.fontFamily

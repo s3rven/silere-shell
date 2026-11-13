@@ -486,6 +486,9 @@ Item {
         ? Math.max(0, root._fullTextWidth - root._measuredContentWidth) : 0
     readonly property bool _scrolling: _titleHover.hovered && root._overflow > 2
         && root.barActive && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
+    // under Reduce motion the title holds still, so the pointer shows its end in place instead of scrolling to it
+    readonly property bool _showsEnd: _titleHover.hovered && root._overflow > 2 && root.barActive
+        && ShellSettings.reduceMotion && !Idle.isIdle
     property real _scrollX: 0
     readonly property bool _marqueeLive: root._scrolling || root._scrollX < -0.5
     on_ScrollingChanged: {
@@ -575,7 +578,8 @@ Item {
                     text:           root._formatted
                     textFormat:     Text.StyledText
                     font.pixelSize: Settings.fontSize
-                    elide:          root._marqueeLive ? Text.ElideNone : Text.ElideRight
+                    elide:          root._marqueeLive ? Text.ElideNone
+                        : root._showsEnd ? Text.ElideLeft : Text.ElideRight
                     // the cap is already in the measured width; following the easing box re-elides every frame of a longer title
                     width:          root._marqueeLive ? root._fullTextWidth : root._measuredContentWidth
                 }
