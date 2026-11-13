@@ -344,6 +344,20 @@ test_qml_module_lookup() (
     fi
 )
 
+test_qtpaths_must_be_qt6() (
+    local stubs="$TMP/qtpaths-stubs"
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\ncase "$2" in QT_VERSION) echo "$SILERE_TEST_QT" ;; QT_INSTALL_QML) echo "%s/qml" ;; esac\n' \
+        "$stubs" > "$stubs/qtpaths"
+    chmod +x "$stubs/qtpaths"
+    roots() {
+        SILERE_TEST_QT="$1" PATH="$stubs" QML2_IMPORT_PATH='' QML_IMPORT_PATH='' "$BASH" -c \
+            'source "$1"; printf "%s\n" "${_silere_qml_import_roots[@]}"' _ "$ROOT/scripts/lib/qml-modules.sh"
+    }
+    ! grep -qx "$stubs/qml" <<<"$(roots 5.15.13)" || fail "a Qt 5 qtpaths put its QML modules ahead of Qt 6's"
+    grep -qx "$stubs/qml" <<<"$(roots 6.10.1)" || fail "a Qt 6 qtpaths without qtpaths6 was not asked for its QML root"
+)
+
 test_quickshell_version_after_qt_warning() (
     local stub="$TMP/qs-version-stub"
     mkdir -p "$stub"
@@ -3690,6 +3704,7 @@ test_marker_removal
 test_uninstall_targets_and_backups
 test_uninstall_empty_optional_paths
 test_qml_module_lookup
+test_qtpaths_must_be_qt6
 test_quickshell_version_after_qt_warning
 test_quickshell_qt_drift
 test_qml_type_floor

@@ -88,6 +88,8 @@ if [ -n "${QML_IMPORT_PATH:-}" ]; then
 fi
 for _silere_qtpaths in qtpaths6 qtpaths; do
     if command -v "$_silere_qtpaths" >/dev/null 2>&1; then
+        # a plain qtpaths can be qt 5's, whose QtQuick.Shapes would fail the qt 6 floor
+        [ "$_silere_qtpaths" = qtpaths6 ] || [[ "$("$_silere_qtpaths" --query QT_VERSION 2>/dev/null)" == 6.* ]] || break
         _silere_qml_qt_root="$("$_silere_qtpaths" --query QT_INSTALL_QML 2>/dev/null || true)"
         [ -n "$_silere_qml_qt_root" ] && _silere_qml_import_roots+=("$_silere_qml_qt_root")
         unset _silere_qml_qt_root
