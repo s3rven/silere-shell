@@ -70,6 +70,7 @@ settings file carries its own `__version` and migrates separately.
 - A bar widget's level bar no longer sticks out past the widget while it shrinks.
 - On a crowded bar, the media title resizes along with the widgets beside it instead of after them.
 - With Reduce motion on, hovering a cut-short window title shows its end.
+- The bar no longer logs a binding loop when Reduce motion turns on, or the screen goes idle, while a window title is closing.
 - Choosing a search result for Artist, Clock format or style, Theme source, Underline mode, or the battery and temperature warnings scrolls to that row and highlights it, as for every other setting.
 - Screen readers announce rows under Settings › Feedback › History › Muted apps as "Mute popups from" and the app's name, not the bare name.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.

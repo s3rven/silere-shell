@@ -7247,6 +7247,14 @@ ShellRoot {
         for (let i = 0; i < 200 && glide.running; i++) glide._advance(0.016)
         root._check(glide.value === 0 && titleWidget.implicitWidth === 0 && !slot.visible,
             "a title gliding shut ends at zero width instead of stopping a fraction short when its slot hides")
+        titleWidget._shownTitle = "A title on its way out"
+        glide._snap()
+        titleWidget._shownTitle = ""
+        glide._advance(0.016)
+        const midway = glide.running && glide.value > 0.5 && slot.visible
+        ShellSettings.reduceMotion = true
+        root._check(midway && !glide.running && glide.value === 0 && titleWidget.implicitWidth === 0 && !slot.visible,
+            "Reduce motion switched on while a title glides shut ends the glide at zero as its slot hides")
         ShellSettings.reduceMotion = reduceWas
         titleWidget.destroy()
         slot.destroy()

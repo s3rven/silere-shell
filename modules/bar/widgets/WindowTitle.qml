@@ -532,7 +532,7 @@ Item {
     // a zone widget shoves its neighbours when it resizes, and titles change on every navigation;
     // a glide keeps its speed when focus moves again before the last change settles
     implicitWidth: root._widthGlide.value
-    readonly property SmoothGlide _widthGlide: SmoothGlide { target: root._naturalWidth; duration: Motion.ms(110); gate: root.barActive && root.visible }
+    readonly property SmoothGlide _widthGlide: SmoothGlide { target: root._naturalWidth; duration: Motion.ms(110); gate: root.barActive }
     // not parent.height: the zone's Loader takes its height from this item, so reading it back collapses to zero and the clip below erases the text
     implicitHeight: Metrics.barHeight
 
