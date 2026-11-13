@@ -33,10 +33,11 @@ section() {
     seen_section=1
     printf '%s== %s ==%s\n' "$BOLD" "$1" "$R"
 }
-ok()   { printf '%sok%s   %-18s %s\n' "$GREEN" "$R" "$1" "$2"; }
-info() { printf '     %-18s %s\n' "$1" "$2"; }
-warn() { printf '%swarn%s %-18s %s\n' "$YELLOW" "$R" "$1" "$2"; }
-fail() { printf '%sfail%s %-18s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
+# wide enough for the longest name, nm-connection-editor
+ok()   { printf '%sok%s   %-20s %s\n' "$GREEN" "$R" "$1" "$2"; }
+info() { printf '     %-20s %s\n' "$1" "$2"; }
+warn() { printf '%swarn%s %-20s %s\n' "$YELLOW" "$R" "$1" "$2"; }
+fail() { printf '%sfail%s %-20s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
 
 _package_family() {
     local id="" like=""
@@ -71,14 +72,17 @@ _package_for() {
         pacman:ssh-keygen|zypper:ssh-keygen|xbps:ssh-keygen) printf 'openssh' ;;
         apt:ssh-keygen)     printf 'openssh-client' ;;
         dnf:ssh-keygen)     printf 'openssh-clients' ;;
-        pacman:nmcli)       printf 'networkmanager' ;;
+        pacman:nmcli|pacman:nmtui) printf 'networkmanager' ;;
         apt:nmcli)          printf 'network-manager' ;;
         dnf:nmcli|zypper:nmcli) printf 'NetworkManager' ;;
         *:pwvucontrol) printf 'pavucontrol' ;;
         *:wpctl)       printf 'wireplumber' ;;
         pacman:pw-dump) printf 'pipewire' ;;
-        pacman:hyprsunset|pacman:matugen) printf '%s' "$tool" ;;
-        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset)
+        pacman:hyprsunset|pacman:matugen|pacman:xdg-terminal-exec|pacman:fakeroot) printf '%s' "$tool" ;;
+        pacman:nm-connection-editor|dnf:nm-connection-editor) printf '%s' "$tool" ;;
+        apt:nm-connection-editor) printf 'network-manager-gnome' ;;
+        *:blueman-manager) printf 'blueman' ;;
+        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset|*:ddcutil)
             printf '%s' "$tool" ;;
         *) return 1 ;;
     esac

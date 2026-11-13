@@ -15,6 +15,7 @@ settings file carries its own `__version` and migrates separately.
 
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
+- `silere doctor` names the package for more missing tools, and its columns line up.
 
 ### Fixed
 
