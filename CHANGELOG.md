@@ -11,6 +11,14 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Changed
+
+- The uninstaller lists what it kept and how to stop the shell that is still running.
+
+### Fixed
+
+- Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
+
 ## Releases
 
 - [1.7.0](docs/releases/1.7.0.md) — 2026-11-12

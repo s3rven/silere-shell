@@ -203,6 +203,19 @@ test_marker_removal() (
         || fail "valid marker pair was rejected"
     assert_eq $'before\nafter' "$(<"$dir/valid.conf")" "valid marker removal"
 
+    # the installer appends a blank line and a block; removal gives the file back byte for byte,
+    # and keeps blank lines of the user's own
+    printf 'one\n\ntwo\n' > "$dir/appended.expect"
+    { cat "$dir/appended.expect"; printf '\n%s\n' '# silere-shell begin' managed '# silere-shell end'; } > "$dir/appended.conf"
+    _remove_block "$dir/appended.conf" '# silere-shell begin' '# silere-shell end' \
+        || fail "an appended marker pair was rejected"
+    _silere_same_text "$dir/appended.expect" "$dir/appended.conf" \
+        || fail "removing an appended block left the installer's blank line behind"
+    printf '%s\n' one '' '' '# silere-shell begin' managed '# silere-shell end' '' two > "$dir/spaced.conf"
+    _remove_block "$dir/spaced.conf" '# silere-shell begin' '# silere-shell end' \
+        || fail "a spaced marker pair was rejected"
+    assert_eq $'one\n\n\ntwo\nx' "$(cat "$dir/spaced.conf"; printf x)" "only the installer's blank line goes"
+
     local name
     for name in missing-end reversed duplicate-begin duplicate-pair; do
         case "$name" in

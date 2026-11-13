@@ -51,6 +51,12 @@ _silere_marker_pair_valid() {
     ' "$1"
 }
 
+# 0 when two files hold the same bytes, trailing newlines included; cmp is not in every base install
+_silere_same_text() {
+    [ -f "$1" ] && [ -f "$2" ] || return 1
+    [ "$(cat -- "$1"; printf x)" = "$(cat -- "$2"; printf x)" ]
+}
+
 # another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
 _silere_other_bars() {
     local bar line config="" qs_bin
