@@ -567,7 +567,7 @@ PageShell {
 
             SectionLabel { label: "Players" }
             SettingsCard {
-                dividerIndent: 42
+                dividerIndent: 14 + Metrics.glyphSlotWidth + 10
 
                 Repeater {
                     model: Media.playerList

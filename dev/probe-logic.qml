@@ -186,6 +186,7 @@ ShellRoot {
     }
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: toggleRowFactory; ToggleRow { width: 320; label: "Probe toggle" } }
+    Component { id: sliderRowFactory; SliderRow { width: 320; label: "Probe slider"; glyph: "󰕰" } }
     Component { id: systemWidgetFactory; SystemWidget {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
@@ -7752,6 +7753,23 @@ ShellRoot {
                 && stopsFor(0, 1, 0.3) === 3 && stopsFor(0, 1, 0.05) === 0 && stopsFor(0, 1, 0) === 0,
             "a slider marks the inner stops of a short grid and leaves a fine or continuous one plain")
         track.destroy()
+        const spineScaleWas = ShellSettings.uiScale
+        const spineSlider = sliderRowFactory.createObject(barFixtureHost)
+        const spineToggle = toggleRowFactory.createObject(barFixtureHost, { glyph: "󰕰" })
+        const labelX = (row, text) => {
+            const label = root._findTrayNode(row, item => item.text === text && item.font !== undefined)
+            return label ? label.mapToItem(row, 0, 0).x : -1
+        }
+        const spines = []
+        for (const scale of [1, 1.5]) {
+            ShellSettings.uiScale = scale
+            spines.push([labelX(spineSlider, "Probe slider"), labelX(spineToggle, "Probe toggle")])
+        }
+        ShellSettings.uiScale = spineScaleWas
+        root._check(spines.every(pair => pair[0] > 0 && pair[0] === pair[1]) && spines[1][0] > spines[0][0],
+            "a slider row's label stays on the toggle rows' column when large type widens the glyph slot")
+        spineSlider.destroy()
+        spineToggle.destroy()
 
         const deviceSlider = quickSliderFactory.createObject(barFixtureHost, {
             width: 320, value: 0.25, accessibleName: "Probe device"

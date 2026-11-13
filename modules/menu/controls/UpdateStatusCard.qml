@@ -171,9 +171,9 @@ Rectangle {
 
             ShellText {
                 id: _detailText
-                x: 42
+                x: 14 + Metrics.glyphSlotWidth + 10
                 y: 3
-                width: parent.width - 42 - 12
+                width: parent.width - x - 12
                 text: root.detail
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                 opacity: root.detail.length > 0 ? 1 : 0

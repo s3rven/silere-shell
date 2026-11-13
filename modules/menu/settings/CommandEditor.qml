@@ -62,9 +62,9 @@ Column {
         height: Math.max(Metrics.rowHeightFor(32), _label.implicitHeight + 12)
         ShellText {
             id: _label
-            x: 42
+            x: 14 + Metrics.glyphSlotWidth + 10
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, parent.width - 56)
+            width: Math.max(0, parent.width - x - 14)
             text: root.label
             color: Theme.text
             font.pixelSize: Settings.fontSize

@@ -40,7 +40,7 @@ Item {
 
             ShellText {
                 anchors.left: parent.left
-                anchors.leftMargin: 42
+                anchors.leftMargin: 14 + Metrics.glyphSlotWidth + 10
                 anchors.right: _trailing.left
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter

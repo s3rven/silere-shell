@@ -49,7 +49,7 @@ Item {
         anchors.leftMargin: 14
         y: Math.round((root._headerH - height) / 2)
         visible: root.glyph.length > 0
-        width: visible ? 18 : 0
+        width: visible ? Metrics.glyphSlotWidth : 0
         horizontalAlignment: Text.AlignHCenter
         text:           root.glyph
         color:          Theme.withAlpha(Theme.subtext, 0.85)

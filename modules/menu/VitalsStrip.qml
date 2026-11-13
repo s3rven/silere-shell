@@ -169,7 +169,7 @@ SettingsCard {
             anchors.left: parent.left
             anchors.leftMargin: 14
             anchors.verticalCenter: parent.verticalCenter
-            width: 18; height: 18
+            width: Metrics.glyphSlotWidth; height: 18
 
             ShellText {
                 anchors.centerIn: parent

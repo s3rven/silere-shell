@@ -23,7 +23,7 @@ Item {
     ShellText {
         id: _label
         anchors.left: parent.left
-        anchors.leftMargin: 42
+        anchors.leftMargin: 14 + Metrics.glyphSlotWidth + 10
         anchors.top: parent.top
         anchors.topMargin: 6
         anchors.right: _value.left
