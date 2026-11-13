@@ -335,7 +335,8 @@ Singleton {
             else low = middle
         }
         let out = tinted(high)
-        // the fitted colour rounds to its own 8-bit channels, a hair off the grey's
+        // _labFits lets a channel sit 0.0005 past the gamut and _labColor clamps it back, so the fitted
+        // colour's luminance lands a hair off the grey's
         for (let i = 0; i < 8 && high < 1 && !passes(out); i++) {
             high = Math.min(1, high + 1 / 512)
             out = tinted(high)
