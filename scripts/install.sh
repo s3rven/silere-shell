@@ -834,12 +834,16 @@ _backup() {
 }
 
 # Copy src→dst after asking; backs up an existing file first.
-# Returns 0 only when it actually writes, so callers can record the step.
+# Returns 0 when it writes, 2 when a copy is already in place, 1 when skipped.
 _install_file() {
     local label="$1" src="$2" dst="$3"
-    if [ -r "$dst" ]; then
+    # a reinstall would otherwise ask, then back up Silere's own file as if it were the user's
+    if _silere_same_text "$src" "$dst"; then
+        _ok "already current"
+        return 2
+    elif [ -r "$dst" ]; then
         _skip "already at $dst"
-        _ask "Overwrite?" || return 1
+        _ask "Overwrite?" || return 2
         _backup "$dst"
         if _dry; then _would "overwrite $dst"; return 0; fi
         cp "$src" "$dst" || _die "could not write $dst"
@@ -1070,18 +1074,19 @@ fi
 # counts, so installing from a TTY or over SSH before the compositor is up works.
 _section "compositor"
 
-_supported_compositor() {
-    [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && return 0
-    [ -n "${NIRI_SOCKET:-}" ] && return 0
-    _find_compositor_pid Hyprland >/dev/null 2>&1 && return 0
-    _find_compositor_pid niri >/dev/null 2>&1 && return 0
-    [ -n "$(_hypr_config_path)" ] && return 0
-    [ -f "$(_niri_config_path)" ] && return 0
-    return 1
+_supported_compositor() { # prints what it found
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then echo "Hyprland is running"
+    elif [ -n "${NIRI_SOCKET:-}" ]; then echo "niri is running"
+    elif _find_compositor_pid Hyprland >/dev/null 2>&1; then echo "Hyprland is running"
+    elif _find_compositor_pid niri >/dev/null 2>&1; then echo "niri is running"
+    elif [ -n "$(_hypr_config_path)" ]; then echo "Hyprland config found"
+    elif [ -f "$(_niri_config_path)" ]; then echo "niri config found"
+    else return 1
+    fi
 }
 
-if _supported_compositor; then
-    _ok "Hyprland or niri found"
+if compositor_found="$(_supported_compositor)"; then
+    _ok "$compositor_found"
 else
     _session="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-unknown}}"
     _warn "no Hyprland or niri found — this session reports \"$_session\""
@@ -1140,8 +1145,10 @@ did_font=false
 
 FONT_DIR="$HOME/.local/share/fonts/JetBrainsMono"
 
+had_font=false
 if _font_installed; then
     _ok "already installed"
+    had_font=true
 else
     _warn "JetBrainsMono Nerd Font not found"
     if _dry; then
@@ -1310,6 +1317,9 @@ fi
 ROOT="$INSTALL_DIR"
 did_tmpl=false did_toml=false did_autostart=false did_update=false did_cli=false
 did_keybind=false
+# set up by an earlier run and left as it was; the summary reports these as in place, not skipped
+had_tmpl=false had_toml=false had_update=false had_cli=false had_keybind=false
+cli_planned=false
 autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
 # compositor lines spell out an ordinary path; one holding anything hyprlang or sh would reinterpret (#, $, quotes, spaces) is written byte-encoded
@@ -1331,12 +1341,14 @@ if [ ! -x "$CLI_TARGET" ] && ! _dry; then
 elif [ -L "$CLI_LINK" ] \
         && [ "$(readlink -f -- "$CLI_LINK" 2>/dev/null || true)" = "$CLI_TARGET" ]; then
     _ok "already available at $CLI_LINK"
+    had_cli=true
 elif [ -e "$CLI_LINK" ] || [ -L "$CLI_LINK" ]; then
     _warn "$CLI_LINK already exists and is not owned by this Silere install"
     _skip "left it untouched; run $CLI_TARGET directly"
 elif _ask "Install the silere command (run, status, doctor, ipc, update)?"; then
     if _dry; then
         _would "create $CLI_LINK → $CLI_TARGET"
+        cli_planned=true
     else
         (umask 077 && mkdir -p "$CLI_DIR") || _die "could not create $CLI_DIR"
         _txn_before_file "$CLI_LINK" || _die "could not journal $CLI_LINK"
@@ -1365,6 +1377,11 @@ if [ -L "$CLI_LINK" ] \
         fi
     done < <(_silere_completion_links "$ROOT")
 fi
+cli_on_path=false
+case ":$PATH:" in *":$CLI_DIR:"*) cli_on_path=true ;; esac
+if { $did_cli || $had_cli || $cli_planned; } && ! $cli_on_path; then
+    _warn "$CLI_DIR is not on your PATH, so silere only runs by its full path; add it in your shell config"
+fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
 _section "matugen template"
@@ -1372,8 +1389,10 @@ TMPL_SRC="$ROOT/assets/matugen-theme.json"
 TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
 if ! $has_matugen; then
     _skip "matugen not installed"
-elif _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST"; then
-    did_tmpl=true
+else
+    tmpl_rc=0
+    _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST" || tmpl_rc=$?
+    case "$tmpl_rc" in 0) did_tmpl=true ;; 2) had_tmpl=true ;; esac
 fi
 
 # ── matugen config.toml ──────────────────────────────────────────────────────────
@@ -1386,6 +1405,7 @@ elif [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; the
     if grep -qF "input_path  = $MATUGEN_INPUT_TOML" "$MATUGEN_CFG" \
             && grep -qF "output_path = $MATUGEN_OUTPUT_TOML" "$MATUGEN_CFG"; then
         _ok "entry already present"
+        had_toml=true
     elif _dry; then
         _would "rewrite the silere-shell block in $MATUGEN_CFG"
     elif _ask "Update the existing Silere entry for this install?"; then
@@ -1656,7 +1676,7 @@ if [ "$receipt_compositor" = niri ]; then
 elif [[ "$HYPR_CONFIG" == *.lua ]] && _owned_block_contains "$HYPR_CONFIG" '-- silere-shell keybind begin' \
         '-- silere-shell keybind end' 'call menu toggle'; then
     _ok "already present in $(_tilde "$HYPR_CONFIG")"
-    did_keybind=true
+    had_keybind=true
     receipt_keybind="$HYPR_CONFIG"
 elif [[ "$HYPR_CONFIG" == *.lua ]] && _lua_ends_in_return "$HYPR_CONFIG"; then
     _skip "$(_tilde "$HYPR_CONFIG") ends in a return — add this where your config declares its binds:"
@@ -1686,7 +1706,7 @@ elif [ -z "$HYPR_CONFIG" ]; then
 elif _owned_block_contains "$HYPR_CONFIG" '# silere-shell keybind begin' \
         '# silere-shell keybind end' 'call menu toggle'; then
     _ok "already present in $(_tilde "$HYPR_CONFIG")"
-    did_keybind=true
+    had_keybind=true
     receipt_keybind="$HYPR_CONFIG"
 elif _menu_bind_taken; then
     _warn "$MENU_BIND_MODS + $MENU_BIND_KEY is already bound in your Hyprland config"
@@ -1711,6 +1731,11 @@ _section "update-check timer"
 
 if ! command -v systemctl >/dev/null 2>&1; then
     _skip "systemctl not found"
+elif systemctl --user is-enabled --quiet silere-update.timer 2>/dev/null \
+        && grep -qF "$ROOT/scripts/update.sh" "$CONFIG_HOME/systemd/user/silere-update.service" 2>/dev/null; then
+    # asked again, the [y/N] default would read as turning it off
+    _ok "already enabled"
+    had_update=true
 elif _ask_no "Install daily update-check timer (flags pending updates in the bar)?"; then
     _txn_timer_state || _die "could not journal update timer state"
     _txn_before_file "$CONFIG_HOME/systemd/user/silere-update.service" \
@@ -1737,15 +1762,30 @@ fi
 
 _txn_commit || _die "could not commit the install receipt; the install was rolled back"
 
+# shellcheck disable=SC2059
+_done_row() { # $1 = label, $2 = written by this run, $3 = already in place
+    if $2; then printf "    ${GREEN}ok${R}      %s\n" "$1"
+    elif $3; then printf "    ${GREEN}ok${R}      %-28s ${DIM}already set up${R}\n" "$1"
+    else printf "    ${DIM}skip${R}    %s\n" "$1"
+    fi
+}
 printf "\n${BOLD}==> done${R}\n"
 printf "    ${GREEN}ok${R}      installed at %s\n" "$ROOT"
-$did_font      && printf "    ${GREEN}ok${R}      JetBrainsMono Nerd Font\n" || printf "    ${DIM}skip${R}    JetBrainsMono Nerd Font\n"
-$did_tmpl      && printf "    ${GREEN}ok${R}      matugen template\n" || printf "    ${DIM}skip${R}    matugen template\n"
-$did_toml      && printf "    ${GREEN}ok${R}      matugen toml\n"     || printf "    ${DIM}skip${R}    matugen toml\n"
-$did_autostart && printf "    ${GREEN}ok${R}      autostart\n"        || printf "    ${DIM}skip${R}    autostart\n"
-$did_keybind   && printf "    ${GREEN}ok${R}      menu keybind\n"     || printf "    ${DIM}skip${R}    menu keybind\n"
-$did_update    && printf "    ${GREEN}ok${R}      update-check timer\n" || printf "    ${DIM}skip${R}    update-check timer\n"
-$did_cli       && printf "    ${GREEN}ok${R}      silere maintenance command\n" || printf "    ${DIM}skip${R}    silere maintenance command\n"
+_done_row "JetBrainsMono Nerd Font" "$did_font" "$had_font"
+_done_row "matugen template" "$did_tmpl" "$had_tmpl"
+_done_row "matugen toml" "$did_toml" "$had_toml"
+_done_row "autostart" "$did_autostart" "$autostart_ready"
+_done_row "menu keybind" "$did_keybind" "$had_keybind"
+_done_row "update-check timer" "$did_update" "$had_update"
+_done_row "silere maintenance command" "$did_cli" "$had_cli"
+# the hints below name the command the way the user can type it
+if { $did_cli || $had_cli; } && $cli_on_path; then
+    SILERE_CMD=silere
+elif [[ "$CLI_TARGET" =~ ^[A-Za-z0-9/._-]+$ ]]; then
+    SILERE_CMD="$CLI_TARGET"
+else
+    SILERE_CMD="$(_shell_quote "$CLI_TARGET")"
+fi
 # a missing runtime and an unwired autostart are independent, so report them
 # separately — chaining them tells a user to restart into a shell nothing launches
 printf '\n'
@@ -1770,16 +1810,16 @@ if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scr
     fi
 fi
 if $autostart_ready; then
-    $started || printf "  silere starts at your next login, or now with: ${DIM}%s/scripts/silere run${R}\n" "$ROOT"
+    $started || printf "  silere starts at your next login, or now with: ${DIM}%s run${R}\n" "$SILERE_CMD"
 elif $started; then
     printf "  ${YELLOW}autostart is not set up${R} — add the line above to your Hyprland or niri config so silere starts at login\n"
 else
     printf "  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"
-    printf "    ${DIM}%s/scripts/silere run${R}\n" "$ROOT"
+    printf "    ${DIM}%s run${R}\n" "$SILERE_CMD"
 fi
-printf "  if a surface does not appear: ${DIM}%s/scripts/silere doctor${R}\n" "$ROOT"
-if $did_keybind; then
+printf "  if a surface does not appear: ${DIM}%s doctor${R}\n" "$SILERE_CMD"
+if $did_keybind || $had_keybind; then
     printf "  press ${DIM}%s + %s${R} or click the active workspace to open the menu\n" \
         "$MENU_BIND_MODS" "$MENU_BIND_KEY"
 else
@@ -1789,6 +1829,6 @@ fi
 # a packaged install ships no uninstall.sh: pointing at it there sends the user
 # to a path that does not exist and would fight their package manager if it did
 if [ -f "$ROOT/scripts/uninstall.sh" ]; then
-    printf "  to uninstall: ${DIM}%s/scripts/uninstall.sh${R}\n" "$ROOT"
+    printf "  to uninstall: ${DIM}%s uninstall${R}\n" "$SILERE_CMD"
 fi
 printf "\n"

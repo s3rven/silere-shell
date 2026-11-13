@@ -14,10 +14,12 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - The uninstaller lists what it kept and how to stop the shell that is still running.
+- The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
 
 ### Fixed
 
 - Uninstalling leaves your compositor config exactly as it was before the install, and no longer leaves Silere's Matugen template behind after a reinstall.
+- Running the installer again reports what is already set up instead of skipping it, keeps an enabled update timer, and no longer asks to overwrite an unchanged Matugen template.
 
 ## Releases
 
