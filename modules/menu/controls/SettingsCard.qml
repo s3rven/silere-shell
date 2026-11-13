@@ -85,6 +85,8 @@ Rectangle {
     Timer { id: _radiiDefer; interval: 0; onTriggered: root._applyRadii() }
     on_FirstEdgeChanged:     _radiiDefer.restart()
     on_LastEdgeChanged:      _radiiDefer.restart()
+    // the Roundness slider reshapes the card under rows that stay put: their hover fills kept the old corners until the page was rebuilt
+    onRadiusChanged:         _radiiDefer.restart()
     // a Column keeps counting hidden children, so a card in an unshown section flips visible without changing implicitHeight
     onVisibleChanged:        _radiiDefer.restart()
     Component.onCompleted:   root._applyRadii()

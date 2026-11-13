@@ -56,12 +56,15 @@ Item {
             id: _knob
             y: root._inset
             // a held knob stretches toward where it will travel; its outer edge stays pinned
-            width: root.pressed ? root._knobSize + Metrics.devicePx(5, root._dpr) : root._knobSize
+            readonly property real _restWidth: root.pressed ? root._knobSize + Metrics.devicePx(5, root._dpr) : root._knobSize
+            width: _restWidth
             height: root._knobSize
             // concentric with the track, so the inset stays even around the corners at any roundness
             radius: Math.max(0, _track.radius - root._inset)
             antialiasing: true
-            x: root.checked ? Metrics.devicePx(parent.width, root._dpr) - width - root._inset : root._inset
+            // a slide aims at the width the knob is heading to: the release stretch moved the animated width every
+            // frame, which restarted the slide each time and held the knob still for 100 ms before it set off
+            x: root.checked ? Metrics.devicePx(parent.width, root._dpr) - (root._animateX ? _restWidth : width) - root._inset : root._inset
             // the same hover lift as the slider handle; a smaller one rounds to nothing at 1.25
             transform: PixelScale {
                 item: _knob

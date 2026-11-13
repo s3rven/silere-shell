@@ -7,7 +7,8 @@ MotionBehavior {
     property int enterEasing: Easing.BezierSpline
     property int exitEasing: Easing.BezierSpline
     property var enterCurve: Motion.emphasizedDecel
-    property var exitCurve: Motion.emphasizedAccel
+    // what is left on screen moves in a collapse too: an accelerating curve landed it at full speed, 37% of the travel in its last 60 Hz frame
+    property var exitCurve: Motion.emphasizedDecel
     // a mutually-exclusive pair must share one curve in both directions, or the expanding sibling outruns the collapsing one and their summed height bulges
     property bool symmetric: false
     readonly property bool running: _animation.running

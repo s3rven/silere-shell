@@ -40,6 +40,7 @@ settings file carries its own `__version` and migrates separately.
 - Notification history settings and muted apps have their own History page under Settings › Feedback, so Notifications fits without scrolling.
 - Settings › System › Overview lists device checks under one row that opens on its own when a check needs attention.
 - Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
+- Settings options that fold away when you switch something off now ease to a stop, instead of the rows below them landing at full speed.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
 - `silere doctor` names the package for more missing tools, and its columns line up.
@@ -92,6 +93,9 @@ settings file carries its own `__version` and migrates separately.
 - An open calendar stays centred on its clock as the clock's date appears or folds away, instead of slipping to one side.
 - With Reduce motion on, a tray menu opened while the app's name showed on hover opens on its icon instead of beside it.
 - On a theme change, workspace markers, the OSD, notification outlines and update status colours change with the rest of the shell instead of trailing it.
+- Settings switches slide as soon as you let go, instead of pausing for a moment first.
+- Switching off a Settings option keeps the line and the square corners on the row you clicked until the options under it have folded away.
+- After changing Roundness, the hover highlight on a Settings card's first and last rows matches the card's new corners.
 - The night light's sun arc writes durations like the battery does, "1h 5m" rather than "1h 05m".
 - Switching outputs with a long device name no longer pushes the volume level out of the on-screen display.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.

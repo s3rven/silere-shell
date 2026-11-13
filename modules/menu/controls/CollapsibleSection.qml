@@ -8,8 +8,10 @@ Item {
     // set on both halves of a mode swap so the card height stays monotonic
     property bool symmetric: false
     default property alias rows: _content.data
-    // semantic presence changes once per toggle. Divider/corner discovery can depend on this instead of rereading animated height every frame
-    readonly property bool layoutPresent: expanded
+    // flips once per toggle, so divider and corner discovery never rereads the animated height. It follows the
+    // height, not expanded: a folding section is still on screen, and the row above rounded off and lost its
+    // divider at the click while the rows below were still sliding away
+    readonly property bool layoutPresent: height > 0.5
 
     readonly property bool isRadiusGroup: true
     readonly property Item radiusColumn: _content

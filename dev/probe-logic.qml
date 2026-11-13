@@ -186,6 +186,19 @@ ShellRoot {
     }
     Component { id: gradientSliderFactory; GradientSlider {} }
     Component { id: toggleRowFactory; ToggleRow { width: 320; label: "Probe toggle" } }
+    Component {
+        id: foldCardFactory
+        SettingsCard {
+            width: 320
+            property alias head: _foldHead
+            property alias fold: _foldSection
+            property alias tail: _foldTail
+            ToggleRow { id: _foldHead; label: "Probe head" }
+            CollapsibleSection { id: _foldSection; ToggleRow { id: _foldTail; label: "Probe tail" } }
+        }
+    }
+    Component { id: knobSwitchFactory; ToggleSwitch {} }
+    Component { id: foldDisclosureFactory; Item { property real h: 0; property alias disclosure: _foldDisclosure; Disclosure on h { id: _foldDisclosure } } }
     Component { id: sliderRowFactory; SliderRow { width: 320; label: "Probe slider"; glyph: "󰕰" } }
     Component {
         id: insetScrollFactory
@@ -3412,8 +3425,68 @@ ShellRoot {
             "a stream recording a real source still counts as a microphone in use")
     }
 
+    // a card's corners and dividers follow what is on screen: a folding section is still there, and a Roundness change reshapes rows that stay put
+    function _checkSettingsFolds(): void {
+        // no motion: a Behavior would turn the stand-in heights below into glides
+        const reduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        // restored even if a step throws, or every motion check after this one runs without motion
+        try {
+            const card = foldCardFactory.createObject(root)
+            discoveryClock.wait(20)
+            const r0 = card.radius
+            const settled = card.head.topRadius === r0 && card.head.bottomRadius === 0 && card.tail.bottomRadius === r0
+            // stand in for a frame mid-fold: the section is closing but still shows part of its row
+            card.fold.expanded = false
+            card.fold.height = 20
+            discoveryClock.wait(20)
+            const midFold = card.fold.layoutPresent === true && card.head.bottomRadius === 0 && card.tail.bottomRadius === r0
+            card.fold.height = 0
+            discoveryClock.wait(20)
+            const folded = card.fold.layoutPresent === false && card.head.bottomRadius === r0
+            root._check(settled && midFold && folded,
+                "the row above a folding section keeps its divider and square corners until the fold is gone")
+            card.radius = r0 + 6
+            discoveryClock.wait(20)
+            root._check(card.head.topRadius === r0 + 6 && card.head.bottomRadius === r0 + 6,
+                "a card's end rows take its new corners when Roundness changes")
+            card.destroy()
+        } finally {
+            ShellSettings.reduceMotion = reduceWas
+        }
+
+        // the end slope of a cubic bezier, relative to the average speed: above 1 the motion is still accelerating as it stops
+        const endSlope = c => (1 - c[3]) / Math.max(1e-6, 1 - c[2])
+        const host = foldDisclosureFactory.createObject(root)
+        const d = host.disclosure
+        root._check(d.exitEasing === Easing.BezierSpline && endSlope(d.exitCurve) < 1
+                && d.enterEasing === Easing.BezierSpline && endSlope(d.enterCurve) < 1,
+            "a fold eases into rest both ways, so the rows below never land at full speed")
+        host.destroy()
+
+        // the release stretch eases the knob's width while the flip slides it: a destination read off that width
+        // moved every frame, restarted the slide each time, and held the knob still until the stretch had settled
+        const knobReduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        try {
+            const sw = knobSwitchFactory.createObject(root, { checked: true })
+            const knob = root._findTrayNode(sw, it => it._restWidth !== undefined)
+            sw._animateX = true
+            const aimed = knob.x
+            knob.width = knob._restWidth + 3
+            const held = Math.abs(knob.x - aimed) < 0.01
+            sw._animateX = false
+            const pinned = Math.abs(knob.x + knob.width - (aimed + knob._restWidth)) < 0.01
+            root._check(held && pinned,
+                "a toggle's slide aims past the release stretch, while a held knob keeps its outer edge pinned")
+            sw.destroy()
+        } finally {
+            ShellSettings.reduceMotion = knobReduceWas
+        }
+    }
 
     function _checksControlFillsAndWidgetCatalog(): void {
+        root._checkSettingsFolds()
         const buttonIdle = Theme.buttonFill(Theme.accent, false, false)
         const buttonHover = Theme.buttonFill(Theme.accent, true, false)
         const buttonPress = Theme.buttonFill(Theme.accent, true, true)

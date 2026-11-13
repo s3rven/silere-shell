@@ -209,7 +209,8 @@ Item {
         }
         _trayRevealAnim.to = open ? 1 : 0
         _trayRevealAnim.duration = open ? Motion.medium : Motion.fast
-        _trayRevealAnim.easing.bezierCurve = open ? Motion.emphasizedDecel : Motion.emphasizedAccel
+        // the rows below ride the fold both ways, so both ease into rest, as a Disclosure does
+        _trayRevealAnim.easing.bezierCurve = Motion.emphasizedDecel
         _trayRevealAnim.start()
     }
 
@@ -296,7 +297,7 @@ Item {
             return
         }
         const p = root.mapToItem(f, 0, root._dragY + root._rowH / 2)
-        root._autoScrollDir = p.y < root._rowH ? -1
+        root._autoScrollDir = p.y < (Number(f.revealTopInset) || 0) + root._rowH ? -1
             : p.y > f.height - root._rowH ? 1 : 0
     }
 
