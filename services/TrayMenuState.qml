@@ -27,16 +27,19 @@ AnchoredPopupState {
 
     // the bar never takes keyboard focus, so a keybind is the way in; the tray on the active monitor answers first
     signal keyboardOpenRequested(string screenName)
+    // the IPC call and the Hyprland global shortcut open the first tray menu the same way
+    function keybindToggle(): string {
+        if (root.open) { root.close(); return "ok" }
+        if (!ShellSettings.trayWidget) return "error: the system tray is hidden; show it in Settings › Show & order"
+        root.keyboardOpenRequested(Monitors.activeName)
+        if (!root.open) root.keyboardOpenRequested("")
+        return root.open ? "ok" : "error: no tray app is showing on a bar"
+    }
+
     IpcHandler {
         target: "tray"
 
-        function toggle(): string {
-            if (root.open) { root.close(); return "ok" }
-            if (!ShellSettings.trayWidget) return "error: the system tray is hidden; show it in Settings › Show & order"
-            root.keyboardOpenRequested(Monitors.activeName)
-            if (!root.open) root.keyboardOpenRequested("")
-            return root.open ? "ok" : "error: no tray app is showing on a bar"
-        }
+        function toggle(): string { return root.keybindToggle() }
         function close(): void { root.close() }
     }
 

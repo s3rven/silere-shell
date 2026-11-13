@@ -595,6 +595,8 @@ if [ "$qs_usable" = 1 ]; then
     # animation driver stalls the event loop of a window that never maps
     export SILERE_UNMAPPED_BARS=1 QSG_USE_SIMPLE_ANIMATION_DRIVER=0
     export QML_DISABLE_DISK_CACHE=1
+    # a terminal the live shell started inherits its claim on silere:menu, and hyprland crashes a second claimant
+    unset SILERE_GLOBAL_SHORTCUTS
     # the detailed log is ~150 KB per shell in the RAM-backed runtime dir, kept until logout
     smoke_flags=()
     env -u LC_ALL qs --no-detailed-logs --version >/dev/null 2>&1 && smoke_flags=(--no-detailed-logs)

@@ -233,7 +233,7 @@ printf 'Starting a private preview of Silere with %s.\n' "$COMPOSITOR"
 printf 'Session files: %s\n' "$scratch"
 
 # fonts and icons live in the real data dir, so that one stays; SILERE_SANDBOX keeps it from locking or suspending this desktop
-env -u XDG_SESSION_ID -u HYPRLAND_INSTANCE_SIGNATURE -u NIRI_SOCKET -u DISPLAY -u PIPEWIRE_REMOTE \
+env -u XDG_SESSION_ID -u HYPRLAND_INSTANCE_SIGNATURE -u NIRI_SOCKET -u DISPLAY -u PIPEWIRE_REMOTE -u SILERE_GLOBAL_SHORTCUTS \
     XDG_CONFIG_HOME="$scratch/config" XDG_STATE_HOME="$scratch/state" XDG_CACHE_HOME="$scratch/cache" \
     XDG_RUNTIME_DIR="$scratch/run" PIPEWIRE_RUNTIME_DIR="$real_runtime" WAYLAND_DISPLAY="$parent" \
     SILERE_SANDBOX=1 SILERE_PREVIEW=1 SILERE_WATCH_FILES=0 QS_PIPEWIRE_IMMEDIATE_RECONNECT=1 \

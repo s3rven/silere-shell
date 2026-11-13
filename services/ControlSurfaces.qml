@@ -16,4 +16,11 @@ Singleton {
         }
         return false
     }
+
+    // what a compositor shortcut opens, named once here instead of in each caller
+    function keybindToggle(surface: string): string {
+        if (surface === "menu") return MenuState.keybindToggle()
+        if (surface === "tray") return TrayMenuState.keybindToggle()
+        return "error: no shortcut surface named " + surface
+    }
 }

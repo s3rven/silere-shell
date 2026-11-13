@@ -2105,12 +2105,12 @@ fi
 # silently gets stale focus back.
 facade_leaks="$(grep -rln 'import Quickshell\.Hyprland' --include='*.qml' \
   modules config services shell.qml 2>/dev/null \
-  | grep -vE '^services/CompositorHyprland(Grab)?\.qml$' || true)"
+  | grep -vE '^services/CompositorHyprland(Grab|Shortcuts)?\.qml$' || true)"
 # focus grabbing is an optional Quickshell plugin: declared in the adapter itself, a build
 # without it would fail the whole adapter instead of only popup dismissal
 inline_grab="$(grep -lE 'HyprlandFocusGrab[[:space:]]*\{' services/CompositorHyprland.qml || true)"
 if [ -n "$facade_leaks" ]; then
-  fail "only services/CompositorHyprland.qml and its grab may import Quickshell.Hyprland:"
+  fail "only services/CompositorHyprland.qml and its grab and shortcuts may import Quickshell.Hyprland:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$facade_leaks"
 elif [ -n "$inline_grab" ]; then
   fail "HyprlandFocusGrab belongs in services/CompositorHyprlandGrab.qml, loaded by Qt.createComponent, so a Quickshell built without it still loads the adapter"

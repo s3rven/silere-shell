@@ -457,15 +457,18 @@ AnchoredPopupState {
 
     readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"
 
+    // the IPC call and the Hyprland global shortcut open Home the same way
+    function keybindToggle(): string {
+        if (root.open) { root.close(); return "ok" }
+        root.selectTab(root.homeTab)
+        root.openUnanchored()
+        return root.open ? "ok" : root._refusedText
+    }
+
     IpcHandler {
         target: "menu"
 
-        function toggle(): string {
-            if (root.open) { root.close(); return "ok" }
-            root.selectTab(root.homeTab)
-            root.openUnanchored()
-            return root.open ? "ok" : root._refusedText
-        }
+        function toggle(): string { return root.keybindToggle() }
         function close(): void { root.close() }
         function tab(index: int): string {
             if (index < root.homeTab || index > root.mediaTab)

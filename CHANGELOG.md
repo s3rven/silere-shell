@@ -13,6 +13,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Added
 
+- On Hyprland, binds can reach the menu and tray as global shortcuts, `silere:menu` and `silere:tray`, without starting a `qs` process for each press.
 - While the CPU is busy, or one program keeps a whole core to itself, Home's CPU row and the bar's system monitor on hover name the process using the most, with its ID.
 - Music pauses when Bluetooth or USB headphones disconnect or run flat, instead of carrying on through the speakers; Settings › Widgets › Media › Pause when headphones disconnect.
 - A menu page that fails to load, Now Playing included, offers Reload, which reloads the shell and reopens the menu on the same page.

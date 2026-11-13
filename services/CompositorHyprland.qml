@@ -746,4 +746,7 @@ QtObject {
             root._layoutTick++
         }
     }
+
+    // silere:menu and silere:tray for Hyprland binds
+    readonly property CompositorHyprlandShortcuts _shortcuts: CompositorHyprlandShortcuts {}
 }

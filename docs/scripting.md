@@ -24,6 +24,20 @@ qs ipc -p "$SILERE_DIR/shell.qml" call menu toggle
 qs ipc -p "$SILERE_DIR/shell.qml" show
 ```
 
+### Keybinds on Hyprland
+
+Every `silere ipc` or `qs ipc` call starts a Quickshell process, about 150 ms on a 2015 laptop.
+On Hyprland the shell also answers two global shortcuts, which a bind reaches without starting
+anything:
+
+```lua
+hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))   -- open or close the menu
+hl.bind("SUPER + period", hl.dsp.global("silere:tray"))  -- the first tray app's menu
+```
+
+In a `.conf` config the first is `bind = SUPER, slash, global, silere:menu`. Only the shell
+`silere run` starts answers them, so a preview or a test copy never takes them over.
+
 ## Surfaces
 
 | call | opens |

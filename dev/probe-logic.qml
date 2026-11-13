@@ -6706,6 +6706,8 @@ ShellRoot {
             hypr._workspaceRefreshKey = refreshKeyWas
             hypr._workspaceRefreshTries = refreshTriesWas
             hypr._eventSeq = seqWas
+            root._check(!hypr._shortcuts.owns && hypr._shortcuts._held.length === 0,
+                "a shell silere run did not start claims no Hyprland global shortcut")
         }
         root._check(SafeText.lastNonEmptyLine("warning: retrying\n\nfatal: no route\n\n", "fallback") === "fatal: no route",
             "lastNonEmptyLine skips trailing blank lines")
