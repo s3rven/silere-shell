@@ -127,6 +127,7 @@ settings file carries its own `__version` and migrates separately.
 - The Line workspace marker has sharp edges at fractional scales such as 125%.
 - Battery details on Home close when the battery goes away, as on a UPower restart, instead of taking the next Escape.
 - In a short panel, a setting found by search is no longer scrolled under the pinned Settings header.
+- On Hyprland, a second Silere started from a hook, or from an app the shell launched itself, no longer crashes at start.
 
 ## Releases
 

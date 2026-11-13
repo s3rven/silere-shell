@@ -64,15 +64,22 @@ Singleton {
             "sh", root._text("exit", "")]
     }
 
+    // an app this shell starts itself leaves behind the flag that makes a qs claim silere:menu and silere:tray:
+    // Hyprland crashes the second claimant, so a qs run from that app's terminal would die at start
+    function bare(argv): var {
+        return ["env", "-u", "SILERE_GLOBAL_SHORTCUTS"].concat(argv)
+    }
+
     // hyprland runs exec through sh -c, so every word is quoted for that shell; a refused dispatch starts it here instead
-    function launch(argv): void {
-        if (!SystemTools.ready || !SystemTools.hasHyprctl) {
-            Quickshell.execDetached(argv)
-            return
-        }
+    function launchCommand(argv): var {
+        if (!SystemTools.ready || !SystemTools.hasHyprctl) return root.bare(argv)
         const words = argv.map(w => "'" + String(w).replace(/'/g, "'\\''") + "'")
-        Quickshell.execDetached(["sh", "-c", "hyprctl dispatch \"$1\" >/dev/null 2>&1 || { shift; exec \"$@\"; }",
-            "sh", root._text("exec", words.join(" "))].concat(argv))
+        return ["sh", "-c", "hyprctl dispatch \"$1\" >/dev/null 2>&1 || { shift; exec env -u SILERE_GLOBAL_SHORTCUTS \"$@\"; }",
+            "sh", root._text("exec", words.join(" "))].concat(argv)
+    }
+
+    function launch(argv): void {
+        Quickshell.execDetached(root.launchCommand(argv))
     }
 
     // chain in one sh: detached hyprctl processes land out of order, and --batch mangles the quoted lua-framework calls

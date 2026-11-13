@@ -96,6 +96,8 @@ Singleton {
     component HookRunner: BoundedProcess {
         id: runner
         property string hookPath: ""
+        // a hook is the user's program, not the shell: a qs it starts must not claim the shell's global shortcuts
+        environment: ({ "SILERE_GLOBAL_SHORTCUTS": null })
         // only a backstop once `timeout` owns the deadline: killing the wrapper leaves the group
         // behind, so this must fire later than the wrapper's own term-then-kill window
         timeoutMs: root._contained

@@ -37,6 +37,7 @@ ShellRoot {
     property bool _volumeCancelDone: false
     property bool _ignoredUpdatesDone: false
     property bool _helperUpdatesDone: false
+    property bool _launchEnvDone: false
     property bool _zoneLinkDone: false
     property real _volumeCancelDeadline: 0
 
@@ -10594,6 +10595,26 @@ ShellRoot {
     }
 
     function _checksDispatchAndNotificationOwner(): void {
+        // the fallback a refused dispatch takes, run as written behind a hyprctl that refuses
+        const toolsWas = SystemTools._tools, toolsReadyWas = SystemTools.ready
+        SystemTools._tools = Object.assign({}, toolsWas, { hyprctl: true })
+        SystemTools.ready = true
+        const fallback = HyprDispatch.launchCommand(["sh", "-c", "printf %s \"${SILERE_GLOBAL_SHORTCUTS-unset}\""])
+        SystemTools._tools = toolsWas
+        SystemTools.ready = toolsReadyWas
+        const fallbackRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 2; printf '#!/bin/sh\\nexit 1\\n' > \"$d/hyprctl\"; chmod +x \"$d/hyprctl\"; "
+            + "out=$(PATH=\"$d:$PATH\" SILERE_GLOBAL_SHORTCUTS=1 \"$@\"); rm -rf \"$d\"; [ \"$out\" = unset ]",
+            "bash"].concat(fallback) })
+        fallbackRun.exited.connect(function(code) {
+            root._check(code === 0, "an app a refused dispatch starts here does not inherit the shell's global shortcut claim")
+            root._launchEnvDone = true
+            fallbackRun.destroy()
+        })
+        fallbackRun.running = true
+        root._check(Hooks._runner0.environment && Hooks._runner0.environment.SILERE_GLOBAL_SHORTCUTS === null,
+            "hooks run without the shell's global shortcut claim")
+
         // the lua config framework replaces the plain dispatchers, so the two
         // dispatch forms are the difference between switching and doing nothing
         const luaWas = HyprDispatch.useLua
@@ -14076,6 +14097,7 @@ ShellRoot {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")
+        root._check(root._launchEnvDone, "the launch fallback environment check completes")
         root._check(root._zoneLinkDone, "the time zone link check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
