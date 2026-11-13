@@ -134,7 +134,7 @@ report_failed_start() {
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null 2>&1; then
         hyprctl notify 3 60000 0 "$message"
     elif command -v notify-send >/dev/null 2>&1; then
-        timeout 5 notify-send --urgency=critical --app-name=silere-shell "Silere did not start" \
+        timeout 5 notify-send --urgency=critical --app-name="Silere Shell" --icon=dialog-error "Silere did not start" \
             "Run $doctor in a terminal to see why."
     fi
 }

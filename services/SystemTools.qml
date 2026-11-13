@@ -132,7 +132,7 @@ Singleton {
             Compositor.launch(command)
             return
         }
-        const note = "notify-send --urgency=critical --app-name=silere-shell " +
+        const note = "notify-send --urgency=critical --app-name='Silere Shell' --icon=dialog-error " +
             root._shq(failTitle) + " " + root._shq("It may require authorization or be blocked by a running task.")
         const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
         for (let i = 0; i < command.length; i++) argv.push(String(command[i]))

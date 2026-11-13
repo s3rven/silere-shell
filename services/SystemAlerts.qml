@@ -22,25 +22,23 @@ Singleton {
         ShellSettings.notifCriticalBypass, Notifications.silencingActive)
     property bool _cpuCritSent:  false
 
-    function _send(summary: string, body: string, urgency: string): bool {
+    function alertCommand(summary: string, body: string, urgency: string, icon: string, timeout: int): var {
+        return ["notify-send", "--urgency=" + urgency, "--expire-time=" + timeout, "--app-name=Silere Shell",
+            "--icon=" + (icon || "dialog-information"),
+            // a bluetooth device can be named "-x": without the end of options, notify-send refuses the alert
+            "--", summary, body]
+    }
+
+    function _send(summary: string, body: string, urgency: string, icon: string): bool {
         if (!SystemTools.ready || !SystemTools.hasNotifySend
                 || Quickshell.env("SILERE_SANDBOX") === "1") return false
-        Quickshell.execDetached([
-            "notify-send",
-            "--urgency=" + urgency,
-            "--expire-time=" + ShellSettings.sysAlertTimeout,
-            "--app-name=silere-shell",
-            // a bluetooth device can be named "-x": without the end of options, notify-send refuses the alert
-            "--",
-            summary,
-            body
-        ])
+        Quickshell.execDetached(root.alertCommand(summary, body, urgency, icon, ShellSettings.sysAlertTimeout))
         return true
     }
 
     // for a service whose failure happens after the surface that started it has closed
-    function send(summary: string, body: string, urgency: string): bool {
-        return root._send(summary, body, urgency)
+    function send(summary: string, body: string, urgency: string, icon: string): bool {
+        return root._send(summary, body, urgency, icon)
     }
 
     // the way into the menu is the active workspace, and otherwise only the installer's terminal output says so.
@@ -51,7 +49,7 @@ Singleton {
         onTriggered: {
             if (root._send("Welcome to Silere",
                 "Click the active workspace to open the menu, or right-click it for quick actions.",
-                "normal")) ShellSettings.markFirstRunSeen()
+                "normal", "dialog-information")) ShellSettings.markFirstRunSeen()
         }
     }
 
@@ -60,14 +58,14 @@ Singleton {
                 && ShellSettings.osdBatteryWarn && !_battCritSent) {
             if (_send("Battery Critical",
                 Math.round(Battery.pct) + "% — plug in now",
-                "critical")) _battCritSent = true
+                "critical", "battery-caution")) _battCritSent = true
         }
     }
     function _checkCpuCrit(): void {
         if (CpuTemp.critical && ShellSettings.osdTempWarn && !_cpuCritSent) {
             if (_send("CPU Critical Temperature",
                 Math.round(CpuTemp.temp) + "°C — reduce load immediately",
-                "critical")) _cpuCritSent = true
+                "critical", "dialog-warning")) _cpuCritSent = true
         }
     }
 
@@ -160,7 +158,7 @@ Singleton {
         for (let i = 0; i < step.alerts.length; i++) {
             const alert = step.alerts[i]
             if (!ShellSettings.osdBatteryWarn
-                    || !root._send(alert.name + " battery low", alert.pct + "%", "normal"))
+                    || !root._send(alert.name + " battery low", alert.pct + "%", "normal", "battery-caution"))
                 delete step.warned[alert.address]
         }
         root._btWarned = step.warned

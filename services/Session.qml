@@ -69,7 +69,7 @@ Singleton {
         root.busy = false
         root.lastError = message
         // the menu closed on the press, and a lid shut on this stays awake and unlocked
-        SystemAlerts.send("Sleep cancelled", message, "critical")
+        SystemAlerts.send("Sleep cancelled", message, "critical", "dialog-warning")
         root.refresh()
     }
     // read before locking: a hint a crashed locker left set would confirm the new lock before it is drawn

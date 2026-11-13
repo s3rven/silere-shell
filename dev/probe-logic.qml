@@ -6111,6 +6111,12 @@ ShellRoot {
                 && IconResolver.senderIconSource("/var/tmp/fifo.png") === ""
                 && IconResolver.senderIconSource("/nix/store/0000-user-added/icon.png") === "",
             "an icon a terminal or packaged app passes from its own root-owned folder shows, and nothing a user could plant")
+        const alert = SystemAlerts.alertCommand("-x battery low", "10%", "normal", "battery-caution", 10000)
+        root._check(alert.indexOf("--app-name=Silere Shell") > 0 && alert.indexOf("--icon=battery-caution") > 0
+                && alert.indexOf("--expire-time=10000") > 0
+                && alert.indexOf("--") === alert.length - 3 && alert[alert.length - 2] === "-x battery low"
+                && SystemAlerts.alertCommand("a", "b", "critical", "", 0).indexOf("--icon=dialog-information") > 0,
+            "Silere's own alerts carry one app name and an icon, and a dash-named device still reaches the summary")
         root._check(IconResolver.senderImageSource("image://icon//usr/share/pixmaps/app.png")
                     === "file:///usr/share/pixmaps/app.png"
                 && IconResolver.senderImageSource("IMAGE://Icon//home/user/app.png") === ""

@@ -2981,7 +2981,7 @@ test_startup_failure_report() (
     startup bash "$ROOT/scripts/silere" run --startup
     await_report || fail "a failed start off Hyprland reported nothing"
     case "$(cat "$calls")" in
-        "notify-send --urgency=critical --app-name=silere-shell Silere did not start"*) ;;
+        "notify-send --urgency=critical --app-name=Silere Shell --icon=dialog-error Silere did not start"*) ;;
         *) fail "a failed start off Hyprland sent the wrong message: $(cat "$calls")" ;;
     esac
 

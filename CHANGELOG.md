@@ -21,6 +21,7 @@ settings file carries its own `__version` and migrates separately.
 
 - The settings schema moves to 4 with nothing to convert, so a rollback to 1.7 keeps the headphone pause setting.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
+- Silere's own alerts show as Silere Shell, each with an icon for what it is about.
 - Home and the other panels build faster: keyboard focus rings and Home's sound options are made only once they show.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - The uninstaller lists what it kept and how to stop the shell that is still running.

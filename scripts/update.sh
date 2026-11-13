@@ -53,7 +53,7 @@ _notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
     # Notifications are advisory. A missing/stale session bus must never turn a
     # successful update check or apply into a failed systemd unit.
-    notify-send -a "Silere Shell" "$@" >/dev/null 2>&1 || true
+    notify-send -a "Silere Shell" -i system-software-update "$@" >/dev/null 2>&1 || true
 }
 
 # The periodic pass runs unattended and its failures are routine (a laptop
