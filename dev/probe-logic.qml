@@ -4768,6 +4768,14 @@ ShellRoot {
 
     function _checksVisualizerAndRim(): void {
         const visualizer = mediaVisualizerFactory.createObject(root, { width: 200, height: 20 })
+        const band = visualizer.textBand(40, 12, 28)
+        visualizer._fillH = 40
+        visualizer.textTop = 12
+        root._check(band && band.top === 0.3 && band.bottom === 0.7 && visualizer.textBand(40, -1, -1) === null
+                && visualizer.textBand(40, 30, 20) === null && visualizer.textBand(40, 0, 40).top === 0.05
+                && visualizer.textBand(40, 0, 40).bottom === 0.97 && visualizer._fillH === -1,
+            "the media wave goes quiet across the title's own band, kept inside the gradient, and repaints when it moves")
+        visualizer.textTop = -1
         const edgeGradients = []
         const edgeContext = {
             createLinearGradient: function(x0, y0, x1, y1) {

@@ -53,6 +53,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere ipc` names the target or call it could not find, and how to list them.
 - `silere status` shows the shell's memory and when updates were last checked.
 - Switching workspaces and windows on Hyprland uses less CPU, most of all with many windows open.
+- The media visualizer goes faint where it passes behind the track title, on a tall bar and in large type too.
 
 ### Fixed
 

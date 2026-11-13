@@ -132,6 +132,9 @@ Item {
                 screen: root.screen
                 holdFrame: true
                 lowPower: root.compact
+                // the title's band, so the wave goes quiet where it passes behind the letters
+                textTop: _content.y + textClip.y
+                textBottom: _content.y + textClip.y + textClip.height
             }
         }
     }

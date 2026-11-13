@@ -35,6 +35,23 @@ Canvas {
     renderStrategy: Canvas.Immediate
 
     property var waveData: Media.barHeights
+    // the media title's band in this item's coordinates; -1 where no text reads over the wave. A fixed share of the
+    // height missed the title on a tall bar or in large type, and a crest crossed its letters
+    property real textTop: -1
+    property real textBottom: -1
+    onTextTopChanged: _bandMoved()
+    onTextBottomChanged: _bandMoved()
+    function _bandMoved(): void {
+        _fillH = -1
+        _barFillH = -1
+        if (_paintable) requestPaint()
+    }
+    // the band as fractions of the height, kept inside the gradient and in order
+    function textBand(h: real, top: real, bottom: real): var {
+        if (!(h > 0) || top < 0 || !(bottom > top)) return null
+        const t = Math.max(0.05, Math.min(0.9, top / h))
+        return { top: t, bottom: Math.max(t + 0.02, Math.min(0.97, bottom / h)) }
+    }
     readonly property bool _paintable: _live
     onWaveDataChanged:  if (_paintable) requestPaint()
     onWidthChanged:     if (_paintable) requestPaint()
@@ -232,7 +249,12 @@ Canvas {
             // fade toward the top: a peak behind the media title would otherwise paint over its glyphs
             if (!_barFill || _barFillH !== height || _barFillR !== ac.r || _barFillG !== ac.g || _barFillB !== ac.b) {
                 var bg = ctx.createLinearGradient(0, 0, 0, height)
-                bg.addColorStop(0.0, Qt.rgba(ac.r, ac.g, ac.b, 0.12))
+                var bandB = textBand(height, textTop, textBottom)
+                bg.addColorStop(0.0, Qt.rgba(ac.r, ac.g, ac.b, bandB ? 0.08 : 0.12))
+                if (bandB) {
+                    bg.addColorStop(bandB.top, Qt.rgba(ac.r, ac.g, ac.b, 0.08))
+                    bg.addColorStop(bandB.bottom, Qt.rgba(ac.r, ac.g, ac.b, 0.24))
+                }
                 bg.addColorStop(1.0, Qt.rgba(ac.r, ac.g, ac.b, 0.82))
                 _barFill = bg
                 _barFillH = height
@@ -293,15 +315,23 @@ Canvas {
         }
 
         if (!_fill || _fillH !== height || _fillR !== ac.r || _fillG !== ac.g || _fillB !== ac.b) {
+            var band = textBand(height, textTop, textBottom)
             var g = ctx.createLinearGradient(0, 0, 0, height)
             g.addColorStop(0.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.0))
-            g.addColorStop(0.72, Qt.rgba(ac.r, ac.g, ac.b, 0.13))
+            if (band) g.addColorStop(band.bottom, Qt.rgba(ac.r, ac.g, ac.b, 0.06))
+            else g.addColorStop(0.72, Qt.rgba(ac.r, ac.g, ac.b, 0.13))
             g.addColorStop(1.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.32))
             _fill = g
-            // quiet through the text band: a full-strength crest behind the media title reads as a strikethrough
+            // quiet through the text band: a full-strength crest behind the media title reads as a strikethrough.
+            // Where the title's own band is known, the line is faintest across it
             var sg = ctx.createLinearGradient(0, 0, 0, height)
-            sg.addColorStop(0.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.10))
-            sg.addColorStop(0.62, Qt.rgba(ac.r, ac.g, ac.b, 0.28))
+            sg.addColorStop(0.0,  Qt.rgba(ac.r, ac.g, ac.b, band ? 0.06 : 0.10))
+            if (band) {
+                sg.addColorStop(band.top,    Qt.rgba(ac.r, ac.g, ac.b, 0.06))
+                sg.addColorStop(band.bottom, Qt.rgba(ac.r, ac.g, ac.b, 0.18))
+            } else {
+                sg.addColorStop(0.62, Qt.rgba(ac.r, ac.g, ac.b, 0.28))
+            }
             sg.addColorStop(1.0,  Qt.rgba(ac.r, ac.g, ac.b, 0.85))
             _stroke = sg
             _fillH = height
