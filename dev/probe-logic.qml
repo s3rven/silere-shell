@@ -5656,6 +5656,25 @@ ShellRoot {
         root._check(trimCountChanges === 1,
             "lowering the history limit removes the excess rows in one model edit")
         Notifications.clearHistory()
+
+        // rows are newest first; the app holding the most gives up its oldest, and among equals the
+        // one whose oldest row is oldest overall. Names are keyed as the rail keys them
+        root._check(JSON.stringify(Notifications.historyEvictions(
+                    ["Chat", "Chat", "Mail", "Chat", "Shot", " Chat "], 4)) === "[5,3]"
+                && JSON.stringify(Notifications.historyEvictions(["A", "B", "A", "B"], 3)) === "[3]"
+                && JSON.stringify(Notifications.historyEvictions(["", "Unknown", "X"], 2)) === "[1]"
+                && Notifications.historyEvictions(["A", "B"], 5).length === 0,
+            "a full history evicts the oldest row of the app holding the most rows")
+        ShellSettings.notifHistoryLimit = 5
+        Notifications._prependHistory({ id: 9801, appName: "Shot", summary: "saved", time: 1 })
+        Notifications._prependHistory({ id: 9802, appName: "Mail", summary: "done", time: 2 })
+        for (let i = 0; i < 10; i++)
+            Notifications._prependHistory({ id: 9810 + i, appName: "Chat", summary: "m" + i, time: 10 + i })
+        const keptRows = []
+        for (let i = 0; i < Notifications.historyCount; i++) keptRows.push(Notifications.historyModel.get(i).summary)
+        root._check(keptRows.join(",") === "m9,m8,m7,done,saved",
+            "a busy chat keeps its newest rows without pushing other apps out of history (" + keptRows + ")")
+        Notifications.clearHistory()
         ShellSettings.notifHistoryLimit = savedLimit
 
         const historyPersistentWas = ShellSettings.notifHistoryPersistent

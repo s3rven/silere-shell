@@ -167,16 +167,49 @@ Singleton {
         }
     }
 
+    // a full history takes from the app holding the most rows, its oldest first: one busy chat
+    // pushed every other app out of the default 20 rows within the hour. Among equals, the app
+    // whose oldest row is oldest gives way. Rows are newest first; the indices come back highest first
+    function historyEvictions(apps, capacity: int): var {
+        const excess = (apps ? apps.length : 0) - capacity
+        if (excess <= 0) return []
+        // the rail's key, so the app counted here is the app shown there
+        const keys = apps.map(name => String(name ?? "").trim() || "Unknown")
+        const counts = Object.create(null)
+        for (const key of keys) counts[key] = (counts[key] || 0) + 1
+        const gone = keys.map(() => false)
+        const out = []
+        for (let n = 0; n < excess; n++) {
+            let pick = -1
+            let most = 0
+            for (let i = keys.length - 1; i >= 0; i--) {
+                if (!gone[i] && counts[keys[i]] > most) { most = counts[keys[i]]; pick = i }
+            }
+            gone[pick] = true
+            counts[keys[pick]]--
+            out.push(pick)
+        }
+        return out.sort((a, b) => b - a)
+    }
+
     function _trimHistory(): void {
-        const excess = _history.count - root._historyCapacity
-        if (excess <= 0) return
+        if (_history.count <= root._historyCapacity) return
+        const apps = []
+        for (let i = 0; i < _history.count; i++) apps.push(_history.get(i).appName)
+        const drop = root.historyEvictions(apps, root._historyCapacity)
         const dropped = []
-        for (let i = root._historyCapacity; i < _history.count; i++) {
+        for (const i of drop) {
             const id = _history.get(i).id
             if (id !== undefined) dropped.push(String(id))
         }
-        // one model edit also lets views reconcile a reduced limit in one pass
-        _history.remove(root._historyCapacity, excess)
+        // neighbouring rows go in one edit, so a lowered limit on one app's rows is still one pass for the views
+        for (let k = 0; k < drop.length;) {
+            let start = drop[k]
+            let n = 1
+            while (k + n < drop.length && drop[k + n] === start - 1) { start--; n++ }
+            _history.remove(start, n)
+            k += n
+        }
         root.historyRevision++
         root._forgetTrimmed(dropped)
     }
