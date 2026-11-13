@@ -45,6 +45,8 @@ Process {
                 root.timedOut = false
                 // a run chained from exited starts before the old run's flag clears
                 root._exitSeen = false
+                // and running never falls between the two, so the bound timer alone would keep the old deadline
+                if (root.timeoutMs > 0) root._timeout.restart()
                 return
             }
             if (!root._exitSeen) root.exited(127, 0)

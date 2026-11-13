@@ -12167,6 +12167,26 @@ ShellRoot {
                 root._check(codes.length === 2 && codes[0] === 0 && codes[1] === 127,
                     "a bounded process chained from exited still reports its spawn failure")
                 chained.destroy()
+                root._runChainedDeadlineCheck()
+            })
+        })
+        chained.running = true
+    }
+
+    // a run chained from exited never sees running fall, so a timeout bound to running alone
+    // kept the finished run's deadline: the second 0.6 s run here was cut off 0.4 s in
+    function _runChainedDeadlineCheck(): void {
+        const chained = boundedProcessFactory.createObject(root, {
+            command: ["sleep", "0.6"], timeoutMs: 1000
+        })
+        let runs = 0
+        chained.exited.connect(function(code) {
+            runs++
+            if (runs === 1) { chained.running = true; return }
+            const complete = chained.completedSuccessfully(code)
+            Qt.callLater(function() {
+                root._check(complete, "a bounded process chained from exited gets a deadline of its own")
+                chained.destroy()
                 root._runChainedSupervisedCheck()
             })
         })
