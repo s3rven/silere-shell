@@ -13,6 +13,8 @@ Column {
     property bool firstSection: true
     property bool animationActive: true
     property bool _optionalExpanded: false
+    property bool _devicesExpanded: false
+    property bool _devicesTouched: false
     property bool _armed: false
     property real _armedAtMs: 0
 
@@ -21,6 +23,12 @@ Column {
     Component.onCompleted: {
         SystemTools.refreshIfStale(60000)
         FontScan.requestScan()
+        root._devicesExpanded = root._deviceWarnings > 0
+    }
+
+    function _toggleDevices(): void {
+        root._devicesTouched = true
+        root._devicesExpanded = !root._devicesExpanded
     }
 
     function _disarm(): void {
@@ -145,6 +153,9 @@ Column {
     readonly property var _attentionIssues: root._health.attention
     readonly property var _optionalIssues: root._health.optional
     readonly property var _deviceChecks: DeviceDiagnostics.checks()
+    readonly property int _deviceWarnings: root._deviceChecks.filter(c => c.warning).length
+    // checks settle after the page builds; one that needs attention opens the list until it is folded by hand
+    on_DeviceWarningsChanged: if (!root._devicesTouched && root._deviceWarnings > 0) root._devicesExpanded = true
     readonly property bool _healthBusy: !SystemTools.ready || SystemTools.checking
         || FontScan.scanning
     readonly property string _healthStatus: {
@@ -190,6 +201,46 @@ Column {
                 FontScan.scan(true)
             }
         }
+        ControlRow {
+            glyph: "󰦉"
+            title: "Device checks"
+            status: root._deviceWarnings > 0
+                ? root._deviceWarnings + (root._deviceWarnings === 1 ? " needs attention" : " need attention")
+                : root._deviceChecks.length + " checked, no problems"
+            statusColor: root._deviceWarnings > 0 ? Theme.warning : "transparent"
+            expandable: true
+            expanded: root._devicesExpanded
+            onActivated: root._toggleDevices()
+            onExpandToggled: root._toggleDevices()
+        }
+        CollapsibleSection {
+            expanded: root._devicesExpanded
+            Repeater {
+                model: root._deviceChecks
+                ControlRow {
+                    required property var modelData
+                    glyph: modelData.glyph
+                    title: modelData.title
+                    status: modelData.detail
+                    valueText: modelData.state
+                    passive: modelData.action.length === 0
+                    // the value is a state, not what a tap does: accent here made one "On" look unlike another
+                    statusColor: modelData.warning ? Theme.warning : "transparent"
+                    onActivated: DeviceDiagnostics.activate(modelData.action)
+                }
+            }
+        }
+        ControlRow {
+            glyph: "󰆏"
+            title: "Copy diagnostic report"
+            status: DeviceDiagnostics.copyError.length > 0 ? DeviceDiagnostics.copyError
+                : "Versions and device status, no identifiers"
+            valueText: DeviceDiagnostics.copyState === "working" ? "Collecting…"
+                : DeviceDiagnostics.copyState === "done" ? "Copied" : "Copy"
+            available: DeviceDiagnostics.copyState !== "working"
+            valueIsAction: true
+            onActivated: DeviceDiagnostics.copyReport()
+        }
     }
 
     SectionLabel {
@@ -217,35 +268,6 @@ Column {
                         MenuState.setSettingsSection(modelData.a)
                 }
             }
-        }
-    }
-
-    SectionLabel { label: "DEVICE CHECKS" }
-    SettingsCard {
-        Repeater {
-            model: root._deviceChecks
-            ControlRow {
-                required property var modelData
-                glyph: modelData.glyph
-                title: modelData.title
-                status: modelData.detail
-                valueText: modelData.state
-                passive: modelData.action.length === 0
-                // the value is a state, not what a tap does: accent here made one "On" look unlike another
-                statusColor: modelData.warning ? Theme.warning : "transparent"
-                onActivated: DeviceDiagnostics.activate(modelData.action)
-            }
-        }
-        ControlRow {
-            glyph: "󰆏"
-            title: "Copy diagnostic report"
-            status: DeviceDiagnostics.copyError.length > 0 ? DeviceDiagnostics.copyError
-                : "Versions and device status, no identifiers"
-            valueText: DeviceDiagnostics.copyState === "working" ? "Collecting…"
-                : DeviceDiagnostics.copyState === "done" ? "Copied" : "Copy"
-            available: DeviceDiagnostics.copyState !== "working"
-            valueIsAction: true
-            onActivated: DeviceDiagnostics.copyReport()
         }
     }
 

@@ -6247,6 +6247,14 @@ ShellRoot {
         root._check(mutedRow?.Accessible.name === "Mute popups from Discord" && mutedRow.Accessible.checked,
             "a muted app's row says what its check box does")
         ShellSettings.notifMutedApps = savedMuted
+        const health = root._findTrayNode(sectionFor("updates"), it => typeof it._toggleDevices === "function")
+        const openedWithWarnings = health && health._devicesExpanded === (health._deviceWarnings > 0)
+        if (health) health._toggleDevices()
+        const foldedByHand = health && health._devicesTouched && health._devicesExpanded === (health._deviceWarnings === 0)
+        if (health) health._devicesExpanded = false
+        if (health) health._deviceWarningsChanged()
+        root._check(openedWithWarnings && foldedByHand && health._devicesExpanded === false,
+            "device checks open with the page only when one needs attention, and stay as they were folded by hand")
         for (const sec in builtSections) builtSections[sec].destroy()
         revealPage.destroy()
         const sameAs = (typo, word) => MenuState.searchSettings(typo).map(row => row.section).join(",")

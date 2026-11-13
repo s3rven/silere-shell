@@ -37,6 +37,7 @@ settings file carries its own `__version` and migrates separately.
 - Home's volume and brightness percentages take the accent while you drag them, as Settings sliders do.
 - A long Settings page keeps its title and search at the top while the rest scrolls under them, and Ctrl+F opens search without jumping back to the top.
 - Notification history settings and muted apps have their own History page under Settings › Feedback, so Notifications fits without scrolling.
+- Settings › System › Overview lists device checks under one row that opens on its own when a check needs attention.
 - Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
