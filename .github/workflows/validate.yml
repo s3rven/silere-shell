@@ -280,8 +280,9 @@ jobs:
           types="$(grep -oE 'type-check passed \([0-9]+ files\)' /tmp/count-types.log | grep -oE '[0-9]+' | tail -n1 || true)"
           logic="$(grep -oE 'PROBE-LOGIC passed [0-9]+' /tmp/count-logic.log | grep -oE '[0-9]+$' | tail -n1 || true)"
           sweep="$(grep -oE 'PROBE-MUTATE swept [0-9]+' /tmp/count-sweep.log | grep -oE '[0-9]+$' | tail -n1 || true)"
-          total=$(( ${lint:-0} + ${types:-0} + ${logic:-0} + ${sweep:-0} ))
-          echo "lint $lint, types $types, logic $logic, sweep $sweep"
+          ui="$(grep -oE 'PROBE-UI-STRESS passed [0-9]+' /tmp/count-ui.log | grep -oE '[0-9]+$' | tail -n1 || true)"
+          total=$(( ${lint:-0} + ${types:-0} + ${logic:-0} + ${sweep:-0} + ${ui:-0} ))
+          echo "lint $lint, types $types, logic $logic, sweep $sweep, ui $ui"
           echo "::notice title=Check count::$total"
 
       - name: Save validation logs
