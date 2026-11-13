@@ -420,7 +420,7 @@ version_info() {
 }
 
 is_packaged() {
-    grep -q '^packaged=1$' <<<"$(version_info 2>/dev/null)"
+    grep -q '^mode=package$' <<<"$(version_info 2>/dev/null)"
 }
 
 print_update_status() {
@@ -490,7 +490,8 @@ human_version() {
     packaged="$(printf '%s\n' "$out" | sed -n 's/^packaged=//p')"
     version="$(printf '%s\n' "$out" | sed -n 's/^version=//p')"
     if [ "$packaged" = 1 ]; then
-        printf '%sSilere Shell %s%s (managed by %s)\n' "$BOLD" "${version:-package build}" "$R" "$(package_manager)"
+        printf '%sSilere Shell %s%s%s\n' "$BOLD" "${version:-package build}" "$R" \
+            "$(grep -q '^mode=package$' <<<"$out" && printf ' (managed by %s)' "$(package_manager)")"
         return 0
     fi
     tag="$(printf '%s\n' "$out" | sed -n 's/^tag=//p')"
@@ -583,7 +584,9 @@ case "$command_name" in
                 printf 'Service: silere-shell.service starts %s%s%s\n' "$YELLOW" "$unit_root" "$R"
             fi
         fi
-        if grep -q '^packaged=1$' <<<"$info"; then
+        if grep -q '^mode=copy$' <<<"$info"; then
+            printf 'Updates: nothing updates this copy; scripts/install.sh sets up one that can update itself\n'
+        elif grep -q '^packaged=1$' <<<"$info"; then
             printf 'Updates: managed by %s; Silere self-update is disabled\n' "$(package_manager)"
         else
             branch="$(printf '%s\n' "$info" | sed -n 's/^branch=//p')"
@@ -644,9 +647,10 @@ case "$command_name" in
         [ -z "$out" ] || printf '%s\n' "$out"
         ;;
     update)
-        if is_packaged; then
-            die "updates are managed by $(package_manager); Silere will not modify package-owned files"
-        fi
+        mode="$(sed -n 's/^mode=//p' <<<"$(version_info 2>/dev/null)")"
+        [ "$mode" != package ] \
+            || die "updates are managed by $(package_manager); Silere will not modify package-owned files"
+        [ "$mode" != copy ] || die "nothing updates this copy; scripts/install.sh sets up one that can update itself"
         case "${1:-}" in
             "") [ "$#" -eq 0 ] || { usage >&2; exit 2; }
                 # the check itself stays silent for the timer and the menu; say what it found here

@@ -2597,7 +2597,33 @@ test_plain_copy_is_not_package_managed() (
         *) fail "a plain copy was not pointed at the installer" ;;
     esac
 
+    mkdir -p "$home/stubs"
+    printf '#!/bin/sh\nexit 1\n' > "$home/stubs/qs"
+    chmod +x "$home/stubs/qs"
+    cli() {
+        HOME="$home" XDG_STATE_HOME="$home/state" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache" \
+            XDG_DATA_HOME="$home/data" PATH="$home/stubs:$PATH" bash "$copy/scripts/silere" "$@" </dev/null 2>&1
+    }
+    out="$(cli version)" || fail "silere version failed on a plain copy"
+    case "$out" in *"managed by"*) fail "silere version called a plain copy package-managed: $out" ;; esac
+    out="$(cli status)" || fail "silere status failed on a plain copy"
+    case "$out" in
+        *"managed by"*) fail "silere status called a plain copy package-managed: $out" ;;
+        *"Updates: nothing updates this copy"*) ;;
+        *) fail "silere status on a plain copy said: $out" ;;
+    esac
+    out="$(cli update)" && fail "silere update succeeded on a plain copy"
+    grep -qxF 'silere: nothing updates this copy; scripts/install.sh sets up one that can update itself' <<<"$out" \
+        || fail "silere update on a plain copy did not say what status says: $out"
+    case "$out" in *"last check failed"*) fail "silere update on a plain copy reported a failed check: $out" ;; esac
+    [ ! -e "$home/cache/silere-shell/update-error" ] || fail "silere update recorded a check failure for a plain copy"
+    out="$(cli link)" || fail "silere link refused a plain copy: $out"
+    assert_eq "$copy/scripts/silere" "$(readlink "$home/.local/bin/silere")" "silere link on a plain copy"
     printf '9.9.9\n' > "$copy/package-version"
+    out="$(cli version)" || fail "silere version failed on a packaged copy"
+    case "$out" in *"9.9.9 (managed by "*) ;; *) fail "silere version on a packaged copy said: $out" ;; esac
+    rm -f "$home/.local/bin/silere"
+    cli link >/dev/null && fail "silere link put a packaged copy on PATH"
     out="$(run_update --version)" || fail "version query failed on a packaged copy"
     case "$out" in
         *"version=9.9.9"*"mode=package"*) ;;
