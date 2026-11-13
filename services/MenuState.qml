@@ -128,7 +128,9 @@ AnchoredPopupState {
         ]},
         { glyph: "󰂚", label: "Feedback", children: [
             { glyph: "󰂚", label: "Notifications", section: "popups",
-              description: "Popups, muted apps, and quiet hours" },
+              description: "Popups and quiet hours" },
+            { glyph: "󰋚", label: "History", section: "history",
+              description: "Saved notifications and muted apps" },
             { glyph: "󱀅", label: "OSD",    section: "osd",
               description: "Volume and brightness feedback" },
             { glyph: "󰀦", label: "Alerts", section: "warnings",
@@ -164,7 +166,8 @@ AnchoredPopupState {
         clock: "clock time date calendar week sunday monday seconds twelve hour twenty four hour 12h 24h am pm temperature forecast",
         media: "music now playing playback player tracks artwork album cover art spectrum visualizer cava audio",
         indicators: "window title battery wifi wi-fi network vpn bluetooth microphone status ram",
-        popups: "notifications popup history retention quiet hours do not disturb dnd critical",
+        popups: "notifications popup quiet hours do not disturb dnd critical",
+        history: "notification history retention saved muted mute apps clear limit",
         osd: "on screen display volume sound audio brightness feedback popup integrated floating",
         warnings: "battery cpu temperature hot overheating critical alerts threshold",
         updates: "updates version release install diagnostics health repair tools dependencies recovery reset defaults maintenance daily shell check doctor fix problems"

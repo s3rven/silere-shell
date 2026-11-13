@@ -36,6 +36,7 @@ settings file carries its own `__version` and migrates separately.
 - When notification history is full, the app with the most entries gives up its oldest one, so one busy chat no longer pushes every other app out.
 - Home's volume and brightness percentages take the accent while you drag them, as Settings sliders do.
 - A long Settings page keeps its title and search at the top while the rest scrolls under them, and Ctrl+F opens search without jumping back to the top.
+- Notification history settings and muted apps have their own History page under Settings › Feedback, so Notifications fits without scrolling.
 - Switching Settings pages is quicker and steadier: the title bar and search stay in place while the page under them fades through, and the next page no longer waits on an empty pane when the panel keeps its size.
 - The uninstaller lists what it kept and how to stop the shell that is still running.
 - The installer names the compositor it found, ends with `silere run`, `silere doctor` and `silere uninstall` when the command is on your PATH, and says when `~/.local/bin` is not on it.
@@ -55,6 +56,7 @@ settings file carries its own `__version` and migrates separately.
 - On a crowded bar, the media title resizes along with the widgets beside it instead of after them.
 - With Reduce motion on, hovering a cut-short window title shows its end.
 - Choosing a search result for Artist, Clock format or style, Theme source, Underline mode, or the battery and temperature warnings scrolls to that row and highlights it, as for every other setting.
+- Screen readers announce rows under Settings › Feedback › History › Muted apps as "Mute popups from" and the app's name, not the bare name.
 - A notification with no title shows its message as the title, in popups and in History, instead of a blank bold line above it.
 - The "Notifications blocked" alert no longer comes back each time Settings rechecks your tools, and its row in Settings › System › Overview stays put while it checks.
 - Muting the Unknown page in History mutes notifications from senders with no name.

@@ -5231,7 +5231,7 @@ ShellRoot {
         const savedDndGate = ShellSettings.dndSchedule
         ShellSettings.dndSchedule = false
         root._check(ShellSettings._dotHidden("popups", "dndFrom") === true
-                && ShellSettings._dotHidden("popups", "notifHistoryLimit") === false,
+                && ShellSettings._dotHidden("popups", "notifCriticalBypass") === false,
             "quiet hours hides its own times without touching the rest of Popups")
         ShellSettings.dndSchedule = savedDndGate
 
@@ -6146,11 +6146,11 @@ ShellRoot {
                 && topSection("margin") === "surface" && topSection("tooltip") === "surface"
                 && topSection("caps lock") === "widgets" && topSection("screen lock") === "devices",
             "settings search finds a setting by the everyday word for it, not only by its label")
-        root._check(MenuState.searchSettings("history retention").some(row => row.section === "popups")
+        root._check(MenuState.searchSettings("history retention").some(row => row.section === "history")
                 && MenuState.searchSettings("brightness display").some(row => row.section === "devices")
                 && MenuState.searchSettings("night-light").some(row => row.section === "devices"),
             "settings search matches all words and normalizes punctuation")
-        root._check(MenuState.searchSettings("notifHistoryDays").some(row => row.section === "popups")
+        root._check(MenuState.searchSettings("notifHistoryDays").some(row => row.section === "history")
                 && MenuState.searchSettings("calendarWeekStart").some(row => row.section === "clock")
                 && MenuState.searchSettings("fontFamily").some(row => row.section === "interface"),
             "settings search accepts exact configuration names as well as plain-language queries")
@@ -6173,7 +6173,7 @@ ShellRoot {
         root._check(MenuState._settingsSearchEntries.map(row => row.section).join(",")
                 === MenuState._flatSections.join(","),
             "ranking search results leaves the cached index in navigation order")
-        const keyedHit = MenuState.searchSettings("notifHistoryDays").find(row => row.section === "popups")
+        const keyedHit = MenuState.searchSettings("notifHistoryDays").find(row => row.section === "history")
         const quietHit = MenuState.searchSettings("dnd from").find(row => row.section === "popups")
         const aliasHit = MenuState.searchSettings("quiet hours").find(row => row.section === "popups")
         root._check(keyedHit && keyedHit.key === "notifHistoryDays"
@@ -6182,7 +6182,7 @@ ShellRoot {
                 && MenuState._settingsSearchEntries.every(row => row.key === undefined),
             "a settings result names the setting it matched without touching the cached index")
         const labelHit = (query, section) => MenuState.searchSettings(query).find(row => row.section === section)
-        root._check(labelHit("keep after restart", "popups")?.key === "notifHistoryPersistent"
+        root._check(labelHit("keep after restart", "history")?.key === "notifHistoryPersistent"
                 && labelHit("shell shadows", "theme")?.key === "barShadow"
                 && labelHit("network speed", "indicators")?.key === "networkTrafficStats"
                 && labelHit("switch animation", "workspaces")?.key === "workspaceShift",
@@ -6207,6 +6207,48 @@ ShellRoot {
         root._check(ShellSettings._schema.every(e => !e.l || e.sec.split(",").every(sec =>
                 MenuState.searchSettings(e.l).some(row => row.section === sec && row.key === e.k))),
             "every labelled setting is found on each of its pages by the label it shows")
+        const revealPage = settingsPageFactory.createObject(root, { width: 320, active: false })
+        const builtSections = {}
+        const sectionFor = sec => builtSections[sec]
+            ?? (builtSections[sec] = revealPage._sectionComponents[sec].createObject(barFixtureHost, { width: 320 }))
+        const rowsFor = (sec, key) => {
+            const out = []
+            root._findTrayNode(sectionFor(sec), it => {
+                if ((it.key === key || it.searchKey === key) && it.topRadius !== undefined) out.push(it)
+                return false
+            })
+            return out
+        }
+        const reachable = (sec, key, hops) => rowsFor(sec, key).length > 0
+            || (hops > 0 && revealPage.revealRowFor(sec, key).length > 0
+                && reachable(sec, revealPage.revealRowFor(sec, key), hops - 1))
+        // Show & order rows, the muted apps list and the glow half of an alert chip are not yet keyed
+        const unkeyed = ["showWindowTitle@widgets", "updatesWidget@widgets", "barShowSystem@widgets",
+            "notifMutedApps@history", "underlineBattGlow@warnings", "underlineTempGlow@warnings"]
+        const unreachable = []
+        for (const e of ShellSettings._schema.filter(e => e.l))
+            for (const sec of e.sec.split(","))
+                if (unkeyed.indexOf(e.k + "@" + sec) < 0 && !reachable(sec, e.k, 3)) unreachable.push(e.k + "@" + sec)
+        root._check(unreachable.length === 0,
+            "every labelled setting has a row on each of its pages for search to flash: " + unreachable.join(" "))
+        root._check(revealPage._keyRow(sectionFor("media"), "mediaWidgetFormat")?.label === "Artist"
+                && revealPage._keyRow(sectionFor("clock"), "clock12h")?.label === "Format",
+            "search reveals a row that writes its setting through its own handler")
+        const battRows = rowsFor("warnings", "osdBatteryWarn")
+        if (battRows.length === 2) {
+            battRows[0].parent.parent.visible = false
+            battRows[1].parent.parent.visible = true
+        }
+        root._check(battRows.length === 2 && revealPage._keyRow(sectionFor("warnings"), "osdBatteryWarn") === battRows[1],
+            "search reveals the shown row when a setting has one per hardware case")
+        const savedMuted = ShellSettings.notifMutedApps
+        ShellSettings.setNotifAppMuted("Discord", true)
+        const mutedRow = root._findTrayNode(sectionFor("history"), it => it.label === "Discord")
+        root._check(mutedRow?.Accessible.name === "Mute popups from Discord" && mutedRow.Accessible.checked,
+            "a muted app's row says what its check box does")
+        ShellSettings.notifMutedApps = savedMuted
+        for (const sec in builtSections) builtSections[sec].destroy()
+        revealPage.destroy()
         const sameAs = (typo, word) => MenuState.searchSettings(typo).map(row => row.section).join(",")
             === MenuState.searchSettings(word).map(row => row.section).join(",") && MenuState.searchSettings(word).length > 0
         root._check(sameAs("worksapce", "workspace") && sameAs("brigthness", "brightness")
@@ -10643,6 +10685,29 @@ ShellRoot {
         MenuState.open = openWas
         MenuState.setRecentFilter(filterWas)
 
+        const limitWas = ShellSettings.notifHistoryLimit
+        ShellSettings.notifHistoryLimit = 50
+        for (let i = 0; i < 12; i++)
+            Notifications._prependHistory({ id: 9310 + i, appName: "Chat", summary: "m" + i, time: 1000 + i })
+        const popupsComponent = Qt.createComponent("modules/menu/settings/SettingsHistorySection.qml")
+        const popups = popupsComponent.status === Component.Ready
+            ? popupsComponent.createObject(root, { width: 360 }) : null
+        const limitRow = popups ? root._findTrayNode(popups, item => item.key === "notifHistoryLimit") : null
+        const limitTrack = limitRow ? root._findTrayNode(limitRow, item => typeof item._press === "function") : null
+        let limitShownLow = ""
+        if (limitTrack) {
+            limitTrack._press(0)
+            limitShownLow = limitRow.displayValue
+            limitTrack._drag(limitTrack.width)
+            limitTrack._release()
+        }
+        root._check(limitTrack !== null && limitTrack.width > 0 && limitShownLow === "5"
+                && Notifications.historyCount === 12 && ShellSettings.notifHistoryLimit === 100,
+            "a history limit dragged down and back keeps every row; only the value let go of applies")
+        if (popups) popups.destroy()
+        popupsComponent.destroy()
+        Notifications.clearHistory()
+        ShellSettings.notifHistoryLimit = limitWas
     }
 
     function _checksDisplayIdentityAndBluetoothDiscovery(): void {

@@ -241,7 +241,7 @@ PageShell {
         separators: _secSeparators, underline: _secUnderline, clock: _secClock,
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
-        popups: _secPopups, osd: _secOsd, warnings: _secWarnings,
+        popups: _secPopups, history: _secHistory, osd: _secOsd, warnings: _secWarnings,
         interface: _secInterface, devices: _secDevices, updates: _secUpdates
     })
 
@@ -572,6 +572,11 @@ PageShell {
         Component {
             id: _secPopups
             SettingsPopupsSection {}
+        }
+
+        Component {
+            id: _secHistory
+            SettingsHistorySection {}
         }
 
         Component {
