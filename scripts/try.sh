@@ -78,7 +78,7 @@ _write_niri_config() { # $1 = scratch, $2 = terminal; prints the path
         for n in 1 2 3 4 5; do
             printf '    Alt+%s { focus-workspace %s; }\n' "$n" "$n"
         done
-        printf '    Alt+Return { spawn "%s"; }\n' "$2"
+        printf '    Alt+Return { spawn %s; }\n' "$(_quoted_text "$2")"
         printf '    Alt+Q { close-window; }\n'
         printf '    Alt+Slash { spawn "qs" "ipc" "-p" %s "call" "menu" "toggle"; }\n' "$(_quoted_text "$ROOT/shell.qml")"
         printf '}\n'

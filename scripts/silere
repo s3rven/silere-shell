@@ -38,6 +38,7 @@ Usage: silere <command> [options]
   stop                   Stop Silere, including its optional user service
   restart                Stop the running shell and start it again
   use [checkout]         Make this checkout (or the given one) the one that runs
+  use --dry-run          Show what use would change, and change nothing
   status                 Show installation and updater state
   log [--follow]         Print the running shell's log
   doctor [--json]        Run read-only installation diagnostics

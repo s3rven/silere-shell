@@ -324,6 +324,11 @@ test_uninstall_empty_optional_paths() (
         || fail "removing the service left silere use's drop-in, which redirects a later install"
     [ -f "$home/.config/systemd/user/silere-shell.service.d/mine.conf" ] \
         || fail "removing the service took a drop-in silere did not write"
+
+    local code=0
+    out="$(PATH="$fixture/stubs:$PATH" bash "$fixture/scripts/service.sh" install --dryrun 2>&1)" || code=$?
+    assert_eq 2 "$code" "a mistyped service option is a usage error"
+    case "$out" in "Usage: silere service"*) ;; *) fail "a mistyped service option printed: '$out'" ;; esac
 )
 
 test_qml_module_lookup() (
@@ -1903,13 +1908,17 @@ test_repair_workflow() (
     printf 'new widget\n' > "$repo/custom.qml"
     printf '{"barHeight":40}\n' > "$repo/settings.json"
 
-    preview="$(bash "$repo/scripts/repair.sh")"
+    preview="$(cd "$TMP" && bash "$repo/scripts/repair.sh")"
     grep -qF 'Nothing was changed' <<<"$preview" \
         || fail "repair preview did not state that it was side-effect free"
+    grep -qF "bash $repo/scripts/repair.sh --apply" <<<"$preview" \
+        || fail "repair preview hinted at a command that only works from the checkout: $preview"
     assert_eq "customized" "$(<"$repo/tracked.qml")" "repair preview tracked file"
     [ -f "$repo/custom.qml" ] || fail "repair preview removed an untracked file"
 
-    bash "$repo/scripts/repair.sh" --apply --yes >/dev/null
+    preview="$(cd "$TMP" && bash "$repo/scripts/repair.sh" --apply --yes)"
+    grep -qF "bash $repo/scripts/repair.sh --undo" <<<"$preview" \
+        || fail "repair apply hinted at an undo that only works from the checkout: $preview"
     assert_eq "shipped" "$(<"$repo/tracked.qml")" "repair apply tracked file"
     [ ! -e "$repo/custom.qml" ] || fail "repair apply left an untracked source file"
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair apply personal settings"
@@ -2658,6 +2667,14 @@ test_plain_copy_is_not_package_managed() (
     esac
 )
 
+test_aur_removal_notes() (
+    source "$ROOT/packaging/aur/silere-shell-git.install"
+    case "$(post_remove)" in
+        *"~/.config/systemd/user/silere-shell.service"*) ;;
+        *) fail "the AUR removal notes do not name the service silere service install writes" ;;
+    esac
+)
+
 test_unit_identity() (
     local root="$TMP/unit-root" stubs="$TMP/unit-stubs" link="$TMP/unit-bin/silere" exec_start
     mkdir -p "$root/scripts" "$stubs" "$TMP/unit-bin"
@@ -2892,7 +2909,7 @@ test_try_config_quotes_paths() (
     PATH="$stubs:$PATH"
     SILERE_SCRIPT_LIB_ONLY=1 source "$fixture/scripts/try.sh"
     _write_hyprland_config "$out" kitty >/dev/null
-    _write_niri_config "$out" kitty >/dev/null
+    _write_niri_config "$out" "$fixture/term" >/dev/null
     printf '%s\n' 'local cmds = {}' \
         'hl = { monitor = function() end, config = function() end, bind = function(k, a) cmds[k] = a end,' \
         '  dsp = { focus = function() return "" end, exec_cmd = function(c) return c end,' \
@@ -2903,6 +2920,9 @@ test_try_config_quotes_paths() (
     kdl="$(sed -n 's/.*"-p" \(".*"\) "call".*/\1/p' "$out/niri.kdl")"
     assert_eq "$fixture/shell.qml" "$(lua - "$kdl" <<< 'io.write(load("return " .. arg[1])())')" \
         "niri's menu shortcut names a checkout path with quotes"
+    kdl="$(sed -n 's/.*Alt+Return { spawn \(".*"\); }$/\1/p' "$out/niri.kdl")"
+    assert_eq "$fixture/term" "$(lua - "$kdl" <<< 'io.write(load("return " .. arg[1])())')" \
+        "niri's terminal shortcut names a terminal path with quotes"
 )
 
 test_lua_block_is_checked() (
@@ -3050,6 +3070,33 @@ test_startup_failure_report() (
         *"Run $ROOT/scripts/silere doctor in a terminal"*) ;;
         *) fail "with silere off PATH, the report does not give the full path: $(cat "$calls")" ;;
     esac
+)
+
+test_fish_completion_scope() (
+    if ! command -v fish >/dev/null 2>&1; then
+        printf 'SKIP: fish not installed; fish completions not tested\n'
+        return 0
+    fi
+    local home="$TMP/fish-home" top bash_top command offered word
+    mkdir -p "$home/stubs"
+    # the ipc helpers call silere, which must never reach a running shell from here
+    printf '#!/bin/sh\nexit 1\n' > "$home/stubs/silere"
+    chmod +x "$home/stubs/silere"
+    fish_complete() {
+        HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_DATA_HOME="$home/data" PATH="$home/stubs:$PATH" fish --no-config \
+            -c 'source $argv[1]; complete -C $argv[2]' "$ROOT/scripts/completions/silere.fish" "$1" | cut -f1
+    }
+    top="$(fish_complete 'silere ' | sort | paste -sd ' ')"
+    bash_top="$(sed -n 's/^ *words=(\(try .*\))$/\1/p' "$ROOT/scripts/completions/silere.bash" | tr ' ' '\n' | sort | paste -sd ' ')"
+    assert_eq "$bash_top" "$top" "fish and bash complete the same commands"
+    # service lists status, ipc asks the running shell and use lists directories
+    for command in $top; do
+        case "$command" in service|ipc|use) continue ;; esac
+        offered="$(fish_complete "silere $command ")"
+        for word in $top; do
+            ! grep -qx -- "$word" <<<"$offered" || fail "fish offers silere $command $word"
+        done
+    done
 )
 
 test_cli_restart_and_log() (
@@ -3291,6 +3338,8 @@ STUB
             GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
             WAYLAND_DISPLAY="${SILERE_TEST_USE_WAYLAND-wayland-test}" bash "$ROOT/scripts/silere" "$@"
     }
+
+    grep -qE '^  use .*--dry-run' <<<"$(cli help)" || fail "silere help does not list use --dry-run"
 
     echo "$t/other/shell.qml" > "$t/running"; : > "$t/calls"
     if out="$(cli restart 2>&1)"; then fail "restart beside another copy's shell claimed success"; fi
@@ -3720,6 +3769,7 @@ test_reinstall_and_uninstall_round_trip
 test_autostart_line_runs
 test_menu_keybind_plan
 test_plain_copy_is_not_package_managed
+test_aur_removal_notes
 test_unit_identity
 test_hypr_discovery
 test_niri_config_discovery
@@ -3731,6 +3781,7 @@ test_lua_block_is_checked
 test_other_bars_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
+test_fish_completion_scope
 test_cli_restart_and_log
 test_cli_ipc_resolution
 test_cli_status_readings

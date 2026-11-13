@@ -80,7 +80,7 @@ case "$action" in
             exit 0
         fi
         printf 'Local changes that would be saved:\n%s\n\n' "$changes"
-        printf 'Nothing was changed. Run `bash scripts/repair.sh --apply` to repair the checkout.\n'
+        printf 'Nothing was changed. Run `bash %s/scripts/repair.sh --apply` to repair the checkout.\n' "$ROOT"
         ;;
 
     --apply)
@@ -102,7 +102,7 @@ case "$action" in
 
         stash_ref="$(_latest_repair_stash)" || _die "changes were saved, but the repair stash could not be located"
         printf 'Silere restored to the installed revision.\n'
-        printf 'Your edits are safe in %s; restore them with `bash scripts/repair.sh --undo`.\n' "$stash_ref"
+        printf 'Your edits are safe in %s; restore them with `bash %s/scripts/repair.sh --undo`.\n' "$stash_ref" "$ROOT"
         ;;
 
     --undo)

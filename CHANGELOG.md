@@ -49,6 +49,10 @@ settings file carries its own `__version` and migrates separately.
 - On a copy of Silere without Git, `silere` no longer says a package manager owns it: `silere link`, `use` and `uninstall` work there, and `silere update` says once that nothing updates it.
 - `silere service remove` and the uninstaller also remove the override `silere use` wrote, so a service installed later starts its own checkout.
 - `silere doctor` and the installer no longer read Qt 5's modules when only a Qt 5 `qtpaths` is on PATH, which could report Qt as too old.
+- Fish no longer suggests `service` after every `silere` command, and `silere help` lists `use --dry-run`.
+- `silere service` with a mistyped option prints its usage instead of exiting silently, and `silere repair` gives full paths in its hints, so they work from any directory.
+- `silere try` on niri accepts a terminal path containing quotes or backslashes.
+- The AUR package's removal notes name the crash recovery service file, if you made one.
 - A battery-critical hook runs once when the battery crosses the critical level, not again each time the reading wobbles across it or UPower restarts.
 - An update-available hook added while Silere runs no longer fires when the update count falls.
 - Home no longer shows an empty Connectivity section on a wired desktop with no Bluetooth and no saved VPN.

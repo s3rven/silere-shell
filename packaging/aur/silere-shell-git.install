@@ -46,7 +46,7 @@ EOF
 post_remove() {
     cat <<'EOF'
 
-  silere is removed. two things it was wired into are left in your home
+  silere is removed. three things it was wired into are left in your home
   directory, because pacman does not own them:
 
     the autostart line you added to your compositor config
@@ -56,6 +56,9 @@ post_remove() {
       `# silere-shell begin` in ~/.config/matugen/config.toml, plus
       ~/.config/matugen/templates/silere-shell/ and
       ~/.config/matugen/silere-shell.json
+
+    the crash recovery service, if you ran silere service install:
+      ~/.config/systemd/user/silere-shell.service
 
   settings stay in ~/.config/silere-shell and notification history in
   ~/.local/state/silere-shell, in case you come back.
