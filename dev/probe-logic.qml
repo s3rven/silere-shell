@@ -3571,7 +3571,7 @@ ShellRoot {
             "a backwards clock change cannot reuse a stale notification process parent")
         WindowActions._parentPidCache = parentCacheWas
 
-        const hereRef = WindowActions._hereWorkspaceRef()
+        const hereRef = WindowActions._hereWorkspace().ref
         const elsewhereRef = hereRef === 2147483647 ? hereRef - 1 : hereRef + 1
         const matchingClients = [
             { ref: "hidden", wsId: -1, wsRef: elsewhereRef, focusRank: 0 },
@@ -3587,6 +3587,17 @@ ShellRoot {
         root._check(WindowActions._chooseMatchingSource(
                     matchingClients, function(c) { return c.ref === "here" }).ref === "here",
             "window matching falls back to the current workspace when it is the only match")
+        const namedClients = [
+            { ref: "mail", wsId: -1338, wsRef: -1338, wsName: "mail", focusRank: 0 },
+            { ref: "chat", wsId: -1338, wsRef: -1338, wsName: "chat", focusRank: 4 }
+        ]
+        const onMail = { ref: -1338, name: "mail" }
+        root._check(WindowActions._chooseMatchingSource(namedClients, () => true, onMail).ref === "chat"
+                && WindowActions._chooseMatchingSource(namedClients, c => c.ref === "mail", onMail).ref === "mail"
+                && WindowActions._chooseMatchingSource(namedClients, () => true, { ref: 3, name: "3" }).ref === "mail"
+                && WindowActions._chooseMatchingSource([{ ref: "here", wsId: 1, wsRef: 11, focusRank: 0 },
+                    { ref: "away", wsId: 2, wsRef: 12, focusRank: 4 }], () => true, { ref: 11, name: "chat" }).ref === "away",
+            "on a named workspace, a window on another named one counts as elsewhere")
         const pidMatches = WindowActions._pidMatches(matchingClients, 77)
         root._check(pidMatches.length === 2 && pidMatches[0].ref === "here"
                 && pidMatches[1].ref === "elsewhere",

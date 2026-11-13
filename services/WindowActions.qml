@@ -23,8 +23,14 @@ Singleton {
         return Compositor.toplevels || []
     }
 
-    function _hereWorkspaceRef(): int {
-        return Compositor.focusedWorkspaceRef
+    function _hereWorkspace(): var {
+        const ws = Compositor.activeWorkspace(Compositor.focusedMonitor)
+        return { ref: Compositor.focusedWorkspaceRef, name: ws ? String(ws.name ?? "") : "" }
+    }
+
+    // hyprland 0.57 gives every named workspace the same ref, so only the name tells two apart
+    function _isHere(c, here): bool {
+        return c.wsRef === here.ref && (here.ref > 0 || String(c.wsName ?? "") === here.name)
     }
 
     function _toPid(value): int {
@@ -46,8 +52,7 @@ Singleton {
         return root._chooseMatchingSource(pool || [], function() { return true })
     }
 
-    function _chooseMatchingSource(clients, matches): var {
-        const hereRef = root._hereWorkspaceRef()
+    function _chooseMatchingSource(clients, matches, here = root._hereWorkspace()): var {
         let bestAny = null
         let bestElsewhere = null
 
@@ -58,7 +63,7 @@ Singleton {
             const rank = c.focusRank ?? 9999
             if (!bestAny || rank < (bestAny.focusRank ?? 9999))
                 bestAny = c
-            if (c.wsRef !== hereRef && (!bestElsewhere || rank < (bestElsewhere.focusRank ?? 9999)))
+            if (!root._isHere(c, here) && (!bestElsewhere || rank < (bestElsewhere.focusRank ?? 9999)))
                 bestElsewhere = c
         }
 
