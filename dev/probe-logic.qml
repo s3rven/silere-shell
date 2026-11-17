@@ -6287,6 +6287,30 @@ ShellRoot {
             "inline code and link markup show only the text a reader would see")
         root._check(Notifications.plainText("it`s 3`4 and [a] (b)", 128) === "it`s 3`4 and [a] (b)",
             "a stray backtick or bracket outside markdown syntax stays")
+        for (const example of [
+            ["Run `<b>literal</b>` now", "Run <b>literal</b> now"],
+            ["Use `**literal** [x](url)`", "Use **literal** [x](url)"],
+            ["```html\n<b>literal</b>\n```", "<b>literal</b>\n"],
+            ["```python\nprint(\"**value** [x](url)\")\n```", "print(\"**value** [x](url)\")\n"],
+            ["```\necho first\n```", "echo first\n"],
+            ["``` echo first ```", "echo first"],
+            ["Before\n```\n\n  indented\n\n```\nAfter", "Before\n\n  indented\n\nAfter"],
+            ["````markdown\n```js\n`x`\n```\n````", "```js\n`x`\n```\n"],
+            ["~~~html\n<b>x</b>\n~~~", "<b>x</b>\n"],
+            ["```html\n<b>unfinished</b>", "<b>unfinished</b>"],
+            ["Use ``a ` b`` now", "Use a ` b now"],
+            ["Use ````keep words with ``` inside````.", "Use keep words with ``` inside."],
+            ["```text\none\n~~~\ntwo\n```\nend", "one\n~~~\ntwo\nend"],
+            ["```text\r\none\r\n```", "one\r\n"],
+            ["**Bold** and `<b>code</b>` and [notes](url)", "Bold and <b>code</b> and notes"],
+            ["**`<b>bold code</b>`**", "<b>bold code</b>"],
+            ["[Run `**literal**`](url)", "Run **literal**"],
+            ["`<b>a</b>` and `**b**`", "<b>a</b> and **b**"],
+            ["x\u00000\u0000 `real`", "x0 real"],
+            ["`&amp;` and &amp;", "&amp; and &"],
+            ["```text\na\u202Eb\u0000c\n```", "abc\n"]
+        ]) root._check(Notifications.plainText(example[0], 512) === example[1],
+            "notification code keeps its literal contents: " + JSON.stringify(example[0]))
         root._check(Notifications._normalizeEntry({ body: "line1\nline2" }).body
                 === "line1\nline2",
             "history text keeps the newlines a multi-line body needs")

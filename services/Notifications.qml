@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import "../config"
+import "NotificationText.js" as NotificationText
 
 Singleton {
     id: root
@@ -1055,23 +1056,7 @@ Singleton {
         const limit = isFinite(requested) && requested > 0
             ? Math.min(root._maxBodyChars, Math.floor(requested)) : root._maxBodyChars
         const source = SafeText.boundedText(s, limit * 2)
-        const plain = source
-            .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s|em|strong|font|img)\b[^>]*>/gi, "")
-            .replace(/<br\s*\/?>|<\/?(p|div)\b[^>]*>/gi, " ")
-            .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-            .replace(/&quot;/g, "\"").replace(/&apos;/g, "'")
-            .replace(/&#(x[0-9a-f]{1,6}|[0-9]{1,7});/gi, (m, n) => {
-                const cp = n[0] === "x" || n[0] === "X" ? parseInt(n.slice(1), 16) : parseInt(n, 10)
-                return cp > 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : m
-            })
-            .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
-            .replace(/&amp;/g, "&")
-            .replace(/(^|[^\w*])\*\*(?=[^*\s])([^*\n]*?[^*\s])\*\*(?![\w*])/g, "$1$2")
-            // a sender that flattens newlines leaves "```lang text ```", so a fence takes its language word and the space with it
-            .replace(/[ \t]*```[\w+#.-]*(?=\s|$)[ \t]*(\n?)/g, (m, nl, at, s) =>
-                at === 0 || s[at - 1] === "\n" ? "" : nl || (at + m.length === s.length ? "" : " "))
-            .replace(/(^|[^\w`])`([^`\n]+)`(?![\w`])/g, "$1$2")
-            .replace(/!?\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")
+        const plain = NotificationText.plainText(source)
         return root._boundedPlainText(plain, limit)
     }
 
