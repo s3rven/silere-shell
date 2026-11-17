@@ -61,7 +61,9 @@ Item {
 
     // only appearing/leaving eases; hover growth is already eased by the label, and a second ease on top lags the slot behind its own content
     property real _showProgress: show ? 1.0 : 0.0
-    implicitWidth:  _row.implicitWidth * _showProgress
+    // the last icon leaves with its tile, so the fold works from the width the row last had
+    property real _foldWidth: 0
+    implicitWidth:  (_row.implicitWidth > 0 ? _row.implicitWidth : _foldWidth) * _showProgress
     implicitHeight: parent ? parent.height : 24
     visible: layoutVisible
     clip: _showProgress < 0.999
@@ -134,6 +136,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         height: root.height
         spacing: root.itemGap
+        onImplicitWidthChanged: if (implicitWidth > 0) root._foldWidth = implicitWidth
 
         Repeater {
             id: _items

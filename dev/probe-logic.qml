@@ -13529,6 +13529,19 @@ ShellRoot {
                 s.first.icon = "file://" + trayIconFixture.path + "?frame=2"
                 root._check(icon.status === Image.Loading && icon.opacity === 1 && !tile.fallbackVisible,
                     "a tray icon stays up while the app's next icon loads")
+                s.trayFullWidth = widget ? widget.implicitWidth : 0
+                root._trayProbeItems = []
+                break
+            }
+            case 12: {
+                // the last app's tile is gone before the fold starts; reduced motion snaps it, so hold it halfway
+                // a Row lays out on polish, which this unrendered bar never reaches
+                const trayRow = widget ? widget.children.find(c => typeof c.forceLayout === "function") : null
+                if (trayRow) trayRow.forceLayout()
+                if (widget) widget._showProgress = 0.5
+                root._check(trayRow && trayRow.implicitWidth === 0 && s.trayFullWidth > 0
+                        && Math.abs(widget.implicitWidth - s.trayFullWidth / 2) < 1,
+                    "a tray whose last app leaves folds from the width it had, not from nothing")
                 s.zone.destroy()
                 s.settings.destroy()
                 root._trayProbeItems = []
