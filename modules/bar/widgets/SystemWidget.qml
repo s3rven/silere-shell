@@ -29,6 +29,10 @@ Pill {
     Component.onDestruction: SysInfo.requestTopProcess(root, false)
     readonly property string _busiest: root._cpuOn && SysInfo.topShown
         ? SysInfo.topName + " (" + SysInfo.topPid + ")" : ""
+    // a part coming or going from the detail is not a reading that flickers: held for the shrink delay, a busiest
+    // process going left 120 px of empty pill for 2.4 s. Another process taking its place is still held
+    readonly property int _detailParts: (root._busiest.length > 0 ? 1 : 0) + (root._memOn && SysInfo.swapActive ? 2 : 0)
+    on_DetailPartsChanged: root._releaseHold()
 
     readonly property int _cpuLevel: root._cpuOn && SysInfo.cpuReady && SysInfo.cpuHigh ? 1 : 0
     // memory reads Home's own band, so the two never disagree about the same reading

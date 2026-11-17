@@ -2956,6 +2956,17 @@ ShellRoot {
         root._check(topQuietOff && topWantedOn && topHeld && !SysInfo._topWanted && !SysInfo.topShown
                 && SysInfo.topName === "" && w._parts[0].detail === "62%",
             "the busiest process is read only while a view asks for it, and forgotten once that view has faded out")
+        SysInfo.topName = "cc1plus"
+        SysInfo.topPid = 48211
+        w._minW = 999
+        SysInfo.topShown = true
+        const heldOnArrival = w._minW
+        w._minW = 999
+        SysInfo.topPid = 48212
+        const heldOnSwap = w._minW
+        SysInfo.topShown = false
+        root._check(heldOnArrival === 0 && heldOnSwap === 999 && w._minW === 0,
+            "the busiest process coming or going lets the monitor's width go at once; another taking its place is held")
         SysInfo._active = topWas.active
         SysInfo.topShown = topWas.shown
         SysInfo.topName = topWas.name
