@@ -134,7 +134,7 @@ Singleton {
     Component.onCompleted: root._seenProfile = root.profile
     onProfileChanged: {
         const was = root._seenProfile
-        if (root.profile.length > 0) root._seenProfile = root.profile
+        root._seenProfile = root.profile
         root._noteProfileChange(was, root.profile)
     }
     property Timer _startSettleTimer: Timer {

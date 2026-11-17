@@ -10420,7 +10420,38 @@ ShellRoot {
         for (const key of Object.keys(checkoutStateWas)) ShellUpdate[key] = checkoutStateWas[key]
     }
 
+    function _checkPowerProfileReconnect(): void {
+        const was = { tools: SystemTools._tools, seen: PowerProfiles._seenProfile,
+            osdProfile: OsdBarState._powerProfile, armed: OsdBarState._armed,
+            enabled: ShellSettings.osdEnabled }
+        SystemTools._tools = { busctl: true, "@powerprofiles": true }
+        OsdBarState._armed = true
+        ShellSettings.osdEnabled = true
+        // The new daemon can restore a different mode. Neither its initial read
+        // nor loss of the old daemon is a new choice made by the user.
+        const current = PowerProfiles.profile
+        const previous = current === "balanced" ? "performance" : "balanced"
+        PowerProfiles._seenProfile = previous
+        OsdBarState._powerProfile = previous
+        OsdBarState._clearEntries()
+        SystemTools._tools = { busctl: true }
+        root._check(PowerProfiles.profile === "" && PowerProfiles._seenProfile === ""
+                && OsdBarState._powerProfile === "",
+            "losing the power service clears the previous mode in both change watchers")
+        SystemTools._tools = { busctl: true, "@powerprofiles": true }
+        root._check(current.length > 0 && PowerProfiles._seenProfile === current
+                && OsdBarState._powerProfile === current && OsdBarState._entryIndex("power") < 0,
+            "a returning power service establishes a fresh baseline without announcing a mode change")
+        SystemTools._tools = was.tools
+        PowerProfiles._seenProfile = was.seen
+        OsdBarState._powerProfile = was.osdProfile
+        OsdBarState._armed = was.armed
+        ShellSettings.osdEnabled = was.enabled
+        OsdBarState._clearEntries()
+    }
+
     function _checksPowerModeAndPresentation(): void {
+        root._checkPowerProfileReconnect()
         root._check(PowerProfiles.profileName(0) === "power-saver"
                 && PowerProfiles.profileName(1) === "balanced"
                 && PowerProfiles.profileName(2) === "performance"

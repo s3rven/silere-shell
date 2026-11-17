@@ -475,7 +475,7 @@ Singleton {
             const now = PowerProfiles.profile
             if (root.powerChangeShown(root._powerProfile, now, ControlSurfaces.anyOpen))
                 root.showAlert("power", PowerProfiles.glyph, 0, PowerProfiles.label, Theme.accent)
-            if (now.length > 0) root._powerProfile = now
+            root._powerProfile = now
         }
     }
 
