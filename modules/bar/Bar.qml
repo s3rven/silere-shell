@@ -58,6 +58,11 @@ PanelWindow {
     }
 
     readonly property bool shadowOn: shadowProgress > 0.001
+    property real borderProgress: ShellSettings.barBorderVisible ? 1.0 : 0.0
+    MotionBehavior on borderProgress {
+        NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
+    }
+    readonly property bool borderOn: borderProgress > 0.001
     // constant, not scaled by shadowProgress: this feeds implicitHeight, so animating it
     // resized the layer-shell window in 4px steps and the bar juddered on every toggle
     readonly property real effectPad: 24
@@ -157,8 +162,8 @@ PanelWindow {
 
         Loader {
             anchors.fill: _backdrop
-            active: bar.wrapUnderline && (bar.shadowOn || ShellSettings.barBorderVisible)
-            opacity: contents.opacity * bar.floatingProgress
+            active: bar.wrapUnderline && (bar.shadowOn || bar.borderOn)
+            opacity: contents.opacity * bar.floatingProgress * Math.max(bar.shadowProgress, bar.borderProgress)
             visible: active && opacity > 0.001
             sourceComponent: Item {
                 Hairline {
@@ -185,8 +190,8 @@ PanelWindow {
         // positioned via y, not flipped anchors: conditional anchor bindings don't reliably clear the stale edge
         Loader {
             anchors.fill: parent
-            active: ShellSettings.barBorderVisible
-            opacity: contents.opacity * (1.0 - bar.floatingProgress)
+            active: bar.borderOn
+            opacity: contents.opacity * (1.0 - bar.floatingProgress) * bar.borderProgress
             visible: active && opacity > 0.001
             // wrapped: a Loader stretches its root item to the Loader's size, which turns the hairline into a full-height wash over the whole bar
             sourceComponent: Item {
@@ -337,8 +342,8 @@ PanelWindow {
 
         Loader {
             anchors.fill: _backdrop
-            active: bar.wrapUnderline && ShellSettings.barBorderVisible
-            opacity: contents.opacity * bar.floatingProgress
+            active: bar.wrapUnderline && bar.borderOn
+            opacity: contents.opacity * bar.floatingProgress * bar.borderProgress
             visible: active && opacity > 0.001
             sourceComponent: OutlineBorder {
                 radius: surface.radius
