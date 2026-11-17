@@ -87,17 +87,28 @@ Item {
     // with the pill's own edge, so the readings after it hold still: laid out at once, they were shoved past the edge
     // and slid back on every hover, and jumped back and slid out again on leaving
     readonly property bool _glideReadings: root.segments.length > 0
-    // what the gliding boxes still have to cover, so the pill heads for the row's final width from the first frame
-    readonly property real _readingSlack: !root._glideReadings ? 0
-        : Array.prototype.reduce.call(row.children, (sum, item) => sum + (item._slack ?? 0), 0)
+    // the row's width once its readings land, so the pill heads there from the first frame. Summed from the boxes'
+    // own targets, as the Row lays out (a zero-width part takes no gap): the Row measures only at its next polish,
+    // and its width plus what the boxes still had to cover mixed two frames, so the pill's glide chased a target
+    // that jumped twice a frame, parked a pixel wide and stepped back once the readings settled
+    readonly property real _finalRowW: {
+        if (!root._glideReadings) return 0
+        const parts = [_glyphBox.implicitWidth, _textBox._hasShownText ? _textBox._targetW : 0]
+        for (let i = 0; i < _segments.count; i++) parts.push(_segments.itemAt(i)?._finalW ?? 0)
+        const shown = parts.filter(w => w > 0)
+        return shown.reduce((sum, w) => sum + w, 0) + Math.max(0, shown.length - 1) * row.spacing
+    }
     // whole px: a fractional text width puts the pill and every widget after it off-pixel
-    readonly property real rowWidth: Math.ceil(row.implicitWidth + root._readingSlack)
+    readonly property real rowWidth: Math.ceil(root._glideReadings ? root._finalRowW : row.implicitWidth)
     implicitWidth: _widthGlide.value
     SmoothGlide {
         id: _widthGlide
         target: root.collapsed ? 0
             : Math.max(root.rowWidth, root._minW) + root.horizontalPadding * 2
         duration: Motion.width
+        // the zone draws the slot at the width rounded up, so a closing pill held its last pixel through the glide's
+        // long tail and the bar after it stepped once more 80 ms after it had come to rest
+        precision: 0.5
         gate: root._ready && root.barActive
         onRunningChanged: if (!running) {
             root._unfolding = false
@@ -351,7 +362,6 @@ Item {
             visible: _hasShownText
             readonly property real _targetW: _hasShownText
                 ? Math.ceil(Math.min(Math.max(implicitWidth, root._reserveW), root.maxTextWidth)) : 0
-            readonly property real _slack: root._glideReadings ? _targetW - width : 0
             width: root._glideReadings ? _textGlide.value : _targetW
             height: _textEl.implicitHeight
             implicitWidth: _textEl.implicitWidth
@@ -417,6 +427,7 @@ Item {
 
         // indexed, not modelled: a reading that ticks rebinds its text instead of rebuilding the pair
         Repeater {
+            id: _segments
             model: root.segments.length
             Row {
                 id: _segment
@@ -428,6 +439,7 @@ Item {
                 spacing: row.spacing
 
                 Item {
+                    id: _segGlyphBox
                     y: Math.round((parent.height - height) / 2)
                     implicitWidth: Metrics.iconCellFor(root.glyphPixelSize)
                     implicitHeight: _segGlyph.implicitHeight
@@ -473,7 +485,8 @@ Item {
                         }
                     }
                 }
-                readonly property real _slack: _segBox._targetW - _segBox.width
+                readonly property real _finalW: leftPadding + _segGlyphBox.implicitWidth
+                    + (_segBox._targetW > 0 ? spacing + _segBox._targetW : 0)
             }
         }
     }

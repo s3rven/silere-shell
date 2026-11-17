@@ -154,6 +154,7 @@ settings file carries its own `__version` and migrates separately.
 - Reopening Settings or History opens the panel at the height it closed at, instead of growing while the page loads.
 - A Settings section that starts open arrives with its page instead of unfolding its rows as the page loads, and the lines at a scrolled page's edges fade out with it.
 - A bar divider folds away beside a widget switched off in Settings, instead of leaving in one step after it.
+- A bar pill closing its hover detail comes to rest with the motion: the bar no longer shifts one more pixel a moment later.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.
