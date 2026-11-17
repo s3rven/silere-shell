@@ -57,6 +57,8 @@ Item {
         width: Metrics.devicePx(22, _dpr); height: width; radius: width / 2
         antialiasing: true
         color: root.spectrum ? "transparent" : root.chipColor
+        // the auto chip and the wallpaper's bases change with the wallpaper while the shell around them fades
+        ColorFade on color { rawSource: true }
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         transform: [
             PixelScale {

@@ -177,7 +177,7 @@ Column {
                     color:          ShellSettings.highContrast
                         ? Theme.menuTextDetail
                         : Theme.inkFor(Theme.mix(Theme.subtext, _accentPicker._shownColor, 0.62))
-                    ColorFade on color {}
+                    ColorFade on color { rawSource: true }
                     font.pixelSize: Settings.fontCaption
                     elide:          Text.ElideRight
                 }

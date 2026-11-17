@@ -15232,6 +15232,8 @@ ShellRoot {
     property real _clockAnchorWidth: 0
 
     function _finish(): void {
+        // here, seconds after the theme checks flipped the source and contrast, so no mode switch is still settling
+        root._checkModeSwitchFades()
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")

@@ -391,6 +391,8 @@ Item {
                                         _headerHover.hovered ? 1.0 : 0.88)
                                     : Theme.withAlpha(Theme.mix(
                                         Theme.text, Theme.accentInk, 0.22), 0.98)
+                            // with the header's fill beside it, which fades
+                            ColorFade on color {}
                             font.pixelSize: Settings.fontCaption
                             font.letterSpacing: 0.65
                             font.weight: Font.DemiBold

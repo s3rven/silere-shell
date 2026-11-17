@@ -120,6 +120,7 @@ Item {
         radius: root.thickness / 2
         antialiasing: true
         color: root.trackColor
+        ColorFade on color {}
         visible: width > 0.5
     }
 

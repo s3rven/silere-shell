@@ -126,7 +126,7 @@ Item {
             radius: _selection.radius
             outlineWidth: 2
             outlineColor: root.ringColor.a > 0 ? root.ringColor : root.colorAt(root.activeIndex)
-            ColorFade on outlineColor {}
+            ColorFade on outlineColor { rawSource: root.ringColor.a === 0 }
         }
     }
 }

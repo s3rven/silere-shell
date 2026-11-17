@@ -186,13 +186,18 @@ Singleton {
     readonly property string _paletteKey: "" + _tBackground + _tSurface + _tText
         + _tSubtext + _tAccent + _tError + _tWarning + _tSuccess + _tLineBase
         + _tMenuTextDetail + _tMenuTextWarning + _tMenuTextQuiet + _tAccentInk
-    readonly property bool paletteShifting: _shiftWindow.running
+    // high contrast and the colour source flip the formulas themselves, not only the colours they read, and that flip has no
+    // fade of its own: the local fades carry it, or a switch's knob went from the accent to dark grey in one frame
+    readonly property bool paletteShifting: _shiftWindow.running && !_modeWindow.running
     on_PaletteKeyChanged: {
         if (!root._paletteReady
                 || !Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) return
         _shiftWindow.restart()
     }
     Timer { id: _shiftWindow; interval: Motion.palette }
+    on_HcChanged: _modeWindow.restart()
+    on_NChanged: _modeWindow.restart()
+    Timer { id: _modeWindow; interval: Motion.palette }
 
     // solved at L* 70.8, C* 20-36: equal visual weight on all three dark bases
     readonly property var neutralAccentPresets: [
@@ -224,9 +229,24 @@ Singleton {
     property color _lineBase: root._tLineBase
     PaletteFade on _lineBase { gate: root._paletteReady }
 
-    readonly property color outline: _hc ? withAlpha(text, lineAlpha(0.36))
-                                        : _n ? withAlpha(_lineBase, lineAlpha(0.14))
-                                             : withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17))
+    // high contrast and the colour source reshape a line, and a palette shift never eases that: the lines most outlines
+    // draw ride an eased blend of both forms instead, so a switch fades them with the rest. Both forms only gain
+    // lightness and alpha toward high contrast, so the blend never passes through a brighter grey
+    property real _hcK: _hc ? 1 : 0
+    property real _nK: _n ? 1 : 0
+    MotionBehavior on _hcK { gate: root._paletteReady
+        NumberAnimation { duration: Motion.palette; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel } }
+    MotionBehavior on _nK { gate: root._paletteReady
+        NumberAnimation { duration: Motion.palette; easing.type: Easing.BezierSpline; easing.bezierCurve: Motion.standardDecel } }
+    function _lerp(a: color, b: color, k: real): color {
+        return Qt.rgba(a.r + (b.r - a.r) * k, a.g + (b.g - a.g) * k, a.b + (b.b - a.b) * k, a.a + (b.a - a.a) * k)
+    }
+    function _modeLine(wallpaper: color, neutral: color, contrast: color): color {
+        return root._lerp(root._lerp(wallpaper, neutral, _nK), contrast, _hcK)
+    }
+
+    readonly property color outline: root._modeLine(withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17)),
+        withAlpha(_lineBase, lineAlpha(0.14)), withAlpha(text, lineAlpha(0.36)))
 
     readonly property color barSeparator: withAlpha(_n ? _lineBase : mix(_lineBase, accent, 0.10), 0.38)
 
@@ -284,6 +304,8 @@ Singleton {
     property bool glass: false
     Component.onCompleted: root.glass = root._glassWanted
     on_GlassWantedChanged: {
+        // a slab turning to glass still snaps, mode switch or not
+        _modeWindow.stop()
         _shiftWindow.restart()
         root.glass = root._glassWanted
     }
@@ -301,9 +323,8 @@ Singleton {
     // for what floats over content, like a hover label, and must not let the content show through
     readonly property color menuCardSolid:   _n ? mix(background, text, _elevK * (_hc ? 0.090 : 0.060))
                                                 : mix(background, text, _elevK * (_hc ? 0.100 : 0.07))
-    readonly property color menuCardBorder:  _hc ? withAlpha(text, lineAlpha(0.22))
-                                                : _n ? withAlpha(_lineBase, lineAlpha(0.105))
-                                                     : withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17))
+    readonly property color menuCardBorder:  root._modeLine(withAlpha(mix(_lineBase, accent, 0.22), lineAlpha(0.17)),
+        withAlpha(_lineBase, lineAlpha(0.105)), withAlpha(text, lineAlpha(0.22)))
     readonly property color menuDivider:     _hc ? withAlpha(text, lineAlpha(0.16))
                                                 : _n ? withAlpha(_lineBase, lineAlpha(0.075))
                                                      : withAlpha(_lineBase, lineAlpha(0.085))
@@ -312,9 +333,8 @@ Singleton {
     // the same ~3 L* separation above the card that neutral gets from 0.060 -> 0.090
     readonly property color menuControl:     glass ? withAlpha(text, _over(_controlK, _cardK)) : menuControlSolid
     readonly property color menuControlSolid: mix(background, text, _controlK)
-    readonly property color menuControlLine: _hc ? withAlpha(text, lineAlpha(0.24))
-                                                : _n ? withAlpha(_lineBase, lineAlpha(0.115))
-                                                     : withAlpha(_lineBase, lineAlpha(0.135))
+    readonly property color menuControlLine: root._modeLine(withAlpha(_lineBase, lineAlpha(0.135)),
+        withAlpha(_lineBase, lineAlpha(0.115)), withAlpha(text, lineAlpha(0.24)))
     readonly property color menuControlLineHot: _hc ? withAlpha(accent, lineAlpha(0.45))
                                                    : _n ? withAlpha(_lineBase, lineAlpha(0.18))
                                                         : withAlpha(mix(_lineBase, accent, 0.18), lineAlpha(0.20))
@@ -326,7 +346,7 @@ Singleton {
                                                      : withAlpha(_lineBase, 0.16)
     // not lineAlpha: the base swatches sit within 1 L* of their card, so this edge is what
     // makes them countable at all and must survive outline strength being turned down
-    readonly property color swatchEdge:      withAlpha(text, _hc ? 0.34 : 0.20)
+    readonly property color swatchEdge:      withAlpha(text, 0.20 + 0.14 * _hcK)
     readonly property color menuTextMuted:   mix(subtext, text, _hc ? 0.45 : (_n ? 0.30 : 0.24))
     readonly property color menuTextFaint:   mix(subtext, text, _hc ? 0.25 : (_n ? 0.15 : 0.10))
     // solved on the target palette and faded, not re-solved every frame; glass asks less, or detail outshines labels

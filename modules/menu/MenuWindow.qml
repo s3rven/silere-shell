@@ -891,7 +891,10 @@ FittedPopupWindow {
                 // the top line marks where scrolled rows are cut, which is under the settings header when it is pinned
                 anchors.topMargin: Math.max(0, contentFlick.revealTopInset - 1)
                 list: contentFlick
-                visible: panel.activeTab !== 2 && _contentSettle.ready
+                // faded, not switched: the lines left on the first frame of a close or a page change
+                opacity: panel.activeTab !== 2 && _contentSettle.ready ? 1 : 0
+                visible: opacity > 0
+                MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
                 z: 4
             }
 
