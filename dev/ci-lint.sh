@@ -2157,20 +2157,22 @@ fi
 
 # quickshell #1268 resurrects a window closed while a client snapshot is in flight; every
 # model must read toplevels through the filter that drops them, or a ghost icon stays
-toplevel_reads="$(grep -c 'Hyprland\.toplevels' services/CompositorHyprland.qml || true)"
+# the copy watcher alone takes quickshell's model itself, unfiltered: it copies ghosts too, as the eviction needs
+toplevel_reads="$(grep 'Hyprland\.toplevels' services/CompositorHyprland.qml | grep -cv '^        model: Hyprland\.toplevels$' || true)"
 if [ "$toplevel_reads" != "1" ] || ! grep -qE '_withoutClosed\(Hyprland\.toplevels' services/CompositorHyprland.qml; then
   fail "services/CompositorHyprland.qml must read Hyprland.toplevels only in _liveToplevels(), which drops closed windows"
 else
   ok "closed windows" "toplevel models skip windows hyprland already closed"
 fi
 
-# every client reply re-runs the window models once per window (focusHistoryID moves on all of
-# them), so a model that copies each window's IPC map costs window-count-squared copies per switch
+# every client reply rewrites each window's IPC map and signals its address again, so a model that
+# copies the map, or reads a toplevel's address, reruns once per window: window-count-squared per reply
 model_copies="$(awk '/^    readonly property var (workspaces|workspaceToplevels|toplevels|activeToplevel): \{/ { inside = 1 }
-  inside && /_ipcOf\(|lastIpcObject/ { print FILENAME ":" FNR ": " $0 }
+  inside && (/_ipcOf\(|lastIpcObject/ || (/\.address/ && !/\<c\.address/)) { print FILENAME ":" FNR ": " $0 }
+  /^    readonly property var urgentRefs:/ && /[a-z]\.address/ { print FILENAME ":" FNR ": " $0 }
   inside && /^    \}$/ { inside = 0 }' services/CompositorHyprland.qml </dev/null)"
 if [ -n "$model_copies" ]; then
-  fail "the Hyprland window models must read _ipcCopies, never copy a window's IPC map themselves:"
+  fail "the Hyprland window models must read _ipcCopies and _addr(t), never a window's IPC map or address:"
   printf '%s\n' "$model_copies"
 else
   ok "window copies" "the window models share one IPC copy per window per reply"

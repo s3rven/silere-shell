@@ -68,6 +68,16 @@ QtObject {
     property bool _refreshAgain: false
     property string _activeAddr: ""
     property bool _unfocused: false
+    // focus order seen this session, by bare address, filled in place: a client list per focus change only refreshed focusHistoryID
+    readonly property var _focusOrder: ({})
+    property int _focusSeq: 0
+    // negative, like niri's: a window focused this session outranks every one not. The focused one ranks first by its
+    // flag: quickshell rebuilds the models on its own focus change, before the event reaches _focusOrder
+    function focusRankOf(address, ipc, focused): real {
+        if (focused) return -Infinity
+        const seq = root._focusOrder[address]
+        return seq !== undefined ? -seq : (ipc && ipc.focusHistoryID !== undefined ? ipc.focusHistoryID : 9999)
+    }
     // per output: two monitors can each show a special workspace
     property var _specialOn: ({})
     readonly property bool _liveTitlesWanted: ShellSettings.showWindowTitle
@@ -209,8 +219,15 @@ QtObject {
         }
     }
 
+    // a window's identities never change, and every model rebuild cleaned three per window; external strings, so no prototype
+    readonly property var _identities: Object.create(null)
     function _identity(value): string {
-        return SafeText.singleLineText(value, Compositor.maxWindowIdentityChars)
+        const raw = String(value ?? "")
+        const known = root._identities[raw]
+        if (known !== undefined) return known
+        if (Object.keys(root._identities).length >= 256)
+            for (const key of Object.keys(root._identities)) delete root._identities[key]
+        return (root._identities[raw] = SafeText.singleLineText(raw, Compositor.maxWindowIdentityChars))
     }
 
     function _title(value): string {
@@ -399,6 +416,7 @@ QtObject {
         if ((root._closedAddrs[key] === true) === closed) return
         const next = Object.assign({}, root._closedAddrs)
         if (closed) {
+            delete root._focusOrder[addr]
             next[key] = true
             const keys = Object.keys(next)
             if (keys.length > 64)
@@ -414,16 +432,21 @@ QtObject {
         for (const t of tops) if (t && t.address) listed["0x" + t.address] = true
         return keys.find(k => listed[k] !== true) ?? keys[0]
     }
-    // t.address, not lastIpcObject: each read of that map builds a fresh JS object, per window per tick
-    function _withoutClosed(tops, closed): var {
-        return tops.filter(t => !(t && t.address && closed["0x" + t.address] === true))
+    function _withoutClosed(tops, closed, addressOf = t => t.address): var {
+        return tops.filter(t => {
+            const a = t ? addressOf(t) : ""
+            return !(a && closed["0x" + a] === true)
+        })
     }
+    // quickshell signals every window's address again with each client reply, so a binding that read t.address reran once per window
+    readonly property var _addressOf: new Map()
+    function _addr(t): string { return (t && root._addressOf.get(t)) || "" }
     // an empty closed set lists every window quickshell holds, ghosts included: only the eviction and the copies ask for that
     function _liveToplevels(closed = root._closedAddrs): var {
-        return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], closed)
+        return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], closed, t => root._addr(t))
     }
     // its own list: urgency read inside the window model would rebuild that model for every consumer on each flip
-    readonly property var urgentRefs: root._liveToplevels().filter(t => t && t.urgent && t.address).map(t => "0x" + t.address)
+    readonly property var urgentRefs: root._liveToplevels().filter(t => t && t.urgent && root._addr(t)).map(t => "0x" + root._addr(t))
 
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""
@@ -440,9 +463,16 @@ QtObject {
         }
         return out
     }
-    function _syncIpcCopies(): void { root._ipcCopies = root.ipcCopiesOf(root._liveToplevels({})) }
+    // the one place a window's address is read for the models, outside any binding; the copies' change reruns them
+    function _syncIpcCopies(): void {
+        const tops = root._liveToplevels({})
+        root._addressOf.clear()
+        for (const t of tops) if (t && t.address) root._addressOf.set(t, t.address)
+        root._ipcCopies = root.ipcCopiesOf(tops)
+    }
+    // quickshell's own model, not a list: a list built from it is new on every open and close, and rebuilt every watcher
     property Instantiator _ipcWatch: Instantiator {
-        model: root._liveToplevels({})
+        model: Hyprland.toplevels
         delegate: Connections {
             required property var modelData
             target: modelData
@@ -513,7 +543,7 @@ QtObject {
         const copies = root._ipcCopies
         const winCount = {}
         for (let i = 0; i < tops.length; i++) {
-            const c = tops[i] ? copies[tops[i].address] : null
+            const c = tops[i] ? copies[root._addr(tops[i])] : null
             if (!c || !c.address) continue
             const id = root._wsNumber(c.workspace)
             if (id > 0) winCount[id] = (winCount[id] ?? 0) + 1
@@ -553,8 +583,10 @@ QtObject {
         const out = []
         for (let i = 0; i < tops.length; i++) {
             const t = tops[i]
-            const c = t ? copies[t.address] : null
+            const address = root._addr(t)
+            const c = address ? copies[address] : null
             if (!c || !c.address) continue
+            const focused = !root._unfocused && !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t)
             const wsName = c.workspace ? String(c.workspace.name ?? "") : ""
             // -1 is reserved for a window with no workspace, which window matching skips
             const wsId = root._workspaceId({ id: root._wsNumber(c.workspace), name: wsName })
@@ -566,8 +598,8 @@ QtObject {
                 pid: c.pid ?? -1, ref: c.address,
                 wsRef: wsId, wsId: wsId, output: (wsId > 0 ? wsOut[wsId] : wsOut[wsName]) ?? "",
                 wsName: wsName,
-                focused: !root._unfocused && !!(Hyprland.activeToplevel && Hyprland.activeToplevel === t),
-                focusRank: c.focusHistoryID ?? 9999,
+                focused: focused,
+                focusRank: root.focusRankOf(address, c, focused),
                 // hyprland's fullscreen is a mode bitmask: 1 maximized, 2 fullscreen, 3 both
                 fullscreen: (Number(c.fullscreen) & 2) !== 0
             })
@@ -611,8 +643,9 @@ QtObject {
     readonly property var activeToplevel: {
         if (root._unfocused) return null
         const t = Hyprland.activeToplevel
-        if (!t || !t.address) return null
-        const addr = "0x" + t.address
+        const bare = root._addr(t)
+        if (!bare) return null
+        const addr = "0x" + bare
         const tops = root.workspaceToplevels
         for (let i = 0; i < tops.length; i++)
             if (tops[i].ref === addr) return Object.assign({}, tops[i], {
@@ -744,15 +777,18 @@ QtObject {
                     return
                 }
                 root._activeAddr = addr
+                if (addr.length > 0) root._focusOrder[addr] = ++root._focusSeq
+                // no layout tick: quickshell's activeToplevel and _unfocused already rebuilt the models, and a focus that
+                // moves monitor or workspace brings its own focusedmon or workspacev2
                 root._syncActiveTitle()
-                root.refreshToplevels()
-                root._layoutTick++
                 return
             }
             if (n === "openwindow" || n === "closewindow") root._setClosed(event.data, n === "closewindow")
             if (n === "openwindow" || n === "closewindow" || n === "movewindowv2"
-                || n === "fullscreen" || n === "changeworkspaceid" || n === "createworkspacev2")
+                || n === "fullscreen" || n === "changeworkspaceid")
                 root.refreshToplevels()
+            // a new workspace changes no window: only the settle's look for a workspace still without its monitor is wanted
+            else if (n === "createworkspacev2" && !_refreshSettle.running) _refreshSettle.restart()
             // a window that never retitles after opening has no windowtitlev2 to arm this on
             if (n === "openwindow" && root._liveTitlesWanted && !Idle.isIdle && !_titleSync.running)
                 _titleSync.start()

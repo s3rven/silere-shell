@@ -7938,6 +7938,38 @@ ShellRoot {
                     && hypr._evictable(["0xa", "0xb"], [{ address: "a" }, { address: "b" }]) === "0xa",
                 "the closed-window memory forgets a window quickshell already dropped before a ghost it still lists")
             hypr._closedAddrs = closedWas
+            const activeWas = hypr._activeAddr
+            const unfocusedWas = hypr._unfocused
+            const settleWas = hypr._refreshSettleTimer.running
+            hypr._refreshSettleTimer.stop()
+            const focusTickWas = hypr._layoutTick
+            hypr._eventConn.onRawEvent({ name: "activewindowv2", data: "fa01" })
+            hypr._eventConn.onRawEvent({ name: "activewindowv2", data: "fb02" })
+            hypr._eventConn.onRawEvent({ name: "activewindowv2", data: "fa01" })
+            const focusAsked = hypr._refreshSettleTimer.running || hypr._layoutTick !== focusTickWas
+            const focusOrdered = hypr._focusOrder["fa01"] > hypr._focusOrder["fb02"]
+            hypr._eventConn.onRawEvent({ name: "closewindow", data: "fb02" })
+            root._check(!focusAsked && focusOrdered && hypr._focusOrder["fb02"] === undefined,
+                "a focus change ranks windows from its own events, rebuilding nothing quickshell's own update did not")
+            const stale = { address: "0xfa01", focusHistoryID: 0 }
+            root._check(hypr.focusRankOf("fa01", stale) < hypr.focusRankOf("fc03", { address: "0xfc03", focusHistoryID: 0 })
+                    && hypr.focusRankOf("fc03", { focusHistoryID: 2 }) === 2 && hypr.focusRankOf("fc03", null) === 9999
+                    && hypr.focusRankOf("fc03", null, true) < hypr.focusRankOf("fa01", stale),
+                "the focused window ranks first, then the ones focused this session, then hyprland's last listing")
+            delete hypr._focusOrder["fa01"]
+            hypr._refreshSettleTimer.stop()
+            hypr._refreshAgain = false
+            hypr._eventConn.onRawEvent({ name: "createworkspacev2", data: "7,7" })
+            const createArmed = hypr._refreshSettleTimer.running
+            hypr._eventConn.onRawEvent({ name: "createworkspacev2", data: "8,8" })
+            root._check(createArmed && hypr._refreshAgain === false,
+                "a new workspace runs the workspace checks without asking hyprland for every client")
+            hypr._refreshSettleTimer.stop()
+            hypr._refreshAgain = false
+            hypr._closedAddrs = closedWas
+            hypr._activeAddr = activeWas
+            hypr._unfocused = unfocusedWas
+            if (settleWas) hypr._refreshSettleTimer.restart()
             hypr._eventSeq = seqWas
             const refreshKeyWas = hypr._workspaceRefreshKey
             const refreshTriesWas = hypr._workspaceRefreshTries
@@ -7956,6 +7988,7 @@ ShellRoot {
             let copyRebuilds = 0
             const countCopyRebuild = () => copyRebuilds++
             hypr._ipcCopiesChanged.connect(countCopyRebuild)
+            const watchModelWas = hypr._ipcWatch.model
             hypr._ipcWatch.model = replyWindows
             discoveryClock.wait(1)
             const listRebuilds = copyRebuilds
@@ -7963,7 +7996,7 @@ ShellRoot {
             const rebuiltInReply = copyRebuilds - listRebuilds
             discoveryClock.wait(1)
             hypr._ipcCopiesChanged.disconnect(countCopyRebuild)
-            hypr._ipcWatch.model = Qt.binding(() => hypr._liveToplevels({}))
+            hypr._ipcWatch.model = watchModelWas
             discoveryClock.wait(1)
             for (const w of replyWindows) w.destroy()
             root._check(listRebuilds === 1 && rebuiltInReply === 0 && copyRebuilds === 2,
@@ -7974,6 +8007,20 @@ ShellRoot {
             root._check(Object.keys(copied).join() === "a1,b2" && copied.a1 !== liveIpc
                     && copied.a1.workspace.id === 2 && copied.a1.focusHistoryID === 3 && copied.b2 === null,
                 "each window's IPC map is copied once, as plain data, under its address")
+            const unsynced = { address: "d4" }
+            const addressWas = hypr._addr(unsynced)
+            hypr._addressOf.set(unsynced, "d4")
+            const addressSynced = hypr._addr(unsynced)
+            hypr._syncIpcCopies()
+            root._check(addressWas === "" && addressSynced === "d4" && hypr._addr(unsynced) === "" && hypr._addr(null) === "",
+                "the window models learn an address from the copy sync, never by reading the window, which signals it on every reply")
+            const oddClass = "kit\u202Ety\n\u0007app"
+            const cleaned = hypr._identity(oddClass)
+            for (let i = 0; i < 300; i++) hypr._identity("probe-class-" + i)
+            root._check(cleaned === SafeText.singleLineText(oddClass, Compositor.maxWindowIdentityChars)
+                    && hypr._identity(oddClass) === cleaned && hypr._identity("__proto__") === "__proto__"
+                    && hypr._identity(null) === "" && Object.keys(hypr._identities).length <= 256,
+                "a window identity is cleaned once and remembered, any name included, in a bounded cache")
             root._check(hypr.monitorlessWorkspaceId([{ id: 2, monitor: { name: "A" } }, null, { id: -98, monitor: null },
                     { id: 4, monitor: null }]) === 4
                     && hypr.monitorlessWorkspaceId([{ id: 2, monitor: { name: "A" } }, { id: -98, monitor: null }]) === -1,
