@@ -276,6 +276,8 @@ PanelWindow {
                                     color: card.muted
                                         ? Theme.withAlpha(Theme.subtext, 0.58)
                                         : Theme.withAlpha(card.fillColor, 0.88)
+                                    // muting greys the level with its glyph and label, which fade
+                                    ColorFade on color { duration: Motion.medium }
                                 }
                             }
 

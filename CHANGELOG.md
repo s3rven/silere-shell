@@ -66,6 +66,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - Warnings, errors and successes stay distinct from an accent of the same hue, such as Gold, Leaf, Coral or a wallpaper accent, on the bar and in the menu.
+- Muting fades the on-screen display's level to grey with its icon and label, instead of switching it at once.
 - Switches, slider knobs, outlines and Home's graphs fade with the rest of the shell when high contrast or the colour source changes, and the Theme page's swatches fade with a new wallpaper, instead of changing in one frame.
 - Closing Home's inline choices returns keyboard focus to their opening control; Wi-Fi rescans keep focus on the same network as the list changes.
 - Escape cancels a Wi-Fi password or discards command edits before the panel's close shortcut runs.
