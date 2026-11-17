@@ -127,10 +127,12 @@ Row {
                     ? _loader.item.layoutVisible
                     : wanted && _loader.item.show)
             // a widget can keep its reserved width while its own content already faded out;
-            // divider placement follows content, not a lingering width-collapse animation
+            // divider placement follows content, not a lingering width-collapse animation. Without its own
+            // content flag a widget's target state stands in: its layout stays visible until the fold ends,
+            // and the divider then left the bar in one step after the pill had slid shut
             readonly property bool contentShown: _loader.loadedKey === key && _loader.item
-                && (_loader.item.contentVisible !== undefined
-                    ? _loader.item.contentVisible
+                && (_loader.item.contentVisible !== undefined ? _loader.item.contentVisible
+                    : _loader.item.show !== undefined ? wanted && _loader.item.show
                     : show)
             readonly property bool flexible: key === "windowTitle" || key === "media"
             readonly property real flexibleWidth: flexible && _loader.item

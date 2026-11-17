@@ -5022,6 +5022,23 @@ ShellRoot {
                     "a widget rebuilt in place by a reorder arrives whole")
                 growZone.destroy()
             }
+            // a widget folding away keeps its layout until the fold ends; its divider goes as the fold starts, beside it
+            {
+                const foldZone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {
+                    orderKeys: ["network", "volume"], compact: false, height: 36,
+                    widgetComponents: { network: foldingWidgetFactory, volume: foldingWidgetFactory }
+                })
+                const deadline = Date.now() + 1000
+                while (foldZone.visibleKeys.length !== 2 && Date.now() < deadline) discoveryClock.wait(10)
+                const both = foldZone.visibleKeys.length === 2
+                const folding = root._findTrayNode(foldZone, item => item.fading !== undefined)
+                folding.fading = true
+                folding.show = false
+                discoveryClock.wait(10)
+                root._check(both && folding.layoutVisible && foldZone.visibleKeys.length === 1,
+                    "a bar widget folding away gives up its divider as the fold starts, not in one step after it")
+                foldZone.destroy()
+            }
             const valuesWas = ShellSettings.valuesOnHover
             ShellSettings.valuesOnHover = false
             const zone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {
