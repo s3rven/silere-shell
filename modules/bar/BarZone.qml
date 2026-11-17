@@ -32,6 +32,21 @@ Row {
         function onAnyOpenChanged() { zone._popupHold = OverlayCoordinator.anyOpen && zone.pointerInside }
     }
     readonly property bool holding: zone.pointerInside || zone._popupHold
+    // settling on a widget closes the details left behind, unless one folding would slide that widget out from under the
+    // pointer: in a zone hung from the right, a detail folding moves everything left of it (battery to brightness: 64 px,
+    // onto Wi-Fi). Those stay open until the pointer leaves the zone
+    property int anchoredAt: Qt.AlignLeft
+    property var _heldKeys: []
+    function _indexOf(key: string): int {
+        for (let i = 0; i < widgetRepeater.count; i++) if (widgetRepeater.itemAt(i)?.key === key) return i
+        return -1
+    }
+    function claimHold(key: string): void {
+        const at = zone._indexOf(key)
+        zone._heldKeys = zone._heldKeys.filter(k => k !== key && (zone.anchoredAt === Qt.AlignRight ? zone._indexOf(k) > at
+            : zone.anchoredAt === Qt.AlignLeft ? zone._indexOf(k) < at : true)).concat([key])
+    }
+    onHoldingChanged: if (!holding) zone._heldKeys = []
 
     function _widgetEnabled(key: string): bool {
         if (key.length === 0) return false
@@ -178,7 +193,18 @@ Row {
             Binding {
                 target: _loader.item && _loader.item.holdOpen !== undefined ? _loader.item : null
                 property: "holdOpen"
-                value: zone.holding
+                value: zone.holding && zone._heldKeys.indexOf(_slot.key) >= 0
+            }
+            // settled on, not passed over on the way to another: the claim waits as long as a reveal does
+            HoverHandler {
+                id: _slotHover
+                onHoveredChanged: if (hovered) _claimDwell.restart(); else _claimDwell.stop()
+            }
+            Timer { id: _claimDwell; interval: 80; onTriggered: zone.claimHold(_slot.key) }
+            // a quick click opens its popup before the dwell ends; the detail under it is the one to keep
+            Connections {
+                target: OverlayCoordinator
+                function onAnyOpenChanged() { if (OverlayCoordinator.anyOpen && _slotHover.hovered) zone.claimHold(_slot.key) }
             }
 
             Binding {
@@ -199,4 +225,5 @@ Row {
             }
         }
     }
+
 }

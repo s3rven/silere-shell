@@ -39,7 +39,7 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 - **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**. The microphone appears while an app is listening.
 - **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge below 20% turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
 - **Workspace markers:** rings are empty workspaces and dots have windows. With app icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page.
-- **Hover:** what the table's last column shows needs **Reveal values on hover** under **Bar › Layout**, on by default.
+- **Hover:** a widget shows the table's last column when the pointer rests on it. **Reveal values on hover** under **Bar › Layout**, on by default, also keeps plain readings such as the volume and battery percentages hidden until then; off, they show all the time. A detail stays open while the pointer moves on over the same part of the bar (left, centre or right), so the widgets beside it don't slide as you move along. It folds when the pointer rests on another widget, a moment after you leave that part of the bar, or when a menu opened from it closes.
 - **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
 - **Reduced motion:** hover a shortened window or media title to read its ending without scrolling it.
 

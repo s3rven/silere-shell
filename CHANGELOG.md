@@ -31,7 +31,7 @@ settings file carries its own `__version` and migrates separately.
 - The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with leaner memory settings, unless you set your own `MALLOC_CONF`.
 - A see-through bar keeps the accent's colour on its marks: the active workspace, widget icons, levels and the visualizer. At low bar opacity they had faded to off-white.
 - A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.
-- Moving the pointer along the bar keeps each widget's hover detail open until you leave that part of the bar, so the widget you aim at no longer slides away as the last one closes.
+- Moving the pointer along the bar keeps a widget's hover detail open until you rest on another widget, or leave that part of the bar when closing it would slide the widget you rest on out from under the pointer.
 - Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
 - Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
 - The clock and the media title ease their hover highlight in and out the way the other bar widgets do.

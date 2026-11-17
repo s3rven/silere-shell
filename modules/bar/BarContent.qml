@@ -240,6 +240,7 @@ Item {
 
     BarZone {
         id: centerZone
+        anchoredAt: Qt.AlignHCenter
         anchors.verticalCenter: parent.verticalCenter
         x: Metrics.centeredSpanX(root.centerAxis, width,
             root.titleFreeLeft, root.titleFreeRight)
@@ -308,6 +309,7 @@ Item {
 
     BarZone {
         id: rightZone
+        anchoredAt: Qt.AlignRight
         anchors.right:          parent.right
         anchors.verticalCenter: parent.verticalCenter
         height: parent.height

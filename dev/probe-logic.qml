@@ -458,6 +458,8 @@ ShellRoot {
     }
     Component { id: pillFactory; Pill { visible: true; glyph: "a" } }
     Component { id: detailPillFactory; Pill { readonly property bool layoutVisible: true; glyph: "a"; text: expanded ? "45% · A long detail" : "45%" } }
+    Component { id: holdingWidgetFactory; Item { property bool holdOpen: false; readonly property bool layoutVisible: true; implicitWidth: 20; height: 36 } }
+    Component { id: foldingWidgetFactory; Item { property bool show: true; property bool fading: false; readonly property bool layoutVisible: show || fading; implicitWidth: 20; height: 36 } }
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
@@ -5028,27 +5030,55 @@ ShellRoot {
             })
             const netPill = zone ? root._findTrayNode(zone, item => item.holdOpen !== undefined) : null
             const volPill = zone ? root._findTrayNode(zone, item => item.holdOpen !== undefined && item !== netPill) : null
-            let held = false, bound = false, closed = false, alone = false
+            // the slot's key, read from the pill's own Loader: the hold is claimed by key
+            const keyOf = pill => pill?.parent?.loadedKey ?? ""
+            let held = false, bound = false, closed = false, alone = false, handed = false, kept = false
             if (netPill && volPill && netPill !== volPill) {
                 zone.pointerInside = true
-                bound = netPill.holdOpen && volPill.holdOpen
+                zone.claimHold(keyOf(volPill))
+                bound = volPill.holdOpen && !netPill.holdOpen
                 volPill.hoverActive = true
                 volPill._pointerChanged(false)
                 held = volPill.expanded
+                // settling on the next widget hands it the hold, and the detail left behind closes
                 netPill.hoverActive = true
+                zone.claimHold(keyOf(netPill))
+                handed = !volPill.holdOpen && !volPill.expanded && netPill.holdOpen && netPill.expanded
+                netPill._pointerChanged(false)
+                kept = netPill.expanded
                 zone.pointerInside = false
-                closed = !volPill.holdOpen && !volPill.expanded && !netPill.expanded
+                closed = !netPill.holdOpen && !volPill.expanded && !netPill.expanded
                 volPill.hoverActive = true
                 volPill._pointerChanged(false)
                 alone = !volPill.expanded
             }
             root._check(bound && held && closed && alone,
                 "a pill's hover detail stays open while the pointer moves on inside its bar zone, and every one closes as it leaves")
+            root._check(handed && kept,
+                "settling on another widget in the zone closes the detail left behind, so only one shows at a time")
+            // hung from the right, a detail to the right of the widget settled on stays: folding it would slide that widget away
+            let rightKept = false, rightLeft = false
+            if (netPill && volPill && netPill !== volPill) {
+                zone.anchoredAt = Qt.AlignRight
+                zone.pointerInside = true
+                zone.claimHold(keyOf(volPill))
+                zone.claimHold(keyOf(netPill))
+                rightKept = volPill.holdOpen && netPill.holdOpen
+                zone._heldKeys = []
+                zone.claimHold(keyOf(netPill))
+                zone.claimHold(keyOf(volPill))
+                rightLeft = !netPill.holdOpen && volPill.holdOpen
+                zone.pointerInside = false
+                zone.anchoredAt = Qt.AlignLeft
+            }
+            root._check(rightKept && rightLeft && !netPill.holdOpen && !volPill.holdOpen,
+                "in a zone hung from the right, a detail folding never slides the widget settled on; the rest close on leaving")
             // a popup opened from the zone takes the pointer; the details it found open wait for it to close
             let popupHeld = false, popupReleased = false, elsewhere = false
             if (netPill && volPill && netPill !== volPill) {
                 const openWas = OverlayCoordinator._openCount
                 zone.pointerInside = true
+                zone.claimHold(keyOf(volPill))
                 volPill.hoverActive = true
                 OverlayCoordinator._openCount = 1
                 zone.pointerInside = false
