@@ -42,10 +42,8 @@ Pill {
     reserveText: "00%"
     readonly property string _level: Math.round(Audio.uiVolume * 100) + "%"
     text: !Audio.ready ? ""
-        : expanded && Audio.sinkName.length > 0
-            ? root._level + (root._outputLow ? " · " + root._outputNote : "") + " · " + Audio.sinkName
         : (ShellSettings.valuesOnHover && !expanded) ? ""
-        : root._level
+        : root._level + (expanded && root._outputLow ? " · " + root._outputNote : "")
     maxTextWidth: compact ? 150 : 260
     levelValue: Audio.ready ? Audio.uiVolume : -1
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded

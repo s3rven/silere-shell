@@ -33,7 +33,8 @@ settings file carries its own `__version` and migrates separately.
 - A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.
 - Moving the pointer along the bar keeps a widget's hover detail open until you rest on another widget, or leave that part of the bar when closing it would slide the widget you rest on out from under the pointer.
 - Hover details also stay out through a brief slip off the bar, and while a menu, calendar or tray menu opened from the bar is showing, instead of folding and shifting the bar under it.
-- Closing a bar widget's hover detail, such as the volume's output name, slides it back under the widget's edge instead of blinking it off.
+- Closing a bar widget's hover detail slides it back under the widget's edge instead of blinking it off.
+- Hovering the volume widget no longer names the output; the volume OSD still names it when the output changes.
 - The clock and the media title ease their hover highlight in and out the way the other bar widgets do.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
 - Scrolling or using the arrow keys on Night light's temperature, an external display's brightness or the Now Playing seek bar applies once you stop, not at every step.
