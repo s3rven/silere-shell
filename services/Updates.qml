@@ -458,7 +458,11 @@ Singleton {
         function onIsIdleChanged() { root._resumeBackgroundCheck() }
     }
 
-    Timer { id: _reconnect; interval: 5000; onTriggered: root._refreshBackground() }
+    readonly property Timer _reconnectTimer: Timer {
+        id: _reconnect
+        interval: 5000
+        onTriggered: root._refreshBackground()
+    }
     Timer {
         id: _sourceRefresh
         interval: 0
@@ -472,6 +476,10 @@ Singleton {
         target: Network
         function onConnectedChanged() {
             if (Network.connected) root._resumeBackgroundCheck()
+        }
+        function onConnectivityIssueChanged() {
+            if (Network.connected && Network.connectivityIssue.length === 0)
+                root._resumeBackgroundCheck()
         }
     }
 

@@ -383,6 +383,11 @@ Singleton {
         function onConnectedChanged() {
             if (Network.connected) root._retryRemoteArt()
         }
+        // signing in restores internet access without reconnecting the link
+        function onConnectivityIssueChanged() {
+            if (Network.connected && Network.connectivityIssue.length === 0)
+                root._retryRemoteArt()
+        }
     }
 
     function remoteArtName(url: string): string {
@@ -446,7 +451,7 @@ Singleton {
         'ls -1t -- "$d" | tail -n +97 | while IFS= read -r old; do ' +
         'rm -f -- "$d/$old" && printf "%s\\n" "$old"; done; exit $rc'
 
-    BoundedProcess {
+    readonly property BoundedProcess _artDownload: BoundedProcess {
         id: _artFetch
         timeoutMs: 15000
         stdout: StdioCollector { id: _artFetchOut }

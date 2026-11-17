@@ -7799,6 +7799,28 @@ ShellRoot {
         Media._finishArtRetry(wantedArt)
         root._check(Media._artMisses[wantedArt[0]] === true,
             "a consumed artwork retry does not reopen the same failed URL repeatedly")
+        const artFetch = Media._artDownload
+        root._check(artFetch !== null && !artFetch.running,
+            "the internet recovery fixture finds an idle artwork downloader")
+        if (artFetch && !artFetch.running) {
+            const commandWas = artFetch.command
+            const issueWas = Network.connectivityIssue
+            ShellSettings.mediaRemoteArt = true
+            artFetch.exec(["sleep", "2"])
+            for (const issue of ["portal", "limited"]) {
+                Media._artRetryPending = false
+                Network.connectivityIssue = issue
+                root._check(!Media._artRetryPending,
+                    "an internet issue does not retry an artwork request: " + issue)
+                Network.connectivityIssue = ""
+                root._check(Media._artRetryPending === Network.connected,
+                    "internet recovery queues an artwork retry even during a download: " + issue)
+            }
+            Network.connectivityIssue = issueWas
+            artFetch.running = false
+            artFetch.command = commandWas
+            ShellSettings.mediaRemoteArt = remoteArtWas
+        }
         Media._artMisses = artMissesWas
         Media._artFiles = artFilesWas
         Media._artRetryPending = artRetryWas
@@ -8798,6 +8820,37 @@ ShellRoot {
         Updates._acceptCheckResult(0, "8\n")
         root._check(Updates.count === 0 && !Updates.lastFailed,
             "a late package result cannot repopulate a disabled widget")
+        const reconnect = Updates._reconnectTimer
+        root._check(reconnect !== null, "the internet recovery fixture finds the package retry timer")
+        if (reconnect) {
+            const issueWas = Network.connectivityIssue
+            const checkedWas = Updates.lastCheckMs
+            ShellSettings.updatesWidget = true
+            SystemTools.packageFamily = "pacman"
+            SystemTools._tools = { checkupdates: true }
+            SystemTools.ready = true
+            Updates.lastFailed = true
+            Updates.lastCheckMs = Date.now()
+            for (const issue of ["portal", "limited"]) {
+                reconnect.stop()
+                Network.connectivityIssue = issue
+                root._check(!reconnect.running,
+                    "an internet issue does not queue a background package retry: " + issue)
+                Network.connectivityIssue = ""
+                root._check(reconnect.running === (Network.connected && !Idle.isIdle),
+                    "internet recovery queues a failed package check without a link change: " + issue)
+            }
+            reconnect.stop()
+            Updates.lastFailed = false
+            Network.connectivityIssue = "portal"
+            Network.connectivityIssue = ""
+            root._check(!reconnect.running,
+                "internet recovery keeps a recent successful package result")
+            Network.connectivityIssue = issueWas
+            ShellSettings.updatesWidget = false
+            SystemTools.ready = false
+            Updates.lastCheckMs = checkedWas
+        }
         ShellSettings.updatesWidget = updatesWidgetWas
         SystemTools.ready = true
         SystemTools.packageFamily = "pacman"
