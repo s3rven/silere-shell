@@ -185,6 +185,7 @@ settings file carries its own `__version` and migrates separately.
 - A tray menu whose app fills a submenu after it opens grows to fit instead of snapping, and a late longer label widens the menu smoothly instead of popping its edge out and back.
 - The tray folds away when its last app quits instead of vanishing in one frame, and an app that starts while the tray shows opens its own place instead of nudging the icon beside it.
 - When a hovered system monitor's busiest process ends, the widget closes the gap at once instead of holding empty room for a few seconds.
+- Switching to a muted output shows its name and Muted; unmuting keeps the name until it times out.
 - A quick peek at the overview with an auto-hidden bar no longer jerks the bar's content up and back.
 - A virtual keyboard from a snippet tool or remote input no longer replaces the keyboard layout name on the bar.
 - The network widget says Wired for USB, onboard and virtual Ethernet adapters with no connection name, instead of their interface name.

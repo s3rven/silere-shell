@@ -1424,10 +1424,10 @@ ShellRoot {
         OsdBarState._closeEntry(OsdBarState._entryIndex("brightness"))
         root._check(OsdBarState.kind === "volume" && OsdBarState.label === Audio.label,
             "returning to volume feedback cannot bring back an expired device name")
-        OsdBarState._upsertEntry("volume", "", 0, "Muted", true, Theme.accent)
+        OsdBarState._upsertEntry("volume", "", 0, "Speakers · Muted", true, Theme.accent)
         OsdBarState._hideDeviceName()
         root._check(OsdBarState.label === "Muted",
-            "device-name expiry preserves muted volume feedback")
+            "device-name expiry removes the output name while preserving muted volume feedback")
         OsdBarState._clearEntries()
         OsdBarState._hideDeviceName()
         root._check(!OsdBarState.showing && OsdBarState.activeCount === 0,

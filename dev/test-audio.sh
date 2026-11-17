@@ -191,8 +191,11 @@ wait_node lab-a; timeout 4 wpctl set-mute "$id" 1
 expect "a mute reaches the OSD" 'vol=0 muted=1 osd=Muted'
 timeout 4 wpctl set-mute "$id" 0
 expect "an unmute reaches the OSD" 'vol=33 muted=0 osd=33%'
+wait_node lab-b; timeout 4 wpctl set-mute "$id" 1
 set_default lab-b
-expect "a new default shows its name" 'sink=lab-b .*osd=lab-b'
+expect "a muted new default shows its name and mute state" 'sink=lab-b .*vol=0 muted=1 osd=lab-b · Muted'
+timeout 4 wpctl set-mute "$id" 0
+expect "unmuting a new default retains its name" 'sink=lab-b .*muted=0 osd=lab-b · [0-9]+%'
 set_default lab-a
 expect "the old default comes back" 'sink=lab-a .*vol=33 '
 

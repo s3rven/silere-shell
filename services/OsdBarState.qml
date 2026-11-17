@@ -311,8 +311,8 @@ Singleton {
         const entry = _entries.get(index)
         // another kind can be primary when the name expires. Update the volume
         // entry too, so bringing it forward cannot revive an expired device name
-        if (!entry.closing && !entry.muted)
-            root._setEntryProperty("volume", "label", Audio.label)
+        if (!entry.closing)
+            root._setEntryProperty("volume", "label", entry.muted ? "Muted" : Audio.label)
     }
 
     function _updateVolume(): void {
@@ -320,9 +320,10 @@ Singleton {
         // an output that went away reads as volume 0, which is not the user muting anything
         if (!Audio.ready || Audio.profileSwitching || _profileHold.running) return
         const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
-        const lbl = effectiveMuted ? "Muted"
-            : root._showDeviceName && Audio.sinkName && root._pausedNote ? `Paused · ${Audio.sinkName}`
-            : (root._showDeviceName && Audio.sinkName ? `${Audio.sinkName} · ${Audio.label}` : Audio.label)
+        const level = effectiveMuted ? "Muted" : Audio.label
+        const lbl = root._showDeviceName && Audio.sinkName
+            ? (!effectiveMuted && root._pausedNote ? `Paused · ${Audio.sinkName}` : `${Audio.sinkName} · ${level}`)
+            : level
         root.show("volume", Audio.icon, Audio.uiVolume, lbl, effectiveMuted)
     }
     // with nothing recording the bar shows no microphone, so a mute key had no visible answer
@@ -372,8 +373,7 @@ Singleton {
             _deviceNameTimer.restart()
             // a node still binding has no level yet; its first reading shows the name through _updateVolume
             if (!Audio.ready) return
-            const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
-            root.show("volume", Audio.icon, Audio.uiVolume, `${name} · ${Audio.label}`, effectiveMuted)
+            root._queueVolumeUpdate()
         }
     }
 
