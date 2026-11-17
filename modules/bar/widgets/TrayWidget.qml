@@ -115,6 +115,7 @@ Item {
     Row {
         id: _row
         anchors.verticalCenter: parent.verticalCenter
+        height: root.height
         spacing: root.itemGap
 
         Repeater {
@@ -138,6 +139,7 @@ Item {
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 readonly property bool hidden: ShellSettings.trayItemHidden(modelData.id)
+                readonly property bool _menuOpen: TrayMenuState.open && TrayMenuState.sourceItem === modelData
                 onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
                 // hidden, not filtered out: a filtered model recreates the icon on every un-hide
                 visible: !hidden
@@ -175,7 +177,8 @@ Item {
                 readonly property real _iconX: root.labelLeads
                     ? _tile.width - root._pad - root.iconSize : root._pad
                 width: root.cellWidth + _tile._labelSpan
-                height: Metrics.barRowHeight
+                // the full bar is a click target; the icon and its highlight keep their centred row size
+                height: root.height
                 anchors.verticalCenter: parent.verticalCenter
 
                 function syncMenuAnchor(): void {
@@ -197,13 +200,16 @@ Item {
 
                 Rectangle {
                     id: _hoverCap
-                    anchors.fill: parent
+                    anchors.centerIn: parent
+                    width: parent.width
+                    height: Metrics.barRowHeight
                     radius: Metrics.hoverRadiusFor(height)
                     color: _tile.needsAttention ? Theme.withAlpha(Theme.accent, 0.20)
                          : _ma.pressed           ? Theme.barPressed
+                         : _tile._menuOpen       ? Theme.barSelected
                          : Theme.barHover
                     opacity: _tile.needsAttention ? _tile.attnPulse
-                           : _ma.pressed          ? 1.0
+                           : _ma.pressed || _tile._menuOpen ? 1.0
                            : (_iconHover.hovered && ShellSettings.barHoverHighlight) ? 1.0
                            : 0.0
                     visible: opacity > 0.001

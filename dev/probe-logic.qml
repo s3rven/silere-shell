@@ -359,11 +359,13 @@ ShellRoot {
         Window {
             id: fixture
             visible: true
-            width: 320; height: 100
+            width: 420; height: 170
             color: Theme.panel
             property alias cell: cell
             property alias pill: hoverPill
             property alias input: inputDriver
+            property alias tray: pointerTray
+            property alias media: pointerMedia
             property var reports: []
             WorkspaceButton {
                 id: cell
@@ -381,6 +383,8 @@ ShellRoot {
                 glyph: "V"; text: "42%"; interactive: true
                 wheelKey: "probe:hover-pill"
             }
+            TrayWidget { id: pointerTray; x: 170; y: 12; height: 48; trayModel: [] }
+            MediaWidget { id: pointerMedia; x: 12; y: 110; height: 36; screen: null; layoutWidthLimit: 180 }
             TestCase { id: inputDriver; when: false }
         }
     }
@@ -14593,6 +14597,71 @@ ShellRoot {
             f.pill.collapsed = true
             root._check(Scroll._accums[f.pill.wheelKey] === undefined,
                 "a collapsing pill discards its unfinished scroll gesture")
+            const barWas = { tray: ShellSettings.trayWidget, hidden: ShellSettings.trayHidden,
+                scale: ShellSettings.uiScale, reduce: ShellSettings.reduceMotion,
+                hover: ShellSettings.valuesOnHover, media: ShellSettings.barShowMedia, shown: Media.shown }
+            ShellSettings.reduceMotion = true
+            ShellSettings.valuesOnHover = false
+            ShellSettings.trayWidget = true
+            ShellSettings.trayHidden = ""
+            const app = trayItemFactory.createObject(f, { id: "__bar_pointer_tray__", title: "Bar pointer app" })
+            f.tray.trayModel = [app]
+            f.input.wait(20)
+            const trayTile = root._findTrayNode(f.tray, item => item.modelData === app)
+            root._check(trayTile !== null, "the bar pointer fixture builds a tray app")
+            if (trayTile) {
+                for (const scale of [1, 1.5]) {
+                    ShellSettings.uiScale = scale
+                    for (const h of [32, 48]) {
+                        f.tray.height = h
+                        f.input.wait(10)
+                        const before = app.activations
+                        f.input.mouseClick(f.tray, f.tray.cellWidth / 2, 1, Qt.LeftButton)
+                        f.input.mouseClick(f.tray, f.tray.cellWidth / 2, h - 1, Qt.LeftButton)
+                        root._check(app.activations === before + 2,
+                            "tray clicks reach both bar edges at height " + h + " and interface scale " + scale)
+                    }
+                }
+                const cap = root._findTrayNode(trayTile, item => item.radius !== undefined
+                    && item.color !== undefined && item.width === trayTile.width)
+                f.input.mouseMove(f.contentItem, 390, 85)
+                TrayMenuState.sourceItem = app
+                TrayMenuState.open = true
+                root._check(cap && cap.height === Metrics.barRowHeight
+                        && Math.abs(cap.y + cap.height / 2 - trayTile.height / 2) < 0.01
+                        && cap.opacity === 1 && Qt.colorEqual(cap.color, Theme.barSelected),
+                    "an open tray menu keeps a centred row-sized highlight on its full-height bar target")
+                TrayMenuState.close()
+                root._check(cap && cap.opacity === 0,
+                    "closing a tray menu releases its selected highlight when the pointer is elsewhere")
+            }
+            ShellSettings.uiScale = barWas.scale
+            ShellSettings.barShowMedia = true
+            Media.shown = true
+            const mediaClip = root._findTrayNode(f.media, item => item.preferredMaxW !== undefined)
+            const longTrack = "The beginning of a long song title and its distinctive ending"
+            if (mediaClip) mediaClip._shown = longTrack
+            const mediaText = root._findTrayNode(f.media, item => item.text === longTrack && item.elide !== undefined)
+            f.input.wait(20)
+            f.input.mouseMove(f.media, Math.max(1, f.media.width / 2), 18)
+            root._check(mediaText && mediaText.elide === Text.ElideLeft,
+                "hovering a shortened media title reveals its ending with reduced motion")
+            f.input.mouseMove(f.contentItem, 390, 85)
+            root._check(mediaText && mediaText.elide === Text.ElideRight,
+                "leaving the media title restores its beginning with reduced motion")
+            f.media.forceActiveFocus(Qt.TabFocusReason)
+            f.media.layoutWidthLimit = 0
+            f.input.wait(10)
+            root._check(f.media.width === 0 && !f.media.Accessible.focusable && !f.media.activeFocus,
+                "a media widget squeezed completely out of the bar releases keyboard focus and its tab stop")
+            f.tray.trayModel = []
+            app.destroy()
+            ShellSettings.trayWidget = barWas.tray
+            ShellSettings.trayHidden = barWas.hidden
+            ShellSettings.valuesOnHover = barWas.hover
+            ShellSettings.barShowMedia = barWas.media
+            Media.shown = barWas.shown
+            ShellSettings.reduceMotion = barWas.reduce
             f.input.mouseMove(f.contentItem, 260, 80)
             f.close()
             f.destroy()
