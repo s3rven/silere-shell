@@ -3659,9 +3659,16 @@ test_keyboard_brightness_helper() (
 set -euo pipefail
 case " $* " in
     *' tree '*)
+        [ "${SILERE_KBD_TREE_FAIL:-0}" = 0 ] || exit 1
         printf '%s\n' /org/freedesktop/UPower/KbdBacklight \
             /org/freedesktop/UPower/KbdBacklight/led0 /org/freedesktop/UPower/KbdBacklight/led1 \
-            /org/freedesktop/UPower/KbdBacklight/unsupported /org/freedesktop/UPower/KbdBacklight/invalid
+            /org/freedesktop/UPower/KbdBacklight/unsupported /org/freedesktop/UPower/KbdBacklight/invalid \
+            /org/freedesktop/UPower/KbdBacklight/container
+        ;;
+    *' introspect '*)
+        # busctl succeeds with just a header when the requested interface is absent
+        printf 'NAME TYPE SIGNATURE RESULT/VALUE FLAGS\n'
+        case "$5" in */led1) printf '.GetMaxBrightness method - i -\n';; esac
         ;;
     *' get-property '*)
         case "$5" in
@@ -3672,7 +3679,10 @@ case " $* " in
     *' call '*)
         case "$7" in
             GetMaxBrightness)
-                case "$5" in */unsupported) printf 'i 0\n';; */invalid) printf 's "2"\n';; *) printf 'i 2\n';; esac
+                case "${SILERE_KBD_MAX_FAIL:-}:$5" in 1:*/led1) exit 1 ;; esac
+                case "${SILERE_KBD_MAX_BAD:-}:$5" in 1:*/led1) printf 's "2"\n'; exit 0 ;; esac
+                case "$5" in */unsupported) printf 'i 0\n';; */invalid) printf 's "2"\n';;
+                    */container) exit 1;; *) printf 'i 2\n';; esac
                 ;;
             GetBrightness)
                 case "${SILERE_KBD_READ_FAIL:-}:$5" in 1:*/led1) exit 1 ;; esac
@@ -3696,6 +3706,17 @@ EOF
         fail "keyboard discovery hid a light whose level could not be read"
     fi
     assert_eq "$path"$'\t1\t2\ts "keyboard-0"' "$actual" "keyboard discovery still lists the lights read before one failed"
+    if actual="$(SILERE_KBD_MAX_FAIL=1 bash "$ROOT/scripts/keyboard-brightness.sh" list)"; then
+        fail "keyboard discovery hid a maximum read failure on a known light"
+    fi
+    assert_eq "$path"$'\t1\t2\ts "keyboard-0"' "$actual" \
+        "a failed maximum read preserves the other keyboard lights"
+    if SILERE_KBD_MAX_BAD=1 bash "$ROOT/scripts/keyboard-brightness.sh" list >/dev/null; then
+        fail "keyboard discovery hid a malformed maximum from a known light"
+    fi
+    if SILERE_KBD_TREE_FAIL=1 bash "$ROOT/scripts/keyboard-brightness.sh" list >/dev/null; then
+        fail "keyboard discovery treated a failed UPower enumeration as an empty device list"
+    fi
     bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 0 's "keyboard-0"'
     assert_eq "$path:0" "$(<"$fixture/calls")" "keyboard light supports zero as off"
     bash "$ROOT/scripts/keyboard-brightness.sh" write "$path/led1" 2 's "keyboard-1"'

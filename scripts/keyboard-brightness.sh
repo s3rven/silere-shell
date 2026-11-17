@@ -18,18 +18,26 @@ identity() {
     busctl --system --timeout=2 get-property org.freedesktop.UPower "$1" "$interface" NativePath 2>/dev/null \
         || printf 'unknown\n'
 }
+has_light_interface() {
+    busctl --system --timeout=2 introspect org.freedesktop.UPower "$1" "$interface" 2>/dev/null \
+        | awk '$1 == ".GetMaxBrightness" && $2 == "method" { found=1 } END { exit !found }'
+}
 
 case "${1:-}" in
     list)
-        mapfile -t paths < <(busctl --system --timeout=2 --list tree org.freedesktop.UPower 2>/dev/null || true)
+        tree="$(busctl --system --timeout=2 --list tree org.freedesktop.UPower 2>/dev/null)" || exit 1
+        mapfile -t paths <<< "$tree"
         seen=()
         failed=0
         for path in "${paths[@]}"; do
             valid_path "$path" || continue
-            maximum="$(get_int "$path" GetMaxBrightness)" || continue
+            maximum="$(get_int "$path" GetMaxBrightness)" || {
+                # container nodes have no light interface; a real light failing its maximum read is an error
+                if has_light_interface "$path"; then failed=1; fi
+                continue
+            }
             [ "$maximum" -gt 0 ] || continue
-            # only an object that answered a positive maximum is known to be a light: a tree node without the
-            # interface fails GetMaxBrightness too. Past that, a failed read is reported, after the rows that worked
+            # report a failed read after the rows that worked, so one broken light cannot hide the others
             current="$(get_int "$path" GetBrightness)" || { failed=1; continue; }
             [ "$current" -le "$maximum" ] || { failed=1; continue; }
             native="$(identity "$path")"
