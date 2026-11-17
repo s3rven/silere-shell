@@ -166,8 +166,9 @@ from the next or previous month to go there. Week start, week numbers and weathe
 **Weather** is off by default. When on, the calendar and Home fetch today's forecast from
 [Open-Meteo](https://open-meteo.com/) and reuse it for 30 minutes. The request carries your time
 zone's main city, rounded to about a kilometre, the same place Night Light uses. **Show on bar**
-adds the temperature beside the clock. After a failed refresh the calendar shows the previous
-reading, marked as old; click it to retry.
+adds the temperature beside the clock. **Units** picks Celsius or Fahrenheit; until you pick, a
+metric locale means Celsius, and the default US locale means Fahrenheit only where that city uses it.
+After a failed refresh the calendar shows the previous reading, marked as old; click it to retry.
 
 ## Settings
 

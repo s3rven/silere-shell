@@ -11,7 +11,8 @@ Singleton {
     id: root
 
     readonly property bool enabled: ShellSettings.weatherEnabled
-    readonly property bool fahrenheit: Qt.locale().measurementSystem === Locale.ImperialUSSystem
+    readonly property bool fahrenheit: root.fahrenheitFor(ShellSettings.weatherUnit,
+        Qt.locale().measurementSystem === Locale.ImperialUSSystem, root._place?.country ?? "")
     readonly property int maxAgeMs: 30 * 60000
     readonly property int timeoutMs: 10000
     readonly property int maxResponseChars: 65536
@@ -26,13 +27,15 @@ Singleton {
     property int code: -1
     property bool isDay: true
     property string place: ""
-    readonly property string unit: root.fahrenheit ? "°F" : "°C"
+    // the unit the shown reading came in: a switch keeps it until the new reading lands
+    readonly property string unit: (root.hasData ? root._readingFahrenheit : root.fahrenheit) ? "°F" : "°C"
     readonly property string glyph: root.glyphFor(root.code, root.isDay)
     readonly property string condition: root.conditionFor(root.code)
 
     property real _fetchedAt: 0
     property real _triedAt: 0
     property string _fetchedFor: ""
+    property bool _readingFahrenheit: false
     // the time zone's principal city, looked up again only when the zone offset moves
     property var _place: null
     property var _xhr: null
@@ -76,6 +79,13 @@ Singleton {
         return ""
     }
 
+    // Linux installs default to en_US, so a US measurement locale says little on its own and the forecast city's
+    // country decides. A metric locale was set on purpose, and a unit chosen in Settings beats both
+    function fahrenheitFor(choice: string, localeImperial: bool, country: string): bool {
+        if (choice === "c" || choice === "f") return choice === "f"
+        return localeImperial && (country.length === 0 || TimeZonePlace.usesFahrenheit(country))
+    }
+
     function forecastUrl(lat: real, lon: real, fahrenheit: bool): string {
         // two decimals is about a kilometre: precise enough for weather, no more
         return "https://api.open-meteo.com/v1/forecast?latitude=" + lat.toFixed(2)
@@ -109,7 +119,7 @@ Singleton {
     }
 
     function _key(nowMs: real): string {
-        return root.unit + ":" + Qt.formatDateTime(new Date(nowMs), "yyyy-MM-dd")
+        return (root.fahrenheit ? "F" : "C") + ":" + Qt.formatDateTime(new Date(nowMs), "yyyy-MM-dd")
     }
 
     function cacheFresh(fetchedAt: real, fetchedFor: string, nowMs: real): bool {
@@ -169,7 +179,8 @@ Singleton {
     function _fetchForecast(): void {
         const place = root._place
         const key = root._key(Date.now())
-        root._get(root.forecastUrl(place.lat, place.lon, root.fahrenheit), data => {
+        const fahrenheit = root.fahrenheit
+        root._get(root.forecastUrl(place.lat, place.lon, fahrenheit), data => {
             const reading = root.parseForecast(data)
             if (!reading) { root._fail("Can't reach Open-Meteo"); return }
             root.temperature = reading.temperature
@@ -177,15 +188,15 @@ Singleton {
             root.high = reading.high
             root.low = reading.low
             root.isDay = reading.isDay
+            root._readingFahrenheit = fahrenheit
             root.place = place.name
             root._fetchedFor = key
             root._fetchedAt = Date.now()
             root.failed = false
             root.failure = ""
             root.loading = false
-            // a lookup can straddle midnight while the calendar stays open
-            if (CalendarState.open && key !== root._key(Date.now()))
-                Qt.callLater(root.request, false)
+            // a lookup can straddle midnight, or a unit switch, while the reading is watched
+            if (key !== root._key(Date.now())) Qt.callLater(root._askIfWatched)
         })
     }
 
@@ -217,7 +228,7 @@ Singleton {
             const found = _zoneProc.completedSuccessfully(code)
                 ? TimeZonePlace.parseLine(_zoneOut.text) : null
             if (!found) { root._fail("Can't tell where you are from the time zone"); return }
-            root._place = { lat: found.lat, lon: found.lon,
+            root._place = { lat: found.lat, lon: found.lon, country: found.country,
                 name: TimeZonePlace.placeName(found.zone), offset: new Date().getTimezoneOffset() }
             root._fetchForecast()
         }
@@ -242,8 +253,12 @@ Singleton {
     // A wake from suspend reconnects too, holding a reading from before the sleep that the bar's monotonic timer would
     // show for up to five more minutes; the cache decides whether either needs a fetch
     function _networkBack(online: bool): void {
-        if (online && (_barRefresh.running || CalendarState.open)) root.request(false)
+        if (online) root._askIfWatched()
     }
+    function _askIfWatched(): void {
+        if (_barRefresh.running || CalendarState.open) root.request(false)
+    }
+    onFahrenheitChanged: if (root.hasData) root._askIfWatched()
     Connections {
         target: Network
         function onConnectedChanged() { root._networkBack(Network.connected) }

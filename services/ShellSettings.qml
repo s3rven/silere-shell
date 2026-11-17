@@ -41,6 +41,7 @@ Singleton {
     property bool   calendarWeekNumbers: true
     property bool   weatherEnabled:      false
     property bool   clockShowWeather:    false
+    property string weatherUnit:         "auto"
     property bool   showWindowTitle:     false
     property bool   showWindowTitleApp:  false
     property bool   showWindowTitleIcon: false
@@ -378,6 +379,7 @@ Singleton {
         { k: "calendarWeekNumbers", t: "bool", sec: "clock", l: "Week numbers" },
         { k: "weatherEnabled",      t: "bool", sec: "clock", l: "Weather" },
         { k: "clockShowWeather",    t: "bool", sec: "clock", l: "Show on bar" },
+        { k: "weatherUnit",         t: "enum", vals: ["auto", "c", "f"], sec: "clock", l: "Units" },
         { k: "showWindowTitle",     t: "bool", sec: "widgets,indicators", l: "Window title" },
         { k: "showWindowTitleApp",  t: "bool", sec: "indicators", l: "App name" },
         { k: "showWindowTitleIcon", t: "bool", sec: "indicators", l: "App icon" },
@@ -706,7 +708,7 @@ Singleton {
         ],
         clock: [
             { master: "clockShowDate", hides: ["compactDate"] },
-            { master: "weatherEnabled", hides: ["clockShowWeather"] }
+            { master: "weatherEnabled", hides: ["clockShowWeather", "weatherUnit"] }
         ],
         indicators: [
             { master: "showWindowTitle", hides: ["showWindowTitleApp", "showWindowTitleIcon"] },

@@ -1,7 +1,7 @@
 .pragma library
 
 // the system time zone's principal city, read from the tz database's own tables: the
-// place is coarse, but nothing leaves the machine to find it. Prints "<ISO 6709>\t<zone>"
+// place is coarse, but nothing leaves the machine to find it. Prints "<ISO 6709>\t<zone>\t<countries>"
 var script =
     // $1 and $2 stand in for the system zone and its tables, for the checks
     "tz=\"${1:-}\"; d=\"${2:-/usr/share/zoneinfo}\"; " +
@@ -14,8 +14,8 @@ var script =
     "for _ in 1 2 3 4; do " +
     "  for f in \"$d/zone1970.tab\" \"$d/zone.tab\"; do " +
     "    [ -r \"$f\" ] || continue; " +
-    "    c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2; exit}' \"$f\")\"; " +
-    "    [ -n \"$c\" ] && { printf '%s\\t%s\\n' \"$c\" \"$tz\"; exit 0; }; " +
+    "    c=\"$(awk -v z=\"$tz\" 'BEGIN{FS=OFS=\"\\t\"} $0 !~ /^#/ && $3==z {print $2, z, $1; exit}' \"$f\")\"; " +
+    "    [ -n \"$c\" ] && { printf '%s\\n' \"$c\"; exit 0; }; " +
     "  done; " +
     "  l=\"$(awk -v z=\"$tz\" '$1==\"L\" && $3==z {print $2; exit}' \"$d/tzdata.zi\" 2>/dev/null)\"; " +
     "  [ -n \"$l\" ] && [ \"$l\" != \"$tz\" ] || break; tz=\"$l\"; " +
@@ -51,5 +51,13 @@ function parseLine(text) {
     var coord = parseCoord(fields[0])
     if (!coord) return null
     coord.zone = fields.length > 1 ? fields[1] : ""
+    // zone1970.tab lists every country sharing a zone, the one holding its city first
+    coord.country = fields.length > 2 ? fields[2].split(",")[0].trim().toUpperCase() : ""
     return coord
+}
+
+// the countries whose weather reports read in Fahrenheit, US territories included
+function usesFahrenheit(country) {
+    return ["US", "PR", "GU", "VI", "AS", "MP", "UM", "LR", "BS", "BZ", "KY", "PW", "FM", "MH"]
+        .indexOf(String(country || "")) >= 0
 }

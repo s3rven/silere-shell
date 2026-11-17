@@ -35,7 +35,7 @@ function _v2ToV3(input) {
     return _copy(input)
 }
 
-// the same mark for 1.7: its file holds the pause on headphone loss, which 1.7 cannot read
+// the same mark for 1.7: its file holds the pause on headphone loss and the weather unit, which 1.7 cannot read
 function _v3ToV4(input) {
     return _copy(input)
 }

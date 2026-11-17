@@ -2887,6 +2887,15 @@ ShellRoot {
                 && line.zone === "Europe/Riga" && TimeZonePlace.parseLine("garbage") === null
                 && TimeZonePlace.placeName("America/Argentina/Buenos_Aires") === "Buenos Aires",
             "the time zone lookup yields coordinates and a readable city name")
+        const shared = TimeZonePlace.parseLine("+4339-07923\tAmerica/Toronto\tCA,BS\n")
+        root._check(shared?.country === "CA" && line.country === ""
+                && TimeZonePlace.usesFahrenheit("US") && TimeZonePlace.usesFahrenheit("BS")
+                && !TimeZonePlace.usesFahrenheit("CA") && !TimeZonePlace.usesFahrenheit(""),
+            "a zone shared by several countries reads as its city's own, for the weather unit")
+        root._check(!Weather.fahrenheitFor("auto", true, "LV") && Weather.fahrenheitFor("auto", true, "US")
+                && Weather.fahrenheitFor("auto", true, "") && !Weather.fahrenheitFor("auto", false, "US")
+                && Weather.fahrenheitFor("f", false, "LV") && !Weather.fahrenheitFor("c", true, "US"),
+            "the default US locale reads Fahrenheit only in a city that uses it, a metric locale holds, and a picked unit wins")
         // the lookup, run as written over a three-line tz database: $1 is the script
         const zoneRun = processFactory.createObject(root, { command: ["bash", "-c",
             "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; "
@@ -2894,8 +2903,8 @@ ShellRoot {
             + "printf 'DE\\t+5230+01322\\tEurope/Berlin\\nIN\\t+2232+08822\\tAsia/Kolkata\\n' > \"$d/zone1970.tab\"; "
             + "printf 'SE\\t+5920+01803\\tEurope/Stockholm\\n' > \"$d/zone.tab\"; "
             + "run() { bash -c \"$script\" tz \"$1\" \"$d\"; }; script=\"$1\"; "
-            + "[ \"$(run Europe/Stockholm)\" = \"$(printf '+5920+01803\\tEurope/Stockholm')\" ] "
-            + "&& [ \"$(run Asia/Calcutta)\" = \"$(printf '+2232+08822\\tAsia/Kolkata')\" ] && [ -z \"$(run Nope/Zone)\" ]",
+            + "[ \"$(run Europe/Stockholm)\" = \"$(printf '+5920+01803\\tEurope/Stockholm\\tSE')\" ] "
+            + "&& [ \"$(run Asia/Calcutta)\" = \"$(printf '+2232+08822\\tAsia/Kolkata\\tIN')\" ] && [ -z \"$(run Nope/Zone)\" ]",
             "check", TimeZonePlace.script] })
         zoneRun.exited.connect(function(code) {
             root._check(code === 0, "a time zone merged into another country's keeps its own city, and an alias follows its link")
@@ -3011,6 +3020,23 @@ ShellRoot {
             Weather._networkBack(true)
             root._check(freshKept && offlineKept && Weather.loading && lookup.running,
                 "a reconnect refreshes a bar weather reading that went stale during suspend, and leaves a fresh one")
+            ShellSettings.weatherEnabled = false
+            if (lookup.running) lookup.running = false
+            const unitDeadline = Date.now() + 1000
+            while ((lookup.running || Weather._discardLookup) && Date.now() < unitDeadline) discoveryClock.wait(10)
+            const unitChoiceWas = ShellSettings.weatherUnit
+            ShellSettings.weatherUnit = "c"
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather._fetchedAt = Date.now()
+            Weather._fetchedFor = Weather._key(Weather._fetchedAt)
+            Weather._readingFahrenheit = false
+            Weather.loading = false
+            Weather.failed = false
+            ShellSettings.weatherUnit = "f"
+            root._check(Weather.unit === "°C" && Weather.loading && lookup.running,
+                "switching the weather unit fetches again, and the shown reading keeps the unit it came in")
+            ShellSettings.weatherUnit = unitChoiceWas
             ShellSettings.clockShowWeather = onlineWas.weather
             ShellSettings.barShowClock = onlineWas.clock
             ShellSettings.weatherEnabled = false

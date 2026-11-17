@@ -82,6 +82,18 @@ Column {
                 description: "Beside the clock, refreshed every 30 min"
                 key: "clockShowWeather"
             }
+            // shows the unit in effect, so Auto needs no chip of its own; a pick is kept from then on
+            ChoiceChipRow {
+                glyph: "󰔐"; label: "Units"
+                searchKey: "weatherUnit"
+                currentValue: ShellSettings.weatherUnit !== "auto" ? ShellSettings.weatherUnit
+                    : ShellSettings.weatherEnabled && Weather.fahrenheit ? "f" : "c"
+                model: [
+                    { value: "c", label: "°C" },
+                    { value: "f", label: "°F" }
+                ]
+                onChosen: (v) => ShellSettings.weatherUnit = v
+            }
         }
     }
 }

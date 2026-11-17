@@ -20,6 +20,7 @@ settings file carries its own `__version` and migrates separately.
 - The volume icon turns amber while Bluetooth headphones it plays through are below 20%, and its hover shows their charge, unless the Bluetooth widget already shows that one device's charge.
 - Settings sliders that move in a few steps, such as Workspaces shown, Edge gap and the battery and temperature warnings, mark their stops on the track.
 - Notification history says when Do Not Disturb, quiet hours, Presentation Mode, fullscreen or screen sharing is holding popups back, with Turn off for Do Not Disturb and Presentation Mode.
+- Weather has a Units choice, °C or °F, under Settings › Widgets › Clock.
 
 ### Changed
 
@@ -32,7 +33,8 @@ settings file carries its own `__version` and migrates separately.
 - The clock and the media title ease their hover highlight in and out the way the other bar widgets do.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
 - Scrolling or using the arrow keys on Night light's temperature, an external display's brightness or the Now Playing seek bar applies once you stop, not at every step.
-- A rollback to 1.7 keeps the headphone pause setting.
+- A rollback to 1.7 keeps the headphone pause and weather unit settings.
+- Weather reads in Celsius under the default US English locale unless its city uses Fahrenheit; a metric locale still means Celsius.
 - Settings search finds a row by the options it shows, such as Wave, Balanced or Tall, and by words like charging, battery percentage, sunset, scaling and systray.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
 - Silere's own alerts show as Silere Shell, each with an icon for what it is about.
