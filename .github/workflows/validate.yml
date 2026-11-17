@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: Install compositor test dependencies
         run: |
-          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux python-dbus python-gobject
+          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen libnotify dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux python-dbus python-gobject
           # a file capability cannot be exec'd without privileges, and this container has none to give
           setcap -r "$(command -v kwin_wayland)"
           useradd --create-home silere-test
@@ -119,7 +119,8 @@ jobs:
       - name: Exercise output removal
         if: matrix.compositor == 'kwin'
         shell: bash
-        run: runuser -u silere-test -- bash dev/test-screens.sh 2>&1 | tee /tmp/compositor-screens.log
+        # every tool it needs is installed above, so a missing one fails instead of skipping
+        run: runuser -u silere-test -- env SILERE_REQUIRE_TOOLS=1 bash dev/test-screens.sh 2>&1 | tee /tmp/compositor-screens.log
       - name: Exercise tray menus from the keyboard
         if: matrix.compositor == 'kwin'
         shell: bash

@@ -94,6 +94,7 @@ trap 'exit 130' INT TERM
 _probe_require_qs
 for tool in kwin_wayland kscreen-doctor dbus-run-session notify-send; do
     if ! command -v "$tool" >/dev/null 2>&1; then
+        [ "${SILERE_REQUIRE_TOOLS:-0}" = 1 ] && { echo "FAIL: $tool is not installed, so screen removal went untested" >&2; exit 1; }
         echo "SKIP: $tool not installed; screen removal needs a nested KWin" >&2
         exit 0
     fi

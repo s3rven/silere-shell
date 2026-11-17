@@ -55,9 +55,9 @@ brightness, Wi-Fi, Bluetooth or power mode. Hyprland checks include an already-o
 workspace, named workspaces on a second output, and a window that opens while the shell is
 busy. KWin also provides a test host for output removal and popup interactions.
 
-Without a GPU render node, the niri runner checks panels and popup interactions,
-then explicitly skips full shell startup. Read the skip message when assessing
-coverage.
+Hyprland needs a GPU render node even nested, so without one its runner skips. The niri
+runner then checks panels and popup interactions and explicitly skips full shell startup.
+Read the skip message when assessing coverage.
 
 ## Audio checks
 
@@ -146,7 +146,7 @@ part of `dev/check.sh`.
 | Validate | Current Arch packages; structural checks, installer and updater fixtures, QML types, logic, UI stress, live settings and layout fit. |
 | UI compatibility | Logic, UI stress and layout fit at 125% and 150% display scaling. Both variants finish independently if one fails. |
 | Minimum Quickshell | Quickshell 0.3.1 on a pinned Arch snapshot with Qt 6.10.2; QML types, logic and settings surfaces. |
-| Compositor integration | Private KWin, Hyprland and niri sessions, plus output removal under KWin. |
+| Compositor integration | Private KWin and niri sessions, plus output removal and tray menus under KWin. The runners have no GPU, so niri checks panels and popups only and Hyprland skips; `dev/check.sh` runs both in full where a render node exists. |
 
 The same workflow gates releases and runs weekly against current Arch packages.
 The pinned minimum job checks the supported floor; the rolling jobs help detect

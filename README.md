@@ -28,7 +28,7 @@ config, launcher, wallpaper tool and lock screen stay your own.
 
 | Feature | What you get |
 |---|---|
-| Bar | Workspaces with app icons, window title, media, system readings, tray and clock. Choose the widgets and their order. |
+| Bar | Workspaces with app icons, window title, media, system readings, tray, and a clock with a calendar and optional weather. Choose the widgets and their order. |
 | Quick settings | Output, microphone and per-app volume; brightness; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake; battery health and charge limit. |
 | Notifications | Actions, inline replies, conversation grouping, searchable history, app muting and Do Not Disturb. |
 | Media | Album art, seeking, player switching and an optional Cava visualizer. |
@@ -157,9 +157,10 @@ Memory is PSS and depends on the machine, fonts, widgets and allocator tuning. T
 [performance guide](docs/performance.md) explains the numbers and how to measure your own.
 
 Tests cover service logic, keyboard and pointer input, layout fit and display scaling, plus hung
-tools and malformed notifications, media and tray items. CI runs them on every push in KWin,
-Hyprland and niri sessions, at 125% and 150% scale, against Quickshell 0.3.1 and the current
-release. See the [testing guide](docs/testing.md).
+tools and malformed notifications, media and tray items. CI runs them on every push in KWin and
+niri sessions, at 125% and 150% scale, against Quickshell 0.3.1 and the current release. CI
+runners have no GPU, so the Hyprland session tests run on my machine with every change. See the
+[testing guide](docs/testing.md).
 
 ## When something's wrong
 
