@@ -420,6 +420,52 @@ QtObject {
         }
     }
 
+    // Quickshell leaves ShellScreen.serialNumber empty on wayland (quickshell#903); niri's output list has the EDID
+    // serial, so bar and popup display choices follow the monitor rather than the port. niri's event stream says
+    // nothing about outputs, so the list is read when Quickshell's screens change
+    property var monitorSerials: ({})
+    function serialsFrom(text: string): var {
+        let outputs = null
+        try { outputs = JSON.parse(text) } catch (e) { return ({}) }
+        const out = {}
+        if (!outputs || typeof outputs !== "object" || Array.isArray(outputs)) return out
+        for (const key in outputs) {
+            const o = outputs[key]
+            const name = o ? o.name : undefined
+            const serial = o ? o.serial : undefined
+            if (typeof name === "string" && typeof serial === "string" && serial.trim().length > 0)
+                out[name] = serial.trim()
+        }
+        return out
+    }
+    property bool _serialsAgain: false
+    function _askSerials(): void {
+        if (root.socketPath.length === 0) return
+        if (_outputsProc.running) root._serialsAgain = true
+        else _outputsProc.running = true
+    }
+    property BoundedProcess _outputsReader: BoundedProcess {
+        id: _outputsProc
+        command: ["niri", "msg", "--json", "outputs"]
+        timeoutMs: 3000
+        stdout: StdioCollector { id: _outputsOut }
+        onExited: code => {
+            if (_outputsProc.completedSuccessfully(code)) {
+                const next = root.serialsFrom(_outputsOut.text)
+                if (JSON.stringify(next) !== JSON.stringify(root.monitorSerials)) root.monitorSerials = next
+            }
+            if (root._serialsAgain) {
+                root._serialsAgain = false
+                Qt.callLater(root._askSerials)
+            }
+        }
+    }
+    property Connections _screensConn: Connections {
+        target: Quickshell
+        function onScreensChanged() { root._askSerials() }
+    }
+    Component.onCompleted: root._askSerials()
+
     property Socket _eventSocket: Socket {
         id: _socket
         path: root.socketPath

@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 ### Changed
 
 - A new install starts with the system tray on, so apps closed to the tray can be reopened; an existing setup keeps its setting.
+- On niri, each display's bar and popup choices follow the monitor across dock changes, as on Hyprland, instead of the port it is plugged into.
 - Hovering the system monitor uncovers its longer readings in place; the readings after them no longer slip under the pill's edge and slide back.
 - A bar widget switched on in Settings unfolds into the bar instead of appearing at full width and pushing its neighbours aside in one step.
 - The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with leaner memory settings, unless you set your own `MALLOC_CONF`.

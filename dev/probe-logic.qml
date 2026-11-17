@@ -9410,6 +9410,26 @@ ShellRoot {
         SystemTools._tools = brightnessToolsWas
 
         const niri = niriBackendFactory.createObject(root)
+        const niriOutputs = JSON.stringify({
+            "eDP-1": { name: "eDP-1", make: "BOE", model: "NE160QDM", serial: " 0x0A1B " },
+            "DP-1": { name: "DP-1", make: "Dell", model: "U2723QE", serial: null },
+            "HDMI-A-1": { name: "HDMI-A-1", make: "LG", model: "27GL850", serial: "  " }
+        })
+        const niriSerials = niri.serialsFrom(niriOutputs)
+        root._check(JSON.stringify(niriSerials) === JSON.stringify({ "eDP-1": "0x0A1B" })
+                && Object.keys(niri.serialsFrom("not json")).length === 0
+                && Object.keys(niri.serialsFrom("[1,2]")).length === 0,
+            "niri's output list yields each monitor's serial by connector, and nothing from a missing or broken one")
+        {
+            // niri itself is not here: a stand-in prints the list as niri msg --json outputs does
+            const reader = niri._outputsReader
+            reader.command = ["sh", "-c", "printf '%s' \"$1\"", "niri", niriOutputs]
+            reader.running = true
+            const readDeadline = Date.now() + 3000
+            while (reader.running && Date.now() < readDeadline) discoveryClock.wait(10)
+            root._check(niri.monitorSerials["eDP-1"] === "0x0A1B" && niri.monitorSerials["DP-1"] === undefined,
+                "the niri backend publishes the serials it reads, so display choices follow the monitor on niri too")
+        }
         niri._onLine(JSON.stringify({ WorkspacesChanged: { workspaces: [
             { id: 11, idx: 1, output: "DP-1", is_active: true,  is_focused: true },
             { id: 22, idx: 2, output: "DP-1", is_active: false, is_focused: false }
