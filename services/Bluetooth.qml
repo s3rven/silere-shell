@@ -39,6 +39,8 @@ Singleton {
     function _releaseMissingAdapter(): void {
         if (root._chosenAdapter && root._adapters.indexOf(root._chosenAdapter) < 0)
             root._chosenAdapter = null
+        for (const stop of root._deferredScanStops)
+            if (!stop.adapter || root._adapters.indexOf(stop.adapter) < 0) root._forgetScanStop(stop)
     }
     readonly property bool available: adapter !== null
     readonly property bool enabled:   adapter ? adapter.enabled : false
@@ -274,6 +276,7 @@ Singleton {
 
     property bool _scanRequested: false
     property var _scanAdapter: null
+    property var _deferredScanStops: []
     readonly property RequestSet _scanRequests: RequestSet {}
 
     function requestScan(owner, wanted: bool): void {
@@ -290,10 +293,34 @@ Singleton {
         if (!_scanSync.running) _scanSync.restart()
     }
 
+    function _forgetScanStop(stop): void {
+        if (stop.adapter) stop.adapter.discoveringChanged.disconnect(stop.changed)
+        root._deferredScanStops = root._deferredScanStops.filter(entry => entry !== stop)
+    }
+
+    // a controller change can overtake StartDiscovery's answer. Keep watching the old controller
+    // until its start lands, then release that session even though the picker now watches another
+    function _deferScanStop(adapter): void {
+        if (root._deferredScanStops.some(stop => stop.adapter === adapter)) return
+        const stop = { adapter: adapter, changed: null }
+        stop.changed = () => {
+            if (!adapter.discovering) return
+            root._forgetScanStop(stop)
+            // the user may have selected this controller again while its start was pending
+            if (root._scanAdapter !== adapter || !root._scanRequested || !adapter.enabled)
+                adapter.discovering = false
+        }
+        adapter.discoveringChanged.connect(stop.changed)
+        root._deferredScanStops = root._deferredScanStops.concat([stop])
+    }
+
     function _syncDiscovery(target): void {
         const previous = root._scanAdapter
-        if (previous && previous !== target && previous.discovering)
-            previous.discovering = false
+        if (previous && previous !== target) {
+            if (previous.discovering) previous.discovering = false
+            else if (root._scanStarting === previous) root._deferScanStop(previous)
+            if (root._scanStarting === previous) root._scanStarting = null
+        }
         const want = !!(root._scanRequested && target && target.enabled)
         const owned = !!(target && (previous === target || (want && !target.discovering)))
         // a start is a round trip: a stop asked for inside it still reads discovering as off and has nothing
@@ -309,7 +336,9 @@ Singleton {
     property var _scanStarting: null
     Connections {
         target: root.adapter
-        function onDiscoveringChanged() { if (root._scanStarting) _scanSync.restart() }
+        function onDiscoveringChanged() {
+            if (root._scanRequested || root._scanStarting) _scanSync.restart()
+        }
     }
 
     onAdapterChanged: {

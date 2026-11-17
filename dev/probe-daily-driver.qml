@@ -769,7 +769,53 @@ Scope {
             "font discovery recovers with a fresh catalogue instead of the cancelled scan")
     }
 
+    function bluetoothDiscoveryChecks(): void {
+        const service = bluetoothFactory.createObject(root)
+        const first = radioFactory.createObject(root, { enabled: true, state: Bt.BluetoothAdapterState.Enabled })
+        const second = radioFactory.createObject(root, {
+            adapterId: "hci1", enabled: true, state: Bt.BluetoothAdapterState.Enabled
+        })
+        service._adapters = [first, second]
+        service._defaultAdapter = first
+        service.setScan(true)
+        root.waitFor(() => first.discovering, "the private Bluetooth controller starts discovery")
+        // Hold the first start's answer through the controller switch.
+        first.discovering = false
+        service._scanStarting = first
+        service.selectAdapter("hci1")
+        root.waitFor(() => second.discovering && service._deferredScanStops.length === 1,
+            "a controller handover retains the old scan's pending stop")
+        first.discovering = true
+        root.waitFor(() => !first.discovering && second.discovering && service._deferredScanStops.length === 0,
+            "the old controller's real change signal releases its late discovery")
+
+        service.setScan(false)
+        root.waitFor(() => !second.discovering, "closing the Bluetooth picker releases discovery")
+        // A late stop can arrive after the picker has reopened and seen discovery still on.
+        second.discovering = true
+        service.setScan(true)
+        input.wait(40)
+        second.discovering = false
+        root.waitFor(() => second.discovering,
+            "a discovery stop arriving after reopen restarts the requested scan")
+
+        second.discovering = false
+        service._scanStarting = second
+        service.selectAdapter("hci0")
+        root.waitFor(() => first.discovering && service._deferredScanStops.length === 1,
+            "another pending controller start retains one cleanup watcher")
+        service._adapters = [first]
+        second.destroy()
+        root.waitFor(() => service._deferredScanStops.length === 0,
+            "unplugging a pending controller releases its cleanup watcher")
+        service.setScan(false)
+        root.waitFor(() => !first.discovering, "the last private Bluetooth discovery session ends")
+        service.destroy()
+        first.destroy()
+    }
+
     function bluetoothChecks(): void {
+        root.bluetoothDiscoveryChecks()
         const service = bluetoothFactory.createObject(root)
         const first = radioFactory.createObject(root)
         const second = radioFactory.createObject(root, { adapterId: "hci1" })

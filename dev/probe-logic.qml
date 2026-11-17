@@ -11715,6 +11715,68 @@ ShellRoot {
         slowRadio.land()
         root._check(!slowRadio.discovering && Bluetooth._scanAdapter === null && Bluetooth._scanStarting === null,
             "a Bluetooth picker closed before its discovery start lands still stops that discovery")
+        const deferredRadio = () => {
+            const listeners = []
+            return { enabled: true, _on: false, _asked: null,
+                discoveringChanged: {
+                    connect(callback) { listeners.push(callback) },
+                    disconnect(callback) {
+                        const at = listeners.indexOf(callback)
+                        if (at >= 0) listeners.splice(at, 1)
+                    }
+                },
+                get discovering() { return this._on },
+                set discovering(value) { this._asked = value },
+                land() {
+                    if (this._asked === null) return
+                    const changed = this._on !== this._asked
+                    this._on = this._asked
+                    this._asked = null
+                    if (changed) for (const listener of listeners.slice()) listener()
+                },
+                get listeners() { return listeners.length }
+            }
+        }
+        const delayed = deferredRadio()
+        const replacement = { enabled: true, discovering: false }
+        Bluetooth._scanRequested = true
+        Bluetooth._syncDiscovery(delayed)
+        Bluetooth._syncDiscovery(replacement)
+        delayed.land()
+        delayed.land()
+        root._check(!delayed.discovering && replacement.discovering && delayed.listeners === 0,
+            "switching controllers before a Bluetooth scan starts releases the old controller's late scan")
+        const returning = deferredRadio()
+        Bluetooth._syncDiscovery(returning)
+        Bluetooth._syncDiscovery(replacement)
+        Bluetooth._syncDiscovery(returning)
+        returning.land()
+        root._check(returning.discovering && !replacement.discovering && returning.listeners === 0,
+            "reselecting a controller before its scan starts preserves the newly requested scan")
+        Bluetooth._scanRequested = false
+        Bluetooth._syncDiscovery(returning)
+        returning.land()
+        const lost = deferredRadio()
+        Bluetooth._scanRequested = true
+        Bluetooth._syncDiscovery(lost)
+        Bluetooth._syncDiscovery(null)
+        lost.land()
+        lost.land()
+        root._check(!lost.discovering && lost.listeners === 0 && Bluetooth._scanStarting === null
+                && Bluetooth._deferredScanStops.length === 0,
+            "losing the selected controller before discovery starts still releases its late scan")
+        const silent = deferredRadio()
+        Bluetooth._syncDiscovery(silent)
+        Bluetooth._syncDiscovery(replacement)
+        Bluetooth._syncDiscovery(silent)
+        Bluetooth._syncDiscovery(replacement)
+        root._check(silent.listeners === 1 && Bluetooth._deferredScanStops.length === 1,
+            "repeated switches while a controller stays silent retain only one cleanup watcher")
+        Bluetooth._releaseMissingAdapter()
+        root._check(silent.listeners === 0 && Bluetooth._deferredScanStops.length === 0,
+            "a vanished Bluetooth controller releases a cleanup watcher even without a final discovery signal")
+        Bluetooth._scanRequested = false
+        Bluetooth._syncDiscovery(replacement)
         Bluetooth._scanAdapter = scanAdapterWas
         Bluetooth._scanRequested = scanRequestedWas
     }
