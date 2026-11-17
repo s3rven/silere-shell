@@ -29,7 +29,8 @@ Item {
 
     property var screen: null
     property bool barActive: true
-    readonly property bool _canInteract: root.enabled && root.visible && root.show && root.barActive && !Idle.isIdle
+    readonly property bool _canInteract: root.enabled && root.visible && root.show && root.width > 0
+        && root.barActive && !Idle.isIdle
     readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
