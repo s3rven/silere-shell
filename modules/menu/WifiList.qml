@@ -328,7 +328,12 @@ Item {
                             font.family: Settings.font; font.pixelSize: Settings.fontSize
                             clip: true
                             onAccepted: _entry._submitPassword()
-                            Keys.onEscapePressed: event => { root._selected = ""; event.accepted = true }
+                            Keys.onShortcutOverride: event => { if (event.key === Qt.Key_Escape) event.accepted = true }
+                            Keys.onEscapePressed: event => {
+                                _entry.focusRow()
+                                root._selected = ""
+                                event.accepted = true
+                            }
 
                             ShellText {
                                 anchors.fill: parent

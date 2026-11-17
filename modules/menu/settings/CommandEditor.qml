@@ -97,6 +97,7 @@ Column {
             text: root.draft
             onTextEdited: root.draft = text
             onAccepted: root.save()
+            Keys.onShortcutOverride: event => { if (event.key === Qt.Key_Escape) event.accepted = true }
             Keys.onEscapePressed: event => { root.revert(); event.accepted = true }
             selectByMouse: true
             // keep a too-long paste visible for validation instead of silently saving a truncated command

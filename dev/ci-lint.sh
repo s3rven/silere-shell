@@ -792,7 +792,7 @@ section "portable QML key handlers"
 key_handlers="$(grep -RhoE 'Keys\.on[A-Za-z0-9_]+' --include='*.qml' shell.qml modules config services \
     | sed 's/^Keys\.//' | sort -u)"
 unsupported_key_handlers="$(printf '%s\n' "$key_handlers" \
-    | grep -vE '^(onPressed|onReleased|onUpPressed|onDownPressed|onLeftPressed|onRightPressed|onSpacePressed|onReturnPressed|onEnterPressed|onEscapePressed|onMenuPressed)$' \
+    | grep -vE '^(onPressed|onReleased|onShortcutOverride|onUpPressed|onDownPressed|onLeftPressed|onRightPressed|onSpacePressed|onReturnPressed|onEnterPressed|onEscapePressed|onMenuPressed)$' \
     || true)"
 if [ -n "$unsupported_key_handlers" ]; then
   fail "unsupported Keys attached handlers:"
