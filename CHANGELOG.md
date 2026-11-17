@@ -24,6 +24,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Hovering the system monitor uncovers its longer readings in place; the readings after them no longer slip under the pill's edge and slide back.
 - The shell uses about a third less memory on 4-thread laptops: `silere run` starts it with leaner memory settings, unless you set your own `MALLOC_CONF`.
 - A see-through bar keeps the accent's colour on its marks: the active workspace, widget icons, levels and the visualizer. At low bar opacity they had faded to off-white.
 - A colour lifted for contrast keeps its hue: lightness changes and the colour stays, where it used to be blended toward white or black and turned grey.

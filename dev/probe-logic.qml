@@ -4616,6 +4616,34 @@ ShellRoot {
                 "a pill's level fill keeps inside its track while the pill shrinks, not " + Math.round(worst) + " px past it")
             lv.destroy()
 
+            // the system monitor's hover: its first reading grows in the middle of the row, between glyphs
+            const sp = pillFactory.createObject(root, { text: "20%", reserveText: "00%", shrinkDelay: 0,
+                segments: [{ glyph: "b", text: "50°", reserve: "00°" }] })
+            sp._ready = true
+            const spRow = sp.children.find(item => typeof item.forceLayout === "function")
+            const glidesOf = obj => (obj.data ?? []).reduce((out, it) =>
+                out.concat(it._advance !== undefined && it.precision !== undefined ? [it] : [], it.data ? glidesOf(it) : []), [])
+            const tailOf = () => spRow.children.filter(item => item._slack !== undefined && item !== spRow.children[1]).pop()
+            const settle = () => { sp.width = Math.ceil(sp.implicitWidth); spRow.forceLayout() }
+            // the trailing reading's distance from the pill's far edge, which stays put in a right-hand zone
+            const tailGap = () => sp.width - (tailOf().mapToItem(sp, 0, 0).x)
+            settle()
+            const restGap = tailGap()
+            sp.text = "12 GB of 62 GB"
+            // the relayout a real frame does before the first glide step
+            spRow.forceLayout()
+            const finalAtOnce = sp.rowWidth > 100
+            let drift = 0, frames = 0
+            for (; frames < 40 && glidesOf(sp).some(g => g.running); frames++) {
+                glidesOf(sp).forEach(g => g._advance(0.016))
+                settle()
+                drift = Math.max(drift, Math.abs(tailGap() - restGap))
+            }
+            root._check(tailOf() !== undefined && finalAtOnce && frames > 3 && drift < 1.5,
+                "a reading growing between a pill's glyphs uncovers in place: the readings after it hold within a pixel, not "
+                    + Math.round(drift) + " px")
+            sp.destroy()
+
             root._check(lv.concealsAs("45% · Speakers", "45%", true) && lv.concealsAs("45%", "", true)
                     && !lv.concealsAs("100%", "10%", false) && !lv.concealsAs("45% · Speakers", "46%", true)
                     && !lv.concealsAs("45%", "45% · Speakers", true),

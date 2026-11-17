@@ -83,8 +83,15 @@ Item {
     property bool collapsed: false
     property int  shrinkDelay: 600
     property real _minW: 0
+    // a reading inside the row (the system monitor's, between its glyphs) changes width on hover. Its box glides
+    // with the pill's own edge, so the readings after it hold still: laid out at once, they were shoved past the edge
+    // and slid back on every hover, and jumped back and slid out again on leaving
+    readonly property bool _glideReadings: root.segments.length > 0
+    // what the gliding boxes still have to cover, so the pill heads for the row's final width from the first frame
+    readonly property real _readingSlack: !root._glideReadings ? 0
+        : Array.prototype.reduce.call(row.children, (sum, item) => sum + (item._slack ?? 0), 0)
     // whole px: a fractional text width puts the pill and every widget after it off-pixel
-    readonly property real rowWidth: Math.ceil(row.implicitWidth)
+    readonly property real rowWidth: Math.ceil(row.implicitWidth + root._readingSlack)
     implicitWidth: _widthGlide.value
     SmoothGlide {
         id: _widthGlide
@@ -326,15 +333,26 @@ Item {
             readonly property bool _hasShownText: _textEl._hasShownText
             anchors.verticalCenter: parent.verticalCenter
             visible: _hasShownText
-            width:   _hasShownText ? Math.ceil(Math.min(Math.max(implicitWidth, root._reserveW), root.maxTextWidth)) : 0
+            readonly property real _targetW: _hasShownText
+                ? Math.ceil(Math.min(Math.max(implicitWidth, root._reserveW), root.maxTextWidth)) : 0
+            readonly property real _slack: root._glideReadings ? _targetW - width : 0
+            width: root._glideReadings ? _textGlide.value : _targetW
             height: _textEl.implicitHeight
             implicitWidth: _textEl.implicitWidth
+            clip: width < _targetW - 0.5
+            SmoothGlide {
+                id: _textGlide
+                target: _textBox._targetW
+                duration: Motion.width
+                gate: root._ready && root.barActive && root._glideReadings
+            }
 
             ShellText {
                 id: _textEl
                 property string _shown: ""
                 readonly property bool _hasShownText: root.animateText ? _shown.length > 0 : root.hasText
-                width: parent.width
+                // the box uncovers the reading as it glides; a narrower text would elide afresh every frame
+                width: _textBox._targetW
                 anchors.verticalCenter: parent.verticalCenter
                 elide:   Text.ElideRight
                 text:    root.animateText ? _shown : root.text
@@ -407,24 +425,39 @@ Item {
                     }
                 }
 
-                ShellText {
-                    id: _segText
+                Item {
+                    id: _segBox
+                    readonly property real _targetW: Math.ceil(Math.max(_segText.implicitWidth, _segReserve.implicitWidth))
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.ceil(Math.max(implicitWidth, _segReserve.implicitWidth))
-                    text: _segment.seg.text ?? ""
-                    color: root._hoverTextColor
-                    font.pixelSize: Settings.fontSize
-                    font.features: ({ "tnum": 1 })
-                    ColorFade on color {}
-                    Text {
-                        id: _segReserve
-                        visible: false
-                        textFormat: Text.PlainText
-                        renderType: _segText.renderType
-                        font: _segText.font
-                        text: _segment.seg.reserve ?? ""
+                    width: _segGlide.value
+                    height: _segText.implicitHeight
+                    clip: width < _targetW - 0.5
+                    SmoothGlide {
+                        id: _segGlide
+                        target: _segBox._targetW
+                        duration: Motion.width
+                        gate: root._ready && root.barActive
+                    }
+                    ShellText {
+                        id: _segText
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: _segBox._targetW
+                        text: _segment.seg.text ?? ""
+                        color: root._hoverTextColor
+                        font.pixelSize: Settings.fontSize
+                        font.features: ({ "tnum": 1 })
+                        ColorFade on color {}
+                        Text {
+                            id: _segReserve
+                            visible: false
+                            textFormat: Text.PlainText
+                            renderType: _segText.renderType
+                            font: _segText.font
+                            text: _segment.seg.reserve ?? ""
+                        }
                     }
                 }
+                readonly property real _slack: _segBox._targetW - _segBox.width
             }
         }
     }
