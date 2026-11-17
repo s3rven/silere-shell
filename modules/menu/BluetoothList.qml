@@ -46,6 +46,7 @@ Item {
         target: Bluetooth
         function onAvailableChanged() { root._syncScanState() }
         function onEnabledChanged() { root._syncScanState() }
+        function onAdapterChanged() { root._confirm.clear() }
     }
     Connections {
         target: Idle

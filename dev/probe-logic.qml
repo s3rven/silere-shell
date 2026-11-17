@@ -3361,6 +3361,12 @@ ShellRoot {
                     const fired = arm.press(key)
                     root._check(fired && arm.key === "",
                         label + " runs on a second press inside the window and disarms")
+                    if (test.name === "Bluetooth") {
+                        arm.press(key)
+                        Bluetooth.adapterChanged()
+                        root._check(arm.key === "", label + " clears when its Bluetooth controller changes")
+                        arm.clear()
+                    }
                     if (disconnect) continue
                     const keyHost = keyboardFixtureFactory.createObject(root)
                     const pickerParent = picker.parent

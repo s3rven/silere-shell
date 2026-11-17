@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 
 - Closing Home's inline choices returns keyboard focus to their opening control; Wi-Fi rescans keep focus on the same network as the list changes.
 - Escape cancels a Wi-Fi password or discards command edits before the panel's close shortcut runs.
+- Changing Bluetooth controllers clears a pending Disconnect or Forget confirmation.
 - Partial scroll gestures on the media and tray widgets stay with their own bar and clear when the control hides or changes its target.
 - Code in notifications keeps its literal tags, entities and Markdown characters, including fenced blocks and backticks inside code.
 - After a wake from suspend, the bar's weather refreshes as soon as the network is back instead of showing the reading from before the sleep for a few minutes.
