@@ -921,6 +921,9 @@ Singleton {
             root._readError = _store.writeAllowed ? ""
                 : "Could not read settings.json. Existing data was left untouched."
             root._loaded = true
+            // a new profile shows the tray: someone coming from waybar has apps closed to it and no other way back.
+            // Any settings file keeps the shipped default, so no install that already has one changes
+            if (root._firstRun) root.trayWidget = true
         }
         onSaved: {
             root._futureTouched = ({})

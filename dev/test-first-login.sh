@@ -99,6 +99,13 @@ if [ "${1:-}" = --inner ]; then
         sleep 0.1
     done
     [ "$up" = 1 ] || fail "the bar did not come up at login"
+    # a new profile saves the tray switched on; an existing one keeps the default
+    tray_on=0
+    for _ in $(seq 1 50); do
+        grep -q '"trayWidget": true' "$home/.config/silere-shell/settings.json" 2>/dev/null && { tray_on=1; break; }
+        sleep 0.1
+    done
+    [ "$tray_on" = 1 ] || fail "a first login did not save the tray switched on"
 
     # a login has no window to send a key to, so the bind is checked as registered and its command is run as written
     nested=""

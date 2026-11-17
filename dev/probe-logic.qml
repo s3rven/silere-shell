@@ -11095,8 +11095,8 @@ ShellRoot {
             "without page tables to compare, the pool assumes ordinary pages")
         root._check(SysInfo.gpuReclaimKb("nr_anon_pages 25\n", gpuMem) === 0,
             "a kernel that does not count the pool leaves the reading alone")
-        root._check(!ShellSettings.firstRun,
-            "a profile that already has a settings file is not greeted as a new one")
+        root._check(!ShellSettings.firstRun && !ShellSettings.trayWidget,
+            "a profile that already has a settings file is not greeted as a new one, and keeps the tray's default")
         ShellSettings._firstRun = true
         ShellSettings.markFirstRunSeen()
         root._check(!ShellSettings.firstRun,
