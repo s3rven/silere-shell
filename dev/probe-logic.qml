@@ -9546,6 +9546,14 @@ ShellRoot {
         SysInfo._applyMeminfo("MemTotal: 100 kB\n")
         root._check(SysInfo.memTotalKb === 0 && SysInfo.memPct === 0,
             "missing memory fields retire the previous reading")
+        const memSeen = []
+        const watchMem = () => memSeen.push(SysInfo.memPct)
+        SysInfo.memPctChanged.connect(watchMem)
+        SysInfo._applyMeminfo("MemTotal: 16000000 kB\nMemAvailable: 12000000 kB\n")
+        SysInfo._applyMeminfo("MemTotal: 100 kB\n")
+        SysInfo.memPctChanged.disconnect(watchMem)
+        root._check(memSeen.length > 0 && memSeen.every(p => p < 0.5),
+            "a first memory reading, and one that fails, never pass through 100% used on the way")
         const swapWas = [SysInfo.swapTotalKb, SysInfo.swapUsedKb, SysInfo.memPressure, SysInfo._memStalled]
         const pressureLine = value => "some avg10=" + value + " avg60=0.00 avg300=0.00 total=1943\n"
             + "full avg10=99.00 avg60=0.00 avg300=0.00 total=1662\n"

@@ -243,9 +243,16 @@ Singleton {
         const avail = mem.match(/^MemAvailable:\s+(\d+)/m)
         const totalKb = total ? Number(total[1]) : 0
         const availKb = avail ? Number(avail[1]) : NaN
-        root.memTotalKb = isFinite(totalKb) && totalKb > 0 && isFinite(availKb) ? totalKb : 0
-        root.memAvailKb = root.memTotalKb > 0
-            ? Math.max(0, Math.min(root.memTotalKb, availKb + root.gpuReclaimKb(root._vmstat, mem))) : 0
+        const memTotal = isFinite(totalKb) && totalKb > 0 && isFinite(availKb) ? totalKb : 0
+        // the total lands last, and goes first when the reading fails: either other way the percentage passed
+        // through 100% used, and the bar's monitor grew for it and held the width for its shrink delay
+        if (memTotal > 0) {
+            root.memAvailKb = Math.max(0, Math.min(memTotal, availKb + root.gpuReclaimKb(root._vmstat, mem)))
+            root.memTotalKb = memTotal
+        } else {
+            root.memTotalKb = 0
+            root.memAvailKb = 0
+        }
         // SwapFree, not SwapCached: cached pages are still resident, only used = total - free is pressure
         const swapTotal = mem.match(/^SwapTotal:\s+(\d+)/m)
         const swapFree = mem.match(/^SwapFree:\s+(\d+)/m)

@@ -91,6 +91,7 @@ settings file carries its own `__version` and migrates separately.
 - Captions from a low-contrast matugen palette (`--contrast` below 0) no longer sink under 3:1.
 - `scripts/bench.sh --warm` works from an SSH session.
 - With more than one reading on show, the bar's system monitor no longer redraws the bar at every sample, so the shell uses far less CPU at idle.
+- The bar's system monitor no longer widens and then slides back a few seconds after the shell starts.
 - Text no longer has orange and blue fringes on displays at fractional scales such as 125% and 150%.
 - With Auto tighten on, hovering a widget on a crowded bar no longer tightens the whole bar and loosens it again.
 - A screen backlight that disappears no longer flashes the brightness display at 0%.
