@@ -148,6 +148,7 @@ settings file carries its own `__version` and migrates separately.
 - Opening and closing the power options no longer makes Home and the power rows jump sideways first.
 - Closing Home's Wi-Fi, Bluetooth, VPN or Night Light choices folds their rows away instead of blanking them first.
 - With the bar at the bottom, the rows under an opening or closing list on Home hold still instead of trembling, and switching from one list to another no longer makes the page jump.
+- Reopening Settings or History opens the panel at the height it closed at, instead of growing while the page loads.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.

@@ -163,6 +163,15 @@ FittedPopupWindow {
         property bool _recentRetained:  false
         property bool _mediaRetained:   false
         property bool _settingsNavRetained: false
+        // closing unloads Settings and History, so a reopen builds them again: the panel opens at the height it closed at
+        // instead of growing from the placeholder's while the page fades in
+        property real _settingsClosedH: 0
+        property string _settingsClosedSection: ""
+        property real _recentClosedH: 0
+        property real _settingsNavClosedH: 0
+        // the nav floors the settings panel and is unloaded with the page, so it stands in at its closing height too
+        readonly property real _settingsNavH: rail.settingsNavHeight > 0 ? rail.settingsNavHeight
+            : panel._settingsClosedSection === MenuState.settingsSection ? panel._settingsNavClosedH : 0
 
         Component.onCompleted: {
             if (activeTab !== 0) _loadedDeferred = true
@@ -329,6 +338,13 @@ FittedPopupWindow {
                     contentFlick.scrollToTop()
                 } else {
                     rail.stopWarmDelays()
+                    if (settingsLoader.item?.contentReady === true) {
+                        panel._settingsClosedH = settingsLoader.item.implicitHeight
+                        panel._settingsClosedSection = MenuState.settingsSection
+                        panel._settingsNavClosedH = rail.settingsNavHeight
+                    }
+                    if (recentLoader.item?.contentReady === true)
+                        panel._recentClosedH = recentLoader.item.implicitHeight
                     _closedUnload.restart()
                 }
             }
@@ -501,16 +517,22 @@ FittedPopupWindow {
 
             // settings stops at the nav's height, as history stops at its viewport: a long page
             // scrolls inside it instead of stretching the panel to the screen edge
-            readonly property int _settingsMaxH: Math.max(rail.settingsNavHeight + 16,
+            readonly property int _settingsMaxH: Math.max(panel._settingsNavH + 16,
                 Metrics.rowHeightFor(640))
-            readonly property int targetH: {
-                const contentH = tabContent.y + tabContent.height
+            readonly property real _fitH: {
+                const contentH = panel.pageTopInset + tabContent.height
                     + panel.pageBottomInset
                 const navH = panel.activeTab === 1
-                    ? rail.settingsNavHeight + 16 : 0
-                return 4 * Math.ceil(Math.max(panel.minRailFitH, panel.idealMinH, navH,
-                    panel.activeTab === 1 ? Math.min(contentH, _settingsMaxH) : contentH) / 4)
+                    ? panel._settingsNavH + 16 : 0
+                return Math.max(panel.minRailFitH, panel.idealMinH, navH,
+                    panel.activeTab === 1 ? Math.min(contentH, _settingsMaxH) : contentH)
             }
+            readonly property int targetH: 4 * Math.ceil(_fitH / 4)
+            // over a bottom bar the panel grows upward on the 4 px grid while a fold grows smoothly: the grid's
+            // remainder goes above the page, or every row below the fold trembles against the fixed edge.
+            // A panel at the screen's limit scrolls instead, and ScrollHold keeps those rows
+            readonly property real gridSlack: Metrics.barAtBottom && targetH <= panel._availablePanelH
+                ? targetH - _fitH : 0
 
             height: panel.height
 
@@ -638,7 +660,7 @@ FittedPopupWindow {
                 Item {
                     id: tabContent
                     x: panel.contentPad
-                    y: panel.pageTopInset
+                    y: panel.pageTopInset + contentPane.gridSlack
                     width: panel.innerW
                     readonly property bool _pagePending:
                         panel.activeTab === 1
@@ -677,8 +699,11 @@ FittedPopupWindow {
                         id: _pagePlaceholder
                         width: parent.width
                         height: implicitHeight
-                        implicitHeight: Math.max(1, panel.idealMinH
-                            - panel.pageTopInset - panel.pageBottomInset)
+                        implicitHeight: Math.max(1,
+                            panel.activeTab === 1 && panel._settingsClosedSection === MenuState.settingsSection
+                                && panel._settingsClosedH > 0 ? panel._settingsClosedH
+                            : panel.activeTab === 2 && panel._recentClosedH > 0 ? panel._recentClosedH
+                            : panel.idealMinH - panel.pageTopInset - panel.pageBottomInset)
                         readonly property bool _shown:
                             tabContent._pageSlow || tabContent._pageError
                         opacity: _pagePlaceholder._shown ? 1 : 0
