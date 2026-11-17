@@ -267,8 +267,9 @@ PanelWindow {
                         _enterAnim.stop()
                         _exitAnim.start()
                     } else {
+                        // a hide still in flight turns back from where it is: resetting it to _hideY snapped a quick overview peek 12 px
+                        if (!_exitAnim.running) contents._slideY = contents._hideY
                         _exitAnim.stop()
-                        contents._slideY = contents._hideY
                         _enterAnim.start()
                     }
                 }
