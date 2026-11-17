@@ -566,10 +566,26 @@ PanelWindow {
 
                             // a slot being removed reads index -1; it has to keep its card for the gap to close over
                             property bool exitHeld: false
-                            readonly property bool shouldLoad: StackLayout.slotLoads(index, stack.count,
+                            readonly property bool _inLimit: StackLayout.slotInLimit(index, stack.count,
                                 ShellSettings.notifMaxVisible, win._showAll, win._isCritical(modelData), exitHeld,
                                 // the service's id, not the card's own flag: the card exists only while this is true
-                                Notifications.replyingId === modelData.id)
+                                Notifications.replyingId === modelData.id,
+                                cardItem !== null, cardItem !== null && cardItem._folding)
+                            // set while its card is in view, so a card that newer ones push past the limit stays loaded
+                            // through its fold instead of vanishing in one frame; the card lets go when the fold ends
+                            property bool _foldHold: false
+                            readonly property bool _folding: _foldHold && !_inLimit
+                            readonly property bool shouldLoad: _inLimit || _foldHold
+                            on_InLimitChanged: {
+                                if (_inLimit) {
+                                    if (cardItem) cardItem.unfold()
+                                } else if (!cardItem || !cardItem.foldAway()) _foldHold = false
+                            }
+                            onCardItemChanged: _foldHold = cardItem !== null && _inLimit
+                            Connections {
+                                target: _slot.cardItem
+                                function onFoldFinished() { _slot._foldHold = false }
+                            }
                             readonly property var cardItem: _cardLoader.item
                             // a swiped card leaves its slot sideways; the slot only bounds the blur vertically
                             Item {
@@ -589,7 +605,17 @@ PanelWindow {
                             }
                             property real timeoutStartedAt: 0
                             // a multiple of 4, or every card below the first lands half an output pixel off the grid at 1.25
-                            readonly property real _gap: index !== win._lastVisualIndex ? 12 : 0
+                            readonly property real _gap: index !== win._lastVisualIndex && !(_folding && win._newestFirst) ? 12 : 0
+                            // newest first, a folding card sits under the new last card, which drops its gap at once: the
+                            // folding card takes that gap above itself and folds it away with its own height. Only as much
+                            // as the card above has grown in, or a card arriving above it opened a gap from nothing
+                            readonly property real _foldGap: {
+                                if (!_folding || !win._newestFirst || !cardItem) return 0
+                                void win._slotsRevision
+                                const above = stack.itemAt(index + 1)
+                                return 12 * cardItem.collapseRatio
+                                    * (above && above.cardItem ? above.cardItem.collapseRatio : 0)
+                            }
 
                             property real _heldAbove: 0
                             property real _heldBelow: 0
@@ -611,7 +637,7 @@ PanelWindow {
                             width: win._cardW
                             height: (cardItem
                                 ? cardItem.implicitHeight + _gap * cardItem.collapseRatio : 0)
-                                + _heldAbove + _heldBelow
+                                + _heldAbove + _heldBelow + _foldGap
                             visible: shouldLoad
 
                             x: win._alignedX(parent.width, width)
@@ -634,7 +660,7 @@ PanelWindow {
                             Loader {
                                 id: _cardLoader
                                 anchors.top: parent.top
-                                anchors.topMargin: _slot._heldAbove
+                                anchors.topMargin: _slot._heldAbove + _slot._foldGap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 height: _slot.cardItem ? _slot.cardItem.implicitHeight : 0

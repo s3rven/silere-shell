@@ -122,6 +122,8 @@ settings file carries its own `__version` and migrates separately.
 - With the bar's system monitor off, Home's CPU reading, temperature and busiest process stay put while the menu closes or you switch pages, instead of blanking first.
 - In History, a notification that arrives or one you remove no longer makes the rows below jump before they slide into place.
 - Clearing History fades the search field out with the list and fades the empty message in, instead of swapping them at once.
+- With more notifications than Max shown, the oldest card folds away behind "Show more" instead of vanishing.
+- A notification closed by its app while hidden behind "Show more" no longer flashes a card on its way out.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.

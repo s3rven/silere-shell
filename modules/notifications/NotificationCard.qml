@@ -156,8 +156,34 @@ Item {
             return
         }
         _openAnim.stop()
+        _foldAnim.stop()
+        _unfoldAnim.stop()
+        card._folding = false
         if (card.collapseOnDismiss) _collapseAnim.restart()
         _exitTimer.start()
+    }
+
+    // pushed past the stack's visible limit by newer cards: it folds and fades where it stands, then its slot lets it go.
+    // False when it cannot play that, and the slot lets it go at once
+    signal foldFinished()
+    property bool _folding: false
+    function foldAway(): bool {
+        if (card._leaving || card._folding || !card.visible
+                || !Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) return false
+        card._folding = true
+        _openAnim.stop()
+        _unfoldAnim.stop()
+        cardRect.opacity = 0
+        _foldAnim.restart()
+        return true
+    }
+    // back inside the limit before the fold ended, as when a card above it leaves
+    function unfold(): void {
+        if (!card._folding || card._leaving) return
+        card._folding = false
+        _foldAnim.stop()
+        cardRect.opacity = 1
+        _unfoldAnim.restart()
     }
 
     // the sender closed it, or an action did: it leaves the way a dismissal does. True when dismissRequested follows
@@ -310,6 +336,18 @@ Item {
         card.replyFocusRequested(card, false)
     }
 
+    // the arrival's curve and length: the cards pushing this one out grow on it, so the stack's height moves one way
+    NumberAnimation {
+        id: _foldAnim
+        target: card; property: "collapseRatio"
+        to: 0; duration: Motion.ms(200); easing.type: Easing.OutCubic
+        onFinished: if (card._folding) card.foldFinished()
+    }
+    NumberAnimation {
+        id: _unfoldAnim
+        target: card; property: "collapseRatio"
+        to: 1; duration: Motion.ms(200); easing.type: Easing.OutCubic
+    }
     NumberAnimation {
         id: _collapseAnim
         target: card; property: "collapseRatio"
@@ -380,7 +418,7 @@ Item {
     implicitWidth:  320
     property real collapseRatio: 1
     // the opening slot shows the arrival unfolding rather than drawing it, faint, over the card it pushes down
-    clip: _openAnim.running
+    clip: _openAnim.running || _unfoldAnim.running || card._folding
 
     property real _collapseBasis: cardRect.height
     implicitHeight: _collapseBasis * collapseRatio
@@ -427,7 +465,7 @@ Item {
             return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
         interval: Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs)
-        running: card.enabled && shouldRun && !card._paused
+        running: card.enabled && shouldRun && !card._paused && !card._folding
         onTriggered: card.dismiss(true)
     }
 

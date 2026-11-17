@@ -9846,6 +9846,13 @@ ShellRoot {
                 && StackLayout.slotLoads(3, 4, 3, false, false, false, false)
                 && StackLayout.slotLoads(0, 4, 3, false, false, true, false),
             "a card with a reply in progress stays when newer notifications push it past the visible ones, and leaves with the rest once the reply ends")
+        // a removed slot (index -1) keeps a card it has, lets a fold run out, and never builds a card for a closed notification
+        root._check(!StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, false, false)
+                && StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, true, false)
+                && !StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, true, true)
+                && !StackLayout.slotInLimit(0, 4, 3, false, false, false, false, true, false)
+                && StackLayout.slotInLimit(3, 4, 3, false, false, false, false, false, false),
+            "a notification closed while hidden behind the more chip gets no card on its way out")
         const firstSlot = notificationSlotFactory.createObject(root, { height: 80 })
         const secondSlot = notificationSlotFactory.createObject(root, { height: 120 })
         stackLayoutProbe.slots = [firstSlot, secondSlot]
@@ -12894,6 +12901,46 @@ ShellRoot {
         ShellSettings.reduceMotion = motionWas
     }
 
+    // newer cards push one past the visible limit: it folds and fades where it stands, and its slot lets go when the fold ends
+    function _checkNotificationFold(): void {
+        const motionWas = ShellSettings.reduceMotion
+        const fixture = notificationKeyboardFactory.createObject(root, { timeout: 60000 })
+        const card = fixture.card
+        fixture.input.wait(80)
+        const rect = card.children.find(c => c._behaviorEnabled !== undefined)
+        let finished = 0
+        card.foldFinished.connect(() => finished++)
+        ShellSettings.reduceMotion = true
+        const stillUnderReduced = !card.foldAway() && !card._folding
+        ShellSettings.reduceMotion = false
+        const started = Date.now()
+        const folding = card.foldAway() && card._folding && card.clip
+        fixture.input.wait(60)
+        const inTime = Date.now() - started < 170
+        const midway = !inTime || (card.collapseRatio > 0 && card.collapseRatio < 1 && rect.opacity < 1)
+        card.unfold()
+        const back = !card._folding
+        fixture.input.wait(Motion.ms(200) + 120)
+        const unfolded = card.collapseRatio === 1 && rect.opacity === 1 && finished === 0 && !card._leaving
+        card.foldAway()
+        fixture.input.wait(Motion.ms(200) + 120)
+        const done = finished === 1 && card.collapseRatio === 0
+        root._check(stillUnderReduced && folding && midway && back && unfolded && done,
+            "a card pushed past the visible limit folds away and reports it, and unfolds if it comes back first")
+        card.unfold()
+        fixture.input.wait(Motion.ms(200) + 120)
+        card.foldAway()
+        card.dismiss(false)
+        root._check(card._leaving && !card._folding && fixture.input !== null,
+            "dismissing a folding card plays its exit instead of the fold")
+        fixture.input.wait(Motion.ms(210) + 120)
+        root._check(fixture.dismissed === 1 && finished === 1,
+            "and it leaves once, without a second fold report")
+        fixture.close()
+        fixture.destroy()
+        ShellSettings.reduceMotion = motionWas
+    }
+
     // a row arriving at the top of its run takes the run's header from the row below, and removing a row can take a header
     // from the one under it; both flip at once. The row growing in or folding away carries it, so text below never steps back
     function _checkHistoryRowCarry(): void {
@@ -12958,6 +13005,7 @@ ShellRoot {
         ShellSettings.reduceMotion = true
         root._checkHistoryKeyboard()
         root._checkHistoryRowCarry()
+        root._checkNotificationFold()
         MenuState.setRecentFilter("")
         MenuState.openAt(17, null, probeAnchor)
         Notifications.clearHistory()
