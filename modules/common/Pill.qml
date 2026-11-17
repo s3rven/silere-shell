@@ -191,11 +191,27 @@ Item {
     property string _shownGlyph: ""
     property string _nextGlyph:  ""
 
+    // a widget switched on in Settings is built fresh: it unfolds out of nothing like one leaving hiding, where it
+    // landed whole and shoved every widget beside it in one frame. Called by the zone before the first frame
+    property bool _unfoldPending: false
+    function unfold(): void {
+        if (root.collapsed) return
+        root._unfoldPending = true
+        root._unfolding = true
+        _widthGlide.value = 0
+    }
+
     Component.onCompleted: {
         _shownGlyph = root.glyph
         _nextGlyph = root.glyph
         _lastText = root.text
-        Qt.callLater(function() { if (root) root._ready = true })
+        Qt.callLater(function() {
+            if (!root) return
+            root._ready = true
+            if (!root._unfoldPending) return
+            root._unfoldPending = false
+            _widthGlide.glideFrom(_widthGlide.value)
+        })
     }
 
     function _settleAnimatedContent(): void {

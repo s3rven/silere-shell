@@ -45,6 +45,14 @@ QtObject {
         root.value = next
     }
 
+    // start over from a value of the caller's, as a glide that was already on its way to the target
+    function glideFrom(start: real): void {
+        root.value = start
+        root._velocity = 0
+        if (root._motionAllowed && Math.abs(start - root.target) >= root.precision) _tick.running = true
+        else root._snap()
+    }
+
     onTargetChanged: {
         if (root._motionAllowed) _tick.running = true
         else root._snap()

@@ -4676,6 +4676,37 @@ ShellRoot {
             // the pointer moving from one pill to the next inside a zone keeps the first one's detail open. The pointer is
             // stood in for: under a loaded check.sh synthetic moves stopped reaching the zone at all. Measured with real
             // moves in a standalone walk: aimed at a neighbour's centre, 1 of 3 landed before, 3 of 3 after
+            // a widget switched on later unfolds out of nothing; the zone's first widgets and a reorder's rebuilt ones do not
+            {
+                const growZone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {
+                    orderKeys: ["network"], compact: false, height: 36,
+                    widgetComponents: { network: detailPillFactory, volume: detailPillFactory }
+                })
+                const pillsOf = () => {
+                    const out = []
+                    const walk = it => { if (it.holdOpen !== undefined) out.push(it); for (const c of it.children) walk(c) }
+                    walk(growZone)
+                    return out
+                }
+                const firstWide = pillsOf().length === 1 && pillsOf()[0].implicitWidth > 0
+                const builtDeadline = Date.now() + 1000
+                while ((!growZone._built || growZone.visibleKeys.length !== 1) && Date.now() < builtDeadline) discoveryClock.wait(10)
+                growZone.orderKeys = ["network", "volume"]
+                const pills = pillsOf()
+                const fresh = pills.find(p => p.implicitWidth === 0 && p._unfoldPending)
+                const kept = pills.find(p => p !== fresh)
+                const startDeadline = Date.now() + 1000
+                while (fresh && fresh._unfoldPending && Date.now() < startDeadline) discoveryClock.wait(5)
+                const glide = fresh ? fresh.data.find(it => it.precision !== undefined && it._advance !== undefined) : null
+                if (glide) for (let i = 0; i < 3; i++) glide._advance(0.016)
+                const opening = fresh && fresh.implicitWidth > 0 && glide && glide.value < glide.target
+                root._check(firstWide, "a bar zone's first widgets arrive with the bar, whole")
+                root._check(pills.length === 2 && fresh !== undefined && opening,
+                    "a bar widget switched on later unfolds out of nothing instead of landing whole")
+                root._check(pills.length === 2 && kept !== undefined && kept !== fresh && kept.implicitWidth > 0,
+                    "a widget rebuilt in place by a reorder arrives whole")
+                growZone.destroy()
+            }
             const valuesWas = ShellSettings.valuesOnHover
             ShellSettings.valuesOnHover = false
             const zone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {

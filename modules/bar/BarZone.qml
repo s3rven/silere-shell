@@ -50,6 +50,10 @@ Row {
         return true
     }
 
+    // the widgets loaded with the zone arrive with the bar; only one switched on or moved here later unfolds
+    property bool _built: false
+    Component.onCompleted: Qt.callLater(() => { if (zone) zone._built = true })
+
     // rebuild off the rendered delegates: widgets only report real visibility once loaded, and per-key state goes stale on reorder
     property var _visibleKeys: []
     readonly property var visibleKeys: _visibleKeys
@@ -163,7 +167,12 @@ Row {
                 sourceComponent: _slot.key.length > 0 ? zone.widgetComponents[_slot.key] : null
                 onSourceComponentChanged: loadedKey = ""
                 onActiveChanged: if (!active) loadedKey = ""
-                onLoaded: loadedKey = _slot.key
+                onLoaded: {
+                    loadedKey = _slot.key
+                    // a reorder rebuilds every slot; only a widget that was not on show here unfolds
+                    if (zone._built && zone._visibleKeys.indexOf(_slot.key) < 0
+                            && typeof item.unfold === "function") item.unfold()
+                }
             }
 
             Binding {
