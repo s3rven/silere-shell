@@ -190,9 +190,11 @@ Singleton {
     on_LostStillLinkedChanged: {
         if (root._lostStillLinked || root._lostAddress.length === 0) return
         _lostWait.stop()
-        root._lostAddress = ""
+        // cleared once this change settles: writing it here re-enters the binding (a binding-loop warning)
+        Qt.callLater(root._forgetLost)
         root.pauseForSpeakers()
     }
+    function _forgetLost(): void { root._lostAddress = "" }
     Timer {
         id: _lostWait
         interval: 3000
