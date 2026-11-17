@@ -447,7 +447,8 @@ PageShell {
                                 }
                             }
                             SunArc {
-                                shown: root._picker === "nightlight" && MenuState.open
+                                // not the picker's own state: the arc stays drawn while its picker folds away
+                                shown: MenuState.open
                             }
                         }
                     }

@@ -5,6 +5,7 @@ import "controls"
 
 Column {
     id: root
+    // gates the lookup, not the rows: the picker unloads this list once its fold ends, and until then it is on screen
     property bool open: false
     width: parent ? parent.width : 0
     onOpenChanged: Vpn.requestList(root, root.open)
@@ -12,7 +13,7 @@ Column {
     Component.onDestruction: Vpn.requestList(root, false)
 
     Repeater {
-        model: root.open ? Vpn.profiles : []
+        model: Vpn.profiles
         InlineOptionRow {
             required property var modelData
             glyph: "󰦝"
@@ -24,7 +25,7 @@ Column {
         }
     }
     HintText {
-        visible: root.open && (Vpn.profiles.length === 0 || Vpn.lastError.length > 0)
+        visible: Vpn.profiles.length === 0 || Vpn.lastError.length > 0
         text: Vpn.lastError.length > 0 ? Vpn.lastError : Vpn.refreshing ? "Loading saved VPNs…" : "No saved VPN profiles. Add one in network settings."
     }
     InlineOptionRow {

@@ -10,6 +10,7 @@ import "controls"
 Item {
     id: root
 
+    // gates the scan, not the rows: the picker unloads this list once its fold ends, and until then it is on screen
     property bool open: false
     // the card only reaches its direct children, so whoever places this list says whether its last row sits on the card's bottom corner
     property real lastRowRadius: 0
@@ -59,7 +60,7 @@ Item {
         spacing: 0
 
         SelectRow {
-            visible: root.open && Bluetooth.adapterCount > 1
+            visible: Bluetooth.adapterCount > 1
             glyph: "󰂯"
             label: "Controller"
             description: "Applies to this session"
@@ -69,7 +70,6 @@ Item {
         }
 
         InlineOptionRow {
-            visible: root.open
             glyph: "󰌌"
             label: "Pair with a passkey"
             status: Settings.bluetoothSettingsCommand.length > 0 ? "Open manager" : "Needs blueman"
@@ -81,7 +81,7 @@ Item {
         }
 
         ShellText {
-            visible: root.open && (!Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0)
+            visible: !Bluetooth.available || !Bluetooth.enabled || Bluetooth.devices.length === 0
             width: parent.width
             height: 4 * Math.ceil(Math.max(Metrics.rowHeightFor(32), contentHeight + 16) / 4)
             leftPadding: 14
@@ -103,12 +103,12 @@ Item {
             objectName: "bluetooth-devices"
             width: parent.width
             height: Math.min(contentHeight, 240)
-            visible: root.open && Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
+            visible: Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             interactive: contentHeight > height
             spacing: 0
             // every visible value comes from the device or service; the delegate owns no row state, so off-screen instances are safe to recycle
             reuseItems: true
-            model: root.open ? Bluetooth.devices : []
+            model: Bluetooth.devices
 
             delegate: InlineOptionRow {
                 id: _row
@@ -177,7 +177,7 @@ Item {
         }
 
         HintText {
-            visible: root.open && Bluetooth.errorAddr.length > 0
+            visible: Bluetooth.errorAddr.length > 0
             // the reason never reaches QML: a device that is off or out of range fails the same way
             // as one that lost its pairing key, and only the second is fixed by pairing again
             text: Bluetooth.errorKind === "pair"

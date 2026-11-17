@@ -373,7 +373,12 @@ Singleton {
         return true
     }
 
+    // held by the logic probe while its fixture list stands: the machine's own access points re-publish on any signal
+    // change, and one landing mid-check replaced the fixture (Wi-Fi focus checks failed in cold runs of a fresh tree)
+    property bool _wifiFixture: false
+    on_WifiFixtureChanged: if (!root._wifiFixture) root._publishWifiNetworks(root._wifiCandidate)
     function _publishWifiNetworks(candidate): bool {
+        if (root._wifiFixture) return false
         const next = Array.isArray(candidate) ? candidate : []
         if (root._sameWifiNetworks(root._publishedWifiNetworks, next)) return false
         root._publishedWifiNetworks = next

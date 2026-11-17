@@ -9,6 +9,7 @@ import "controls"
 Item {
     id: root
 
+    // gates the scan, not the rows: the picker unloads this list once its fold ends, and until then it is on screen
     property bool open: false
     property real lastRowRadius: 0
 
@@ -27,7 +28,8 @@ Item {
     property Item _focusOrigin: null
 
     function _syncNetworks(): void {
-        if (root._selected !== "") return
+        // closing releases the scan and Network publishes no networks at once: the rows stay through the fold after it
+        if (root._selected !== "" || !root.open) return
         const window = root.Window.window
         const focused = window ? window.activeFocusItem : null
         let restore = false
@@ -88,6 +90,8 @@ Item {
             _selected = ""
             root._confirm.clear()
             _focusRestore.stop()
+        } else {
+            _syncNetworks()
         }
     }
     Component.onCompleted: { _syncScanState(); _syncNetworks() }
@@ -131,7 +135,6 @@ Item {
         spacing: 0
 
         InlineOptionRow {
-            visible: root.open
             glyph: "󰖟"
             label: "Advanced network settings"
             status: Settings.networkSettingsCommand.length > 0 ? "Open" : "Needs network editor"
@@ -143,7 +146,7 @@ Item {
         }
 
         ShellText {
-            visible: root.open && root._networks.length === 0
+            visible: root._networks.length === 0
             width: parent.width
             height: 4 * Math.ceil(Math.max(Metrics.rowHeightFor(32), contentHeight + 16) / 4)
             leftPadding: 14
@@ -164,11 +167,11 @@ Item {
             id: _list
             width: parent.width
             height: Math.min(contentHeight, 240)
-            visible: root.open && root._networks.length > 0
+            visible: root._networks.length > 0
             interactive: contentHeight > height
             spacing: 0
             reuseItems: true
-            model: root.open ? root._networks : []
+            model: root._networks
 
             delegate: Column {
                 id: _entry

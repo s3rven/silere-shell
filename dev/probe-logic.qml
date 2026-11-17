@@ -1542,6 +1542,10 @@ ShellRoot {
             picker.open = false
             root._check(picker._passwordDraft === "" && picker._selected === "",
                 "closing the Wi-Fi picker clears both its draft and selection")
+            picker._networks = [row]
+            const rows = root._findTrayNode(picker, item => typeof item.positionViewAtIndex === "function")
+            root._check(rows !== null && rows.count === 1,
+                "a closed Wi-Fi picker keeps its rows drawn: Home unloads it once its fold ends, not before")
             picker.destroy()
         }
         component.destroy()
@@ -1554,7 +1558,7 @@ ShellRoot {
 
     function _checkPanelFocus(): void {
         const was = { motion: ShellSettings.reduceMotion, position: ShellSettings.barPosition,
-            networks: Network._publishedWifiNetworks, presentation: Audio._profilePresentation,
+            presentation: Audio._profilePresentation,
             devices: Brightness.devices }
         ShellSettings.reduceMotion = true
         const host = panelKeyboardWindowFactory.createObject(root)
@@ -1623,9 +1627,14 @@ ShellRoot {
         const networks = Array.from({ length: 14 }, (_, i) => ({ ssid: "__panel_network_" + i,
             label: "Panel network " + i, glyph: "", secured: true, psk: true,
             passwordless: false, profileOnly: false, active: false, known: false }))
-        Network._publishedWifiNetworks = networks
         const component = Qt.createComponent("modules/menu/WifiList.qml")
         const wifi = component.createObject(host.contentItem, { width: 440, open: true })
+        // an open list starts the machine's real scanner (the system bus is not the probe's), and nearby networks replaced
+        // these mid-check; dropping the request before that deferred start leaves the published list to the probe, and the
+        // fixture hold keeps any other access point change (a signal update) from publishing over it
+        Network.requestWifiScan(wifi, false)
+        Network._wifiFixture = true
+        Network._publishedWifiNetworks = networks
         const list = root._findTrayNode(wifi, item => item.currentIndex !== undefined && typeof item.forceLayout === "function")
         list.currentIndex = 7
         list.positionViewAtIndex(7, ListView.Contain)
@@ -1670,6 +1679,15 @@ ShellRoot {
         host.input.wait(30)
         root._check(host.outside.activeFocus, "a delayed Wi-Fi refresh cannot steal focus after Tab leaves the list")
         wifi.open = false
+        // what releasing the scan publishes as the picker closes
+        Network._publishedWifiNetworks = []
+        root._check(list.count === networks.length && wifi._networks.length === networks.length,
+            "a closing Wi-Fi picker keeps its rows through the fold when releasing the scan empties the networks")
+        wifi.open = true
+        root._check(list.count === Network.wifiNetworks.length,
+            "a Wi-Fi picker reopened during its fold shows the networks as they are now, not the rows it kept")
+        Network.requestWifiScan(wifi, false)
+        wifi.open = false
         wifi.destroy()
         component.destroy()
         const editorComponent = Qt.createComponent("modules/menu/settings/CommandEditor.qml")
@@ -1685,7 +1703,7 @@ ShellRoot {
         root._check(host.escapes === escapes + 1, "the next Escape can close Settings after discarding a command draft")
         editor.destroy()
         editorComponent.destroy()
-        Network._publishedWifiNetworks = was.networks
+        Network._wifiFixture = false
         ShellSettings.barPosition = was.position
         ShellSettings.reduceMotion = was.motion
         host.close()
