@@ -13,10 +13,10 @@ Item {
 
     readonly property real _slide: 5
     readonly property int _iconWidth: Settings.iconSize + 6
-    readonly property real _labelWidth: OsdBarState.hasBar
-        ? Math.ceil(Math.max(_maxLabel.advanceWidth, _maxValue.advanceWidth)) + 2
-        : Math.min(Math.round(240 * ShellSettings.uiScale),
-            Math.max(Math.ceil(_alertLabel.advanceWidth) + 2, _alertWidth))
+    readonly property real _labelWidth: Math.min(Math.round(240 * ShellSettings.uiScale),
+        OsdBarState.hasBar
+            ? Math.ceil(Math.max(_maxLabel.advanceWidth, _maxValue.advanceWidth, _contextLabel.advanceWidth)) + 2
+            : Math.max(Math.ceil(_alertLabel.advanceWidth) + 2, _alertWidth))
     readonly property real _availableWidth: Math.max(0,
         width - _iconWidth - (OsdBarState.hasBar ? 16 : 8))
 
@@ -116,6 +116,12 @@ Item {
     }
 
     TextMetrics {
+        id: _contextLabel
+        font: _maxLabel.font
+        text: OsdBarState.hasBar ? OsdBarState.label : ""
+    }
+
+    TextMetrics {
         id: _alertLabel
         font.family:    Settings.font
         font.pixelSize: Settings.fontSize
@@ -188,11 +194,10 @@ Item {
 
         ShellText {
             anchors.verticalCenter: parent.verticalCenter
-            text:           !OsdBarState.hasBar ? OsdBarState.label
-                            : OsdBarState.muted ? "Muted"
-                            : (Math.round(OsdBarState.clamped * 100) + "%")
+            // device changes and automatic pauses carry context beyond the level
+            text:           OsdBarState.label
             width: Math.min(root._labelWidth, root._availableWidth)
-            elide: Text.ElideRight
+            elide: OsdBarState.hasBar ? Text.ElideMiddle : Text.ElideRight
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.barSubtext, 0.7)
