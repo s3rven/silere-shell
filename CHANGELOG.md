@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 - Album art and failed package checks retry when a Wi-Fi sign-in page or a lost internet connection clears.
 - Switching Bluetooth controllers before a scan starts releases the old controller's late scan, and reopening the picker recovers if an earlier stop arrives late.
 - Keyboard lighting reports failed maximum-brightness reads and UPower discovery errors while keeping other working lights available.
+- Notification floods and removals no longer trigger a binding loop while overflow cards fold away.
 - A Settings slider for History limit applies the value you let go at; taking it down and back by dragging, scrolling or with the arrow keys no longer deletes history on the way.
 - While a fullscreen window covers the bar, night light keeps to its schedule and the shell's other timers keep running; with motion on they could stop until you left fullscreen. The bar's motion and visualizer rest under it.
 - The bar's status colours (microphone in use, low battery, Caps Lock, a hot CPU, an urgent workspace, an alert shown in the bar) stay readable on a see-through bar over a bright wallpaper; they dropped to about 2:1 there.

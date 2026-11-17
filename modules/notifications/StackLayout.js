@@ -24,9 +24,9 @@ function slotLoads(index, count, maxVisible, showAll, critical, leaving, replyin
     return leaving || replying || showAll || maxVisible <= 0 || index < 0 || index >= count - maxVisible || critical
 }
 
-// a slot being removed reads index -1: it keeps a card it has, so the gap closes over it, and lets a fold run out. One
-// hidden behind the more chip has none, and building one then put a card for a closed notification on screen
-function slotInLimit(index, count, maxVisible, showAll, critical, leaving, replying, hasCard, cardFolding) {
-    if (index < 0) return hasCard && !cardFolding
+// a removed slot keeps the state captured before its index became -1. The caller must not read
+// the loader this decision controls, or folding and destroying its card re-enters the binding
+function slotInLimit(index, count, maxVisible, showAll, critical, leaving, replying, keepRemoved) {
+    if (index < 0) return keepRemoved
     return slotLoads(index, count, maxVisible, showAll, critical, leaving, replying)
 }

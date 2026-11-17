@@ -566,22 +566,29 @@ PanelWindow {
 
                             // a slot being removed reads index -1; it has to keep its card for the gap to close over
                             property bool exitHeld: false
+                            // captured while the index is valid: reading the loader or its fold here makes
+                            // the decision depend on the card that the decision itself creates and folds
+                            property bool _keepRemovedCard: false
                             readonly property bool _inLimit: StackLayout.slotInLimit(index, stack.count,
                                 ShellSettings.notifMaxVisible, win._showAll, win._isCritical(modelData), exitHeld,
                                 // the service's id, not the card's own flag: the card exists only while this is true
                                 Notifications.replyingId === modelData.id,
-                                cardItem !== null, cardItem !== null && cardItem._folding)
+                                index < 0 && _keepRemovedCard)
                             // set while its card is in view, so a card that newer ones push past the limit stays loaded
                             // through its fold instead of vanishing in one frame; the card lets go when the fold ends
                             property bool _foldHold: false
                             readonly property bool _folding: _foldHold && !_inLimit
                             readonly property bool shouldLoad: _inLimit || _foldHold
                             on_InLimitChanged: {
+                                if (index >= 0) _keepRemovedCard = _inLimit && cardItem !== null
                                 if (_inLimit) {
                                     if (cardItem) cardItem.unfold()
                                 } else if (!cardItem || !cardItem.foldAway()) _foldHold = false
                             }
-                            onCardItemChanged: _foldHold = cardItem !== null && _inLimit
+                            onCardItemChanged: {
+                                if (index >= 0) _keepRemovedCard = cardItem !== null && _inLimit
+                                _foldHold = cardItem !== null && _inLimit
+                            }
                             Connections {
                                 target: _slot.cardItem
                                 function onFoldFinished() { _slot._foldHold = false }

@@ -228,8 +228,26 @@ ShellRoot {
                     required property var modelData
                     required property int index
                     property bool exitHeld: false
-                    readonly property bool shouldLoad: StackLayout.slotLoads(index, notifStack.count,
-                        notifWindow.maxVisible, false, false, exitHeld, Notifications.replyingId === notifSlot.modelData.id)
+                    property bool _keepRemovedCard: false
+                    readonly property bool _inLimit: StackLayout.slotInLimit(index, notifStack.count,
+                        notifWindow.maxVisible, false, false, exitHeld, Notifications.replyingId === notifSlot.modelData.id,
+                        index < 0 && _keepRemovedCard)
+                    property bool _foldHold: false
+                    readonly property bool shouldLoad: _inLimit || _foldHold
+                    on_InLimitChanged: {
+                        if (index >= 0) _keepRemovedCard = _inLimit && card !== null
+                        if (_inLimit) {
+                            if (card) card.unfold()
+                        } else if (!card || !card.foldAway()) _foldHold = false
+                    }
+                    onCardChanged: {
+                        if (index >= 0) _keepRemovedCard = card !== null && _inLimit
+                        _foldHold = card !== null && _inLimit
+                    }
+                    Connections {
+                        target: notifSlot.card
+                        function onFoldFinished() { notifSlot._foldHold = false }
+                    }
                     readonly property var card: notifLoader.item
                     width: 400; height: card ? card.implicitHeight : 0
                     visible: shouldLoad
@@ -357,6 +375,34 @@ ShellRoot {
             + "instead of being unloaded mid-exit and coming back once the stack shrinks")
         root.closeNotification(newer)
         root.waitFor(() => notifStack.count === 0, 2000)
+        notifWindow.maxVisible = 0
+        notifWindow.visible = false
+        ShellSettings.reduceMotion = motionWas
+    }
+
+    function checkOverflowRemoval(): void {
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        notifWindow.visible = true
+        notifWindow.maxVisible = 1
+        const first = root.sendNotification("Overflow fold", "[]")
+        input.wait(300)
+        const second = root.sendNotification("Visible above the folded card", "[]")
+        root.check(root.waitFor(() => notifStack.count === 2 && notifStack.itemAt(0).card === null, 1000),
+            "an overflow card finishes its fold and releases its loader")
+        const visible = notifStack.itemAt(1).card
+        root.closeNotification(first)
+        root.check(root.waitFor(() => notifStack.count === 1, 1000)
+                && notifStack.itemAt(0).card === visible,
+            "removing a hidden overflow card never builds a replacement or reloads the visible card")
+        const third = root.sendNotification("Arrives during overflow removal", "[]")
+        root.closeNotification(second)
+        root.check(root.waitFor(() => notifStack.count === 1
+                && notifStack.itemAt(0).modelData.id === third, 1500),
+            "withdrawing a folding overflow card completes its exit without a loading cycle")
+        root.closeNotification(third)
+        root.check(root.waitFor(() => notifStack.count === 0, 1000),
+            "removing the last overflow fixture leaves no retained card")
         notifWindow.maxVisible = 0
         notifWindow.visible = false
         ShellSettings.reduceMotion = motionWas
@@ -580,6 +626,7 @@ ShellRoot {
             root.checkHoverRelease()
             root.checkWithdrawnExit()
             root.checkExitOutlivesSlotLimit()
+            root.checkOverflowRemoval()
             root.checkScrollThumb()
             cycleTimer.start()
         }

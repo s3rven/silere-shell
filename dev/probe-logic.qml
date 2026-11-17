@@ -9960,11 +9960,10 @@ ShellRoot {
                 && StackLayout.slotLoads(0, 4, 3, false, false, true, false),
             "a card with a reply in progress stays when newer notifications push it past the visible ones, and leaves with the rest once the reply ends")
         // a removed slot (index -1) keeps a card it has, lets a fold run out, and never builds a card for a closed notification
-        root._check(!StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, false, false)
-                && StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, true, false)
-                && !StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, true, true)
-                && !StackLayout.slotInLimit(0, 4, 3, false, false, false, false, true, false)
-                && StackLayout.slotInLimit(3, 4, 3, false, false, false, false, false, false),
+        root._check(!StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, false)
+                && StackLayout.slotInLimit(-1, 3, 3, false, false, false, false, true)
+                && !StackLayout.slotInLimit(0, 4, 3, false, false, false, false, true)
+                && StackLayout.slotInLimit(3, 4, 3, false, false, false, false, false),
             "a notification closed while hidden behind the more chip gets no card on its way out")
         const firstSlot = notificationSlotFactory.createObject(root, { height: 80 })
         const secondSlot = notificationSlotFactory.createObject(root, { height: 120 })
