@@ -452,11 +452,18 @@ FittedPopupWindow {
                 readonly property bool  _flip: x < _origin.x
                 readonly property real _panelH: Metrics.snap4Up(
                     Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, card.winH - 8)))
-                readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, card.winH - 4 - _origin.y - _panelH))
+                readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, card.winH - 4 - _origin.y - height))
                 x: Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW, _entry.ownerOpensLeft)
                 y: _origin.y + _targetY
                 width:  _w
-                height: _panelH
+                height: _flyHeight.value
+                // rows an app sends after the submenu shows grow it like the card; the rows it opens with land at once, before the fade starts
+                SmoothGlide {
+                    id: _flyHeight
+                    target: _flyout._panelH
+                    gate: _flyout.opened && _flyout.opacity > 0
+                    duration: Motion.normal
+                }
                 radius: Math.min(Theme.surfaceRadius, height / 2)
                 antialiasing: true
                 color: Theme.popup
@@ -494,7 +501,8 @@ FittedPopupWindow {
                     height: Math.max(0, _flyout.height - _flyout.pad * 2)
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
-                    interactive: contentHeight > height
+                    // against the height it is headed for: a growing submenu is not a scrolling one
+                    interactive: contentHeight > _flyHeight.target - _flyout.pad * 2
 
                     Column {
                         id: _subCol
@@ -539,8 +547,18 @@ FittedPopupWindow {
         readonly property int pad: 6
         readonly property real _maxContentH: Math.max(48, winH - _edgeY - pad * 2 - 8)
         readonly property int levelWidth: win.fitWidth(_col.children)
+        // a growing card reveals its rows at their final width; a shrinking one keeps its edge on them
+        readonly property real rowWidth: Math.max(levelWidth, width - pad * 2)
 
-        width:  card.levelWidth + pad * 2
+        // placement clamps against where the width is headed, as the menu panel does
+        targetWidth: _widthGlide.target
+        width: _widthGlide.value
+        SmoothGlide {
+            id: _widthGlide
+            target: card.levelWidth + card.pad * 2
+            gate: card.geometryMotionReady
+            duration: Motion.normal
+        }
         height: _heightGlide.value
         SmoothGlide {
             id: _heightGlide
@@ -569,15 +587,15 @@ FittedPopupWindow {
         ShellFlickable {
             id: _scroll
             x: card.pad; y: card.pad
-            width: card.levelWidth
+            width: Math.max(0, card.width - card.pad * 2)
             height: Math.max(0, card.height - card.pad * 2)
             contentWidth: width
             contentHeight: _col.implicitHeight
-            interactive: contentHeight > height
+            interactive: contentHeight > _heightGlide.target - card.pad * 2
 
             Column {
                 id: _col
-                width: card.levelWidth
+                width: card.rowWidth
                 spacing: 1
 
                 Repeater {
@@ -587,7 +605,7 @@ FittedPopupWindow {
                     onItemAdded: (index, item) => {
                         item.ownerScroll = _scroll
                         item.siblings = _opener.children
-                        item.levelWidth = Qt.binding(() => card.levelWidth)
+                        item.levelWidth = Qt.binding(() => card.rowWidth)
                         if (win._focusFirstPending) Qt.callLater(win._focusFirst)
                     }
                 }
@@ -595,7 +613,7 @@ FittedPopupWindow {
                 Item {
                     visible: _hideRow.visible
                         && (_opener.children?.values ?? []).some(entry => entry && !entry.isSeparator)
-                    width: card.levelWidth
+                    width: card.rowWidth
                     height: 11
 
                     Hairline {
@@ -622,7 +640,7 @@ FittedPopupWindow {
                         }
                     }
                     visible: trayId.length > 0
-                    width: card.levelWidth
+                    width: card.rowWidth
                     height: Metrics.rowHeightFor(32)
                     enabled: TrayMenuState.open
                     readonly property bool keyboardStop: _hideRow.visible && _hideRow.enabled
