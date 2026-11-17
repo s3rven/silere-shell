@@ -86,6 +86,22 @@ ShellRoot {
         }
     }
     Component { id: settingsPageFactory; SettingsPage {} }
+    // a page built while the menu is open: its loader's flags reach it before its build completes
+    Component {
+        id: openMenuPageLoaderFactory
+        PageLoader {
+            layoutWidth: 332
+            shown: true
+            pageActive: true
+            animateOnCreate: true
+            sourceComponent: PageShell {
+                property bool built: false
+                property real opaqueBeforeBuilt: 0
+                onOpacityChanged: if (!built) opaqueBeforeBuilt = Math.max(opaqueBeforeBuilt, opacity)
+                Component.onCompleted: built = true
+            }
+        }
+    }
     Component {
         id: selectStubFactory
         QtObject {
@@ -2644,6 +2660,21 @@ ShellRoot {
         SysInfo.memAvailKb = was.avail
     }
 
+    // an asynchronous Loader parents the page before its build finishes: a page drawn opaque then showed its half-built rows
+    function _checkPageBuildHidden(): void {
+        const openWas = MenuState.open
+        const reduceWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        MenuState.open = true
+        const loader = openMenuPageLoaderFactory.createObject(root)
+        const page = loader ? loader.item : null
+        root._check(page !== null && page.active && page.built && page.opaqueBeforeBuilt < 0.001 && page.opacity < 0.001,
+            "a page built while the menu is open stays hidden until it has finished building, then fades in")
+        if (loader) loader.destroy()
+        MenuState.open = openWas
+        ShellSettings.reduceMotion = reduceWas
+    }
+
     function _checkAppHandoffs(): void {
         const toolsWas = SystemTools._tools
         SystemTools._tools = { kitty: true, btop: true, nmtui: true }
@@ -3545,6 +3576,7 @@ ShellRoot {
         root._checkBluetoothRowRelease()
         root._checkBrightnessChoices()
         root._checkSystemWidget()
+        root._checkPageBuildHidden()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()

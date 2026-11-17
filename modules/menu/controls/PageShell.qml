@@ -21,6 +21,9 @@ Item {
 
     width: parent ? parent.width : 0
     enabled: root.active && !root.powerOpen
+    // an asynchronous Loader parents the page before its build finishes and onCompleted runs, so a page that
+    // starts opaque draws its half-built rows for every frame the build spans: hidden until onCompleted decides
+    opacity: 0
     visible: opacity > 0.001
     property real _pageShift: 0
     property real _pageLift: 0
@@ -72,6 +75,9 @@ Item {
     onViewportReadyChanged: if (root.viewportReady) root._startEnter()
 
     property bool _menuOpenSettled: false
+    // an asynchronous build delivers active before onCompleted, while _menuOpenSettled is still false: settling then drew
+    // the half-built page at full opacity for the frames the build spans, and onCompleted hid it again to fade it in
+    property bool _completed: false
     Connections {
         target: MenuState
         function onOpenChanged() {
@@ -95,9 +101,11 @@ Item {
             else root.settleVisual(root.active)
         })
         Qt.callLater(root._announceShown)
+        root._completed = true
     }
 
     onActiveChanged: {
+        if (!root._completed) return
         root._transitionDirection = MenuState.tabDirection === 0
             ? 1 : MenuState.tabDirection
         if (root.active) {
@@ -122,7 +130,7 @@ Item {
     }
 
     on_MotionAllowedChanged: {
-        if (root._motionAllowed) return
+        if (root._motionAllowed || !root._completed) return
         _enter.stop()
         _exit.stop()
         if (MenuState.open) root.settleVisual(root.active)
