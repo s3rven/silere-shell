@@ -463,9 +463,14 @@ ShellRoot {
             property bool hasMenu: false
             property QtObject menu: null
             property int activations: 0
+            property int wheelDelta: 0
+            property int horizontalWheelDelta: 0
             function activate(): void { activations++ }
             function secondaryActivate(): void {}
-            function scroll(delta: int, horizontal: bool): void {}
+            function scroll(delta: int, horizontal: bool): void {
+                if (horizontal) horizontalWheelDelta += delta
+                else wheelDelta += delta
+            }
         }
     }
     Component {
@@ -14605,6 +14610,103 @@ ShellRoot {
         }
     }
 
+    function _checkBarWheelLifetimes(f, app, tile): void {
+        const wheel = (target, x, y) => f.input.mouseWheel(target,
+            target.width / 2, target.height / 2, x, y, Qt.NoButton, Qt.NoModifier, 0)
+        const trayKey = item => item._wheelKey ?? ("tray:" + item.modelData.id)
+        const resetTray = item => {
+            Scroll.resetControl(trayKey(item) + ":h")
+            Scroll.resetControl(trayKey(item) + ":v")
+        }
+        for (const gate of ["bar", "app", "widget"]) {
+            resetTray(tile)
+            app.wheelDelta = 0
+            app.horizontalWheelDelta = 0
+            wheel(f.tray, 0, 60)
+            wheel(f.tray, 60, 0)
+            if (gate === "bar") { f.tray.barActive = false; f.tray.barActive = true }
+            if (gate === "app") {
+                ShellSettings.setTrayItemHidden(app.id, true)
+                ShellSettings.setTrayItemHidden(app.id, false)
+            }
+            if (gate === "widget") { ShellSettings.trayWidget = false; ShellSettings.trayWidget = true }
+            wheel(f.tray, 0, 60)
+            wheel(f.tray, 60, 0)
+            root._check(app.wheelDelta === 0 && app.horizontalWheelDelta === 0,
+                "tray scroll input starts fresh after concealing the " + gate)
+        }
+        resetTray(tile)
+        const replacement = trayItemFactory.createObject(f, { id: app.id, title: "Replacement app" })
+        wheel(f.tray, 0, 60)
+        tile.modelData = replacement
+        wheel(f.tray, 0, 60)
+        root._check(replacement.wheelDelta === 0,
+            "a replacement tray app cannot finish the previous app's partial scroll")
+        tile.modelData = app
+        replacement.destroy()
+        resetTray(tile)
+        const other = trayWidgetFactory.createObject(f.contentItem, {
+            trayModel: Qt.binding(() => [app]), x: 300, y: 12, height: 48
+        })
+        f.input.wait(10)
+        const otherTile = root._findTrayNode(other, item => item.modelData === app)
+        app.wheelDelta = 0
+        wheel(f.tray, 0, 60)
+        wheel(other, 0, 60)
+        root._check(app.wheelDelta === 0,
+            "the same tray app on two bars has independent partial scroll gestures")
+        wheel(f.tray, 0, 60)
+        wheel(other, 0, 60)
+        root._check(app.wheelDelta === 240,
+            "each tray bar completes its own wheel notch")
+        resetTray(tile)
+        if (otherTile) resetTray(otherTile)
+        other.destroy()
+        const before = app.activations
+        f.input.mousePress(f.tray, f.tray.width / 2, f.tray.height / 2, Qt.LeftButton, Qt.NoModifier, 0)
+        for (let i = 0; i < 4; i++) {
+            app.icon = i % 2 ? "utilities-terminal" : "application-x-executable"
+            app.tooltipTitle = "Updating icon " + i
+            f.input.wait(15)
+        }
+        f.input.mouseRelease(f.tray, f.tray.width / 2, f.tray.height / 2, Qt.LeftButton, Qt.NoModifier, 0)
+        root._check(app.activations === before + 1
+                && root._findTrayNode(f.tray, item => item.modelData === app) === tile,
+            "tray icon and tooltip updates preserve an in-progress click and its delegate")
+
+        const mediaKey = f.media._wheelKey ?? "media"
+        Scroll.resetControl(mediaKey)
+        wheel(f.media, 0, 60)
+        const received = Scroll._accums[mediaKey] === 60
+        f.media.barActive = false
+        f.media.barActive = true
+        root._check(received && Scroll._accums[mediaKey] === undefined,
+            "concealing the media bar discards its partial track-switch gesture")
+        Scroll.resetControl(mediaKey)
+        wheel(f.media, 0, 60)
+        Media.playerChanged()
+        root._check(Scroll._accums[mediaKey] === undefined,
+            "changing the media player discards a gesture meant for the previous player")
+        Scroll.resetControl(mediaKey)
+        wheel(f.media, 0, 60)
+        f.media.layoutWidthLimit = 0
+        root._check(Scroll._accums[mediaKey] === undefined,
+            "squeezing media out of the bar discards its partial scroll")
+        f.media.layoutWidthLimit = 180
+        Scroll.resetControl(mediaKey)
+        const otherMedia = mediaWidgetFactory.createObject(f.contentItem, {
+            x: 220, y: 110, width: 140, layoutWidthLimit: 140
+        })
+        wheel(f.media, 0, 60)
+        wheel(otherMedia, 0, 60)
+        const otherMediaKey = otherMedia._wheelKey ?? "media"
+        root._check(Scroll._accums[mediaKey] === 60 && Scroll._accums[otherMediaKey] === 60,
+            "two media bars keep their partial track-switch gestures separate")
+        Scroll.resetControl(mediaKey)
+        Scroll.resetControl(otherMediaKey)
+        otherMedia.destroy()
+    }
+
     Timer {
         id: _barPointerSettle
         interval: 150
@@ -14708,6 +14810,7 @@ ShellRoot {
             f.input.mouseMove(f.contentItem, 390, 85)
             root._check(mediaText && mediaText.elide === Text.ElideRight,
                 "leaving the media title restores its beginning with reduced motion")
+            if (trayTile) root._checkBarWheelLifetimes(f, app, trayTile)
             f.media.forceActiveFocus(Qt.TabFocusReason)
             f.media.layoutWidthLimit = 0
             f.input.wait(10)

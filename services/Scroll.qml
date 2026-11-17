@@ -75,10 +75,7 @@ Singleton {
     // a tray app steps once per Scroll call, so a touchpad's stream of small deltas has to arrive as whole notches
     function processTrayWheel(event, key: string): var {
         if (!event) return { steps: 0, horizontal: false }
-        if (event.phase === Qt.ScrollBegin) {
-            _forgetKey(key + ":h")
-            _forgetKey(key + ":v")
-        }
+        if (event.phase === Qt.ScrollBegin) root.resetTray(key)
         const touchpad = _isTouchpad(event)
         const axes = _wheelAxes(event, touchpad)
         const horizontal = Math.abs(axes.x) > Math.abs(axes.y)
@@ -91,10 +88,7 @@ Singleton {
             horizontal: horizontal
         }
         // a zero-delta end has no axis of its own; retire both remainders
-        if (event.phase === Qt.ScrollEnd) {
-            _forgetKey(key + ":h")
-            _forgetKey(key + ":v")
-        }
+        if (event.phase === Qt.ScrollEnd) root.resetTray(key)
         return result
     }
 
@@ -156,6 +150,11 @@ Singleton {
 
     function resetControl(key: string): void {
         if (key.length > 0) root._forgetKey(key)
+    }
+
+    function resetTray(key: string): void {
+        root.resetControl(key + ":h")
+        root.resetControl(key + ":v")
     }
 
     function _forgetKey(key: string): void {

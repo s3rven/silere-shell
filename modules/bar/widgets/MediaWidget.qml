@@ -31,6 +31,14 @@ Item {
     property bool barActive: true
     readonly property bool _canInteract: root.enabled && root.visible && root.show && root.width > 0
         && root.barActive && !Idle.isIdle
+    // each bar owns its gesture; a half-notch on another output cannot skip this track
+    readonly property string _wheelKey: "media:" + root
+    on_CanInteractChanged: if (!root._canInteract) Scroll.resetControl(root._wheelKey)
+    Component.onDestruction: Scroll.resetControl(root._wheelKey)
+    Connections {
+        target: Media
+        function onPlayerChanged() { Scroll.resetControl(root._wheelKey) }
+    }
     readonly property bool _onActiveBar: Monitors.isActive(root.screen)
     readonly property bool _visualizerActive: ShellSettings.mediaProgress
         && ShellSettings.mediaVisualizerPosition === "media"
@@ -291,7 +299,7 @@ Item {
         onWheel: (event) => {
             if (!root._canInteract) { event.accepted = false; return }
             event.accepted = true
-            const n = Scroll.processControlWheel(event, "media")
+            const n = Scroll.processControlWheel(event, root._wheelKey)
             if (n > 0)      Media.next()
             else if (n < 0) Media.previous()
         }

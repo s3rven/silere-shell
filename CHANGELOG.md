@@ -63,6 +63,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Partial scroll gestures on the media and tray widgets stay with their own bar and clear when the control hides or changes its target.
 - After a wake from suspend, the bar's weather refreshes as soon as the network is back instead of showing the reading from before the sleep for a few minutes.
 - Tray icons accept clicks across the bar's full height and keep their highlight while their menu is open.
 - With Reduce motion on, hovering a shortened media title reveals its ending, as for window titles.

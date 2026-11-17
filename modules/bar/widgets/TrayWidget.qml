@@ -126,6 +126,10 @@ Item {
             delegate: Item {
                 id: _tile
                 required property var modelData
+                readonly property string _wheelKey: "tray:" + _tile
+                readonly property bool _canScroll: root._canInteract && !_tile.hidden
+                on_CanScrollChanged: if (!_tile._canScroll) Scroll.resetTray(_tile._wheelKey)
+                Component.onDestruction: Scroll.resetTray(_tile._wheelKey)
                 readonly property string label: SafeText.singleLineText(
                     String(modelData.tooltipTitle || "").length > 0 ? modelData.tooltipTitle
                     : String(modelData.title || "").length > 0 ? modelData.title
@@ -156,6 +160,7 @@ Item {
 
                 onNeedsAttentionChanged: _attentionSettled = false
                 onModelDataChanged: {
+                    Scroll.resetTray(_tile._wheelKey)
                     _tile._providedIconFailed = false
                     _tile._fallbackDue = false
                     _tile._dwelled = false
@@ -339,7 +344,7 @@ Item {
                     onWheel: (wheel) => {
                         if (!root._canInteract || _tile.hidden) { wheel.accepted = false; return }
                         wheel.accepted = true
-                        const r = Scroll.processTrayWheel(wheel, "tray:" + _tile.modelData.id)
+                        const r = Scroll.processTrayWheel(wheel, _tile._wheelKey)
                         if (r.steps !== 0) _tile.modelData.scroll(r.steps * Scroll.notch, r.horizontal)
                     }
                 }
