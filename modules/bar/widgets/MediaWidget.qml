@@ -204,7 +204,8 @@ Item {
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
                 width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
-                elide: ShellSettings.reduceMotion ? Text.ElideRight : Text.ElideNone
+                elide: !ShellSettings.reduceMotion ? Text.ElideNone
+                    : root._canInteract && _rootHover.hovered ? Text.ElideLeft : Text.ElideRight
 
                 opacity: Media.playing ? 1.0 : 0.72
                 MotionBehavior on opacity {

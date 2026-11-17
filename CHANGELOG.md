@@ -63,6 +63,7 @@ settings file carries its own `__version` and migrates separately.
 
 - After a wake from suspend, the bar's weather refreshes as soon as the network is back instead of showing the reading from before the sleep for a few minutes.
 - Tray icons accept clicks across the bar's full height and keep their highlight while their menu is open.
+- With Reduce motion on, hovering a shortened media title reveals its ending, as for window titles.
 - Album art and failed package checks retry when a Wi-Fi sign-in page or a lost internet connection clears.
 - Switching Bluetooth controllers before a scan starts releases the old controller's late scan, and reopening the picker recovers if an earlier stop arrives late.
 - Keyboard lighting reports failed maximum-brightness reads and UPower discovery errors while keeping other working lights available.

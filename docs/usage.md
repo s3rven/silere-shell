@@ -41,6 +41,7 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 - **Workspace markers:** rings are empty workspaces and dots have windows. With app icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page.
 - **Hover:** what the table's last column shows needs **Reveal values on hover** under **Bar › Layout**, on by default.
 - **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
+- **Reduced motion:** hover a shortened window or media title to read its ending without scrolling it.
 
 ## Keyboard
 
