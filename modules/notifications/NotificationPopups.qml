@@ -444,21 +444,37 @@ PanelWindow {
         // the stack reads outward from the bar, so clear-all stays nearest it and the more chip farthest
         readonly property var _order: win._barBottom
             ? [_moreChip, _cardViewport, _clearChip] : [_clearChip, _cardViewport, _moreChip]
+        // a chip's gap folds with the chip: dropped whole as it hid, the cards closed their last 8 px in one frame
+        readonly property real _chipH: Metrics.rowHeightFor(30)
+        function _share(item): real {
+            return item === _cardViewport ? 1 : Math.max(0, Math.min(1, item.height / outerCol._chipH))
+        }
+        function _gap(a, b): real {
+            return outerCol.spacing * outerCol._share(a) * outerCol._share(b)
+        }
         function _topOf(item): real {
             let y = 0
-            for (let i = 0; i < outerCol._order.length && outerCol._order[i] !== item; i++)
-                if (outerCol._order[i].visible) y += outerCol._order[i].height + outerCol.spacing
-            return y
+            let prev = null
+            for (let i = 0; i < outerCol._order.length && outerCol._order[i] !== item; i++) {
+                const it = outerCol._order[i]
+                if (!it.visible) continue
+                if (prev) y += outerCol._gap(prev, it)
+                y += it.height
+                prev = it
+            }
+            return prev && item.visible ? y + outerCol._gap(prev, item) : y
         }
         height: {
             let h = 0
-            let shown = 0
+            let prev = null
             for (let i = 0; i < outerCol._order.length; i++) {
-                if (!outerCol._order[i].visible) continue
-                h += outerCol._order[i].height
-                shown++
+                const it = outerCol._order[i]
+                if (!it.visible) continue
+                if (prev) h += outerCol._gap(prev, it)
+                h += it.height
+                prev = it
             }
-            return h + Math.max(0, shown - 1) * outerCol.spacing
+            return h
         }
 
         Item {
