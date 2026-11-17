@@ -166,10 +166,12 @@ Singleton {
 
     on_WantedChanged: {
         if (!root._wanted) {
-            root._detectGeneration++
-            _warmup.stop()
-            if (_detectProc.running) _detectProc.running = false
-            root._resetState()
+            root._releaseHold.restart()
+            return
+        }
+        // wanted again before the hold ran out: nothing was reset, so the reading carries on as it was
+        if (root._releaseHold.running) {
+            root._releaseHold.stop()
             return
         }
         root._warmedUp = false
@@ -178,6 +180,19 @@ Singleton {
     }
 
     Component.onCompleted: root._started = true
+
+    // the moment Home starts fading out it stops wanting the reading: clearing it then dropped the
+    // temperature from its CPU tile on the first frame of the fade
+    property Timer _releaseHold: Timer {
+        interval: 300
+        onTriggered: if (!root._wanted) root._release()
+    }
+    function _release(): void {
+        root._detectGeneration++
+        _warmup.stop()
+        if (_detectProc.running) _detectProc.running = false
+        root._resetState()
+    }
 
     BoundedProcess {
         id: _detectProc

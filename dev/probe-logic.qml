@@ -2634,9 +2634,13 @@ ShellRoot {
         SysInfo._active = true
         const topWantedOn = SysInfo._topWanted
         SysInfo.requestTopProcess(topOwner, false)
-        root._check(topQuietOff && topWantedOn && !SysInfo._topWanted && !SysInfo.topShown
+        // held while the page that asked fades out, then forgotten
+        const topHeld = !SysInfo._topWanted && SysInfo.topShown && SysInfo._topRelease.running
+        SysInfo._topRelease.stop()
+        SysInfo._topRelease.triggered()
+        root._check(topQuietOff && topWantedOn && topHeld && !SysInfo._topWanted && !SysInfo.topShown
                 && SysInfo.topName === "" && w._parts[0].detail === "62%",
-            "the busiest process is read only while a view asks for it, and forgotten when the last one stops")
+            "the busiest process is read only while a view asks for it, and forgotten once that view has faded out")
         SysInfo._active = topWas.active
         SysInfo.topShown = topWas.shown
         SysInfo.topName = topWas.name
@@ -2673,6 +2677,58 @@ ShellRoot {
         if (loader) loader.destroy()
         MenuState.open = openWas
         ShellSettings.reduceMotion = reduceWas
+    }
+
+    // Home lets go of its readings as it starts to fade out, on a close or a tab switch; a tile blanked on that first frame
+    function _checkReadingsOutlastFade(): void {
+        const was = {
+            show: ShellSettings.barShowSystem, cpu: ShellSettings.systemShowCpu, warn: ShellSettings.osdTempWarn,
+            active: SysInfo._active, ready: SysInfo.cpuReady, pct: SysInfo.cpuPct,
+            path: CpuTemp._sensorPath, probed: CpuTemp._probeComplete, temp: CpuTemp.temp
+        }
+        const unwanted = !SysInfo._homeWanted && !CpuTemp._wanted
+        ShellSettings.systemShowCpu = true
+        ShellSettings.barShowSystem = true
+        // active by hand, as in _checkSystemWidget: activating for real would read /proc after this check restores
+        SysInfo._active = true
+        SysInfo.cpuReady = true
+        SysInfo.cpuPct = 0.42
+        ShellSettings.barShowSystem = false
+        const cpuHeld = SysInfo._active && SysInfo.cpuReady && SysInfo.cpuPct === 0.42 && SysInfo._releaseHold.running
+        SysInfo._releaseHold.stop()
+        SysInfo._releaseHold.triggered()
+        root._check(unwanted && cpuHeld && !SysInfo._active && !SysInfo.cpuReady,
+            "the CPU reading outlasts the fade of the page that stops wanting it, then stops")
+
+        // no sensor to read or to look for, so only the hold moves the reading
+        CpuTemp._sensorPath = ""
+        CpuTemp._probeComplete = true
+        const warmedWas = CpuTemp._warmedUp
+        ShellSettings.osdTempWarn = true
+        CpuTemp._sample(55)
+        CpuTemp._warmedUp = true
+        ShellSettings.osdTempWarn = false
+        const tempHeld = CpuTemp.temp === 55 && CpuTemp._releaseHold.running
+        ShellSettings.osdTempWarn = true
+        // nothing was reset, so its alerts are not held back by a fresh warm-up either
+        const tempResumed = !CpuTemp._releaseHold.running && CpuTemp.temp === 55 && CpuTemp._warmedUp
+        ShellSettings.osdTempWarn = false
+        CpuTemp._releaseHold.stop()
+        CpuTemp._releaseHold.triggered()
+        root._check(tempHeld && tempResumed && CpuTemp.temp === 0,
+            "the temperature outlasts the fade of the page that stops wanting it, and carries on when wanted again first")
+
+        ShellSettings.osdTempWarn = was.warn
+        CpuTemp._warmedUp = warmedWas
+        CpuTemp._sensorPath = was.path
+        CpuTemp._probeComplete = was.probed
+        CpuTemp.temp = was.temp
+        ShellSettings.barShowSystem = was.show
+        ShellSettings.systemShowCpu = was.cpu
+        SysInfo._releaseHold.stop()
+        SysInfo._active = was.active
+        SysInfo.cpuReady = was.ready
+        SysInfo.cpuPct = was.pct
     }
 
     function _checkAppHandoffs(): void {
@@ -3576,6 +3632,7 @@ ShellRoot {
         root._checkBluetoothRowRelease()
         root._checkBrightnessChoices()
         root._checkSystemWidget()
+        root._checkReadingsOutlastFade()
         root._checkPageBuildHidden()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()

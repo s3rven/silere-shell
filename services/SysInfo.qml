@@ -44,9 +44,10 @@ Singleton {
     property var _topLast: null
     on_TopWantedChanged: {
         if (root._topWanted) {
+            root._topRelease.stop()
             root._sampleTop()
             _topPrime.restart()
-        } else root._clearTop()
+        } else root._topRelease.restart()
     }
 
     readonly property real memPct:     memTotalKb > 0 ? (memTotalKb - memAvailKb) / memTotalKb : 0
@@ -85,9 +86,19 @@ Singleton {
     readonly property bool _wanted: _homeWanted || _barWanted
 
     on_WantedChanged: {
-        if (_wanted) _startDelay.restart()
-        else root._deactivate()
+        if (_wanted) {
+            root._releaseHold.stop()
+            _startDelay.restart()
+        } else {
+            _startDelay.stop()
+            if (root._active) root._releaseHold.restart()
+            else root._deactivate()
+        }
     }
+    // the moment Home starts fading out, on a close or a tab switch, it stops wanting these: clearing then
+    // blanked its tiles (CPU to a dash, its wave, the busiest process) on the first frame of the fade
+    property Timer _releaseHold: Timer { interval: 300; onTriggered: if (!root._wanted) root._deactivate() }
+    property Timer _topRelease: Timer { interval: 300; onTriggered: if (!root._topWanted) root._clearTop() }
     on_HomeWantedChanged: {
         if (!root._active) return
         if (root._homeWanted) root._refreshHome()
@@ -110,6 +121,7 @@ Singleton {
     }
 
     function _deactivate(): void {
+        root._releaseHold.stop()
         _startDelay.stop()
         _cpuPrime.stop()
         _uptimePoll.stop()
