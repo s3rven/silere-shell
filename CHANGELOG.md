@@ -182,6 +182,7 @@ settings file carries its own `__version` and migrates separately.
 - Words and glyphs in the accent colour stay readable on a see-through menu or popup with a white or a dark window behind it: selected options, active rows, status lines and the tray menu's checks (as low as 1.6:1 before). Fills, rings and the accent you chose stay as they were.
 - When a hovered system monitor's busiest process ends, the widget closes the gap at once instead of holding empty room for a few seconds.
 - A virtual keyboard from a snippet tool or remote input no longer replaces the keyboard layout name on the bar.
+- The network widget says Wired for USB, onboard and virtual Ethernet adapters with no connection name, instead of their interface name.
 
 ## Releases
 

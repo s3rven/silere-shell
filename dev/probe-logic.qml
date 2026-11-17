@@ -2287,6 +2287,14 @@ ShellRoot {
             component.destroy()
         }
         SystemTools._tools = secondTools
+        const netComponent = Qt.createComponent("modules/bar/widgets/NetworkWidget.qml")
+        const net = netComponent.status === Component.Ready ? netComponent.createObject(barFixtureHost, { screen: screen }) : null
+        root._check(net !== null && ["Wired connection 1", "Ethernet", "eth0", "enp2s0", "eno1", "ens3", "enx00e04c680001",
+                "end0", "enP1p1s0"].every(n => net.genericWiredName(n))
+                && !["Home LAN", "Office", "en", "eth"].some(n => net.genericWiredName(n)),
+            "the network pill says Wired for default profile and interface names, and keeps a name someone chose")
+        if (net) net.destroy()
+        netComponent.destroy()
         const btComponent = Qt.createComponent("modules/bar/widgets/BluetoothWidget.qml")
         const bt = btComponent.status === Component.Ready ? btComponent.createObject(barFixtureHost, { screen: screen }) : null
         root._check(bt !== null && bt.restText(false, 64) === "64%" && bt.restText(false, 0) === "0%"

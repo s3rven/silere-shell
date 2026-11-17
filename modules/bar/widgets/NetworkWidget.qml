@@ -25,6 +25,7 @@ Pill {
     readonly property string _signal: Network.isWifi && Network.signalStrength > 0
         ? Network.signalStrength + "%"
         : ""
+    readonly property string _physicalWithSignal: root._join([root._physical, root._signal], " ")
     readonly property string _linkSummary: {
         if (!Network.connected) return ""
         const label = root.compact ? Network.underlyingIcon
@@ -47,11 +48,7 @@ Pill {
 
         const parts = []
         if (Network.hasVpn) parts.push(root._vpnText)
-        if (root._showPhysicalLink || !Network.hasVpn) {
-            parts.push(root._signal.length > 0
-                ? root._physical + " " + root._signal
-                : root._physical)
-        }
+        if (root._showPhysicalLink || !Network.hasVpn) parts.push(root._physicalWithSignal)
         parts.push(Network.connectivityText)
         return root._join(parts)
     }
@@ -62,12 +59,7 @@ Pill {
         const parts = []
         if (Network.hasVpn) parts.push(root._vpnText)
         if (root._showPhysicalLink) parts.push(root._linkSummary)
-        else if (!Network.hasVpn) {
-            const physical = root._signal.length > 0
-                ? root._physical + " " + root._signal
-                : root._physical
-            parts.push(physical)
-        }
+        else if (!Network.hasVpn) parts.push(root._physicalWithSignal)
         parts.push(Network.connectivityText)
         if (Network.trafficActive) parts.push(Network.trafficLabel)
         return root._join(parts)
@@ -102,13 +94,15 @@ Pill {
     function _physicalLabel(): string {
         if (Network.isWifi) return Network.connectionName || "Wi-Fi"
         const name = Network.connectionName || Network.deviceName
-        const generic = /^(wired connection [0-9]+|ethernet|enp[0-9a-z]+|eth[0-9]+)$/i
-        if (name.length === 0 || generic.test(name)) return "Wired"
-        return name
+        return name.length === 0 || root.genericWiredName(name) ? "Wired" : name
+    }
+    // NetworkManager's default profile names and systemd's interface names (eno1, ens3, enp2s0, enx<mac>, end0, eth0)
+    function genericWiredName(name: string): bool {
+        return /^(wired connection [0-9]+|(en[dopsx]|eth)[0-9a-z]+)$/i.test(name)
     }
 
-    function _join(parts): string {
-        return parts.filter(p => p && p.length > 0).join(" · ")
+    function _join(parts, separator = " · "): string {
+        return parts.filter(p => p && p.length > 0).join(separator)
     }
 
     text: expanded ? _detailText : _inlineText
