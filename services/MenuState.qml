@@ -192,7 +192,8 @@ AnchoredPopupState {
         batteryAutoHide: "charging plugged",
         osdChargedNotify: "charging",
         uiScale: "scaling",
-        trayWidget: "systray"
+        trayWidget: "systray",
+        weatherUnit: "celsius fahrenheit"
     })
 
     function _searchWords(text: string): string {
