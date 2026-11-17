@@ -13252,6 +13252,36 @@ ShellRoot {
             "in the left zone the name grows to the right, away from the edge that zone is pinned to")
         ShellSettings.setBarWidgetLayout(s.layout[0], s.layout[1], s.layout[2])
         tile._dwelled = false
+        // resting on the next icon names it and drops the one left behind, as across the bar
+        const next = root._findTrayNode(s.zone, item => typeof item.syncMenuAnchor === "function"
+            && item.modelData === s.second)
+        let handed = false
+        if (next) {
+            tile._dwelled = true
+            widget._heldTile = tile
+            next._dwelled = true
+            widget._heldTile = next
+            handed = !tile._dwelled && next._dwelled
+            next._dwelled = false
+            widget._heldTile = null
+        }
+        root._check(handed, "resting on another tray icon closes the name left behind, so only one shows at a time")
+        // as in a bar zone: a name whose fold would slide the icon now rested on stays out until the hold ends
+        const after = widget.labelLeads ? next : null
+        let trayKept = false, trayFreed = false
+        if (next && after) {
+            s.zone.pointerInside = true
+            s.zone.claimHold("tray")
+            next._dwelled = true
+            widget._heldTile = next
+            tile._dwelled = true
+            widget._heldTile = tile
+            trayKept = widget.holdOpen && next._dwelled && tile._dwelled
+            s.zone.pointerInside = false
+            trayFreed = !next._dwelled && !tile._dwelled && widget._heldTile === null
+        }
+        root._check(trayKept && trayFreed,
+            "a tray name whose fold would slide the icon rested on stays out until the pointer leaves the zone")
         ShellSettings.valuesOnHover = hoverWas
     }
 

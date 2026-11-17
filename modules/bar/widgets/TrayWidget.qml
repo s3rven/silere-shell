@@ -14,6 +14,23 @@ Item {
     property bool barActive: true
     // the pointer is still over the tray's bar zone, so a revealed app name waits for it to leave, as the pills do
     property bool holdOpen: false
+    // as across the bar: the hold keeps the last icon rested on named, and resting on the next one closes it
+    property Item _heldTile: null
+    onHoldOpenChanged: if (!root.holdOpen) root._heldTile = null
+    // and, as in a bar zone, a name whose fold would slide the icon now rested on stays out until the hold ends:
+    // hung from the right, folding a name moves the icons left of it; from the left, those right of it; centred, all
+    readonly property bool _centred: ShellSettings.barWidgetOrderCenterKeys.indexOf("tray") >= 0
+    function _foldMoves(tile: Item, held: Item): bool {
+        if (!held || !root.holdOpen) return false
+        if (root._centred) return true
+        let at = -1, heldAt = -1
+        for (let i = 0; i < _items.count; i++) {
+            const t = _items.itemAt(i)
+            if (t === tile) at = i
+            if (t === held) heldAt = i
+        }
+        return root.labelLeads ? heldAt < at : heldAt > at
+    }
     property var trayModel: SystemTray.items
     Component.onCompleted: TrayMenuState.recoverOrphanItems()
     readonly property var _trayItems: root.trayModel
@@ -156,6 +173,9 @@ Item {
                 Connections {
                     target: root
                     function onHoldOpenChanged() { if (!root.holdOpen && !_iconHover.hovered) _tile._dwelled = false }
+                    function on_HeldTileChanged() {
+                        if (root._heldTile !== _tile && !_iconHover.hovered && !root._foldMoves(_tile, root._heldTile)) _tile._dwelled = false
+                    }
                 }
 
                 onNeedsAttentionChanged: _attentionSettled = false
@@ -200,7 +220,10 @@ Item {
                 Timer {
                     id: _labelDwell
                     interval: 80
-                    onTriggered: _tile._dwelled = true
+                    onTriggered: {
+                        _tile._dwelled = true
+                        root._heldTile = _tile
+                    }
                 }
 
                 Rectangle {
