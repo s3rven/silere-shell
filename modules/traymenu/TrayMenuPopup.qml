@@ -339,7 +339,7 @@ FittedPopupWindow {
                         width: side; height: side
                         radius: Math.round(side * 0.28)
                         antialiasing: true
-                        color: _entry.checked ? Theme.accent : "transparent"
+                        color: _entry.checked ? Theme.accentInk : "transparent"
                         OutlineBorder {
                             radius: _box.radius
                             outlineColor: _entry.checked
@@ -358,7 +358,7 @@ FittedPopupWindow {
                         visible: _entry.btnType === 2
                         width: 8; height: 8; radius: 4
                         antialiasing: true
-                        color: _entry.checked ? Theme.accent : "transparent"
+                        color: _entry.checked ? Theme.accentInk : "transparent"
                         OutlineBorder {
                             radius: parent.radius
                             outlineColor: _entry.checked

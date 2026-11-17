@@ -99,7 +99,7 @@ MenuRow {
         text:           root.glyph
         opacity: root._showDependsNote ? root._controlOpacity : 1.0
         color:          root.checked
-            ? Theme.withAlpha(Theme.accent, 0.9)
+            ? Theme.withAlpha(Theme.accentInk, 0.9)
             : Theme.withAlpha(Theme.subtext, 0.85)
         font.pixelSize: Settings.iconSize + 2
         ColorFade on color {}

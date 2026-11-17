@@ -13,6 +13,8 @@ Item {
     property bool glidingSelection: false
     readonly property bool _ownsActive: root.active && !root.glidingSelection
     property color accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
     property int railW: 44
     // expanded drawers already provide their own labels. Keeping this tooltip open there paints it over the drawer's controls
     property bool labelPillEnabled: true
@@ -108,8 +110,8 @@ Item {
         y: Math.round((parent.height - _iconText.height) / 2)
         text: root.glyph
         color: root.active
-            ? Theme.mix(root.accentColor, Theme.text, 0.10)
-            : Theme.withAlpha(Theme.mix(Theme.subtext, root.accentColor, _hover.hovered ? 0.24 : 0),
+            ? Theme.mix(root._ink, Theme.text, 0.10)
+            : Theme.withAlpha(Theme.mix(Theme.subtext, root._ink, _hover.hovered ? 0.24 : 0),
                                _hover.hovered ? 0.90 : 0.76)
         font.pixelSize: Settings.iconSize + 2
         scale: _tap.pressed ? 0.92 : (root.active ? 1.015 : 1.0)

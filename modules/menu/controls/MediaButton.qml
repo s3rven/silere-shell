@@ -46,7 +46,7 @@ Item {
     ShellText {
         anchors.centerIn: parent
         text: root.glyph
-        color: root.lit ? (_hover.hovered || _tap.pressed ? Theme.mix(Theme.accent, Theme.text, 0.35) : Theme.accent)
+        color: root.lit ? (_hover.hovered || _tap.pressed ? Theme.mix(Theme.accentInk, Theme.text, 0.35) : Theme.accentInk)
             : _hover.hovered || _tap.pressed ? Theme.withAlpha(Theme.text, 0.92) : Theme.withAlpha(Theme.text, 0.55)
         font.pixelSize: Settings.fontSize + 9
         ColorFade on color {}

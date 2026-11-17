@@ -14,6 +14,8 @@ MenuRow {
     property var    model: []
     property var    currentValue: root.key.length > 0 ? ShellSettings[root.key] : undefined
     property color  accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
 
     rowHovered:     _rowHover.hovered
     rowInteractive: root.enabled
@@ -266,7 +268,7 @@ MenuRow {
                             visible: _option.optionGlyph.length > 0
                             text: _option.optionGlyph
                             color: _option.active
-                                ? Theme.mix(Theme.text, root.accentColor, 0.24)
+                                ? Theme.mix(Theme.text, root._ink, 0.24)
                                 : Theme.withAlpha(Theme.subtext,
                                     _hover.hovered ? 0.88 : 0.68)
                             font.pixelSize: Settings.fontLabel
@@ -285,7 +287,7 @@ MenuRow {
                             text: _option.optionLabel
                             elide: Text.ElideRight
                             color: _option.active
-                                ? Theme.mix(Theme.text, root.accentColor,
+                                ? Theme.mix(Theme.text, root._ink,
                                     ShellSettings.highContrast ? 0 : 0.22)
                                 : Theme.withAlpha(Theme.subtext,
                                     _hover.hovered ? 0.90 : 0.72)

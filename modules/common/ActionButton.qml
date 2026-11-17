@@ -10,6 +10,8 @@ Item {
     property string accessibleName: label
     property bool emphasis: false
     property color accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
     property real radius: Theme.radiusField
 
     signal triggered()
@@ -94,9 +96,9 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.glyph
                 color: root.emphasis
-                    ? Theme.mix(Theme.text, root.accentColor, 0.10)
+                    ? Theme.mix(Theme.text, root._ink, 0.10)
                     : _hover.hovered
-                        ? Theme.mix(Theme.subtext, root.accentColor, 0.22)
+                        ? Theme.mix(Theme.subtext, root._ink, 0.22)
                         : Theme.withAlpha(Theme.subtext, 0.82)
                 font.pixelSize: Settings.fontSize
                 ColorFade on color {}
@@ -107,7 +109,7 @@ Item {
                 text: root.label
                 color: root.emphasis ? Theme.text
                     : _hover.hovered
-                        ? Theme.mix(Theme.text, root.accentColor, 0.07)
+                        ? Theme.mix(Theme.text, root._ink, 0.07)
                         : Theme.withAlpha(Theme.text, 0.80)
                 font.pixelSize: Settings.fontLabel
                 font.weight: root.emphasis ? Font.DemiBold : Font.Normal

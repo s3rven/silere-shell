@@ -362,7 +362,7 @@ PageShell {
                     ShellText {
                         anchors.verticalCenter: parent.verticalCenter
                         text: _muteButton.muted ? "󰪑" : "󰂜"
-                        color: _muteButton.muted ? Theme.accent
+                        color: _muteButton.muted ? Theme.accentInk
                             : _muteHover.hovered ? Theme.withAlpha(Theme.text, 0.88)
                             : Theme.withAlpha(Theme.subtext, 0.72)
                         font.pixelSize: Settings.fontSize
@@ -436,7 +436,7 @@ PageShell {
                         anchors.leftMargin: 12
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰂛"
-                        color: Theme.accent
+                        color: Theme.accentInk
                         font.pixelSize: Settings.fontSize
                     }
 
@@ -506,7 +506,7 @@ PageShell {
                 x: (_searchBox.height - implicitWidth) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰍉"
-                color: _searchInput.activeFocus ? Theme.accent : Theme.menuTextDetail
+                color: _searchInput.activeFocus ? Theme.accentInk : Theme.menuTextDetail
                 font.pixelSize: Settings.fontSize + 2
                 ColorFade on color { gate: root.active && MenuState.open }
             }
@@ -798,7 +798,7 @@ PageShell {
                             anchors.leftMargin:     4
                             anchors.verticalCenter: parent.verticalCenter
                             text: { void root._timeTick; return root.sectionLabel(_entry.modelData.time) }
-                            color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accent, 0.22), 0.88)
+                            color: Theme.withAlpha(Theme.mix(Theme.subtext, Theme.accentInk, 0.22), 0.88)
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.DemiBold
                             font.capitalization: Font.AllUppercase

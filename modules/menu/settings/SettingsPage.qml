@@ -415,7 +415,7 @@ PageShell {
                     anchors.centerIn: parent
                     opacity: _detail._fade
                     text: _detailHeader._meta.glyph
-                    color: Theme.mix(Theme.accent, Theme.text, 0.10)
+                    color: Theme.mix(Theme.accentInk, Theme.text, 0.10)
                     font.pixelSize: Settings.fontSize + 2
                 }
             }

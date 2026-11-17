@@ -344,7 +344,7 @@ Item {
                             ShellText {
                                 anchors.centerIn: parent
                                 text: "󰌑"
-                                color: Theme.accent
+                                color: Theme.accentInk
                                 font.pixelSize: Settings.fontSize + 1
                             }
                         }

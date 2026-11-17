@@ -11,6 +11,8 @@ MenuRow {
     property string status:      ""
     property string valueText:   ""
     property color  accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
     // transparent follows the normal active/inactive hierarchy. A semantic colour lets a failure remain recognisable even when the control is off
     property color  statusColor: "transparent"
     // a status of someone else's words, such as a track title, is cut short instead of growing the row
@@ -105,7 +107,7 @@ MenuRow {
             id: _glyph
             anchors.centerIn: parent
             text:           root.glyph
-            color:          root.active ? Theme.withAlpha(root.accentColor, 0.95)
+            color:          root.active ? Theme.withAlpha(root._ink, 0.95)
                                         : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.iconSize + 2
             ColorFade on color {}
@@ -199,7 +201,7 @@ MenuRow {
             color:          root.statusColor.a > 0
                 ? Theme.withAlpha(Theme.mix(root.statusColor, Theme.text,
                     ShellSettings.highContrast ? 0.22 : 0.10), 0.94)
-                : root.active ? Theme.mix(root.accentColor, Theme.text, 0.12)
+                : root.active ? Theme.mix(root._ink, Theme.text, 0.12)
                               : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
@@ -249,7 +251,7 @@ MenuRow {
             elide:          Text.ElideRight
             text:           root.valueText
             color:          (root.active || (root.valueIsAction && root._canTap))
-                                ? Theme.mix(root.accentColor, Theme.text, 0.18)
+                                ? Theme.mix(root._ink, Theme.text, 0.18)
                                 : Theme.withAlpha(Theme.text, 0.60)
             font.pixelSize: Settings.fontLabel
             font.weight:    Font.Medium

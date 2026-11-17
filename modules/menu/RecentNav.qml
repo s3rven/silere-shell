@@ -190,7 +190,7 @@ Item {
                             text: _row.isAll ? "󰂚"
                                 : SafeText.initial(_row.label, "N")
                             color: _row.active
-                                ? Theme.mix(Theme.accent, Theme.text, 0.10)
+                                ? Theme.mix(Theme.accentInk, Theme.text, 0.10)
                                 : Theme.withAlpha(Theme.subtext,
                                     _rowHover.hovered ? 0.92 : 0.76)
                             font.pixelSize: _row.isAll

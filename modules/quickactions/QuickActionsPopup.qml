@@ -46,6 +46,7 @@ FittedPopupWindow {
         readonly property int _mainHeight: Metrics.rowHeightFor(38)
         readonly property color _statusColor: error ? Theme.error
             : warning ? Theme.warning : Theme.accent
+        readonly property color _statusInk: Theme.inkFor(_statusColor)
 
         signal triggered()
 
@@ -95,7 +96,7 @@ FittedPopupWindow {
             horizontalAlignment: Text.AlignHCenter
             text: _row.glyph
             color: _row.error || _row.warning || _row.highlighted
-                ? Theme.withAlpha(_row._statusColor, 0.95) : Theme.withAlpha(Theme.subtext, 0.85)
+                ? Theme.withAlpha(_row._statusInk, 0.95) : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.fontSize + 1
             ColorFade on color {}
         }
@@ -143,7 +144,7 @@ FittedPopupWindow {
                 width: Math.min(implicitWidth, _state.width - 12)
                 text: _row.stateText
                 color: _row.error || _row.warning ? _row._statusColor
-                    : _row.highlighted ? Theme.mix(Theme.accent, Theme.text, 0.18)
+                    : _row.highlighted ? Theme.mix(Theme.accentInk, Theme.text, 0.18)
                     : Theme.withAlpha(Theme.subtext, 0.82)
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.Medium

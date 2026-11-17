@@ -390,7 +390,7 @@ Item {
                                     ? Theme.withAlpha(Theme.menuTextMuted,
                                         _headerHover.hovered ? 1.0 : 0.88)
                                     : Theme.withAlpha(Theme.mix(
-                                        Theme.text, Theme.accent, 0.22), 0.98)
+                                        Theme.text, Theme.accentInk, 0.22), 0.98)
                             font.pixelSize: Settings.fontCaption
                             font.letterSpacing: 0.65
                             font.weight: Font.DemiBold
@@ -525,7 +525,7 @@ Item {
                                         horizontalAlignment: Text.AlignHCenter
                                         text: _leaf.glyph
                                         color: _leaf.active
-                                            ? Theme.mix(Theme.accent, Theme.text, 0.10)
+                                            ? Theme.mix(Theme.accentInk, Theme.text, 0.10)
                                             : Theme.withAlpha(Theme.subtext,
                                                 _leafHover.hovered ? 1.0 : 0.88)
                                         font.pixelSize: Settings.fontSize + 1

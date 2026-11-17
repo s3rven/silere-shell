@@ -19,6 +19,8 @@ Rectangle {
     property string confirmLabel: "Press again"
     property int confirmTimeout: 3000
     property color accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
 
     signal triggered()
 
@@ -46,7 +48,7 @@ Rectangle {
     readonly property color _glyphFg: root.armed
         ? Theme.error
         : root.tintedGlyph
-            ? Theme.withAlpha(root.accentColor, root.interactive ? (root._hot ? 0.90 : 0.72) : 0.86)
+            ? Theme.withAlpha(root._ink, root.interactive ? (root._hot ? 0.90 : 0.72) : 0.86)
             : root.dangerous
                 ? Theme.withAlpha(Theme.error, root._hot ? 0.86 : 0.60)
                 : Theme.withAlpha(Theme.subtext, root._hot ? 0.78 : 0.56)

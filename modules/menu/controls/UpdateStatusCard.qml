@@ -13,6 +13,7 @@ Rectangle {
     property string detail: ""
     property bool   detailError: false
     property color statusColor: Theme.subtext
+    readonly property color _statusInk: Theme.inkFor(root.statusColor)
     property bool busy: false
     property bool animationActive: true
 
@@ -58,7 +59,7 @@ Rectangle {
                 width: Metrics.glyphSlotWidth
                 horizontalAlignment: Text.AlignHCenter
                 text: root.glyph
-                color: root.statusColor
+                color: root._statusInk
                 font.pixelSize: Settings.fontSize + 4
                 ColorFade on color { duration: Motion.medium }
 
@@ -123,7 +124,7 @@ Rectangle {
                     width: parent.width
                     text: root.status
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                    color: Theme.withAlpha(root.statusColor, 0.9)
+                    color: Theme.withAlpha(root._statusInk, 0.9)
                     font.pixelSize: Settings.fontCaption
                     ColorFade on color { duration: Motion.medium }
                 }

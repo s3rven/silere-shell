@@ -448,7 +448,7 @@ Item {
                     : _zoneHeader.zone === "center" ? "Center" : "Right")
                     + " · " + _zoneHeader.shown + " shown"
                 color: _zoneHeader.hot
-                    ? Theme.accent : Theme.menuTextQuiet
+                    ? Theme.accentInk : Theme.menuTextQuiet
                 font.pixelSize: Settings.fontMicro
                 font.weight: Font.DemiBold
                 ColorFade on color {}
@@ -588,7 +588,7 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 text: _row.meta.glyph
                 color: _row.checked
-                    ? Theme.withAlpha(Theme.accent, 0.90)
+                    ? Theme.withAlpha(Theme.accentInk, 0.90)
                     : Theme.withAlpha(Theme.subtext, 0.48)
                 font.pixelSize: Settings.iconSize + 2
                 ColorFade on color {}

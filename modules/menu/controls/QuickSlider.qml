@@ -95,7 +95,7 @@ MenuRow {
         width: Math.ceil(_vm.advanceWidth)
         horizontalAlignment: Text.AlignRight
         text: root.valueText
-        color: _track.dragging ? Theme.accent : Theme.withAlpha(Theme.text, 0.60)
+        color: _track.dragging ? Theme.accentInk : Theme.withAlpha(Theme.text, 0.60)
         ColorFade on color {}
         font.pixelSize: Settings.fontLabel
         elide: Text.ElideRight
@@ -130,7 +130,7 @@ MenuRow {
         ShellText {
             anchors.centerIn: parent
             text: "󰅀"
-            color: root.expanded ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.85)
+            color: root.expanded ? Theme.accentInk : Theme.withAlpha(Theme.subtext, 0.85)
             font.pixelSize: Settings.fontSize
             rotation: root.expanded ? 180 : 0
             transformOrigin: Item.Center

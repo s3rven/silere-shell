@@ -79,7 +79,7 @@ Item {
         text:           root._shownName
         elide:          Text.ElideRight
         color:          root.tintedReadout && !ShellSettings.highContrast && root._shownIdx >= 0
-            ? Theme.mix(Theme.subtext, _sr.colorAt(root._shownIdx), 0.62)
+            ? Theme.inkFor(Theme.mix(Theme.subtext, _sr.colorAt(root._shownIdx), 0.62))
             : Theme.menuTextDetail
         font.pixelSize: Settings.fontCaption
         ColorFade on color {}

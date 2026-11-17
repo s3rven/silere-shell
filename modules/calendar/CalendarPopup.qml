@@ -256,7 +256,7 @@ FittedPopupWindow {
                         ShellText {
                             anchors.verticalCenter: parent.verticalCenter
                             text: card._todayD < 0 ? "" : card._todayD
-                            color: Theme.accent
+                            color: Theme.accentInk
                             font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
                         }
                         Column {
@@ -427,7 +427,7 @@ FittedPopupWindow {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
                                 color: _weekRow.index === Math.floor(card._todayCell / 7)
-                                    ? Theme.accent : Theme.withAlpha(Theme.subtext, 0.78)
+                                    ? Theme.accentInk : Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontTiny
                                 font.weight: Font.Medium
                             }

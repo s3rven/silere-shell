@@ -11,6 +11,8 @@ Item {
     property string accessiblePrefix: ""
     property string status: ""
     property color accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
     property bool selected: false
     property bool highlighted: false
     property bool warning: false
@@ -123,7 +125,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         text: root.glyph
         color: root._attentive ? root._attention
-            : root.selected || root.highlighted ? root.accentColor
+            : root.selected || root.highlighted ? root._ink
             : Theme.withAlpha(Theme.subtext, 0.78)
         font.pixelSize: Settings.iconSize + 1
         ColorFade on color { gate: root.motionReady }
@@ -167,7 +169,7 @@ Item {
         text: root.status
         elide: Text.ElideRight
         color: root._attentive ? root._attention
-            : root.selected ? Theme.mix(root.accentColor, Theme.text, 0.14)
+            : root.selected ? Theme.mix(root._ink, Theme.text, 0.14)
             : Theme.withAlpha(Theme.subtext, root._hot ? 0.70 : 0.54)
         font.pixelSize: Settings.fontCaption
         font.weight: root._attentive || root.selected ? Font.Medium : Font.Normal
@@ -182,7 +184,7 @@ Item {
         width: root.selected ? Metrics.glyphSlotWidth : 0
         horizontalAlignment: Text.AlignHCenter
         text: "󰄬"
-        color: root._attentive ? root._attention : root.accentColor
+        color: root._attentive ? root._attention : root._ink
         font.pixelSize: Settings.fontSize
         opacity: root.selected ? 0.90 : 0.0
         MotionBehavior on width { gate: root.motionReady; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }

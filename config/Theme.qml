@@ -81,6 +81,19 @@ Singleton {
     readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : sourcedAccent(_matuAccent)
     property color accent: root._tAccent
     PaletteFade on accent { gate: root._paletteReady }
+    // the accent as a word or a glyph. Fills, rings, tracks and knobs keep the chosen accent; its ink holds a
+    // caption's 3:1 over a white and a dark window on glass, or over the lightest control when opaque, where most
+    // presets sat near 2.4:1 on a see-through menu. Solved on lightness alone, so the hue stays
+    readonly property color _tAccentInk: root._captionInk(_tAccent)
+    property color accentInk: root._tAccentInk
+    PaletteFade on accentInk { gate: root._paletteReady }
+    // a control's tint where it draws a word or a glyph: the theme's accent takes its ink, a status colour
+    // already holds 3:1, and anything else is solved the same way
+    function inkFor(c: color): color {
+        if (Qt.colorEqual(c, root.accent)) return root.accentInk
+        if (Qt.colorEqual(c, root.error) || Qt.colorEqual(c, root.warning) || Qt.colorEqual(c, root.success)) return c
+        return root._captionInk(c)
+    }
     // keep the chosen accent for fills, but lift very dark colours where the
     // bar uses them as small text, glyphs or the active workspace marker
     readonly property color _barDark: mix(Qt.rgba(0, 0, 0, 1), _tBackground, panelOpacity)
@@ -144,7 +157,7 @@ Singleton {
 
     readonly property string _paletteKey: "" + _tBackground + _tSurface + _tText
         + _tSubtext + _tAccent + _tError + _tWarning + _tSuccess + _tLineBase
-        + _tMenuTextDetail + _tMenuTextWarning
+        + _tMenuTextDetail + _tMenuTextWarning + _tMenuTextQuiet + _tAccentInk
     readonly property bool paletteShifting: _shiftWindow.running
     on_PaletteKeyChanged: {
         if (!root._paletteReady

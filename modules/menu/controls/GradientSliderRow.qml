@@ -51,7 +51,7 @@ Item {
         width: Math.max(Math.ceil(_vm.advanceWidth), Math.ceil(implicitWidth))
         horizontalAlignment: Text.AlignRight
         text: root.displayValue
-        color: _slider.dragging ? Theme.accent : Theme.withAlpha(Theme.text, 0.58)
+        color: _slider.dragging ? Theme.accentInk : Theme.withAlpha(Theme.text, 0.58)
         ColorFade on color {}
         font.pixelSize: Settings.fontLabel
         font.weight: Font.DemiBold

@@ -196,7 +196,7 @@ Column {
                 x: (Math.min(parent.width, root.fieldHeight) - implicitWidth) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰍉"
-                color: _input.activeFocus ? Theme.accent : Theme.menuTextDetail
+                color: _input.activeFocus ? Theme.accentInk : Theme.menuTextDetail
                 font.pixelSize: Settings.fontSize + 2
                 ColorFade on color {}
             }

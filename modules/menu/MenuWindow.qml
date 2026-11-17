@@ -720,7 +720,7 @@ FittedPopupWindow {
                                     text: tabContent._pageError ? "󰅙" : "󰔟"
                                     color: tabContent._pageError
                                         ? Theme.withAlpha(Theme.error, 0.82)
-                                        : Theme.withAlpha(Theme.accent, 0.76)
+                                        : Theme.withAlpha(Theme.accentInk, 0.76)
                                     font.pixelSize: Settings.iconSize + 5
                                 }
                             }

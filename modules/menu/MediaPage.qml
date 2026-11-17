@@ -524,7 +524,7 @@ PageShell {
                         property bool _ready: false
                         text: shown
                         color: _playH.hovered || _playT.pressed
-                            ? Theme.mix(Theme.accent, Theme.text, 0.35) : Theme.accent
+                            ? Theme.mix(Theme.accentInk, Theme.text, 0.35) : Theme.accentInk
                         font.pixelSize: Settings.fontSize + 15
                         ColorFade on color {}
 

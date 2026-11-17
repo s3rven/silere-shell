@@ -177,7 +177,7 @@ PanelWindow {
                 ShellText {
                     anchors.verticalCenter: parent.verticalCenter
                     text: chip.glyph
-                    color: _hover.hovered ? chip.tint
+                    color: _hover.hovered ? Theme.inkFor(chip.tint)
                         : Theme.withAlpha(Theme.menuTextMuted, 0.76)
                     font.pixelSize: Settings.fontLabel
                     ColorFade on color {}

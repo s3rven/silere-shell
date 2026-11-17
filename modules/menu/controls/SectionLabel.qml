@@ -36,7 +36,7 @@ Item {
             text: root.label
             elide: Text.ElideRight
             color: Theme.withAlpha(
-                Theme.mix(Theme.menuTextMuted, Theme.accent, 0.10), 0.84)
+                Theme.mix(Theme.menuTextMuted, Theme.accentInk, 0.10), 0.84)
             font.pixelSize: Settings.fontCaption
             font.letterSpacing: 0.65
             font.weight: Font.DemiBold

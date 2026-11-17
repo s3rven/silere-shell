@@ -505,6 +505,42 @@ else
   ok "layout" "no size, margin or anchor reads effective visibility"
 fi
 
+section "accent ink"
+# the accent as a word or a glyph reads only at its ink: over a see-through menu most accents sat near 2.4:1.
+# A ShellText's colour, continuation lines included, takes Theme.accentInk or its control's _ink; fills keep Theme.accent
+accent_text="$(find modules/menu modules/calendar modules/notifications modules/quickactions modules/traymenu \
+  modules/common modules/osd -name '*.qml' -print0 | sort -z | xargs -0 -r awk '
+function indent(s) { match(s, /^[ \t]*/); return RLENGTH }
+FNR == 1 { depth = 0; n = 0; inColor = 0 }
+{
+    line = $0
+    code = line; sub(/\/\/.*/, "", code)
+    if (inColor) {
+        if (indent(line) > colorIndent && code !~ /^[ \t]*$/) {
+            if (code ~ /Theme\.accent([^A-Za-z0-9_]|$)/ || code ~ /(^|[^A-Za-z0-9_])accentColor([^A-Za-z0-9_]|$)/) hit = 1
+        } else {
+            if (hit) print FILENAME ":" colorLine
+            inColor = 0
+        }
+    }
+    if (n > 0 && depth == stack[n] + 1 && code ~ /^[ \t]*color[ \t]*:/) {
+        inColor = 1; colorIndent = indent(line); colorLine = FNR
+        hit = (code ~ /Theme\.accent([^A-Za-z0-9_]|$)/ || code ~ /(^|[^A-Za-z0-9_])accentColor([^A-Za-z0-9_]|$)/)
+    }
+    opens = gsub(/\{/, "{", code); closes = gsub(/\}/, "}", code)
+    if (code ~ /(^|[^A-Za-z0-9_.])ShellText[ \t]*\{/) { n++; stack[n] = depth }
+    depth += opens - closes
+    while (n > 0 && depth <= stack[n]) n--
+}
+END { if (inColor && hit) print FILENAME ":" colorLine }
+' || true)"
+if [ -n "$accent_text" ]; then
+  fail "a word or a glyph draws the raw accent (use Theme.accentInk, or the control's _ink):"
+  printf '%s\n' "$accent_text"
+else
+  ok "accent ink" "words and glyphs draw the accent's ink, fills keep the accent"
+fi
+
 section "probed geometry is the geometry drawn"
 # these probe checks test a helper; they only mean something while the surface still reads it
 probed_missing=""

@@ -16,6 +16,8 @@ Item {
     property var    model:       []
     property var    currentValue: root.key.length > 0 ? ShellSettings[root.key] : undefined
     property color  accentColor: Theme.accent
+    // the tint as a word or a glyph: fills and rings keep accentColor
+    readonly property color _ink: Theme.inkFor(root.accentColor)
     // one component serves the header and every option; each reads its subject off its own Loader
     property Component optionPreview: null
     property string fallbackLabel: currentValue === undefined || currentValue === null
@@ -360,7 +362,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text:           root._typed.length > 0 ? root._typed : root._activeLabel
             elide:          Text.ElideRight
-            color: root._open ? Theme.mix(Theme.text, root.accentColor,
+            color: root._open ? Theme.mix(Theme.text, root._ink,
                     ShellSettings.highContrast ? 0 : 0.10)
                 : Theme.withAlpha(Theme.text, _hov.hovered ? 0.90 : 0.78)
             font.family:    root._activeFont
@@ -375,7 +377,7 @@ Item {
             text:    "󰅀"
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
-            color: root._open ? root.accentColor
+            color: root._open ? root._ink
                 : Theme.withAlpha(Theme.subtext, _hov.hovered ? 0.86 : 0.66)
             font.pixelSize: Settings.fontSize
             MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }

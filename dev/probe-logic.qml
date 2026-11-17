@@ -219,6 +219,7 @@ ShellRoot {
     Component { id: systemWidgetFactory; SystemWidget {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
+    Component { id: updateStatusFactory; UpdateStatusCard { width: 320; title: "Probe update" } }
     Component { id: swatchRowFactory; SwatchRow { options: [{ name: "Probe accent" }] } }
     Component {
         id: choiceChipFactory
@@ -1659,6 +1660,105 @@ ShellRoot {
 
     // ink on a see-through popup has two backdrops to survive, a white window and a dark one. Solved against
     // the worse alone, white text put that backdrop at mid grey, where black beats white by a hair
+    // the accent drawn as a word or a glyph: every accent the theme can choose, on glass and opaque
+    function _checkAccentInk(): void {
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent", "highContrast", "baseTone",
+            "barOpacity", "surfaceBlur", "popupMatchBarOpacity", "matugenAccentBalance", "matugenAccentRole", "matugenDepth"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = true
+        ShellSettings.surfaceBlur = true
+        ShellSettings.highContrast = false
+        ShellSettings.barOpacity = 0.58
+        ShellSettings.matugenDepth = "none"
+        const dark = { background: "#121318", surface: "#1e1f25", text: "#e3e1e9", subtext: "#c6c5d0", accent: "#b9c3ff",
+            error: "#ffb4ab", warning: "#e5bad8", success: "#c3c5dd" }
+        const light = { background: "#fbf8ff", surface: "#efedf4", text: "#1b1b21", subtext: "#46464f", accent: "#525a92",
+            error: "#ba1a1a", warning: "#77536d", success: "#5b5d72" }
+        const cases = []
+        for (const preset of Theme.neutralAccentPresets)
+            cases.push({ neutral: true, auto: false, accent: preset.color, palette: dark, name: preset.name, preset: true })
+        // a dark custom hex sinks under 3:1 even on an opaque menu
+        for (const custom of ["#23509a", "#103323"])
+            cases.push({ neutral: true, auto: false, accent: custom, palette: dark, name: "custom " + custom })
+        cases.push({ neutral: true, auto: true, palette: dark, name: "auto" })
+        for (const palette of [dark, light]) for (const role of ["primary", "secondary", "tertiary"])
+            for (const balance of [false, true])
+                cases.push({ neutral: false, auto: true, palette, role, balance,
+                    name: (palette === light ? "light " : "") + role + (balance ? " balanced" : "") })
+        const white = Qt.rgba(1, 1, 1, 1), black = Qt.rgba(0, 0, 0, 1)
+        const lowestFor = ink => Theme.glass
+            ? Math.min(Theme.contrastRatio(ink, Theme._controlOverBackdrop(Theme.background, Theme.text, Theme.popupOpacity, white)),
+                Theme.contrastRatio(ink, Theme._controlOverBackdrop(Theme.background, Theme.text, Theme.popupOpacity, black)))
+            : Theme.contrastRatio(ink, Theme._glassWorst)
+        const hueGap = (a, b) => Math.abs(((a - b) % 360 + 540) % 360 - 180)
+        const failed = { reads: [], hue: [], chosen: [], own: [], opaque: [], inkFor: [] }
+        let liftedRuns = 0, runs = 0
+        for (const glass of [true, false]) for (const tone of ["black", "charcoal"]) for (const c of cases) {
+            ShellSettings.popupMatchBarOpacity = glass
+            ShellSettings.baseTone = tone
+            ShellSettings.neutralTheme = c.neutral
+            ShellSettings.neutralAccentAuto = c.auto
+            if (c.accent) ShellSettings.neutralAccent = c.accent
+            ShellSettings.matugenAccentRole = c.role ?? "primary"
+            ShellSettings.matugenAccentBalance = c.balance ?? false
+            MatugenTheme._palette = c.palette
+            runs++
+            const context = (glass ? "glass/" : "opaque/") + tone + "/" + c.name
+            const ink = Theme.accentInk, accent = Theme.accent
+            const reads = lowestFor(ink)
+            if (!(reads >= 2.99)) failed.reads.push(context + " " + reads.toFixed(2))
+            const inkLch = Theme.lchOf(ink), accentLch = Theme.lchOf(accent)
+            if (accentLch.C >= 4 && inkLch.C >= 4 && hueGap(inkLch.h, accentLch.h) > 4) failed.hue.push(context)
+            if (!Qt.colorEqual(accent, Theme._tAccent) || (c.accent && !Qt.colorEqual(accent, Qt.color(c.accent))))
+                failed.chosen.push(context)
+            if (lowestFor(accent) >= 3.0 && !Qt.colorEqual(ink, accent)) failed.own.push(context)
+            if (!glass && c.preset && !Qt.colorEqual(ink, accent)) failed.opaque.push(context)
+            if (!Qt.colorEqual(Theme.inkFor(accent), ink) || !Qt.colorEqual(Theme.inkFor(Theme.error), Theme.error)
+                    || !Qt.colorEqual(Theme.inkFor(Theme.warning), Theme.warning)
+                    || !Qt.colorEqual(Theme.inkFor(Theme.success), Theme.success))
+                failed.inkFor.push(context)
+            if (!Qt.colorEqual(ink, accent)) liftedRuns++
+        }
+        root._check(runs === 92 && failed.reads.length === 0,
+            "the accent as a word or a glyph holds 3:1 for every accent on glass and opaque: " + failed.reads.join(", "))
+        root._check(failed.hue.length === 0, "the accent's ink keeps its hue: " + failed.hue.join(", "))
+        root._check(failed.chosen.length === 0, "the chosen accent itself never moves: " + failed.chosen.join(", "))
+        root._check(failed.own.length === 0 && failed.opaque.length === 0 && liftedRuns > 0,
+            "an accent that already reads is its own ink, so every preset on an opaque menu draws as before: "
+                + failed.own.concat(failed.opaque).join(", ") + " (lifted " + liftedRuns + ")")
+        root._check(failed.inkFor.length === 0,
+            "a control's tint as ink: the accent takes its ink, status colours stay as they are: " + failed.inkFor.join(", "))
+
+        // real controls draw their words and glyphs with the ink and keep the accent for their fills
+        ShellSettings.popupMatchBarOpacity = true
+        ShellSettings.baseTone = "black"
+        ShellSettings.neutralTheme = true
+        ShellSettings.neutralAccentAuto = false
+        ShellSettings.neutralAccent = "#9babe9"
+        // a Text keeps its colour in 8 bits a channel
+        const near = (a, b) => Math.abs(a.r - b.r) < 0.003 && Math.abs(a.g - b.g) < 0.003
+            && Math.abs(a.b - b.b) < 0.003 && Math.abs(a.a - b.a) < 0.003
+        const row = controlRowFactory.createObject(barFixtureHost, { glyph: "󰂯", active: true })
+        const glyph = row ? root._findTrayNode(row, item => item.text === "󰂯") : null
+        const option = inlineOptionFactory.createObject(barFixtureHost, { selected: true })
+        const mark = option ? root._findTrayNode(option, item => item.text === "󰄬") : null
+        const card = updateStatusFactory.createObject(barFixtureHost, { status: "Probe status", statusColor: Theme.accent })
+        const words = card ? root._findTrayNode(card, item => item.text === "Probe status") : null
+        const lifted = !Qt.colorEqual(Theme.accentInk, Theme.accent)
+        root._check(lifted && glyph !== null && near(glyph.color, Theme.withAlpha(Theme.accentInk, 0.95)),
+            "an active control row draws its glyph with the accent's ink")
+        root._check(lifted && mark !== null && near(mark.color, Theme.accentInk),
+            "a selected option draws its check mark with the accent's ink")
+        root._check(lifted && words !== null && near(words.color, Theme.withAlpha(Theme.accentInk, 0.9)),
+            "an update card in the accent draws its status line with the accent's ink")
+        if (row) row.destroy()
+        if (option) option.destroy()
+        if (card) card.destroy()
+        MatugenTheme._palette = paletteWas
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
     function _checkGlassInks(): void {
         const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "highContrast", "baseTone", "barOpacity",
             "surfaceBlur", "popupMatchBarOpacity", "matugenAccentBalance", "matugenAccentRole", "matugenDepth"]
@@ -1695,7 +1795,8 @@ ShellRoot {
             const context = (neutral ? "neutral/" : "wallpaper/") + palette.accent + "/" + depth
             let lowest = Infinity, lowestInk = ""
             const inks = { subtext: Theme.subtext, detail: Theme.menuTextDetail, dependency: Theme.menuTextWarning,
-                quiet: Theme.menuTextQuiet, error: Theme.error, warning: Theme.warning, success: Theme.success }
+                quiet: Theme.menuTextQuiet, accent: Theme.accentInk, error: Theme.error, warning: Theme.warning,
+                success: Theme.success }
             for (const backdrop of [white, black]) {
                 const control = Theme._controlOverBackdrop(Theme.background, Theme.text, Theme.popupOpacity, backdrop)
                 for (const name in inks) {
@@ -3452,6 +3553,7 @@ ShellRoot {
         root._checkLightPalette()
         root._checkContrastKeepsHue()
         root._checkGlassInks()
+        root._checkAccentInk()
         root._check(MenuState.adjacentTab(MenuState.homeTab, false, 1) === MenuState.recentTab
                 && MenuState.adjacentTab(MenuState.recentTab, false, 1) === MenuState.settingsTab
                 && MenuState.adjacentTab(MenuState.settingsTab, false, 1) === MenuState.homeTab
