@@ -93,7 +93,14 @@ Item {
         Item {
             id: _powerRailSurface
             x: rail.menu.railCollapsedW
-            width: rail.menu.navW
+            // the closing rows keep their open width while the rail clips them away, as the drawers keep their labels:
+            // navW drops to the compact share the moment power closes, and every row reflowed 48 px narrower first
+            property real _openW: rail.menu.navW
+            Connections {
+                target: rail.menu
+                function onNavWChanged() { if (rail.menu.powerOpen) _powerRailSurface._openW = rail.menu.navW }
+            }
+            width: rail.menu.powerOpen ? rail.menu.navW : _powerRailSurface._openW
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 10
             height: rail.menu.powerOpen

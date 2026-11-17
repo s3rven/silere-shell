@@ -65,7 +65,9 @@ FittedPopupWindow {
 
         // every panel width stays on the 4px grid, or the outline's right edge lands on a half output px at fractional scale and rasterizes wider than its left
         readonly property int _compactW: 400 + Metrics.menuContentGrowth
-        readonly property int _powerW: 572 + _typeGain + Metrics.menuContentGrowth
+        // the home pane at its own width beside the power column (400 - 44 - 2 * 12 = 576 - 204 - 2 * 20): at 572 Home
+        // reflowed 4 px narrower as the drawer opened, and every right-aligned value stepped back before the glide
+        readonly property int _powerW: 576 + _typeGain + Metrics.menuContentGrowth
         readonly property int _settingsW: 672 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentBaseW: 492 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentW: _recentBaseW + _navMaxW + 16
