@@ -117,6 +117,7 @@ settings file carries its own `__version` and migrates separately.
 - The night light's sun arc writes durations like the battery does, "1h 5m" rather than "1h 05m".
 - Switching outputs with a long device name no longer pushes the volume level out of the on-screen display.
 - The first time Settings or History opens in a session, the page fades in once instead of drawing, blanking and fading in.
+- A notification that arrives when none are showing slides and fades in like the ones after it, instead of appearing in place.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.

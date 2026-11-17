@@ -354,9 +354,18 @@ Item {
         _updateTime()
         if (card._paused) card._hoverStartMs = Date.now()
     }
+    property bool _entryPending: false
     onVisibleChanged: {
         if (!visible && card._leaving) card._completeDismiss()
-        else if (visible) card._updateTime()
+        else if (visible) {
+            card._updateTime()
+            // a turn later: the motion gates read visible too, and a handler can run before their bindings do
+            if (card._entryPending) Qt.callLater(() => {
+                if (!card._entryPending) return
+                card._entryPending = false
+                cardRect.enter()
+            })
+        }
     }
 
     Timer {
@@ -548,14 +557,21 @@ Item {
             && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
             && (Math.abs(x) > 0.5 || opacity < 0.999)
 
+        function enter(): void {
+            if (card.visible && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) _openAnim.start()
+            _behaviorEnabled = true
+            opacity = 1.0
+            x = 0
+        }
+
         Component.onCompleted: {
             const isNew = !Notifications.isSeen(card.notifId)
             if (isNew) {
                 Notifications.markSeen(card.notifId)
-                if (card.visible && Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) _openAnim.start()
-                _behaviorEnabled = true
-                opacity = 1.0
-                x = 0
+                // the stack still reads empty while its first card builds, so that card is hidden for a moment and
+                // entering now drew it in place with no motion: it enters when it is first shown instead
+                if (!card.visible) card._entryPending = true
+                else cardRect.enter()
             } else {
                 x = 0
                 opacity = 1.0

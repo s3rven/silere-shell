@@ -13506,9 +13506,35 @@ ShellRoot {
         root._motionPage = pageShellFactory.createObject(root, {
             active: true, powerOpen: false
         })
+        // the first card into an empty stack builds while the stack still reads empty, so it is hidden as it completes
+        root._entryHost = entryHostFactory.createObject(barFixtureHost)
+        const freshId = 2147483590
+        root._entryWasUnseen = !Notifications.isSeen(freshId)
+        root._entryCard = notificationCardFactory.createObject(root._entryHost, { notifId: freshId })
+        root._entryHeldHidden = root._entryCard._entryPending === true
+        root._entryHost.visible = true
+        root._entryShownAt = Date.now()
         root._motionStep = 0
         _pageMotionCheck.interval = 40
         _pageMotionCheck.restart()
+    }
+    Component { id: entryHostFactory; Item { visible: false; width: 360; height: 200 } }
+    property var _entryHost: null
+    property var _entryCard: null
+    property bool _entryWasUnseen: false
+    property bool _entryHeldHidden: false
+    property real _entryShownAt: 0
+    function _checkHiddenCardEntry(): void {
+        const card = root._entryCard
+        const rect = card ? card.children.find(c => c._behaviorEnabled !== undefined) : null
+        // the slide, fade and height all run 200-280 ms; a check that came later than that cannot see them
+        const inTime = Date.now() - root._entryShownAt < 180
+        root._check(root._entryWasUnseen && root._entryHeldHidden && card && !card._entryPending && rect
+                && rect._behaviorEnabled && (!inTime || (card.collapseRatio < 1 && rect.opacity < 1)),
+            "a new card built while hidden plays its entrance when it is first shown, not in place")
+        root._entryHost.destroy()
+        root._entryHost = null
+        root._entryCard = null
     }
 
     Timer {
@@ -13517,6 +13543,7 @@ ShellRoot {
             const page = root._motionPage
             switch (root._motionStep++) {
             case 0:
+                root._checkHiddenCardEntry()
                 page.active = false
                 interval = Motion.pageOut + 80
                 restart()
