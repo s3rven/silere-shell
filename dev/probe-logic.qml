@@ -2919,6 +2919,11 @@ ShellRoot {
                 && Math.abs(busiestTop.share - 0.45) < 1e-9 && Math.abs(busiestTop.cores - 0.9) < 1e-9
                 && SysInfo.busiestProcess(null, secondTop) === null && SysInfo.busiestProcess(secondTop, firstTop) === null,
             "the busiest process has the most CPU ticks since the last sample, and a reused PID is left out")
+        const oddTop = SysInfo.processSample("cpu 10 0 0 10 0 0 0 0\n77 (a) b (c) R 1 2 3 4 5 6 7 8 9 10 11 12\n"
+            + "79 (z) R 1 2 3 4 5 6 7 8 9 10 11  13 14\n80 (w) R 1 2 3 4 5 6 7 8 9 10 11\nabc (q) R 1\n81 (nope R 1 2\n")
+        root._check(oddTop.names["77"] === "a) b (c" && oddTop.ticks["77"] === 23 && oddTop.ticks["79"] === 11
+                && oddTop.ticks["80"] === undefined && Object.keys(oddTop.ticks).length === 2 && oddTop.total === 20,
+            "a process name holding brackets and spaces, an empty field and a cut-short line each parse as /proc means them")
         const heavyTop = { cores: 0.9 }, easingTop = { cores: 0.7 }, lightTop = { cores: 0.2 }
         root._check([SysInfo.topSamplesAfter(heavyTop, 0.1, 0), SysInfo.topSamplesAfter(heavyTop, 0.1, 1),
                 SysInfo.topSamplesAfter(easingTop, 0.1, 2), SysInfo.topSamplesAfter(lightTop, 0.1, 2),

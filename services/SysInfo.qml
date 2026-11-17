@@ -334,23 +334,29 @@ Singleton {
         }
     }
 
-    // per-process ticks from /proc against the machine's, so the name is what runs now: ps gives a lifetime average
+    // per-process ticks from /proc against the machine's, so the name is what runs now: ps gives a lifetime average.
+    // utime and stime are found by walking spaces: splitting each of ~400 lines into its fields took 3.6 ms a sample
     function processSample(raw: string): var {
         const ticks = {}, names = {}
         let total = 0, cpus = 0
         for (const line of raw.split("\n")) {
-            if (line.startsWith("cpu ")) {
-                total = line.trim().split(/\s+/).slice(1, 9).reduce((sum, v) => sum + (Number(v) || 0), 0)
+            if (line.startsWith("cpu")) {
+                if (line.startsWith("cpu ")) total = line.trim().split(/\s+/).slice(1, 9).reduce((sum, v) => sum + (Number(v) || 0), 0)
+                else if (/^cpu[0-9]+ /.test(line)) cpus++
                 continue
             }
-            if (/^cpu[0-9]+ /.test(line)) { cpus++; continue }
             const open = line.indexOf(" (")
             const close = line.lastIndexOf(") ")
             if (open <= 0 || close < open) continue
             const pid = line.slice(0, open)
             if (!/^[0-9]+$/.test(pid)) continue
-            const rest = line.slice(close + 2).split(" ")
-            const used = Number(rest[11]) + Number(rest[12])
+            // the 12th and 13th fields after the name
+            let at = close + 2
+            for (let k = 0; k < 11 && at > 0; k++) at = line.indexOf(" ", at) + 1
+            const gap = at > 0 ? line.indexOf(" ", at) : -1
+            if (gap < 0) continue
+            const end = line.indexOf(" ", gap + 1)
+            const used = Number(line.slice(at, gap)) + Number(line.slice(gap + 1, end < 0 ? line.length : end))
             if (!isFinite(used)) continue
             ticks[pid] = used
             names[pid] = line.slice(open + 2, close)
