@@ -9147,6 +9147,22 @@ ShellRoot {
         track.commitOnRelease = true
         track.value = 0.25
         trackChanged = -1
+        track._press(track._thumbCenter)
+        track._drag(track._thumbCenter + 1)
+        track.value = 0.3
+        track._release()
+        root._check(trackChanged === -1 && track.shownValue === 0.3 && !track.dragging,
+            "holding a seek handle still lets playback advance without seeking back on release")
+        track.value = 0.15
+        track.nudge(1, 1)
+        const pendingAtGrab = track.shownValue
+        track._press(track._thumbCenter)
+        track.value = 0.16
+        track._release()
+        root._check(trackChanged === pendingAtGrab && !track._stepPending,
+            "grabbing a seek handle after a keyboard step preserves that pending seek until release")
+        track.value = 0.25
+        trackChanged = -1
         track.interactionKey = "first track"
         track._press(85)
         root._check(track.dragging && trackChanged === -1 && track.shownValue > 0.8,

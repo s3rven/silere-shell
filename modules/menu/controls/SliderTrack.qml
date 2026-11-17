@@ -62,6 +62,7 @@ Item {
     readonly property real shownValue: _shownValue
     readonly property bool dragging: root._gestureActive
     property bool _gestureActive: false
+    property bool _gestureChanged: false
     readonly property bool _canInteract: root.enabled && root.visible && root.interactive
     property real _shownValue: value
     property real _hoveredSince: 0
@@ -110,6 +111,7 @@ Item {
         Scroll.resetControl(root.wheelKey)
         if (!root.dragging && !root._stepPending) return
         root._gestureActive = false
+        root._gestureChanged = false
         root._stepPending = false
         root._grab = 0
         root._shownValue = root.value
@@ -153,6 +155,7 @@ Item {
         const next = _clamp(_snap(v))
         if (Math.abs(next - _shownValue) < 0.000001) return
         _shownValue = next
+        if (root.dragging) root._gestureChanged = true
         if (!commitOnRelease) changed(next)
         else if (!root.dragging) {
             root._stepPending = true
@@ -166,6 +169,7 @@ Item {
     function _press(px: real): void {
         if (!root._canInteract) return
         root._gestureActive = true
+        root._gestureChanged = root._stepPending
         root._stepPending = false
         const off = px - root._thumbCenter
         const onHandle = root.showThumb && Math.abs(off) <= root._thumbW / 2 + 2
@@ -183,7 +187,12 @@ Item {
     }
     function _release(): void {
         if (!root.dragging) return
+        const changed = root._gestureChanged
         root._gestureActive = false
+        root._gestureChanged = false
+        // a stationary grab must catch up with live playback, not seek back to
+        // the position it had at press; pending keyboard steps still commit
+        if (!changed) { root._shownValue = root.value; return }
         if (root.commitOnRelease && root._canInteract) root.changed(root._shownValue)
     }
     function nudge(dir: int, mult: int): void {
