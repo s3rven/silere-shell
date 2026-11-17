@@ -174,7 +174,9 @@ PanelWindow {
                         enabled: !Idle.isIdle
                         ParallelAnimation {
                             NumberAnimation { target: card; property: "_slide"; duration: Motion.ms(105); easing.type: Easing.InCubic }
-                            NumberAnimation { target: card; property: "_op";    duration: Motion.ms(115); easing.type: Easing.InCubic }
+                            // soft at both ends: on the accelerating curve the pill went from 42% to nothing in its last
+                            // frame, a blink rather than a fade, and a decelerating one dropped half of it in the first
+                            NumberAnimation { target: card; property: "_op";    duration: Motion.ms(115); easing.type: Easing.InOutQuad }
                             NumberAnimation { target: card; property: "height"; duration: Motion.ms(165); easing.type: Easing.InCubic }
                         }
                     }
