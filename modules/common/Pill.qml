@@ -433,6 +433,9 @@ Item {
                 id: _segment
                 required property int index
                 readonly property var seg: root.segments[index] ?? ({})
+                // held here, so a reading's tick, which hands every segment a new object, writes no colour: Text keeps
+                // 8 bits a channel, a computed colour never reads back equal, and each write restarted the 160 ms fade
+                readonly property color _ink: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
                 height: row.height
                 // half again the glyph gap ahead of each pair: a glyph reads as its own reading's, yet the pairs stay one widget
                 leftPadding: Math.round(row.spacing / 2)
@@ -447,7 +450,7 @@ Item {
                         id: _segGlyph
                         anchors.centerIn: parent
                         text: _segment.seg.glyph ?? ""
-                        color: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
+                        color: _segment._ink
                         font.pixelSize: root.glyphPixelSize
                         ColorFade on color {}
                     }

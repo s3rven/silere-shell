@@ -569,6 +569,18 @@ else
   ok "mapping" "coordinate mapping stays out of bindings"
 fi
 
+section "colour fades"
+# Text keeps 8 bits a channel, so a computed colour written again never reads back equal and restarts its fade.
+# Bound straight to a delegate's per-tick object, every reading redrew the bar (system monitor: idle CPU about 6x)
+faded_delegate_colours="$(grep -rnE -A3 --include='*.qml' '^[[:space:]]*color:.*(modelData\.|\.seg\.)' modules \
+  | grep -E 'ColorFade on color' || true)"
+if [ -n "$faded_delegate_colours" ]; then
+  fail "a faded colour reads a delegate object directly; hold it in a typed color property first:"
+  printf '%s\n' "$faded_delegate_colours"
+else
+  ok "fades" "no faded colour is bound straight to a delegate's per-tick object"
+fi
+
 section "pooled delegate motion"
 # Inspect delegate scopes and their component files; a view's header and disclosure
 # animations are never pooled and must not be required to carry a reuse gate.
