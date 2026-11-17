@@ -21,7 +21,8 @@ Pill {
     accessibleName: ["Keyboard", InputState.layout,
         InputState.capsAvailable ? (InputState.capsLock ? "Caps Lock on" : "Caps Lock off") : ""]
         .filter(part => part.length > 0).join(", ")
-    interactive: root.show && InputState.layout.length > 0
+    // a click cycles layouts: with one there is nothing to cycle, so no hover fill or press promising one
+    interactive: root.show && InputState.layout.length > 0 && Compositor.keyboardLayoutCount !== 1
     onActivated: if (root.canActivate) Compositor.cycleKeyboardLayout()
     pressed: _tap.pressed
     TapHandler { id: _tap; enabled: root.canActivate; onTapped: root.activated() }

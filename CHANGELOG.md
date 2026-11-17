@@ -64,6 +64,7 @@ settings file carries its own `__version` and migrates separately.
 - The media visualizer goes faint where it passes behind the track title, on a tall bar and in large type too.
 - Notification popups wait while the menu, calendar or another panel is open, so one no longer times out behind the calendar with its buttons out of reach.
 - Home's busiest-process reading takes a third of the time it did.
+- With one keyboard layout, the keyboard widget no longer shows a hover fill or a click, since there is nothing to switch to.
 
 ### Fixed
 

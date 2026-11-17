@@ -10,6 +10,8 @@ import "../config"
 QtObject {
     id: root
     property string keyboardLayout: ""
+    // 0 = not read yet; Hyprland lists the main keyboard's layouts comma-separated ("us,lv")
+    property int keyboardLayoutCount: 0
     function cycleKeyboardLayout(): void {
         Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
     }
@@ -32,6 +34,7 @@ QtObject {
             const pool = physical.length > 0 ? physical : keyboards.filter(k => !!k)
             const main = pool.find(k => k.main) || pool[0]
             root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
+            root.keyboardLayoutCount = main ? String(main.layout ?? "").split(",").filter(l => l.trim().length > 0).length : 0
         } catch (e) {}
     }
     // wtype, emoji pickers and remote input upload their own keymap, often nameless ("error"), and become main while typing

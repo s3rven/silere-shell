@@ -7802,7 +7802,7 @@ ShellRoot {
             "unsaved markers and a lone glyph stay in the window title")
         const hypr = Compositor.isHyprland ? Compositor._be : null
         if (hypr) {
-            const keyboardWas = { layout: hypr.keyboardLayout, revision: hypr._keyboardRevision }
+            const keyboardWas = { layout: hypr.keyboardLayout, revision: hypr._keyboardRevision, count: hypr.keyboardLayoutCount }
             const keyboardSnapshot = JSON.stringify({ keyboards: [null,
                 { main: false, active_keymap: "English (US)" },
                 { main: true, active_keymap: "Latvian" }] })
@@ -7834,6 +7834,7 @@ ShellRoot {
                 "a valid snapshot with no keyboard clears its removed layout")
             hypr.keyboardLayout = keyboardWas.layout
             hypr._keyboardRevision = keyboardWas.revision
+            hypr.keyboardLayoutCount = keyboardWas.count
             root._check(hypr.blurBlockerFrom('{"version": "0.55.4"}{"bool": true}') === "Needs Hyprland 0.56"
                     && hypr.blurBlockerFrom('{"tag": "v0.54.0"}') === "Needs Hyprland 0.56",
                 "a Hyprland without the blur protocol is named on the blur row")

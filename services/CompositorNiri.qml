@@ -17,6 +17,7 @@ QtObject {
     property var _keyboardNames: []
     property int _keyboardIndex: 0
     readonly property string keyboardLayout: SafeText.singleLineText(root._keyboardNames[root._keyboardIndex] || "", 128)
+    readonly property int keyboardLayoutCount: root._keyboardNames.length
     function cycleKeyboardLayout(): void { root._action(["switch-layout", "next"]) }
 
     readonly property string socketPath: String(Quickshell.env("NIRI_SOCKET") || "")

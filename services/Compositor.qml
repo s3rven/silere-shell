@@ -43,6 +43,7 @@ Singleton {
     // output name -> EDID serial, where the compositor knows one Quickshell does not
     readonly property var monitorSerials:     _be && _be.monitorSerials ? _be.monitorSerials : ({})
     readonly property string keyboardLayout: _be && _be.keyboardLayout !== undefined ? _be.keyboardLayout : ""
+    readonly property int keyboardLayoutCount: _be && _be.keyboardLayoutCount !== undefined ? _be.keyboardLayoutCount : 0
     readonly property bool sharingSupported: root.isHyprland || !!(_be && _be.sharingSupported)
     function cycleKeyboardLayout(): void {
         if (Quickshell.env("SILERE_SANDBOX") !== "1" && root._be && root._be.cycleKeyboardLayout)
