@@ -2990,6 +2990,34 @@ ShellRoot {
             lookup.command = commandWas
             Weather._place = placeWas
 
+            // a wake from suspend: nothing failed, the reading predates the sleep, and the network comes back
+            const wakeDeadline = Date.now() + 1000
+            while ((lookup.running || Weather._discardLookup) && Date.now() < wakeDeadline) discoveryClock.wait(10)
+            lookup.command = ["sleep", "2"]
+            Weather._place = null
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather._fetchedAt = Date.now()
+            Weather._fetchedFor = Weather._key(Weather._fetchedAt)
+            Weather.loading = false
+            Weather.failed = false
+            ShellSettings.barShowClock = true
+            ShellSettings.clockShowWeather = true
+            Weather._networkBack(true)
+            const freshKept = !Weather.loading && !lookup.running
+            Weather._fetchedAt = Date.now() - Weather.maxAgeMs - 1
+            Weather._networkBack(false)
+            const offlineKept = !Weather.loading && !lookup.running
+            Weather._networkBack(true)
+            root._check(freshKept && offlineKept && Weather.loading && lookup.running,
+                "a reconnect refreshes a bar weather reading that went stale during suspend, and leaves a fresh one")
+            ShellSettings.clockShowWeather = onlineWas.weather
+            ShellSettings.barShowClock = onlineWas.clock
+            ShellSettings.weatherEnabled = false
+            if (lookup.running) lookup.running = false
+            lookup.command = commandWas
+            Weather._place = placeWas
+
             discoveryClock.wait(30)
             let lookupStarts = 0
             const countLookupStart = () => { if (lookup.running) lookupStarts++ }

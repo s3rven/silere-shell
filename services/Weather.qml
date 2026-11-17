@@ -238,15 +238,17 @@ Singleton {
     function _barTick(): void {
         if (!root.failed || Date.now() - root._triedAt >= root.maxAgeMs) root.request(false)
     }
-    // offline is the common failure, and it ends with the connection or a sign-in page clearing, not on the next tick
+    // offline is the common failure, and it ends with the connection or a sign-in page clearing, not on the next tick.
+    // A wake from suspend reconnects too, holding a reading from before the sleep that the bar's monotonic timer would
+    // show for up to five more minutes; the cache decides whether either needs a fetch
+    function _networkBack(online: bool): void {
+        if (online && (_barRefresh.running || CalendarState.open)) root.request(false)
+    }
     Connections {
         target: Network
-        function onConnectedChanged() {
-            if (Network.connected && root.failed && (_barRefresh.running || CalendarState.open)) root.request(false)
-        }
+        function onConnectedChanged() { root._networkBack(Network.connected) }
         function onConnectivityIssueChanged() {
-            if (Network.connected && Network.connectivityIssue.length === 0 && root.failed
-                    && (_barRefresh.running || CalendarState.open)) root.request(false)
+            root._networkBack(Network.connected && Network.connectivityIssue.length === 0)
         }
     }
 
