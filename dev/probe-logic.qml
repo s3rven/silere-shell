@@ -6923,6 +6923,12 @@ ShellRoot {
                 && MenuState.searchSettings("qzxv").length === 0 && MenuState._correctedTerm("clok") === "clock"
                 && MenuState._correctedTerm("lok") === "lok",
             "typo correction leaves exact matches, short words and unrelated names alone")
+        const landsOn = (query, key) => (MenuState.searchSettings(query)[0] ?? {}).key === key
+        root._check(landsOn("wave", "mediaVisualizerStyle") && landsOn("balanced", "mediaVisualizerPreset")
+                && landsOn("tall", "barHeight") && landsOn("wide", "barSpacing") && landsOn("warm", "nightLightProvider")
+                && landsOn("battery percentage", "valuesOnHover") && landsOn("charging", "batteryAutoHide")
+                && landsOn("systray", "trayWidget") && MenuState._correctedTerm("charging") === "charging",
+            "a row's chip names and everyday words find that row, not a word spelled near them")
         MenuState.setSettingsSection("popups")
         root._check(MenuState.settingsSection === "popups",
             "a known settings page is selected by name")

@@ -157,7 +157,7 @@ AnchoredPopupState {
     readonly property var _settingsSearchAliases: ({
         theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
         interface: "font typeface text size bigger larger smaller zoom icons scale accessibility animations contrast menu groups",
-        devices: "display monitor screen brightness ddc ddcutil external backlight keyboard light bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset dock overlay",
+        devices: "display monitor screen multi primary brightness ddc ddcutil external backlight keyboard light bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset dock overlay",
         surface: "bar position top bottom size shape corners rounded floating margin tooltip",
         underline: "underline glow screenshot pulse activity",
         separators: "spacing gaps padding dividers compact",
@@ -170,7 +170,29 @@ AnchoredPopupState {
         history: "notification history retention saved muted mute apps clear limit",
         osd: "on screen display volume sound audio brightness feedback popup integrated floating",
         warnings: "battery cpu temperature hot overheating critical alerts threshold",
-        updates: "updates version release install diagnostics health repair tools dependencies recovery reset defaults maintenance daily shell check doctor fix problems"
+        updates: "updates version release changelog install diagnostics health repair tools dependencies recovery reset restore defaults maintenance daily shell check doctor fix problems"
+    })
+
+    // the words a row shows besides its title (its chips) or answers to, so the row itself is found and flashed.
+    // A real word the index lacks is otherwise "corrected" to a near one: wave found History, charging found screen sharing
+    readonly property var _settingsKeyAliases: ({
+        mediaVisualizerStyle: "wave bars pulse",
+        mediaVisualizerPreset: "eco balanced smooth",
+        barHeight: "compact tall",
+        barSpacing: "tight wide",
+        wsActiveMarker: "gem dot line",
+        dotStyle: "bullet ring slash",
+        barSeparatorMode: "groups every",
+        notifMaxVisible: "stack",
+        calendarWeekStart: "first day",
+        weatherEnabled: "location",
+        nightLightProvider: "nightlight warm sunset sunrise redshift",
+        // off shows the battery percentage and other readings all the time
+        valuesOnHover: "battery percentage",
+        batteryAutoHide: "charging plugged",
+        osdChargedNotify: "charging",
+        uiScale: "scaling",
+        trayWidget: "systray"
     })
 
     function _searchWords(text: string): string {
@@ -195,11 +217,12 @@ AnchoredPopupState {
         for (let i = 0; i < schema.length; i++) {
             const entry = schema[i]
             const label = entry.l || widgetLabels[entry.k] || ""
-            const words = " " + root._searchWords(entry.k + " " + label) + " "
+            const alias = root._settingsKeyAliases[entry.k] || ""
+            const words = " " + root._searchWords(entry.k + " " + label + " " + alias) + " "
             const sections = String(entry.sec).split(",")
             for (let j = 0; j < sections.length; j++) {
                 const sec = sections[j]
-                keys[sec] = (keys[sec] || "") + " " + entry.k
+                keys[sec] = (keys[sec] || "") + " " + entry.k + " " + alias
                 labels[sec] = (labels[sec] || "") + " " + label
                 if (!keyWords[sec]) keyWords[sec] = []
                 keyWords[sec].push({ key: entry.k, label: label, words: words, labelWords: spaced(label) })

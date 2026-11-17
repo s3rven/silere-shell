@@ -33,6 +33,7 @@ settings file carries its own `__version` and migrates separately.
 - Opening notification history ends Do Not Disturb's missed count, so the bell and Home's badge no longer stay lit for notifications you have seen.
 - Scrolling or using the arrow keys on Night light's temperature, an external display's brightness or the Now Playing seek bar applies once you stop, not at every step.
 - A rollback to 1.7 keeps the headphone pause setting.
+- Settings search finds a row by the options it shows, such as Wave, Balanced or Tall, and by words like charging, battery percentage, sunset, scaling and systray.
 - Notification icons that apps pass as files from their own installed folders show instead of a letter, such as kitty's for programs running in it.
 - Silere's own alerts show as Silere Shell, each with an icon for what it is about.
 - Notification history opens on every app each time the menu opens, so an app picked earlier no longer hides the notifications you came for.
