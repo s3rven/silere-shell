@@ -7,8 +7,8 @@ if [ "${1:-}" = --inner ]; then
     scratch="$2"; backend="$3"; benchmark="${4:-}"
     [[ "$XDG_CONFIG_HOME" = "$scratch/"* && -z "${XDG_SESSION_ID:-}" ]] || exit 1
     case "${DBUS_SESSION_BUS_ADDRESS:-}" in ''|*/run/user/*/bus*) exit 1 ;; esac
-    parent_pid=""; child_pid=""; shell_pid=""; monitors_pid=""
-    trap '_probe_stop "$monitors_pid"; _probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
+    parent_pid=""; child_pid=""; shell_pid=""; monitors_pid=""; window_pid=""
+    trap '_probe_stop "$window_pid"; _probe_stop "$monitors_pid"; _probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
     kwin_wayland --virtual --no-lockscreen --no-global-shortcuts --width 1280 --height 900 \
         --socket silere-test-parent > "$scratch/parent.log" 2>&1 &
     parent_pid=$!
@@ -195,9 +195,23 @@ EOF
             grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2 || cat "$scratch/monitors.log" >&2
             exit 1
         done
+        # a window that opens focused while the shell is busy is the focused window once it maps
+        printf 'import Quickshell\nShellRoot { FloatingWindow { title: "silere-probe-window"; implicitWidth: 200; implicitHeight: 120 } }\n' \
+            > "$scratch/window.qml"
+        printf 'busy\n' > "$scratch/phase"
+        sleep 0.3
+        qs -p "$scratch/window.qml" --no-color > "$scratch/window.log" 2>&1 &
+        window_pid=$!
+        for _ in $(seq 1 50); do grep -q 'PROBE-MONITORS busy ' "$scratch/monitors.log" && break; sleep 0.1; done
+        step window-opened
+        grep -q "PROBE-MONITORS window-opened .*window=silere-probe-window special=" "$scratch/monitors.log" || {
+            printf 'FAIL: a window that opened while the shell was busy is not the focused window\n' >&2
+            grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2; cat "$scratch/window.log" >&2
+            exit 1
+        }
         errors="$(_probe_errors "$scratch/monitors.log")"
         [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
-        checked="$checked, a special workspace open at start, a second monitor's named workspace"
+        checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy"
     fi
     errors="$(_probe_errors "$scratch/shell.log")"
     [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }

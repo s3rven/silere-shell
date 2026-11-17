@@ -441,12 +441,18 @@ QtObject {
     // quickshell signals every window's address again with each client reply, so a binding that read t.address reran once per window
     readonly property var _addressOf: new Map()
     function _addr(t): string { return (t && root._addressOf.get(t)) || "" }
+    // the map fills on a later tick than quickshell's own update: a window that opens focused or urgent is missing from
+    // it when activeToplevel and urgentRefs first look, so those two read this. Bumped only when the windows change
+    property int _addressRev: 0
     // an empty closed set lists every window quickshell holds, ghosts included: only the eviction and the copies ask for that
     function _liveToplevels(closed = root._closedAddrs): var {
         return root._withoutClosed(Hyprland.toplevels ? (Hyprland.toplevels.values ?? []) : [], closed, t => root._addr(t))
     }
     // its own list: urgency read inside the window model would rebuild that model for every consumer on each flip
-    readonly property var urgentRefs: root._liveToplevels().filter(t => t && t.urgent && root._addr(t)).map(t => "0x" + root._addr(t))
+    readonly property var urgentRefs: {
+        void root._addressRev
+        return root._liveToplevels().filter(t => t && t.urgent && root._addr(t)).map(t => "0x" + root._addr(t))
+    }
 
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""
@@ -466,9 +472,16 @@ QtObject {
     // the one place a window's address is read for the models, outside any binding; the copies' change reruns them
     function _syncIpcCopies(): void {
         const tops = root._liveToplevels({})
-        root._addressOf.clear()
-        for (const t of tops) if (t && t.address) root._addressOf.set(t, t.address)
+        const known = root._addressOf
+        const next = new Map()
+        for (const t of tops) if (t && t.address) next.set(t, t.address)
+        let changed = next.size !== known.size
+        for (const [t, address] of next) if (known.get(t) !== address) changed = true
+        known.clear()
+        for (const [t, address] of next) known.set(t, address)
         root._ipcCopies = root.ipcCopiesOf(tops)
+        // after the copies, so the window models have rebuilt once by the time these bindings look again
+        if (changed) root._addressRev++
     }
     // quickshell's own model, not a list: a list built from it is new on every open and close, and rebuilt every watcher
     property Instantiator _ipcWatch: Instantiator {
@@ -643,6 +656,7 @@ QtObject {
     readonly property var activeToplevel: {
         if (root._unfocused) return null
         const t = Hyprland.activeToplevel
+        void root._addressRev
         const bare = root._addr(t)
         if (!bare) return null
         const addr = "0x" + bare

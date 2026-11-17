@@ -8030,6 +8030,13 @@ ShellRoot {
             hypr._syncIpcCopies()
             root._check(addressWas === "" && addressSynced === "d4" && hypr._addr(unsynced) === "" && hypr._addr(null) === "",
                 "the window models learn an address from the copy sync, never by reading the window, which signals it on every reply")
+            hypr._addressOf.set(unsynced, "d4")
+            const revWas = hypr._addressRev
+            hypr._syncIpcCopies()
+            const revOnChange = hypr._addressRev
+            hypr._syncIpcCopies()
+            root._check(revOnChange === revWas + 1 && hypr._addressRev === revOnChange,
+                "a sync that changes the windows tells the active window and urgency to look again, and a reply with the same windows does not")
             const oddClass = "kit\u202Ety\n\u0007app"
             const cleaned = hypr._identity(oddClass)
             for (let i = 0; i < 300; i++) hypr._identity("probe-class-" + i)

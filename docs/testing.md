@@ -52,8 +52,8 @@ These create private nested sessions. The runner needs KWin, `dbus-run-session`,
 and the selected compositor. A nested shell you start by hand should set `SILERE_SANDBOX=1`, as these
 runners do, so it never locks, suspends or ends your real session, and never changes your
 brightness, Wi-Fi, Bluetooth or power mode. Hyprland checks include an already-open special
-workspace and named workspaces on a second output. KWin also provides a test host
-for output removal and popup interactions.
+workspace, named workspaces on a second output, and a window that opens while the shell is
+busy. KWin also provides a test host for output removal and popup interactions.
 
 Without a GPU render node, the niri runner checks panels and popup interactions,
 then explicitly skips full shell startup. Read the skip message when assessing
