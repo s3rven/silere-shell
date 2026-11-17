@@ -479,6 +479,119 @@ def run_cycles(lab, args, arms):
     return results
 
 
+# one row per line of the docs/performance.md visualizer table
+VISUALIZER_ROWS = [
+    ("Off", {"mediaProgress": False}),
+    ("Media, Wave, Eco", {"mediaVisualizerPosition": "media", "mediaVisualizerStyle": "wave", "mediaVisualizerPreset": "eco"}),
+    ("Media, Wave, Balanced", {"mediaVisualizerPosition": "media", "mediaVisualizerStyle": "wave", "mediaVisualizerPreset": "balanced"}),
+    ("Media, Wave, Smooth", {"mediaVisualizerPosition": "media", "mediaVisualizerStyle": "wave", "mediaVisualizerPreset": "smooth"}),
+    ("Media, Bars, Balanced", {"mediaVisualizerPosition": "media", "mediaVisualizerStyle": "bars", "mediaVisualizerPreset": "balanced"}),
+    ("Media, Pulse, Balanced", {"mediaVisualizerPosition": "media", "mediaVisualizerStyle": "pulse", "mediaVisualizerPreset": "balanced"}),
+    ("Center, Wave, Balanced", {"mediaVisualizerPosition": "center", "mediaVisualizerStyle": "wave", "mediaVisualizerPreset": "balanced"}),
+    ("Underline, Wave, Balanced", {"mediaVisualizerPosition": "underline", "mediaVisualizerStyle": "wave", "mediaVisualizerPreset": "balanced"}),
+]
+
+
+def music_wav(path, seconds=20, rate=48000):
+    # chords, a bass line and a hi-hat at 120 bpm, so every band Cava splits the spectrum into moves; the sink is a null
+    # sink in the lab's own PipeWire, so nothing reaches a speaker
+    import math, struct, wave
+    chords = [(220.0, 277.2, 329.6), (196.0, 246.9, 293.7), (174.6, 220.0, 261.6), (196.0, 246.9, 311.1)]
+    rng = random.Random(7)
+    frames = bytearray()
+    for i in range(seconds * rate):
+        t = i / rate
+        beat, bar = (t * 2) % 1, int(t / 2) % len(chords)
+        env = math.exp(-beat * 3)
+        v = sum(math.sin(2 * math.pi * f * t) for f in chords[bar]) * 0.12 * (0.5 + 0.5 * env)
+        v += math.sin(2 * math.pi * chords[bar][0] / 2 * t) * 0.25 * env
+        v += (rng.random() * 2 - 1) * 0.08 * math.exp(-((t * 4) % 1) * 18)
+        s = int(max(-1, min(1, v)) * 30000)
+        frames += struct.pack("<hh", s, s)
+    with wave.open(path, "wb") as w:
+        w.setnchannels(2)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(bytes(frames))
+
+
+def descendants(pid):
+    kids = {}
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/stat") as f:
+                parent = int(f.read().rsplit(")", 1)[1].split()[1])
+        except (OSError, ValueError, IndexError):
+            continue
+        kids.setdefault(parent, []).append(int(entry))
+    out, todo = [], [pid]
+    while todo:
+        for child in kids.get(todo.pop(), []):
+            out.append(child)
+            todo.append(child)
+    return out
+
+
+def process_name(pid):
+    try:
+        with open(f"/proc/{pid}/comm") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def run_visualizer(lab, args, arms):
+    # percent of one core for the shell and for its Cava, with a track playing and audio going into the lab's sink
+    if not shutil.which("pw-play"):
+        sys.exit("the visualizer bench needs pw-play, from PipeWire's tools")
+    base = {}
+    if args.settings:
+        with open(args.settings) as f:
+            base = json.load(f)
+    base.update({"mediaProgress": True})
+    path = os.environ["XDG_RUNTIME_DIR"] + "/player.py"
+    with open(path, "w") as f:
+        f.write(PLAYER)
+    lab._spawn(["python3", path], lab.env, "player")
+    track = os.environ["XDG_RUNTIME_DIR"] + "/music.wav"
+    music_wav(track)
+    lab._spawn(["bash", "-c", f"while :; do pw-play --target Bench_Output {track} || sleep 1; done"], lab.env, "music")
+    time.sleep(2)
+    plan = [(name, tree, row) for name, tree in arms.items() for row in VISUALIZER_ROWS] * args.n
+    random.Random(args.seed).shuffle(plan)
+    results = {}
+    for name, tree, (label, overrides) in plan:
+        folder = os.environ["XDG_CONFIG_HOME"] + "/silere-shell"
+        with open(folder + "/settings.json", "w") as f:
+            json.dump(dict(base, **overrides, powerProfileRemember=False, nightLightAuto=False, nightLightOn=False), f)
+        lab.start_shell(tree)
+        time.sleep(3)
+        lab.ipc("quickActions", "keepAwake")
+        time.sleep(8)
+        cava = [p for p in descendants(lab.shell.pid) if process_name(p) == "cava"]
+        shell_before = cpu_seconds(lab.shell.pid)
+        cava_before = sum(cpu_seconds(p) for p in cava)
+        started = time.monotonic()
+        time.sleep(args.window)
+        spent = time.monotonic() - started
+        shell_pct = (cpu_seconds(lab.shell.pid) - shell_before) * 100 / spent
+        cava_now = [p for p in cava if os.path.exists(f"/proc/{p}")]
+        cava_pct = (sum(cpu_seconds(p) for p in cava_now) - cava_before) * 100 / spent if cava_now == cava else None
+        results.setdefault(f"{name}, {label}", []).append({"shell": round(shell_pct, 2), "cava": None if cava_pct is None else round(cava_pct, 2),
+                                                          "cava_running": bool(cava), "errors": len(lab.errors())})
+        print(f"{name}, {label}: shell {shell_pct:.1f}%, cava " + ("-" if cava_pct is None else f"{cava_pct:.1f}%")
+              + ("" if cava else " (no cava)"), flush=True)
+        lab.stop_shell()
+        time.sleep(1)
+    for key, runs in results.items():
+        shells = [r["shell"] for r in runs]
+        cavas = [r["cava"] for r in runs if r["cava"] is not None]
+        print(f"{key}: shell median {statistics.median(shells):.1f}%" + (f", cava median {statistics.median(cavas):.1f}%" if cavas else ""), flush=True)
+    return results
+
+
 def run_settings(lab, args, arms):
     tree = next(iter(arms.values()))
     configs = {"session": {}, "+allocator": ALLOCATOR, "+no KDE theme": NO_KDE_THEME, "+gray text": GRAY_TEXT,
@@ -564,19 +677,20 @@ def run_soak(lab, args, arms):
 
 def main():
     parser = argparse.ArgumentParser(description="measure a whole shell in a private nested session")
-    parser.add_argument("test", choices=("startup", "latency", "cycles", "settings", "soak"))
+    parser.add_argument("test", choices=("startup", "latency", "cycles", "settings", "soak", "visualizer"))
     parser.add_argument("--arm", action="append", default=[], metavar="NAME=DIR", help="a checkout to measure, repeatable; default: this one")
     parser.add_argument("--n", type=int, default=None, help="trials per arm; default 20 for startup, 12 for latency, 10 for settings, 2 for cycles")
     parser.add_argument("--cycles", type=int, default=50, help="menu opens per cycles run")
     parser.add_argument("--hours", type=float, default=6.0, help="length of a soak")
     parser.add_argument("--idle", dest="workload", action="store_false", help="soak with Keep Awake on and nothing happening")
     parser.add_argument("--settings", metavar="FILE", help="a settings.json to copy in; default: all defaults")
+    parser.add_argument("--window", type=float, default=20.0, help="seconds each visualizer row is measured over")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--out", metavar="FILE", help="write the raw results here as JSON")
     args = parser.parse_args()
     refuse_real_session()
     if args.n is None:
-        args.n = {"startup": 20, "latency": 12, "settings": 10, "cycles": 2}.get(args.test, 1)
+        args.n = {"startup": 20, "latency": 12, "settings": 10, "cycles": 2, "visualizer": 2}.get(args.test, 1)
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     arms = dict(arm.split("=", 1) for arm in args.arm) or {"this checkout": here}
     arms = {name: os.path.abspath(tree) for name, tree in arms.items()}

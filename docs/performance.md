@@ -95,6 +95,7 @@ bash dev/bench-lab.sh latency                                         # every pa
 bash dev/bench-lab.sh cycles --cycles 50                              # does memory settle over repeated opens
 bash dev/bench-lab.sh settings                                        # what each setting above saves and costs
 bash dev/bench-lab.sh soak --hours 6                                  # memory over a long session
+bash dev/bench-lab.sh visualizer --n 5                               # each visualizer setting's CPU, music playing
 ```
 
 Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
@@ -116,20 +117,21 @@ windows, making a high-refresh display look like 60 Hz. Launch with
 ## Visualizer and Cava
 
 The visualizer is the main optional CPU cost, and only while it is on screen and music plays.
-Drawing it costs the shell more than Cava costs to listen. Measured in a nested 1920x1200 session at
-scale 1.25 with audio playing, as percent of one core for the shell plus Cava:
+Drawing it costs the shell more than Cava costs to listen. Measured with `dev/bench-lab.sh visualizer`
+in a nested 2560x1600 session at scale 1.25, music playing into the lab's own silent sink, as percent
+of one core for the shell and for Cava, the median of five 20-second runs:
 
 | Visualizer | Shell | Cava |
 |---|---|---|
-| Off | 0.1 | 0 |
-| Media position, Wave: Eco / Balanced / Smooth | 3.0 / 4.6 / 5.1 | 0.8 / 1.1 / 1.1 |
-| Media position, Balanced: Bars / Pulse | 3.5 / 2.3 | 0.7 / 0.6 |
-| Center position, Wave, Balanced | 5.3 | 1.1 |
-| Underline position, Wave, Balanced | 8.2 | 1.2 |
+| Off | 0.2 | 0 |
+| Media position, Wave: Eco / Balanced / Smooth | 3.4 / 5.0 / 5.8 | 0.9 / 1.1 / 1.4 |
+| Media position, Balanced: Bars / Pulse | 3.5 / 3.6 | 0.8 / 0.8 |
+| Center position, Wave, Balanced | 6.4 | 1.2 |
+| Underline position, Wave, Balanced | 11.3 | 1.1 |
 
 The underline position traces a curve across the whole bar each frame, so it costs about twice
-the others. A larger display or a higher scale raises every row. Pulse at Eco is the
-lightest choice that still moves.
+the others. A larger display or a higher scale raises every row, the center and underline
+positions most, since they span more of the bar. Eco is the lightest preset that still moves.
 
 Silere creates its own temporary Cava profile at runtime, so it does not alter or depend on your
 personal Cava configuration.
