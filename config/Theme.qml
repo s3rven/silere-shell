@@ -131,9 +131,37 @@ Singleton {
     // matugen warning/success are M3 tertiary/secondary with no semantic meaning, so anchor the hue and let it tint; error is real
     readonly property color _warnAnchor: "#d4ad77"
     readonly property color _okAnchor:   "#94bd8b"
-    readonly property color _tErrorBase:   _n ? "#dd92a2" : MatugenTheme.error
-    readonly property color _tWarningBase: _n ? _warnAnchor : _semanticInk(_warnAnchor, MatugenTheme.warning)
-    readonly property color _tSuccessBase: _n ? _okAnchor   : _semanticInk(_okAnchor,   MatugenTheme.success)
+    readonly property color _errorSource:   _n ? Qt.color("#dd92a2") : MatugenTheme.error
+    readonly property color _warningSource: _n ? _warnAnchor : _semanticInk(_warnAnchor, MatugenTheme.warning)
+    readonly property color _successSource: _n ? _okAnchor   : _semanticInk(_okAnchor,   MatugenTheme.success)
+    readonly property color _tErrorBase:   root._apartFromAccent(_errorSource, [_warningSource, _successSource])
+    readonly property color _tWarningBase: root._apartFromAccent(_warningSource, [_tErrorBase, _successSource])
+    readonly property color _tSuccessBase: root._apartFromAccent(_successSource, [_tErrorBase, _tWarningBase])
+    // a status colour must not pass for the accent: Gold drew warnings, Leaf successes and Coral errors in the accent's
+    // own colour (CIEDE2000 2.0, 2.8, 5.6), and so did an auto accent off an amber, green or red wallpaper, so an urgent
+    // workspace read as the active one. The gap is taken on the a*b* plane, which the bar's lightness solve leaves alone.
+    // Only the hue turns, the least that clears the accent and the other status colours, so L* (and contrast) and
+    // chroma hold; turning away from the accent alone walked a red wallpaper's error onto its warning
+    readonly property real _statusGap: 18
+    function _apartFromAccent(status: color, others: var): color {
+        const lab = c => _labOf(c)
+        const accent = lab(_tAccent)
+        const gap = (x, y) => Math.hypot(x.a - y.a, x.b - y.b)
+        if (gap(lab(status), accent) >= _statusGap) return status
+        const own = lchOf(status)
+        const away = ((own.h - lchOf(_tAccent).h) % 360 + 540) % 360 - 180 >= 0 ? 1 : -1
+        const kept = others.map(lab)
+        const worstOf = l => Math.min(gap(l, accent), ...kept.map(k => gap(l, k)))
+        // where nothing clears every colour, the least crowded turn wins, and not turning at all is one of them
+        let best = status, bestGap = worstOf(lab(status))
+        for (let step = 1; step <= 12; step++) for (const turn of [away, -away]) {
+            const out = lchColor(own.L, own.C, own.h + turn * 5 * step)
+            const worst = worstOf(lab(out))
+            if (worst >= _statusGap) return out
+            if (worst > bestGap) { best = out; bestGap = worst }
+        }
+        return best
+    }
     // a status colour is read as a glyph or a short word on a card; over glass it has to hold
     // through a white window behind a dark menu and a dark one behind a light menu
     readonly property color _tError:    root._glassInk(_tErrorBase,   3.0)

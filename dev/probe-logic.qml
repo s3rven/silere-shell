@@ -1987,6 +1987,102 @@ ShellRoot {
         for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
     }
 
+    // a warning in Gold, a success in Leaf, an error in Coral, or any of them under an auto accent off a wallpaper
+    // of the same hue, drew in the accent's own colour; on the bar an urgent workspace then read as the active one
+    function _checkStatusApart(): void {
+        const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "neutralAccent", "highContrast", "baseTone",
+            "barOpacity", "matugenAccentBalance", "matugenAccentRole"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = true
+        ShellSettings.highContrast = false
+        ShellSettings.baseTone = "black"
+        ShellSettings.barOpacity = 0.58
+        ShellSettings.matugenAccentBalance = false
+        const chromaGap = (a, b) => { const x = Theme._labOf(a), y = Theme._labOf(b); return Math.hypot(x.a - y.a, x.b - y.b) }
+        // matugen 4.2 off an orange and a red source colour; the red one's error sits 1.5 from its primary
+        const warm = { background: "#1a110e", surface: "#271d1a", text: "#f1dfd9", subtext: "#d8c2bb", accent: "#ffb59b",
+            error: "#ffb4ab", warning: "#d5c68e", success: "#e7beaf" }
+        const red = { background: "#1a1110", surface: "#271d1c", text: "#f1dedd", subtext: "#d8c2bf", accent: "#ffb3ad",
+            error: "#ffb4ab", warning: "#e1c28c", success: "#e7bdb9" }
+        const cases = Theme.neutralAccentPresets.map(p => ({ neutral: true, accent: p.color, name: p.name, palette: warm }))
+        for (const palette of [warm, red]) for (const role of ["primary", "secondary"])
+            cases.push({ neutral: false, role, palette, name: (palette === red ? "red " : "warm ") + role })
+        const close = [], bar = [], moved = [], crowded = []
+        for (const c of cases) {
+            ShellSettings.neutralTheme = c.neutral
+            ShellSettings.neutralAccentAuto = false
+            if (c.accent) ShellSettings.neutralAccent = c.accent
+            ShellSettings.matugenAccentRole = c.role ?? "primary"
+            MatugenTheme._palette = c.palette
+            // a turned status colour keeps clear of the other two, or stays at least as far as the palette had them
+            const pairGap = list => Math.min(chromaGap(list[0], list[1]), chromaGap(list[0], list[2]), chromaGap(list[1], list[2]))
+            const before = pairGap([Theme._errorSource, Theme._warningSource, Theme._successSource])
+            const after = pairGap([Theme._tErrorBase, Theme._tWarningBase, Theme._tSuccessBase])
+            if (after < Math.min(before, Theme._statusGap) - 0.5)
+                crowded.push(c.name + " " + before.toFixed(1) + " -> " + after.toFixed(1))
+            const pairs = [[Theme._tErrorBase, Theme.barError, Qt.color("#dd92a2")],
+                [Theme._tWarningBase, Theme.barWarning, Theme._warnAnchor],
+                [Theme._tSuccessBase, Theme.barSuccess, Theme._okAnchor]]
+            for (const [base, mark, anchor] of pairs) {
+                if (chromaGap(base, Theme.accent) < Theme._statusGap - 0.5) close.push(c.name + " " + base)
+                if (chromaGap(mark, Theme.barAccentMark) < Theme._statusGap * 0.8) bar.push(c.name + " " + mark)
+                if (!c.neutral) continue
+                // an accent clear of the anchor leaves it exactly as it was; a moved one keeps its lightness, so its contrast
+                const clear = chromaGap(anchor, Theme.accent) >= Theme._statusGap
+                if (clear ? !Qt.colorEqual(base, anchor) : Math.abs(Theme.lchOf(base).L - Theme.lchOf(anchor).L) > 0.6)
+                    moved.push(c.name + " " + anchor + " -> " + base)
+            }
+        }
+        root._check(close.length === 0, "status colours keep clear of the accent on every preset and wallpaper role: "
+            + close.join(", "))
+        root._check(bar.length === 0, "a see-through bar's status marks keep clear of its accent marks: " + bar.join(", "))
+        root._check(crowded.length === 0, "a status colour turned off the accent keeps clear of the other two: "
+            + crowded.join(", "))
+        root._check(moved.length === 0, "an accent clear of a status colour leaves it as it was, a moved one keeps its "
+            + "lightness: " + moved.join(", "))
+        MatugenTheme._palette = paletteWas
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
+    // a wallpaper's palette eases every token, so local fades stand down for it; high contrast and the colour source flip
+    // the formulas themselves, which no token eases, and a switch's knob snapped from the accent to grey without them
+    function _checkModeSwitchFades(): void {
+        const keys = ["reduceMotion", "highContrast", "neutralTheme", "neutralAccentAuto"]
+        const saved = keys.map(key => ShellSettings[key])
+        const paletteWas = MatugenTheme._palette
+        ShellSettings.reduceMotion = false
+        // either source takes this palette's accent; switching the source here would itself open a mode switch
+        ShellSettings.neutralAccentAuto = true
+        MatugenTheme._palette = { background: "#121318", surface: "#1e1f25", text: "#e3e1e9", subtext: "#c6c5d0",
+            accent: "#b9c3ff", error: "#ffb4ab", warning: "#e5bad8", success: "#c3c5dd" }
+        const wallpaper = Theme.paletteShifting
+        ShellSettings.highContrast = !ShellSettings.highContrast
+        const contrast = Theme.paletteShifting
+        // the outlines' own lines blend between both forms and set off from where they were
+        const contrastLines = Math.abs(Theme._hcK - (ShellSettings.highContrast ? 1 : 0)) > 0.5
+        ShellSettings.highContrast = !ShellSettings.highContrast
+        ShellSettings.neutralTheme = !ShellSettings.neutralTheme
+        const source = Theme.paletteShifting
+        const sourceLines = Math.abs(Theme._nK - (ShellSettings.neutralTheme ? 1 : 0)) > 0.5
+        root._check(wallpaper && !contrast && !source,
+            "a wallpaper's palette stands local colour fades down; a high contrast or source switch keeps them: "
+                + [wallpaper, contrast, source].join(" "))
+        root._check(contrastLines && sourceLines, "a high contrast or source switch eases the outlines' lines")
+        // without motion the blend lands on each form exactly
+        ShellSettings.reduceMotion = true
+        ShellSettings.highContrast = true
+        const hcExact = Qt.colorEqual(Theme.menuCardBorder, Theme.withAlpha(Theme.text, Theme.lineAlpha(0.22)))
+        ShellSettings.highContrast = false
+        ShellSettings.neutralTheme = true
+        const neutralExact = Qt.colorEqual(Theme.menuCardBorder, Theme.withAlpha(Theme._lineBase, Theme.lineAlpha(0.105)))
+            && Qt.colorEqual(Theme.outline, Theme.withAlpha(Theme._lineBase, Theme.lineAlpha(0.14)))
+        root._check(hcExact && neutralExact, "with reduce motion, a mode switch sets the lines at once and exactly: "
+            + [hcExact, neutralExact].join(" "))
+        MatugenTheme._palette = paletteWas
+        for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
+    }
+
     function _checkGlassInks(): void {
         const keys = ["reduceMotion", "neutralTheme", "neutralAccentAuto", "highContrast", "baseTone", "barOpacity",
             "surfaceBlur", "popupMatchBarOpacity", "matugenAccentBalance", "matugenAccentRole", "matugenDepth"]
@@ -2047,8 +2143,8 @@ ShellRoot {
         // an opaque popup leaves every status colour exactly as the palette gave it
         ShellSettings.popupMatchBarOpacity = false
         ShellSettings.neutralTheme = false
-        // dim enough that a glass solve would lift it
-        const dim = Object.assign({}, palettes[1], { error: "#6a3b3d" })
+        // dim enough that a glass solve would lift it, under an accent far enough off red to leave it alone
+        const dim = Object.assign({}, palettes[2], { error: "#6a3b3d" })
         MatugenTheme._palette = dim
         root._check(!Theme.glass && Qt.colorEqual(Theme.error, dim.error)
                 && Qt.colorEqual(Theme.subtext, Theme._tSubtextSolid),
@@ -3917,6 +4013,7 @@ ShellRoot {
         root._checkContrastKeepsHue()
         root._checkGlassInks()
         root._checkAccentInk()
+        root._checkStatusApart()
         root._check(MenuState.adjacentTab(MenuState.homeTab, false, 1) === MenuState.recentTab
                 && MenuState.adjacentTab(MenuState.recentTab, false, 1) === MenuState.settingsTab
                 && MenuState.adjacentTab(MenuState.settingsTab, false, 1) === MenuState.homeTab

@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Fixed
 
+- Warnings, errors and successes stay distinct from an accent of the same hue, such as Gold, Leaf, Coral or a wallpaper accent, on the bar and in the menu.
 - Closing Home's inline choices returns keyboard focus to their opening control; Wi-Fi rescans keep focus on the same network as the list changes.
 - Escape cancels a Wi-Fi password or discards command edits before the panel's close shortcut runs.
 - Changing Bluetooth controllers clears a pending Disconnect or Forget confirmation.
