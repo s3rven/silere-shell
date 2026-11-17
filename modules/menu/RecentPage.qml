@@ -216,18 +216,31 @@ PageShell {
             return
         }
         _clearEntries = entries
+        // unfiltered, this empties the history, and the search row goes with it
+        _clearTakesSearch = !root.searching && root.filter.length === 0
         _clearing = true
         _clearAllAnimation.restart()
     }
+    property bool _clearTakesSearch: false
 
+    // the search row and the empty state change with the last rows: they vanished and appeared the frame the list ended its fade
     SequentialAnimation {
         id: _clearAllAnimation
-        NumberAnimation {
-            target: _historyList
-            property: "opacity"
-            to: 0
-            duration: Motion.fast
-            easing.type: Easing.InCubic
+        ParallelAnimation {
+            NumberAnimation {
+                target: _historyList
+                property: "opacity"
+                to: 0
+                duration: Motion.fast
+                easing.type: Easing.InCubic
+            }
+            NumberAnimation {
+                target: _searchBox
+                property: "opacity"
+                to: root._clearTakesSearch ? 0 : 1
+                duration: Motion.fast
+                easing.type: Easing.InCubic
+            }
         }
         ScriptAction {
             script: {
@@ -235,9 +248,19 @@ PageShell {
                 root._clearEntries = []
                 root._openRows = ({})
                 _historyList.opacity = 1
+                _searchBox.opacity = 1
+                if (root.rowCount === 0) _emptyState.opacity = 0
                 root._clearing = false
             }
         }
+        NumberAnimation {
+            target: _emptyState
+            property: "opacity"
+            to: 1
+            duration: Motion.normal
+            easing.type: Easing.OutCubic
+        }
+        onStopped: _emptyState.opacity = 1
     }
 
     SequentialAnimation {
@@ -563,6 +586,7 @@ PageShell {
         }
 
         Item {
+            id: _emptyState
             width: parent.width
             anchors.top: _searchBox.bottom
             anchors.topMargin: 8

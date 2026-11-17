@@ -28,6 +28,8 @@ Item {
     }
 
     function _syncNames(apps): void {
+        // one app or none closes the drawer: the rows it held stay for its fade instead of emptying under it
+        if (apps.length <= 1 && root._names.length > 1) return
         const names = [""]
         for (let i = 0; i < apps.length; i++) names.push(apps[i].appName)
         if (names.length === root._names.length

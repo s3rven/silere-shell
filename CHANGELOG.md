@@ -121,6 +121,7 @@ settings file carries its own `__version` and migrates separately.
 - The last notification card no longer jumps its final few pixels into place as Clear all folds away above it.
 - With the bar's system monitor off, Home's CPU reading, temperature and busiest process stay put while the menu closes or you switch pages, instead of blanking first.
 - In History, a notification that arrives or one you remove no longer makes the rows below jump before they slide into place.
+- Clearing History fades the search field out with the list and fades the empty message in, instead of swapping them at once.
 - Above 115% UI scale, Quick Actions icons no longer run into their labels.
 - The on-screen display grows with UI scale, instead of keeping its 100% size while its icon and level grew inside it.
 - With week numbers on, the calendar's week column widens with UI scale, so the numbers no longer crowd the line beside them.
