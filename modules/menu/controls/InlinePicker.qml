@@ -28,7 +28,7 @@ Column {
         for (let i = 0; i < siblings.length - 1; i++)
             if (siblings[i] === root) { _hold.item = siblings[i + 1]; break }
     }
-    onShownChanged: if (root.above) _hold.arm()
+    onShownChanged: if (root.above) _hold.arm(root.shown)
 
     CollapsibleSection {
         id: _section

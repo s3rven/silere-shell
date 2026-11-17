@@ -8,6 +8,8 @@ Flickable {
     maximumFlickVelocity: Motion.flickVelocity
     boundsMovement: Flickable.StopAtBounds
     onContentYChanged: if (moving) Scroll.notePageMoved()
+    // the one ScrollHold allowed to scroll this page
+    property QtObject scrollHold: null
 
     function scrollToTop(): void {
         // assigning contentY alone leaves a running flick free to move the next page again on its first frame

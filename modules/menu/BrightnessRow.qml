@@ -28,7 +28,7 @@ Item {
         item: _slider
         watched: root
     }
-    onOpenChanged: if (root._optionsAbove) _hold.arm()
+    onOpenChanged: if (root._optionsAbove) _hold.arm(root.open)
 
     function closeInline(): bool {
         if (!root.open) return false

@@ -89,7 +89,7 @@ Item {
         if (next) MenuState.claimSettingsSelect(root)
         else MenuState.releaseSettingsSelect(root)
         root._typed = ""
-        if (root._above) _hold.arm()
+        if (root._above) _hold.arm(next)
         _open = next
         if (_open) {
             _options.currentIndex = Math.max(0, root._activeIndex)

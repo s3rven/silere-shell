@@ -78,7 +78,7 @@ Item {
         _tabSwap.restart()
     }
     onOpenChanged: {
-        if (root._optionsAbove) _hold.arm()
+        if (root._optionsAbove) _hold.arm(root.open)
         if (!root.open) root._settleTab()
     }
     on_TabMotionChanged: if (!root._tabMotion) root._settleTab()

@@ -1556,6 +1556,37 @@ ShellRoot {
         ShellSettings.reduceMotion = motionWas
     }
 
+    // over a bottom bar a picker opens above its row, and switching pickers arms two holds on one page
+    function _checkScrollHolds(): void {
+        const flick = flickableFactory.createObject(root)
+        const holdFor = y => {
+            const row = Qt.createQmlObject("import QtQuick; Item { width: 100; height: 40 }", flick.contentItem)
+            row.y = y
+            const hold = Qt.createQmlObject("import \"modules/menu/controls\"; ScrollHold {}", root)
+            hold.item = row
+            return hold
+        }
+        const closing = holdFor(100), opening = holdFor(300)
+        closing.arm(false)
+        root._check(flick.scrollHold === closing, "a closing picker's hold takes the page when no other is at work")
+        opening.arm(true)
+        root._check(flick.scrollHold === opening && opening.leads,
+            "the picker that opens takes the page from the one closing: its row is under the pointer")
+        closing.arm(false)
+        root._check(flick.scrollHold === opening, "a hold armed for a close yields to the one opening, whichever order they arm in")
+        closing.item.y = 160
+        flick.contentY = 0
+        closing._hold()
+        root._check(flick.contentY === 0, "a hold that yielded leaves the page where the leading hold keeps it")
+        opening.item.y = 340
+        opening._hold()
+        root._check(flick.contentY === 40, "the leading hold scrolls its row back under the pointer")
+        opening._y = NaN
+        closing.arm(false)
+        root._check(flick.scrollHold === closing, "a released hold no longer leads, so a later close holds its own row")
+        closing.item.destroy(); opening.item.destroy(); closing.destroy(); opening.destroy(); flick.destroy()
+    }
+
     function _checkPanelFocus(): void {
         const was = { motion: ShellSettings.reduceMotion, position: ShellSettings.barPosition,
             presentation: Audio._profilePresentation,
@@ -3861,6 +3892,7 @@ ShellRoot {
         root._checkOsdOverHome()
         root._checkSandboxWritesNoDevice()
         root._checkWifiDraft()
+        root._checkScrollHolds()
         root._checkPanelFocus()
         root._checkPowerRail()
         root._checkPillTextBaseline()

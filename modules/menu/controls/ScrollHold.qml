@@ -7,10 +7,20 @@ QtObject {
     property Item item: null
     property Item watched: null
     property real _y: NaN
+    property bool _opening: false
+    readonly property bool leads: root._opening && isFinite(root._y)
 
-    // call before content above `item` starts to grow or shrink
-    function arm(): void {
+    // call before content above `item` starts to grow or shrink. One hold scrolls a page at a time: two rows
+    // cannot both stay put while the space between them changes, and the one opening is under the pointer
+    function arm(opening: bool): void {
         if (!root.item) return
+        const view = root._viewport()
+        if (view && view.scrollHold !== undefined) {
+            const other = view.scrollHold
+            if (!opening && other && other !== root && other.leads) return
+            view.scrollHold = root
+        }
+        root._opening = opening
         root._y = root.item.mapToItem(null, 0, 0).y
         root._release.restart()
     }
@@ -25,7 +35,7 @@ QtObject {
     function _hold(): void {
         if (!root.item || !isFinite(root._y)) return
         const view = root._viewport()
-        if (!view) return
+        if (!view || (view.scrollHold !== undefined && view.scrollHold !== root)) return
         const drift = root.item.mapToItem(null, 0, 0).y - root._y
         if (Math.abs(drift) < 0.5) return
         const top = Number(view.originY || 0)
