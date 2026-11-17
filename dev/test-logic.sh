@@ -33,8 +33,8 @@ XDG_CONFIG_HOME="$cfg" XDG_STATE_HOME="$cfg" XDG_CACHE_HOME="$cfg/cache" XDG_RUN
 probe_pid=$!
 
 # Focus/expiry and animation checks need real settle time, including while check.sh
-# runs the other probes alongside them.
-_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 180 0.25 || true
+# runs the other probes alongside them: alone the probe takes ~38 s, so 45 s timed out under load.
+_probe_wait "$log" "$probe_pid" 'PROBE-LOGIC' 300 0.25 || true
 
 if ! grep -q 'PROBE-LOGIC passed' "$log" 2>/dev/null; then
     cat "$log" >&2
