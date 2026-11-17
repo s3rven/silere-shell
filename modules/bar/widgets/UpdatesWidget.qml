@@ -19,10 +19,6 @@ StatusActionPill {
         : Updates.count > 0 ? String(Updates.count) : ""
 
     onActivated: if (root.canActivate) MenuState.showSettingsAt("updates", root, root.screen)
-
-    TapHandler {
-        enabled: root.canActivate && !root.busy
-        acceptedButtons: Qt.RightButton
-        onTapped: if (root.canActivate && !root.busy) Updates.refresh()
-    }
+    hasSecondary: !root.busy
+    onSecondaryActivated: if (!root.busy) Updates.refresh()
 }
