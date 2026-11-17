@@ -187,6 +187,7 @@ settings file carries its own `__version` and migrates separately.
 - When a hovered system monitor's busiest process ends, the widget closes the gap at once instead of holding empty room for a few seconds.
 - The compact on-screen display keeps the device name, why playback paused and the microphone label, shortening the middle of a long name instead of dropping it.
 - Switching to a muted output shows its name and Muted; unmuting keeps the name until it times out.
+- Turning temperature warnings on while the CPU is already hot shows the warning instead of waiting for the next rise.
 - A quick peek at the overview with an auto-hidden bar no longer jerks the bar's content up and back.
 - A virtual keyboard from a snippet tool or remote input no longer replaces the keyboard layout name on the bar.
 - The network widget says Wired for USB, onboard and virtual Ethernet adapters with no connection name, instead of their interface name.

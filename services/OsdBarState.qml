@@ -434,6 +434,10 @@ Singleton {
     function _replayAlerts(): void {
         if (!ShellSettings.osdEnabled) return
         root._replayBatteryAlerts()
+        root._replayTempAlerts()
+    }
+    function _replayTempAlerts(): void {
+        if (!ShellSettings.osdEnabled) return
         if (CpuTemp.critical) root._alertTempCritical()
         else root._alertTempHot()
     }
@@ -491,5 +495,6 @@ Singleton {
         }
         function onOsdBatteryWarnChanged() { Qt.callLater(root._replayBatteryAlerts) }
         function onOsdChargedNotifyChanged() { Qt.callLater(root._replayBatteryAlerts) }
+        function onOsdTempWarnChanged() { Qt.callLater(root._replayTempAlerts) }
     }
 }

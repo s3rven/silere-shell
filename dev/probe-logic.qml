@@ -1469,6 +1469,73 @@ ShellRoot {
         ShellSettings.reduceMotion = repeatWas.motion
     }
 
+    function _checkOsdContextAndWarnings(): void {
+        const was = { armed: OsdBarState._armed, enabled: ShellSettings.osdEnabled,
+            integrated: ShellSettings.osdBarIntegrated, motion: ShellSettings.reduceMotion,
+            warning: ShellSettings.osdTempWarn, temp: CpuTemp.temp,
+            hot: CpuTemp.hot, critical: CpuTemp.critical }
+        OsdBarState._armed = true
+        ShellSettings.osdEnabled = true
+        ShellSettings.osdBarIntegrated = true
+        ShellSettings.reduceMotion = true
+        OsdBarState._clearEntries()
+        const component = Qt.createComponent("modules/bar/widgets/OsdBarWidget.qml")
+        const widget = component.createObject(root, { width: 640, height: 36 })
+        root._check(widget !== null, "the integrated OSD builds for contextual feedback")
+        if (widget) {
+            for (const label of ["Headphones · 45%", "Paused · Speakers", "Microphone muted",
+                    "A very long output name ".repeat(20) + " · 45%"]) {
+                OsdBarState._upsertEntry(label === "Microphone muted" ? "microphone" : "volume",
+                    "V", 0.45, label, label === "Microphone muted", Theme.accent)
+                const text = root._findTrayNode(widget, item => item.text === label)
+                root._check(text && widget._labelWidth > 60
+                        && widget._labelWidth <= 240 * ShellSettings.uiScale
+                        && text.elide === Text.ElideMiddle && widget.Accessible.name === label,
+                    "the integrated OSD preserves device and microphone context within its width limit: " + label.slice(0, 32))
+            }
+            OsdBarState._upsertEntry("volume", "V", 0.45, "45%", false, Theme.accent)
+            widget.width = 200
+            const track = root._findTrayNode(widget, item => item.radius === 1.5 && item.height === 3)
+            root._check(OsdBarState.rapid && widget._labelWidth < 60 && track && track.width > 0,
+                "an expired device name releases room for the level track even during a held volume key")
+            OsdBarState._clearEntries()
+            widget.destroy()
+        }
+        component.destroy()
+
+        // Keep sampling demand stable: the warning toggle must read an existing
+        // hot state, rather than relying on a fresh threshold crossing.
+        ShellSettings.osdTempWarn = false
+        CpuTemp.temp = 90
+        CpuTemp.hot = true
+        CpuTemp.critical = false
+        OsdBarState._clearEntries()
+        ShellSettings.osdTempWarn = true
+        discoveryClock.wait(1)
+        root._check(OsdBarState.kind === "temp" && OsdBarState.showing
+                && OsdBarState.label === "CPU Hot · 90°",
+            "enabling temperature warnings replays a CPU that is already hot")
+        ShellSettings.osdTempWarn = false
+        CpuTemp.critical = true
+        OsdBarState._clearEntries()
+        ShellSettings.osdTempWarn = true
+        discoveryClock.wait(1)
+        root._check(OsdBarState.kind === "temp" && OsdBarState.showing
+                && OsdBarState.label === "CPU Critical · 90°"
+                && String(OsdBarState.fillColor) === String(Theme.error),
+            "enabling temperature warnings replays the critical tier without downgrading it")
+        ShellSettings.osdTempWarn = false
+        CpuTemp.temp = was.temp
+        CpuTemp.hot = was.hot
+        CpuTemp.critical = was.critical
+        ShellSettings.osdTempWarn = was.warning
+        ShellSettings.osdEnabled = was.enabled
+        ShellSettings.osdBarIntegrated = was.integrated
+        ShellSettings.reduceMotion = was.motion
+        OsdBarState._armed = was.armed
+        OsdBarState._clearEntries()
+    }
+
     function _checkWifiDraft(): void {
         const motionWas = ShellSettings.reduceMotion
         const errorWas = Network.wifiError
@@ -4012,6 +4079,7 @@ ShellRoot {
         root._checkOsdProfileHold()
         root._checkBrightnessOsdUnattended()
         root._checkOsdOverHome()
+        root._checkOsdContextAndWarnings()
         root._checkSandboxWritesNoDevice()
         root._checkWifiDraft()
         root._checkScrollHolds()
