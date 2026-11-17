@@ -32,7 +32,13 @@ Item {
         return root.labelLeads ? heldAt < at : heldAt > at
     }
     property var trayModel: SystemTray.items
-    Component.onCompleted: TrayMenuState.recoverOrphanItems()
+    Component.onCompleted: {
+        TrayMenuState.recoverOrphanItems()
+        Qt.callLater(root._goLive)
+    }
+    // the tiles a bar starts with land whole; an app that joins later opens its cell
+    property bool _tilesLive: false
+    function _goLive(): void { root._tilesLive = true }
     readonly property var _trayItems: root.trayModel
         ? (Array.isArray(root.trayModel) ? root.trayModel : (root.trayModel.values ?? [])) : []
     readonly property bool show: ShellSettings.trayWidget
@@ -204,7 +210,17 @@ Item {
                     ? _hoverLabel.width + Math.min(root._labelGap, _hoverLabel.width) : 0
                 readonly property real _iconX: root.labelLeads
                     ? _tile.width - root._pad - root.iconSize : root._pad
-                width: root.cellWidth + _tile._labelSpan
+                // the first app rides the tray's own unfold; one that joins a tray already showing, or unfolding at a login burst, opens its cell
+                property bool _arriving: false
+                SmoothGlide {
+                    id: _cellGlide
+                    target: root.cellWidth
+                    gate: _tile._arriving
+                    duration: Motion.normal
+                    onRunningChanged: if (!running) _tile._arriving = false
+                }
+                width: _cellGlide.value + _tile._labelSpan
+                clip: _tile._arriving
                 // the full bar is a click target; the icon and its highlight keep their centred row size
                 height: root.height
                 anchors.verticalCenter: parent.verticalCenter
@@ -215,7 +231,16 @@ Item {
                     if (isFinite(pt.x)) _tile.menuAnchorX = pt.x
                 }
 
-                Component.onCompleted: _tile.syncMenuAnchor()
+                function _arrive(): void {
+                    _tile._arriving = true
+                    _cellGlide.glideFrom(0)
+                    if (!_cellGlide.running) _tile._arriving = false
+                }
+                // a turn later: the glide snaps to its target as it completes
+                Component.onCompleted: {
+                    if (root._tilesLive && root.show && root._showProgress > 0.001) Qt.callLater(_tile._arrive)
+                    _tile.syncMenuAnchor()
+                }
                 onXChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
                 onYChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
                 on_IconXChanged: if (!TrayMenuState.open) _tile.syncMenuAnchor()
