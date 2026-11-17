@@ -22,9 +22,46 @@ Item {
     // the model is a held snapshot: any content change in Network.wifiNetworks destroys every delegate, and with it the password field being typed into
     property var _networks: []
     readonly property ArmConfirm _confirm: ArmConfirm {}
+    property string _focusSsid: ""
+    property int _focusIndex: 0
+    property Item _focusOrigin: null
 
     function _syncNetworks(): void {
-        if (root._selected === "") root._networks = Network.wifiNetworks
+        if (root._selected !== "") return
+        const window = root.Window.window
+        const focused = window ? window.activeFocusItem : null
+        let restore = false
+        // a second scan can arrive while Qt still hands focus out of the old delegates
+        for (let item = _focusRestore.running ? null : focused; item && item !== root; item = item.parent) {
+            if (item.ListView.view !== _list || !item.modelData) continue
+            root._focusSsid = item.modelData.ssid
+            root._focusIndex = item.index
+            root._focusOrigin = focused
+            restore = true
+            break
+        }
+        root._networks = Network.wifiNetworks
+        if (restore) _focusRestore.restart()
+    }
+
+    Timer {
+        id: _focusRestore
+        interval: 0
+        onTriggered: {
+            const window = root.Window.window
+            if (!root.open || !root.visible || !root.enabled || root._selected !== ""
+                    || !window || !window.active || _list.count === 0) return
+            const focused = window.activeFocusItem
+            // another real tab stop takes ownership while the replacement delegates are built
+            if (focused && focused !== root._focusOrigin && focused.activeFocusOnTab) return
+            const found = root._networks.findIndex(item => item.ssid === root._focusSsid)
+            const index = found >= 0 ? found : Math.min(root._focusIndex, _list.count - 1)
+            _list.currentIndex = index
+            _list.positionViewAtIndex(index, ListView.Contain)
+            _list.forceLayout()
+            if (_list.currentItem) _list.currentItem.focusRow()
+            root._focusOrigin = null
+        }
     }
 
     function _canScan(): bool {
@@ -40,6 +77,7 @@ Item {
     }
 
     on_SelectedChanged: {
+        if (root._selected !== "") _focusRestore.stop()
         root._passwordDraft = ""
         root._passwordVisible = false
         _syncNetworks()
@@ -49,6 +87,7 @@ Item {
         if (!open) {
             _selected = ""
             root._confirm.clear()
+            _focusRestore.stop()
         }
     }
     Component.onCompleted: { _syncScanState(); _syncNetworks() }
@@ -150,6 +189,10 @@ Item {
                 readonly property bool _sel:        root._selected === modelData.ssid
                 readonly property bool _connecting: Network.wifiConnecting === modelData.ssid
                 readonly property bool _failed:     Network.wifiError === modelData.ssid
+
+                function focusRow(): void {
+                    if (_row._canActivate) _row.forceActiveFocus(Qt.BacktabFocusReason)
+                }
 
                 function _submitPassword(): void {
                     if (!_entry._sel || _entry._connecting) return
