@@ -99,6 +99,18 @@ Item {
         if (next) next.forceActiveFocus(Qt.TabFocusReason)
     }
 
+    // a disclosure returns focus only if it still owns it, before disabling its contents
+    function restoreFrom(container: Item): bool {
+        if (!root.canInteract || !container) return false
+        const window = root.control.Window.window
+        for (let item = window ? window.activeFocusItem : null; item; item = item.parent) {
+            if (item !== container) continue
+            root.control.forceActiveFocus(Qt.BacktabFocusReason)
+            return true
+        }
+        return false
+    }
+
     FocusScroll {
         id: _focusScroll
         control: root.control

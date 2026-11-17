@@ -112,6 +112,8 @@ PageShell {
 
     function _closePicker(): bool {
         if (root._picker === "") return false
+        const parts = root._pickerParts(root._picker)
+        if (parts[0] && parts[1]) parts[0].restorePickerFocus(parts[1])
         root._picker = ""
         return true
     }

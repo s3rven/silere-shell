@@ -170,6 +170,20 @@ ShellRoot {
         }
     }
     Component {
+        id: panelKeyboardWindowFactory
+        Window {
+            id: fixture
+            visible: true
+            width: 460; height: 1000
+            property alias input: input
+            property alias outside: outside
+            property int escapes: 0
+            Shortcut { sequence: "Escape"; context: Qt.ApplicationShortcut; onActivated: fixture.escapes++ }
+            ActionButton { id: outside; y: 960; label: "Outside panel" }
+            TestCase { id: input; when: false }
+        }
+    }
+    Component {
         id: focusScrollWindowFactory
         Window {
             visible: true
@@ -1536,6 +1550,146 @@ ShellRoot {
         Network.wifiErrorReason = reasonWas
         Network.wifiConnecting = connectingWas
         ShellSettings.reduceMotion = motionWas
+    }
+
+    function _checkPanelFocus(): void {
+        const was = { motion: ShellSettings.reduceMotion, position: ShellSettings.barPosition,
+            networks: Network._publishedWifiNetworks, presentation: Audio._profilePresentation,
+            devices: Brightness.devices }
+        ShellSettings.reduceMotion = true
+        const host = panelKeyboardWindowFactory.createObject(root)
+        host.requestActivate()
+        host.input.wait(30)
+        const homeComponent = Qt.createComponent("modules/menu/HomePage.qml")
+        for (const mode of [
+            { position: "top", motion: true }, { position: "bottom", motion: true },
+            { position: "top", motion: false }, { position: "bottom", motion: false }
+        ]) {
+            const position = mode.position
+            ShellSettings.reduceMotion = mode.motion
+            ShellSettings.barPosition = position
+            const home = homeComponent.createObject(host.contentItem, { width: 440, active: true })
+            home._togglePicker("dnd")
+            host.input.wait(20)
+            const option = root._findTrayNode(home, item => item.label === "For 1 hour")
+            if (option) option.forceActiveFocus(Qt.TabFocusReason)
+            home.dismissInline()
+            host.input.wait(mode.motion ? 10 : Motion.medium + 60)
+            root._check(option !== null && host.activeFocusItem
+                    && host.activeFocusItem.Accessible.name === "Show Do Not Disturb options",
+                "closing Home's " + position + " inline picker returns focus to its opener with reduced motion " + mode.motion)
+            home._togglePicker("dnd")
+            host.outside.forceActiveFocus(Qt.TabFocusReason)
+            home.dismissInline()
+            root._check(host.outside.activeFocus,
+                "closing Home's " + position + " picker preserves focus outside the picker")
+            home.destroy()
+            host.input.wait(10)
+        }
+        homeComponent.destroy()
+        ShellSettings.reduceMotion = true
+        Audio._profilePresentation = { ready: true, micReady: true, volume: 0.5, effectiveVolume: 0.5,
+            muted: false, name: "Probe output", micVolume: 0.5, micEffectiveVolume: 0.5,
+            micMuted: false, sourceName: "Probe input" }
+        for (const kind of ["Volume", "Brightness"]) {
+            const component = Qt.createComponent("modules/menu/" + kind + "Row.qml")
+            const control = component.createObject(host.contentItem, { width: 440, open: true })
+            host.input.wait(10)
+            if (kind === "Brightness") {
+                // finish queued hardware reads before installing this inventory fixture
+                Brightness.devices = [{ name: "__panel_focus_probe__" }, { name: "__dock_focus_probe__" }]
+                control.open = true
+            }
+            const choice = root._findTrayNode(control, item => kind === "Volume"
+                ? item.Accessible.role === Accessible.Slider && item.Accessible.name === "Microphone"
+                : item.accessiblePrefix === "Brightness display")
+            if (choice) choice.forceActiveFocus(Qt.TabFocusReason)
+            control.closeInline()
+            const returned = host.activeFocusItem
+                && host.activeFocusItem.Accessible.name === "Show " + kind.toLowerCase() + " options"
+            host.input.wait(10)
+            root._check(choice !== null && returned,
+                "closing " + kind + " choices returns focus to its expander")
+            control.open = true
+            host.outside.forceActiveFocus(Qt.TabFocusReason)
+            control.closeInline()
+            root._check(host.outside.activeFocus, kind + " choices never take focus from another control")
+            control.destroy()
+            host.input.wait(10)
+            component.destroy()
+        }
+        Audio._profilePresentation = was.presentation
+        Brightness.devices = was.devices
+        const networks = Array.from({ length: 14 }, (_, i) => ({ ssid: "__panel_network_" + i,
+            label: "Panel network " + i, glyph: "", secured: true, psk: true,
+            passwordless: false, profileOnly: false, active: false, known: false }))
+        Network._publishedWifiNetworks = networks
+        const component = Qt.createComponent("modules/menu/WifiList.qml")
+        const wifi = component.createObject(host.contentItem, { width: 440, open: true })
+        const list = root._findTrayNode(wifi, item => item.currentIndex !== undefined && typeof item.forceLayout === "function")
+        list.currentIndex = 7
+        list.positionViewAtIndex(7, ListView.Contain)
+        list.forceLayout()
+        host.input.wait(10)
+        const initial = root._findTrayNode(list.currentItem, item => item.Accessible.name === networks[7].label)
+        if (initial) initial.forceActiveFocus(Qt.TabFocusReason)
+        Network._publishedWifiNetworks = networks.slice().reverse()
+        host.input.wait(30)
+        root._check(initial !== null && host.activeFocusItem
+                && host.activeFocusItem.Accessible.name === networks[7].label,
+            "a Wi-Fi rescan preserves the focused network when signal ordering changes")
+        const remaining = Network._publishedWifiNetworks.filter(item => item.ssid !== networks[7].ssid)
+        Network._publishedWifiNetworks = remaining
+        host.input.wait(30)
+        root._check(host.activeFocusItem && host.activeFocusItem.Accessible.name === remaining[6].label,
+            "a disappearing Wi-Fi network leaves keyboard focus on the nearest remaining row")
+        const passwordRow = root._findTrayNode(wifi, item => item.Accessible.name === remaining[6].label)
+        if (passwordRow) passwordRow.Accessible.pressAction()
+        host.input.wait(20)
+        const password = root._findTrayNode(wifi, item => item.Accessible.name === "Wi-Fi password" && item.activeFocus)
+        if (password) password.insert(0, "draft password")
+        Network._publishedWifiNetworks = [remaining[6]].concat(remaining.filter(item => item !== remaining[6]))
+        host.input.wait(20)
+        root._check(password && password.activeFocus && password.text === "draft password",
+            "a Wi-Fi rescan while entering a password preserves the field, draft and focus")
+        host.input.keyClick(Qt.Key_Escape)
+        host.input.wait(30)
+        root._check(password !== null && wifi._selected === "" && wifi._passwordDraft === ""
+                && host.activeFocusItem && host.activeFocusItem.Accessible.name === remaining[6].label,
+            "Escape cancels a Wi-Fi password draft and returns focus to its network")
+        root._check(host.escapes === 0, "Wi-Fi password cancellation takes Escape before the panel's application shortcut")
+        host.input.keyClick(Qt.Key_Escape)
+        root._check(host.escapes === 1, "the next Escape is available to close the Wi-Fi picker")
+        Network._publishedWifiNetworks = networks.slice().reverse()
+        Network._publishedWifiNetworks = networks.slice()
+        host.input.wait(30)
+        root._check(host.activeFocusItem && host.activeFocusItem.Accessible.name === remaining[6].label,
+            "back-to-back Wi-Fi scans retain the same pending focus target")
+        Network._publishedWifiNetworks = networks.map(item => Object.assign({}, item))
+        host.outside.forceActiveFocus(Qt.TabFocusReason)
+        host.input.wait(30)
+        root._check(host.outside.activeFocus, "a delayed Wi-Fi refresh cannot steal focus after Tab leaves the list")
+        wifi.open = false
+        wifi.destroy()
+        component.destroy()
+        const editorComponent = Qt.createComponent("modules/menu/settings/CommandEditor.qml")
+        const editor = editorComponent.createObject(host.contentItem, { width: 440, settingKey: "lockCommandCustom" })
+        const command = root._findTrayNode(editor, item => item.maximumLength === 4096)
+        editor.draft = editor.savedValue + " --unsaved"
+        if (command) command.forceActiveFocus(Qt.TabFocusReason)
+        const escapes = host.escapes
+        host.input.keyClick(Qt.Key_Escape)
+        root._check(command !== null && !editor.dirty && !command.activeFocus && host.escapes === escapes,
+            "Escape reverts a command draft before the panel's application shortcut can close Settings")
+        host.input.keyClick(Qt.Key_Escape)
+        root._check(host.escapes === escapes + 1, "the next Escape can close Settings after discarding a command draft")
+        editor.destroy()
+        editorComponent.destroy()
+        Network._publishedWifiNetworks = was.networks
+        ShellSettings.barPosition = was.position
+        ShellSettings.reduceMotion = was.motion
+        host.close()
+        host.destroy()
     }
 
     function _checkAccentContrast(): void {
@@ -3683,6 +3837,7 @@ ShellRoot {
         root._checkOsdOverHome()
         root._checkSandboxWritesNoDevice()
         root._checkWifiDraft()
+        root._checkPanelFocus()
         root._checkPowerRail()
         root._checkPillTextBaseline()
         root._checkStackTags()

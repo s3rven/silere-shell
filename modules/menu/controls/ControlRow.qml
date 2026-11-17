@@ -36,6 +36,8 @@ MenuRow {
     signal expandToggled()
     signal badgeActivated()
 
+    function restorePickerFocus(picker: Item): void { _expandFocus.restoreFrom(picker) }
+
     readonly property bool _canTap: !root.passive && root.enabled && root.visible && root.available
     function _activate(): void {
         if (!_canTap) return
@@ -293,7 +295,7 @@ MenuRow {
                 Accessible.name: (root.expanded ? "Hide " : "Show ") + root.title + " options"
                 Accessible.focusable: enabled
                 Accessible.onPressAction: root._toggleExpanded()
-                KeyboardFocus { onActivated: root._toggleExpanded() }
+                KeyboardFocus { id: _expandFocus; onActivated: root._toggleExpanded() }
                 onClicked: {
                     root._toggleExpanded()
                 }

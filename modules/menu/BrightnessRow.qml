@@ -32,6 +32,7 @@ Item {
 
     function closeInline(): bool {
         if (!root.open) return false
+        _slider.restorePickerFocus(_options)
         root.open = false
         return true
     }
@@ -103,7 +104,7 @@ Item {
 
                     onTriggered: {
                         ShellSettings.brightnessDevice = modelData.value
-                        root.open = false
+                        root.closeInline()
                     }
                 }
             }
