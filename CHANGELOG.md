@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 - Notification popups wait while the menu, calendar or another panel is open, so one no longer times out behind the calendar with its buttons out of reach.
 - Home's busiest-process reading takes a third of the time it did.
 - With one keyboard layout, the keyboard widget no longer shows a hover fill or a click, since there is nothing to switch to.
+- Changing a floating bar's gap glides the bar together with an open panel under it, instead of moving it in one step.
 
 ### Fixed
 

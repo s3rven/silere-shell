@@ -50,7 +50,12 @@ PanelWindow {
     }
     // stepped in 4s so the bar edge stays on the 4px grid and hairlines land on whole physical px
     readonly property int surfaceInset: Metrics.barEdgeInset
-    readonly property real visualSurfaceInset: ShellSettings.barGap * floatingProgress
+    // the popup cards glide their bar clearance on this curve (FloatingPopupCard._barInset); a snapped gap left
+    // the bar 8 px from the Settings panel it sits over while the gap slider moved
+    property real visualSurfaceInset: Metrics.barEdgeInset
+    MotionBehavior on visualSurfaceInset {
+        NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+    }
 
     readonly property bool shadowOn: shadowProgress > 0.001
     // constant, not scaled by shadowProgress: this feeds implicitHeight, so animating it
