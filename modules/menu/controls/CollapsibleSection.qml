@@ -30,7 +30,18 @@ Item {
     enabled: expanded
     visible: expanded || height > 0.5
 
-    Disclosure on height { id: _fold; symmetric: root.symmetric }
+    // built open, its rows can still arrive frames later (a Repeater in a page built asynchronously): they land with the
+    // page instead of unfolding into it. A toggle, or the page settling, gives the fold back its motion
+    property bool _bornOpen: false
+    Component.onCompleted: if (root.expanded) { root._bornOpen = true; _bornSettle.start() }
+    onExpandedChanged: { _bornSettle.stop(); root._bornOpen = false }
+    Timer {
+        id: _bornSettle
+        interval: 500
+        onTriggered: root._bornOpen = false
+    }
+
+    Disclosure on height { id: _fold; symmetric: root.symmetric; gate: _fold._geometryReady && !root._bornOpen }
 
     Column {
         id: _content
