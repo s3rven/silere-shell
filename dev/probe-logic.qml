@@ -7311,6 +7311,10 @@ ShellRoot {
         root._check(MenuState._settingsSearchEntries.length === MenuState._flatSections.length
                 && MenuState._settingsSearchEntries.every(row => MenuState._flatSections.indexOf(row.section) >= 0),
             "settings search indexes each available section once without constructing pages")
+        // a renamed setting or section would leave its search words pointing at nothing, silently
+        root._check(Object.keys(MenuState._settingsKeyAliases).every(k => ShellSettings._schemaByKey[k] !== undefined)
+                && Object.keys(MenuState._settingsSearchAliases).every(s => MenuState._flatSections.indexOf(s) >= 0),
+            "every search alias names a real setting or section")
         root._check(MenuState.searchSettings("").length === 0
                 && MenuState.searchSettings("   ").length === 0
                 && MenuState.searchSettings("!!!").length === 0,
