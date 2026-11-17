@@ -12894,10 +12894,70 @@ ShellRoot {
         ShellSettings.reduceMotion = motionWas
     }
 
+    // a row arriving at the top of its run takes the run's header from the row below, and removing a row can take a header
+    // from the one under it; both flip at once. The row growing in or folding away carries it, so text below never steps back
+    function _checkHistoryRowCarry(): void {
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        MenuState.setRecentFilter("")
+        MenuState.selectTab(MenuState.recentTab)
+        MenuState.openAt(17, null, probeAnchor)
+        Notifications.clearHistory()
+        const now = Date.now()
+        Notifications._prependHistory({ id: 9301, appName: "Mail", summary: "Older mail", time: now - 4000 })
+        Notifications._prependHistory({ id: 9302, appName: "Chat", summary: "Chat between", time: now - 3000 })
+        Notifications._prependHistory({ id: 9303, appName: "Mail", summary: "Newer mail", time: now - 2000 })
+        const host = keyboardFixtureFactory.createObject(root, { width: 380, height: 640 })
+        const component = Qt.createComponent("modules/menu/RecentPage.qml")
+        const page = component.status === Component.Ready ? component.createObject(host.contentItem, {
+            width: 332, viewportHeight: 600, active: true, powerOpen: false
+        }) : null
+        root._check(page !== null, "history builds for the row carry checks")
+        if (page) {
+            page.settleVisual(true)
+            host.input.wait(80)
+            const list = root._findTrayNode(page, item => typeof item.itemAtIndex === "function")
+            const textY = summary => {
+                const t = root._findTrayNode(list.contentItem, item => item.text === summary && item.visible)
+                return t ? t.mapToItem(list, 0, 0).y : NaN
+            }
+            list.forceLayout()
+            const newerBefore = textY("Newer mail"), olderBefore = textY("Older mail")
+            Notifications._prependHistory({ id: 9304, appName: "Mail", summary: "Arrival", time: now - 1000 })
+            list.forceLayout()
+            const newerAfter = textY("Newer mail"), olderAfter = textY("Older mail")
+            root._check(isFinite(newerBefore) && newerAfter >= newerBefore - 1.5 && olderAfter >= olderBefore - 1.5,
+                "an arrival that takes its run's header does not step the rows below up before they slide down")
+            host.input.wait(Motion.normal + 120)
+            list.forceLayout()
+            const chatRow = root._findTrayNode(list.contentItem, item => typeof item.removeSelf === "function"
+                && item.modelData && item.modelData.summary === "Chat between")
+            const olderSettled = textY("Older mail")
+            if (chatRow) chatRow.removeSelf()
+            list.forceLayout()
+            const olderOnRemove = textY("Older mail")
+            root._check(chatRow !== null && isFinite(olderSettled) && Math.abs(olderOnRemove - olderSettled) <= 1.5,
+                "removing a row whose neighbour joins the run above leaves that neighbour's text in place as the row folds")
+            host.input.wait(Motion.normal + 120)
+            list.forceLayout()
+            root._check(textY("Older mail") < olderSettled - 20,
+                "the neighbour then rises into the removed row's place")
+            page.destroy()
+        }
+        host.close()
+        host.destroy()
+        component.destroy()
+        Notifications.clearHistory()
+        MenuState.close()
+        MenuState.setRecentFilter("")
+        ShellSettings.reduceMotion = motionWas
+    }
+
     function _startHistoryPageProbe(): void {
         root._historyReduceWas = ShellSettings.reduceMotion
         ShellSettings.reduceMotion = true
         root._checkHistoryKeyboard()
+        root._checkHistoryRowCarry()
         MenuState.setRecentFilter("")
         MenuState.openAt(17, null, probeAnchor)
         Notifications.clearHistory()

@@ -122,6 +122,8 @@ PageShell {
     }
 
     property bool _clearing: false
+    // the row folding away after a removal, which takes up its neighbour's header change (see _carry)
+    property var _foldingRow: null
     property var _clearEntries: []
     // a row scrolled past the cache buffer is destroyed, so expansion has to live on the page
     property var _openRows: ({})
@@ -718,9 +720,32 @@ PageShell {
                     }
 
                     width: _historyList.width
-                    height: _fullHeight * _presence
-                    opacity: _presence
+                    height: _fullHeight * _presence + _carry * (_adding ? 1 - _presence : _presence)
+                    // carrying the header it took over, the row stands in place for it: a fade would blink that header
+                    opacity: _adding && _carry > 0 ? 1 : _presence
                     clip: true
+
+                    // a neighbour's header or section lands at once when this row arrives above it or leaves from above it.
+                    // The row growing in or folding away takes up that change, so the rows below glide one way and the
+                    // neighbour's own text holds still: dropped at once, every row stepped up 27-44 px and slid back down
+                    property real _carry: 0
+                    property bool _adding: false
+                    property int _formerIndex: -1
+                    property real _lastFull: 0
+                    // a row removed from here is named before the model changes; an arrival sits just above
+                    function _carrierAbove(): var {
+                        const fold = root._foldingRow
+                        if (fold && fold !== _entry && fold._formerIndex === _entry.index) return fold
+                        const above = _entry.index > 0 ? _historyList.itemAtIndex(_entry.index - 1) : null
+                        return above && above !== _entry && above._adding ? above : null
+                    }
+                    on_FullHeightChanged: {
+                        const grew = _fullHeight - _lastFull
+                        _lastFull = _fullHeight
+                        if (!_heightReady || _resizing || _adding || _removing || grew === 0) return
+                        const carrier = _carrierAbove()
+                        if (carrier) carrier._carry -= grew
+                    }
 
                     // clearAll and a filter swap each fade the whole list, so per-row motion there would animate every delegate at once behind an already-invisible list
                     readonly property bool _animateRows: Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)
@@ -730,19 +755,31 @@ PageShell {
                         id: _presenceAnim
                         target: _entry; property: "_presence"
                         duration: Motion.normal; easing.type: Easing.OutCubic
-                        onRunningChanged: if (!running && _entry.ListView.delayRemove) _entry.ListView.delayRemove = false
+                        onRunningChanged: {
+                            if (running) return
+                            _entry._adding = false
+                            _entry._carry = 0
+                            if (root._foldingRow === _entry) root._foldingRow = null
+                            if (_entry.ListView.delayRemove) _entry.ListView.delayRemove = false
+                        }
                     }
                     ListView.onAdd: {
                         if (!_entry._animateRows) return
                         _presenceAnim.stop()
+                        _entry._carry = 0
+                        _entry._adding = true
                         _entry._presence = 0
                         _presenceAnim.to = 1
                         _presenceAnim.start()
                     }
                     ListView.onRemove: {
                         if (!_entry._animateRows) return
-                        // stop first: a stopped grow-in releases delayRemove on its way out
+                        // stop first: a stopped grow-in releases delayRemove on its way out. The carry stays: a neighbour
+                        // can hand it over before the view gets here
                         _presenceAnim.stop()
+                        _entry._adding = false
+                        _entry._formerIndex = _entry.index
+                        root._foldingRow = _entry
                         _entry.ListView.delayRemove = true
                         _presenceAnim.to = 0
                         _presenceAnim.start()
@@ -753,9 +790,13 @@ PageShell {
                     Timer { id: _heightArm; interval: 0; onTriggered: _entry._heightReady = true }
                     Component.onCompleted: {
                         _entry._restoreExpanded()
+                        _entry._lastFull = _entry._fullHeight
                         _heightArm.start()
                     }
-                    Component.onDestruction: _heightArm.stop()
+                    Component.onDestruction: {
+                        _heightArm.stop()
+                        if (root._foldingRow === _entry) root._foldingRow = null
+                    }
                     // only an expand eases: a header or section that moves with an insert or removal has to land at once
                     property bool _resizing: false
                     Timer { id: _resizeSettle; interval: Motion.normal + 40; onTriggered: _entry._resizing = false }
@@ -777,6 +818,9 @@ PageShell {
                         const restoreFocus = _card.activeFocus || _removeButton.activeFocus
                         // persist immediately. A delegate-owned delay is lost if the user changes pages before its timer fires
                         _removing = true
+                        // named before the model changes: its neighbour's header flips inside the removal, ahead of onRemove
+                        _entry._formerIndex = _entry.index
+                        if (_entry._animateRows) root._foldingRow = _entry
                         root.setRowOpen(_entry._rowKey, false)
                         root._removeEntry(modelData, _entry.index, restoreFocus)
                     }
