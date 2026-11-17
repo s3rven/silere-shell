@@ -7829,6 +7829,17 @@ ShellRoot {
                 hypr._keyboardRevision)
             root._check(hypr.keyboardLayout === "Latvian" && hypr._keyboardRevision === beforeLayoutEvent + 1,
                 "a virtual keyboard's own keymap never replaces the physical keyboard's layout")
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "vicinae-snippet-virtual-keyboard,error" })
+            hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
+                { name: "vicinae-snippet-virtual-keyboard", main: true, layout: "us", active_keymap: "error" },
+                { name: "at-translated-set-2-keyboard", main: false, layout: "lv", active_keymap: "Latvian" }] }),
+                hypr._keyboardRevision)
+            root._check(hypr.keyboardLayout === "Latvian" && hypr.keyboardLayoutCount === 1,
+                "a client-named virtual keyboard is skipped too, and one layout counts as one")
+            hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
+                { name: "at-translated-set-2-keyboard", main: true, layout: "us,lv,", active_keymap: "English (US)" }] }),
+                hypr._keyboardRevision)
+            root._check(hypr.keyboardLayoutCount === 2, "the main keyboard's comma-separated layouts are counted")
             hypr._acceptKeyboardSnapshot('{"keyboards":[]}', hypr._keyboardRevision)
             root._check(hypr.keyboardLayout === "",
                 "a valid snapshot with no keyboard clears its removed layout")

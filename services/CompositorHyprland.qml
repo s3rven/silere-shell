@@ -37,9 +37,10 @@ QtObject {
             root.keyboardLayoutCount = main ? String(main.layout ?? "").split(",").filter(l => l.trim().length > 0).length : 0
         } catch (e) {}
     }
-    // wtype, emoji pickers and remote input upload their own keymap, often nameless ("error"), and become main while typing
+    // wtype, emoji pickers and remote input upload their own keymap, often nameless ("error"), and become main while typing;
+    // Hyprland names most "hl-virtual-keyboard*", but a client may name its own ("vicinae-snippet-virtual-keyboard")
     function _isVirtualKeyboard(name): bool {
-        return String(name ?? "").startsWith("hl-virtual-keyboard")
+        return String(name ?? "").includes("virtual-keyboard")
     }
     function _updateKeyboardLayout(data): void {
         const value = String(data ?? "")
