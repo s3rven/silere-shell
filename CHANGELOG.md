@@ -182,7 +182,7 @@ settings file carries its own `__version` and migrates separately.
 - With Do Not Disturb on, a notification that lands on the open History page in front of you no longer counts as missed.
 - `silere repair` and the updater quote a checkout path with spaces in the commands they suggest, so the commands paste back as written.
 - Shell completions for `silere service` offer only what fits: install, status or remove, then `--dry-run` after install.
-- Quiet captions stay readable on a light, see-through panel over a dark window: a notification's earlier lines, the Overview's status details, and the hints and counts in Settings › Show & order (as low as 2:1 before).
+- Quiet captions stay readable on a light, see-through panel over a dark window: a notification's earlier lines, the Overview's status details, and the hints and counts in Settings › Widgets › Show & order (as low as 2:1 before).
 - Words and glyphs in the accent colour stay readable on a see-through menu or popup with a white or a dark window behind it: selected options, active rows, status lines and the tray menu's checks (as low as 1.6:1 before). Fills, rings and the accent you chose stay as they were.
 - A tray menu whose app fills a submenu after it opens grows to fit instead of snapping, and a late longer label widens the menu smoothly instead of popping its edge out and back.
 - The tray folds away when its last app quits instead of vanishing in one frame, and an app that starts while the tray shows opens its own place instead of nudging the icon beside it.

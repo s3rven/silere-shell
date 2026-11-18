@@ -752,7 +752,7 @@ Usage:
   bash scripts/install.sh --repair-matugen
         Rewire Matugen without reinstalling. Writes only Silere's own template
         and its marked block in config.toml, and refuses an entry it does not
-        own. This is what Settings > Maintenance runs.
+        own. This is what Settings › System › Overview runs.
 
 Silere runs on Hyprland and niri only. The installer asks before it writes
 anything and backs up every file it edits.

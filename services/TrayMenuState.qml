@@ -30,7 +30,7 @@ AnchoredPopupState {
     // the IPC call and the Hyprland global shortcut open the first tray menu the same way
     function keybindToggle(): string {
         if (root.open) { root.close(); return "ok" }
-        if (!ShellSettings.trayWidget) return "error: the system tray is hidden; show it in Settings › Show & order"
+        if (!ShellSettings.trayWidget) return "error: the system tray is hidden; show it in Settings › Widgets › Show & order"
         root.keyboardOpenRequested(Monitors.activeName)
         if (!root.open) root.keyboardOpenRequested("")
         return root.open ? "ok" : "error: no tray app is showing on a bar"
