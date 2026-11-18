@@ -7886,10 +7886,12 @@ ShellRoot {
             root._check(hypr.keyboardLayout === "Latvian",
                 "the keyboard snapshot selects the main keyboard and tolerates a missing entry")
             const beforeLayoutEvent = hypr._keyboardRevision
+            hypr.keyboardLayoutCount = 0
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard,English (US, intl.)" })
-            hypr._acceptKeyboardSnapshot(keyboardSnapshot, beforeLayoutEvent)
-            root._check(hypr.keyboardLayout === "English (US, intl.)",
-                "a layout event wins over an older in-flight devices snapshot and preserves commas in the layout")
+            hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
+                { main: true, layout: "us,lv", active_keymap: "Latvian" }] }), beforeLayoutEvent)
+            root._check(hypr.keyboardLayout === "English (US, intl.)" && hypr.keyboardLayoutCount === 2,
+                "a layout event wins over an older devices snapshot while its layout count still arrives")
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "missing delimiter" })
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard," })
             hypr._acceptKeyboardSnapshot('{"keyboards":{}}', hypr._keyboardRevision)
@@ -7919,6 +7921,49 @@ ShellRoot {
             hypr._acceptKeyboardSnapshot('{"keyboards":[]}', hypr._keyboardRevision)
             root._check(hypr.keyboardLayout === "",
                 "a valid snapshot with no keyboard clears its removed layout")
+            const keyboardProbe = hypr._keyboardProbe
+            const keyboardCommandWas = keyboardProbe.command.slice()
+            hypr._keyboardWanted = false
+            const keyboardDeadline = Date.now() + 4000
+            while (keyboardProbe.running && Date.now() < keyboardDeadline) discoveryClock.wait(10)
+            keyboardProbe.command = ["sleep", "0.1"]
+            let keyboardReads = 0
+            const countKeyboardRead = () => { if (keyboardProbe.running) keyboardReads++ }
+            keyboardProbe.runningChanged.connect(countKeyboardRead)
+            hypr._keyboardWanted = true
+            const refreshedKeyboard = JSON.stringify({ keyboards: [
+                { main: true, layout: "us,lv,de", active_keymap: "German" }] })
+            keyboardProbe.command = ["printf", "%s", refreshedKeyboard]
+            hypr._refreshKeyboard()
+            hypr._refreshKeyboard()
+            const refreshDeadline = Date.now() + 3000
+            while ((keyboardReads < 2 || keyboardProbe.running) && Date.now() < refreshDeadline) discoveryClock.wait(10)
+            root._check(keyboardReads === 2 && !keyboardProbe.running
+                    && hypr.keyboardLayout === "German" && hypr.keyboardLayoutCount === 3,
+                "keyboard refreshes during an in-flight devices read coalesce into one follow-up read")
+            keyboardProbe.command = ["sh", "-c", "sleep 0.1; exit 1"]
+            hypr._refreshKeyboard()
+            keyboardProbe.command = ["printf", "%s", JSON.stringify({ keyboards: [
+                { main: true, layout: "lv", active_keymap: "Latvian" }] })]
+            hypr._refreshKeyboard()
+            const failedRefreshDeadline = Date.now() + 3000
+            while ((keyboardReads < 4 || keyboardProbe.running) && Date.now() < failedRefreshDeadline) discoveryClock.wait(10)
+            root._check(keyboardReads === 4 && !keyboardProbe.running
+                    && hypr.keyboardLayout === "Latvian" && hypr.keyboardLayoutCount === 1,
+                "a failed devices read still services the keyboard refresh requested while it was running")
+            keyboardProbe.command = ["sleep", "0.1"]
+            hypr._refreshKeyboard()
+            hypr._refreshKeyboard()
+            hypr._keyboardWanted = false
+            const hiddenKeyboardDeadline = Date.now() + 3000
+            while (keyboardProbe.running && Date.now() < hiddenKeyboardDeadline) discoveryClock.wait(10)
+            discoveryClock.wait(20)
+            root._check(keyboardReads === 5 && !keyboardProbe.running,
+                "hiding the keyboard widget drops its queued devices read")
+            if (keyboardProbe.running) keyboardProbe.running = false
+            keyboardProbe.runningChanged.disconnect(countKeyboardRead)
+            keyboardProbe.command = keyboardCommandWas
+            hypr._keyboardWanted = Qt.binding(() => ShellSettings.barShowKeyboard)
             hypr.keyboardLayout = keyboardWas.layout
             hypr._keyboardRevision = keyboardWas.revision
             hypr.keyboardLayoutCount = keyboardWas.count

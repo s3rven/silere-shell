@@ -18,22 +18,27 @@ QtObject {
     property bool _keyboardWanted: ShellSettings.barShowKeyboard
     property int _keyboardRevision: 0
     property int _keyboardProbeRevision: 0
+    property bool _keyboardRefreshAgain: false
     on_KeyboardWantedChanged: root._refreshKeyboard()
     function _refreshKeyboard(): void {
-        if (!root._keyboardWanted || _keyboardProbe.running) return
+        if (!root._keyboardWanted) return
+        if (_keyboardProbe.running) {
+            root._keyboardRefreshAgain = true
+            return
+        }
         root._keyboardProbeRevision = root._keyboardRevision
         _keyboardProbe.running = true
     }
     function _acceptKeyboardSnapshot(raw: string, revision: int): void {
-        // a devices reply can arrive after a layout switch; the newer socket event wins
-        if (revision !== root._keyboardRevision) return
         try {
             const keyboards = JSON.parse(raw).keyboards
             if (!Array.isArray(keyboards)) return
             const physical = keyboards.filter(k => k && !root._isVirtualKeyboard(k.name))
             const pool = physical.length > 0 ? physical : keyboards.filter(k => !!k)
             const main = pool.find(k => k.main) || pool[0]
-            root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
+            // a layout switch leaves the configured count useful, but its newer socket event owns the name
+            if (revision === root._keyboardRevision)
+                root.keyboardLayout = main ? SafeText.singleLineText(main.active_keymap || "", 128) : ""
             root.keyboardLayoutCount = main ? String(main.layout ?? "").split(",").filter(l => l.trim().length > 0).length : 0
         } catch (e) {}
     }
@@ -57,8 +62,13 @@ QtObject {
         command: ["hyprctl", "devices", "-j"]
         stdout: StdioCollector { id: _keyboardOut }
         onExited: code => {
-            if (!_keyboardProbe.completedSuccessfully(code)) return
-            root._acceptKeyboardSnapshot(_keyboardOut.text, root._keyboardProbeRevision)
+            if (_keyboardProbe.completedSuccessfully(code))
+                root._acceptKeyboardSnapshot(_keyboardOut.text, root._keyboardProbeRevision)
+            // config reloads can arrive while devices is in flight; read again after running falls
+            if (root._keyboardRefreshAgain) {
+                root._keyboardRefreshAgain = false
+                Qt.callLater(root._refreshKeyboard)
+            }
         }
     }
 

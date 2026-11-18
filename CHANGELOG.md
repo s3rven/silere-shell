@@ -71,6 +71,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - On Hyprland, a numeric workspace name no longer sends another workspace's app icons to the wrong monitor.
+- The Hyprland keyboard widget keeps its layout count when a layout switch races its first read, and catches config reloads that arrive during a pending read.
 - Warnings, errors and successes stay distinct from an accent of the same hue, such as Gold, Leaf, Coral or a wallpaper accent, on the bar and in the menu.
 - Muting fades the on-screen display's level to grey with its icon and label, instead of switching it at once.
 - Switches, slider knobs, outlines and Home's graphs fade with the rest of the shell when high contrast or the colour source changes, and the Theme page's swatches fade with a new wallpaper, instead of changing in one frame.
