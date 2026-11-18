@@ -144,8 +144,8 @@ Singleton {
 
     // a silenced notification is missed unless its row lands on the History page in front of you;
     // one history does not keep is missed only when it is transient and leaves no trace at all
-    function missedOnArrival(archived: bool, transient: bool, appName): bool {
-        if (!archived) return transient
+    function missedOnArrival(archived: bool, isTransient: bool, appName): bool {
+        if (!archived) return isTransient
         if (!MenuState.recentActive) return true
         const filter = MenuState.recentFilter
         const name = String(root.identityText(appName)).trim()
