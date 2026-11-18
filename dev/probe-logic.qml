@@ -40,6 +40,7 @@ ShellRoot {
     property bool _launchEnvDone: false
     property bool _zoneLinkDone: false
     property bool _localArtDone: false
+    property bool _launchFailDone: false
     property real _volumeCancelDeadline: 0
 
     QtObject {
@@ -8585,6 +8586,24 @@ ShellRoot {
             artRun.destroy()
         })
         artRun.running = true
+        // a stand-in notify-send records each alert: a command failing at once alerts, one failing after 6 s does not
+        const quickFail = SystemTools.launchArgv(["false"], "Probe failed")
+        const lateFail = SystemTools.launchArgv(["sh", "-c", "sleep 6; exit 1"], "Probe failed")
+        const launchRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; "
+            + "printf '#!/bin/sh\\necho alert >> \"%s/alerts\"\\n' \"$d\" > \"$d/notify-send\"; chmod +x \"$d/notify-send\"; "
+            + "export PATH=\"$d:$PATH\"; "
+            + "\"$1\" -c \"$2\" bash false; quick=$(cat \"$d/alerts\" 2>/dev/null | wc -l); "
+            + "\"$1\" -c \"$2\" bash sh -c 'sleep 6; exit 1'; late=$(cat \"$d/alerts\" 2>/dev/null | wc -l); "
+            + "[ \"$quick\" = 1 ] && [ \"$late\" = 1 ]",
+            "check", quickFail[0], quickFail[2]] })
+        launchRun.exited.connect(function(code) {
+            root._check(code === 0 && quickFail[2] === lateFail[2] && lateFail.slice(4).join(" ") === "sh -c sleep 6; exit 1",
+                "a power or settings command that fails at once alerts; one that ran a while and exits nonzero does not")
+            root._launchFailDone = true
+            launchRun.destroy()
+        })
+        launchRun.running = true
         root._check(Media.privacyPlaceholderSource("Zen is playing media") === "Zen"
                 && Media.privacyPlaceholderSource("Song is playing") === "",
             "media recognises a browser's generic playback placeholder")
@@ -15672,6 +15691,7 @@ ShellRoot {
         root._check(root._launchEnvDone, "the launch fallback environment check completes")
         root._check(root._zoneLinkDone, "the time zone link check completes")
         root._check(root._localArtDone, "the cover file check completes")
+        root._check(root._launchFailDone, "the launch failure check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()

@@ -128,15 +128,17 @@ Singleton {
             console.info("silere-shell: sandboxed power action skipped:", command.join(" "))
             return
         }
-        if (!root.hasNotifySend) {
-            Compositor.launch(command)
-            return
-        }
+        Compositor.launch(root.hasNotifySend ? root.launchArgv(command, failTitle) : command)
+    }
+
+    // only a failure to start is reported: a lock that ran an hour, or a terminal passing on the hangup its
+    // monitor got when the window closed, exits nonzero too, and alerting then calls a normal close a failure
+    function launchArgv(command, failTitle: string): var {
         const note = "notify-send --urgency=critical --app-name='Silere Shell' --icon=dialog-error " +
             root._shq(failTitle) + " " + root._shq("It may require authorization or be blocked by a running task.")
-        const argv = ["bash", "-c", '"$@" || ' + note, "bash"]
+        const argv = ["bash", "-c", '"$@" || [ "$SECONDS" -ge 5 ] || ' + note, "bash"]
         for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
-        Compositor.launch(argv)
+        return argv
     }
 
     readonly property int _minRetryDelayMs: 5000
