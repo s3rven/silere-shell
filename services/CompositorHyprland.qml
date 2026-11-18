@@ -586,14 +586,16 @@ QtObject {
     readonly property var workspaceToplevels: {
         void root._layoutTick
         // by name too: named and special workspaces share an id, and each can sit on its own monitor
-        const wsOut = Object.create(null)
+        const wsOutById = Object.create(null)
+        const wsOutByName = Object.create(null)
         const wsVals = Hyprland.workspaces ? (Hyprland.workspaces.values ?? []) : []
         for (let i = 0; i < wsVals.length; i++) {
             const ws = wsVals[i]
             if (!ws) continue
             const output = ws.monitor ? (ws.monitor.name ?? "") : ""
-            wsOut[ws.id] = output
-            wsOut[ws.name ?? ""] = output
+            // a display name can be another workspace's number, so it must never replace that id's output
+            wsOutById[ws.id] = output
+            wsOutByName[ws.name ?? ""] = output
         }
         const tops = root._liveToplevels()
         const copies = root._ipcCopies
@@ -613,7 +615,7 @@ QtObject {
                 cls: root._identity(c.class),
                 initialClass: root._identity(c.initialClass),
                 pid: c.pid ?? -1, ref: c.address,
-                wsRef: wsId, wsId: wsId, output: (wsId > 0 ? wsOut[wsId] : wsOut[wsName]) ?? "",
+                wsRef: wsId, wsId: wsId, output: (wsId > 0 ? wsOutById[wsId] : wsOutByName[wsName]) ?? "",
                 wsName: wsName,
                 focused: focused,
                 focusRank: root.focusRankOf(address, c, focused),

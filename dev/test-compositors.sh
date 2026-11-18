@@ -209,9 +209,25 @@ EOF
             grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2; cat "$scratch/window.log" >&2
             exit 1
         }
+        # a workspace display name can be another workspace's number; names must not overwrite id lookups
+        if [[ "$hypr_config" = *.lua ]]; then
+            hyprctl dispatch 'hl.dsp.workspace.rename({ workspace = 2, name = "1" })' > /dev/null
+            hyprctl dispatch 'hl.dsp.window.move({ workspace = 1, follow = false })' > /dev/null
+        else
+            hyprctl dispatch renameworkspace '2 1' > /dev/null
+            hyprctl dispatch movetoworkspacesilent 1 > /dev/null
+        fi
+        step numeric-name
+        grep -q "PROBE-MONITORS numeric-name .*outputs=silere-probe-window@$first_output " "$scratch/monitors.log" || {
+            printf 'FAIL: a numeric workspace name moved a window to the wrong output in the shell model\n' >&2
+            grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2
+            hyprctl -j workspaces >&2
+            hyprctl -j clients >&2
+            exit 1
+        }
         errors="$(_probe_errors "$scratch/monitors.log")"
         [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
-        checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy"
+        checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy, numeric workspace names"
     fi
     errors="$(_probe_errors "$scratch/shell.log")"
     [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }

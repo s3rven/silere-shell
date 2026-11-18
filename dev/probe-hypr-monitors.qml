@@ -24,7 +24,9 @@ ShellRoot {
             const active = Compositor.workspaces.filter(w => w.active)
                 .map(w => w.output + "=" + w.name).sort()
             const focused = Compositor.activeToplevel
+            const outputs = Compositor.toplevels.map(t => t.title + "@" + t.output).sort().join("|")
             console.log("PROBE-MONITORS " + phase + " " + active.join(" ")
+                + " outputs=" + outputs
                 + " window=" + (focused ? focused.title : "")
                 + " special=" + Compositor.specialOutputs.slice().sort().join(","))
         }
