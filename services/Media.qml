@@ -855,10 +855,12 @@ Singleton {
         return sum / h.length
     }
 
-    // a player closed to its tray (Spotify) has no window to find; MPRIS can still bring one back
+    // a player closed to its tray (Spotify) has no window to find; MPRIS can still bring one back, so a window
+    // that only names it in a title is a guess for players that cannot raise themselves
     function focusPlayer(): void {
-        if (WindowActions.focusMediaPlayer(root.playerName, root.title)) return
-        if (player && player.canRaise) player.raise()
+        const raisable = !!(player && player.canRaise)
+        if (WindowActions.focusMediaPlayer(root.playerName, root.title, !raisable)) return
+        if (raisable) player.raise()
     }
 
     function togglePlay(): void {

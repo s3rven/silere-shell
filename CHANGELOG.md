@@ -84,6 +84,7 @@ settings file carries its own `__version` and migrates separately.
 - A media player's cover that points at a pipe or an unresponsive mount no longer stops icons and covers from loading across the shell.
 - A very long window title or label no longer ends in half an emoji.
 - Clicking a Claude Code notification no longer focuses a VS Code window instead of the terminal that sent it.
+- Clicking the media widget or Now Playing brings up the player itself, not a browser tab whose title mentions it.
 - After a wake from suspend, the bar's weather refreshes as soon as the network is back instead of showing the reading from before the sleep for a few minutes.
 - Tray icons accept clicks across the bar's full height and keep their highlight while their menu is open.
 - With Reduce motion on, hovering a shortened media title reveals its ending, as for window titles.

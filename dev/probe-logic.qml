@@ -4782,6 +4782,17 @@ ShellRoot {
                 && WindowActions._appMatches(named("dev.zed.Zed"), "Zed")
                 && WindowActions._appMatches(named("code"), "Code"),
             "a word in front of a short class is not its vendor: Claude Code never matches VS Code's window")
+        const playerWindows = [
+            { ref: "app", cls: "Spotify", initialClass: "Spotify", title: "Spotify Premium", wsId: 3, wsRef: 3, focusRank: 5 },
+            { ref: "tab", cls: "zen", initialClass: "zen", title: "Spotify - Web Player — Zen", wsId: 2, wsRef: 2, focusRank: 0 },
+            { ref: "film", cls: "kitty", initialClass: "kitty", title: "celluloid: night.mkv", wsId: 4, wsRef: 4, focusRank: 1 }
+        ]
+        // on a workspace of its own, so neither window counts as here whatever the desktop shows
+        const away = { ref: 99, name: "99" }
+        root._check(WindowActions.mediaPlayerSource(playerWindows, "spotify", "A Song", away)?.ref === "app"
+                && WindowActions.mediaPlayerSource(playerWindows, "celluloid", "", away)?.ref === "film"
+                && WindowActions.mediaPlayerSource(playerWindows.slice(1), "spotify", "A Song", away, false) === null,
+            "the media card goes to the player's own window before one that only names it in a title, and a player that can raise itself is not guessed from titles")
         const byStartup = WindowActions._resolveByDesktopEntry(
             matchingClients, "Probe.desktop", function(identity) {
                 return identity === "probe"

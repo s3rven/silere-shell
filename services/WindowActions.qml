@@ -319,35 +319,43 @@ Singleton {
         return c ? { wsId: c.wsId ?? -1, output: String(c.output ?? "") } : null
     }
 
-    function focusMediaPlayer(playerName: string, songTitle: string): bool {
-        const clients = root._clients()
-        if (clients.length === 0) return false
-
+    // a class names the player's own window and a title only mentions it: a browser tab titled "Spotify", used
+    // more recently, took the media card's click from the Spotify app. A player that can raise itself skips titles
+    function mediaPlayerSource(clients, playerName: string, songTitle: string, here = root._hereWorkspace(), titles = true): var {
         const name   = String(playerName || "").toLowerCase()
         const norm   = (s) => String(s || "").toLowerCase()
         const browserName = root._browserClasses.some(b => root._hasBrowserToken(name, b))
+        const pick = matches => root._chooseMatchingSource(clients, matches, here)
 
         let best = name.length > 0
-            ? root._chooseMatchingSource(clients, c =>
+            ? pick(c =>
                 (browserName
                     ? root._browserClasses.some(b => root._hasBrowserToken(name, b)
                         && (root._hasBrowserToken(c.cls, b)
                             || root._hasBrowserToken(c.initialClass, b)))
-                    : norm(c.cls).includes(name) || norm(c.initialClass).includes(name)
-                        || norm(c.title).includes(name)))
+                    : norm(c.cls).includes(name) || norm(c.initialClass).includes(name)))
             : null
 
+        if (!best && titles && name.length > 0 && !browserName)
+            best = pick(c => norm(c.title).includes(name))
+
         if (!best && browserName)
-            best = root._chooseMatchingSource(clients, c =>
+            best = pick(c =>
                 root._browserClasses.some(b =>
                     root._hasBrowserToken(c.cls, b)
                     || root._hasBrowserToken(c.initialClass, b)))
 
-        if (!best && songTitle && songTitle.length > 4) {
+        if (!best && titles && songTitle && songTitle.length > 4) {
             const t = songTitle.toLowerCase()
-            best = root._chooseMatchingSource(clients, c => norm(c.title).includes(t))
+            best = pick(c => norm(c.title).includes(t))
         }
+        return best
+    }
 
+    function focusMediaPlayer(playerName: string, songTitle: string, titles: bool): bool {
+        const clients = root._clients()
+        if (clients.length === 0) return false
+        const best = root.mediaPlayerSource(clients, playerName, songTitle, root._hereWorkspace(), titles)
         if (best) Compositor.focusToplevel(best)
         return !!best
     }
