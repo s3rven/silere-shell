@@ -3346,7 +3346,9 @@ test_cli_status_readings() (
     printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
     chmod +x "$stubs/qs" "$stubs/systemctl"
     echo $(( $(date +%s) - 600 )) > "$home/cache/silere-shell/update-checked"
+    # the stand-in HOME hides CI's global safe.directory, and git then refuses a checkout owned by another user
     out="$(env -u LC_ALL PATH="$stubs:$PATH" HOME="$home" XDG_CACHE_HOME="$home/cache" XDG_STATE_HOME="$home/state" \
+        GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
         bash "$ROOT/scripts/silere" status 2>&1)" || fail "silere status failed: $out"
     [[ "$out" == *"Shell: running (pid $BASHPID, "[0-9]*" MB PSS)"* ]] || fail "status left out the shell's memory: $out"
     [[ "$out" == *"Update: up to date, checked 10 min ago"* ]] || fail "status left out when updates were last checked: $out"
