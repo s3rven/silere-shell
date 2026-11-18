@@ -62,6 +62,8 @@ ShellRoot {
     }
     function source(): string { return String(TrayMenuState.sourceItem?.id ?? "") }
     function wait(ms: int): void { root.keys.wait(ms) }
+    // the card's window maps a turn after the catcher's; under check.sh's parallel load that has outrun a fixed wait
+    function waitFocus(done): void { for (let i = 0; i < 40 && !done(root.focused()); i++) root.wait(50) }
     // past the 180 ms a pointer-opened submenu waits before it closes
     function key(k: int, settle: int): void { root.keys.keyClick(k); root.wait(settle ?? 60) }
     function call(): string {
@@ -92,6 +94,7 @@ ShellRoot {
 
         root.check(root.call() === "ok" && TrayMenuState.open && root.source() === "labapp",
             "tray toggle opens the first app's menu")
+        root.waitFocus(f => f === "Open")
         root.check(root.focused() === "Open", "a menu opened from the keyboard lands on its first entry")
         root.key(Qt.Key_Down)
         root.check(root.focused() === "Settings", "Down moves to the next entry")
@@ -129,6 +132,8 @@ ShellRoot {
         root.check(!TrayMenuState.open, "Escape from the menu's own level closes it")
 
         root.trayWidget._openMenu(lab.modelData, lab)
+        // mapped first, then long enough for a first-entry focus that should not come
+        root.waitFocus(f => f !== "nothing")
         root.wait(400)
         root.check(TrayMenuState.open && root.focused() === "the card", "a menu opened by pointer focuses no entry")
         root.key(Qt.Key_Down)
