@@ -16,6 +16,9 @@ Rectangle {
     property bool animateScale: true
     property bool scaleUniform: true
     property bool animatePlacement: true
+    // a card whose width glides takes its x from that width each frame: an x glide of its own eased on another curve,
+    // and the far edge of a widening tray menu swung back before it went out
+    property bool placeFollowsWidth: false
 
     signal closeFinished()
 
@@ -46,8 +49,6 @@ Rectangle {
     }
     readonly property real _edgeY: _barInset + Metrics.barHeight + 8
     readonly property real _minX: Metrics.snap4Up(radius + 4)
-    readonly property real _maxX: Math.max(_minX,
-        Metrics.snap4Down(winW - targetWidth - _minX))
 
     property real scaleAmt: 1
     property real edgeOffset: 0
@@ -103,19 +104,24 @@ Rectangle {
     // A card wider than the bar has only the screen to keep to. Applied when placing, never live:
     // a card that chases the bar's ends slides away from the width slider being dragged
     readonly property int _barSide: Metrics.barPresent(win.screen) ? Metrics.barSideGap(winW) : 0
-    readonly property bool _fitsBar: winW - _barSide * 2 >= targetWidth
 
-    function _screenClampedX(px: real): real {
-        return Math.max(_minX, Math.min(px, _maxX))
+    // bounds come from the width being placed, never a binding on targetWidth: onTargetWidthChanged runs before
+    // such a binding catches up, and a widened card was placed against its old width, on the screen's edge
+    function _screenClampedX(px: real, w: real, snapped: bool): real {
+        const room = winW - w - _minX
+        return Math.max(_minX, Math.min(px, snapped ? Metrics.snap4Down(room) : room))
     }
-    function _clampedX(px: real): real {
-        if (!_fitsBar) return root._screenClampedX(px)
+    function _clampedX(px: real, w: real, snapped: bool): real {
+        if (winW - _barSide * 2 < w) return root._screenClampedX(px, w, snapped)
         const low = Math.max(_minX, _barSide)
-        return Math.max(low, Math.min(px, Math.min(_maxX, winW - _barSide - targetWidth)))
+        return Math.max(low, Math.min(root._screenClampedX(px, w, snapped), winW - _barSide - w))
+    }
+    function _xAt(w: real, snapped: bool): real {
+        const t = Math.max(0, Math.min(winW, anchorX))
+        return root._clampedX(t - w * t / Math.max(1, winW), w, snapped)
     }
     function _targetX(): real {
-        const t = Math.max(0, Math.min(winW, anchorX))
-        return Metrics.snap4(_clampedX(t - targetWidth * t / Math.max(1, winW)))
+        return Metrics.snap4(root._xAt(targetWidth, true))
     }
     // what a window fitted around the card must cover: the whole glide while one runs, else where it sits; set here, as a binding on x re-entered when that window resized mid-glide
     property point placementSpan: Qt.point(0, 0)
@@ -124,12 +130,25 @@ Rectangle {
     }
     function place(): void {
         const from = x, to = _targetX()
+        if (_followingWidth) {
+            // the fitted window covers the whole move up front, as it does for a glide
+            _xGlide.stop()
+            placementSpan = Qt.point(Math.min(from, to), Math.max(from, to))
+            x = _xAt(width, false)
+            return
+        }
         x = to
         _spanTo(from, to)
     }
+    readonly property bool _followingWidth: placeFollowsWidth && open && _placementSettled
+        && Math.abs(width - targetWidth) > 0.5
+    // unsnapped, so x moves with the glided width frame by frame
+    onWidthChanged: if (_followingWidth) x = _xAt(width, false)
+    // the glide's end lands on the snapped placement
+    on_FollowingWidthChanged: if (!_followingWidth && open) place()
     // only keeps the card on screen; the bar's ends were met when it was placed
     function reclamp(): void {
-        const nx = Metrics.snap4(_screenClampedX(x))
+        const nx = Metrics.snap4(_screenClampedX(x, targetWidth, true))
         if (Math.abs(nx - x) <= 0.5) return
         // clamp corrections are geometry invariants, not placement motion. Snapping also avoids retargeting x on every radius-animation frame
         _hardClamping = true
@@ -208,7 +227,7 @@ Rectangle {
 
     MotionBehavior on x {
         gate: root.animatePlacement && root.open && root._transitionReady
-            && root._placementSettled && !root._hardClamping
+            && root._placementSettled && !root._hardClamping && !root._followingWidth
         NumberAnimation {
             id: _xGlide
             duration: Motion.medium

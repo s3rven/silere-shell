@@ -72,6 +72,7 @@ ShellRoot {
     }
 
     Component { id: pageShellFactory; PageShell {} }
+    Component { id: popupCardFactory; FloatingPopupCard { height: 44 } }
     Component { id: drawerContentFactory; Item { implicitHeight: 100 } }
     Component {
         id: flickableFactory
@@ -3066,6 +3067,22 @@ ShellRoot {
     }
 
     // an asynchronous Loader parents the page before its build finishes: a page drawn opaque then showed its half-built rows
+    // a card widened while open was placed against the old width: its bounds were a binding on targetWidth that had
+    // not caught up when onTargetWidthChanged placed it, so a tray menu near the screen's end sat on the edge
+    function _checkCardWidenKeepsMargin(): void {
+        const host = Qt.createQmlObject("import QtQuick; Item { width: 1536; height: 960 }", root)
+        const card = popupCardFactory.createObject(root, { win: host, open: true, anchorX: 1500, barBottom: false, width: 232 })
+        const inside = () => card.x + card.width <= host.width - card._minX && card.x >= card._minX
+        const narrow = inside()
+        card.width = 292
+        const wide = inside()
+        card.width = 200
+        const narrowed = inside() && card.x === Metrics.snap4(card._targetX())
+        root._check(narrow && wide && narrowed,
+            "a popup card widened while open keeps its margin to the screen's edge (x " + card.x + ", width " + card.width + ")")
+        card.destroy(); host.destroy()
+    }
+
     function _checkPageBuildHidden(): void {
         const openWas = MenuState.open
         const reduceWas = ShellSettings.reduceMotion
@@ -4098,6 +4115,7 @@ ShellRoot {
         root._checkSystemWidget()
         root._checkReadingsOutlastFade()
         root._checkPageBuildHidden()
+        root._checkCardWidenKeepsMargin()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()

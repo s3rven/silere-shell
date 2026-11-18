@@ -552,6 +552,7 @@ FittedPopupWindow {
 
         // placement clamps against where the width is headed, as the menu panel does
         targetWidth: _widthGlide.target
+        placeFollowsWidth: true
         width: _widthGlide.value
         SmoothGlide {
             id: _widthGlide

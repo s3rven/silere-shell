@@ -195,6 +195,7 @@ settings file carries its own `__version` and migrates separately.
 - A quick peek at the overview with an auto-hidden bar no longer jerks the bar's content up and back.
 - A virtual keyboard from a snippet tool or remote input no longer replaces the keyboard layout name on the bar.
 - The network widget says Wired for USB, onboard and virtual Ethernet adapters with no connection name, instead of their interface name.
+- A tray menu that widens while open, as a long label arrives, keeps its gap to the screen's edge instead of ending flush against it, and its far edge holds still as it widens.
 
 ## Releases
 
