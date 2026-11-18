@@ -1,6 +1,6 @@
 pkgbase = silere-shell-git
 	pkgdesc = Quickshell desktop shell for Hyprland and niri: bar, notifications, OSD and tray in one process
-	pkgver = 1.7.0.r0.gde39889
+	pkgver = 1.8.0.r0.gd25ef9f
 	pkgrel = 1
 	url = https://github.com/s3rven/silere-shell
 	install = silere-shell-git.install
