@@ -81,6 +81,7 @@ settings file carries its own `__version` and migrates separately.
 - Partial scroll gestures on the media and tray widgets stay with their own bar and clear when the control hides or changes its target.
 - Code in notifications keeps its literal tags, entities and Markdown characters, including fenced blocks and backticks inside code.
 - A notification body full of unclosed tags no longer freezes the shell for a moment.
+- A media player's cover that points at a pipe or an unresponsive mount no longer stops icons and covers from loading across the shell.
 - A very long window title or label no longer ends in half an emoji.
 - After a wake from suspend, the bar's weather refreshes as soon as the network is back instead of showing the reading from before the sleep for a few minutes.
 - Tray icons accept clicks across the bar's full height and keep their highlight while their menu is open.

@@ -317,12 +317,14 @@ Singleton {
 
     // remote art is allowed on purpose where notification icons are denied: mpris art genuinely is a url,
     // but it reaches the view only as a file curl already saved, never as a url for Qt to fetch in-process
-    readonly property var artCandidates: {
+    readonly property var _artOffers: {
         const out = []
         function offer(value) {
             let source = root.artSource(value)
+            // a saved download is this shell's own file; any other local path is the player's word
+            const check = /^file:/i.test(source)
             if (/^https:\/\//i.test(source)) source = root._artFiles[source] ?? ""
-            if (source.length > 0 && out.indexOf(source) < 0) out.push(source)
+            if (source.length > 0 && !out.some(o => o.source === source)) out.push({ source: source, check: check })
         }
         const reported = root.normalizedArtUrl(root.player ? root.player.trackArtUrl : "")
         offer(root.sizedArtUrl(reported))
@@ -333,6 +335,52 @@ Singleton {
                 offer(directory + "/" + root.sidecarArtNames[i])
         return out
     }
+    // a player's local cover reaches an Image only once stat calls it a regular file: a fifo behind one held Qt's
+    // single image thread, so no icon in the shell loaded again and the shell could not quit. A hung mount did the same
+    function shownArt(offers, checked): var {
+        return offers.filter(o => !o.check || checked[o.source] === true).map(o => o.source)
+    }
+    readonly property var artCandidates: root.shownArt(root._artOffers, root._localArt)
+    property var _localArt: ({})
+    function keptLocalArt(checked): var {
+        const out = {}
+        for (const source in checked) if (checked[source] === true) out[source] = true
+        return out
+    }
+    property var _localArtChecking: []
+    readonly property var _localArtUnchecked: root._artOffers
+        .filter(o => o.check && root._localArt[o.source] === undefined).map(o => o.source)
+    // a turn later: set from the check's own exit, a direct call would start the next run inside that handler
+    on_LocalArtUncheckedChanged: Qt.callLater(root._checkLocalArt)
+    function localArtPath(source): string {
+        const match = /^file:(?:\/\/)?(\/.*)$/i.exec(String(source ?? ""))
+        if (!match) return ""
+        try { return decodeURIComponent(match[1]) } catch (error) { return "" }
+    }
+    // test stats without opening, so a fifo cannot hold it; prints the 1-based index of each readable regular file
+    readonly property string _localArtScript: 'i=0; for p; do i=$((i+1)); [ -f "$p" ] && [ -r "$p" ] && echo "$i"; done; exit 0'
+    function _checkLocalArt(): void {
+        if (!root._artWanted || _localArtCheck.running) return
+        const sources = root._localArtUnchecked
+        if (sources.length === 0) return
+        root._localArtChecking = sources
+        _localArtCheck.exec(["sh", "-c", root._localArtScript, "silere-art-check"].concat(sources.map(root.localArtPath)))
+    }
+    readonly property BoundedProcess _localArtProbe: BoundedProcess {
+        id: _localArtCheck
+        timeoutMs: 3000
+        stdout: StdioCollector { id: _localArtOut }
+        onExited: code => {
+            const checked = root._localArtChecking
+            root._localArtChecking = []
+            const regular = _localArtOut.text.trim().split(/\s+/)
+            const next = Object.keys(root._localArt).length > 200 ? ({}) : Object.assign({}, root._localArt)
+            for (let i = 0; i < checked.length; i++)
+                next[checked[i]] = !_localArtCheck.timedOut && regular.indexOf(String(i + 1)) >= 0
+            root._localArt = next
+            Qt.callLater(root._checkLocalArt)
+        }
+    }
 
     readonly property bool remoteArtAvailable: SystemTools.hasCurl && root._artCacheDir.length > 0
     function artDemand(available: bool, railVisible: bool, pageShown: bool,
@@ -342,7 +390,12 @@ Singleton {
     readonly property bool _artWanted: root.artDemand(root.available,
         root.shown, MenuState.mediaActive,
         MenuState.open, Idle.isQuiet)
-    on_ArtWantedChanged: if (root._artWanted) root._fetchNextArt()
+    on_ArtWantedChanged: if (root._artWanted) {
+        root._fetchNextArt()
+        // a cover a player wrote after naming it, or a mount that came back, gets another look at each opening
+        root._localArt = root.keptLocalArt(root._localArt)
+        root._checkLocalArt()
+    }
     readonly property string _artCacheDir: XdgPaths.cacheHome.length > 0
         ? XdgPaths.cacheHome + "/silere-shell/art" : ""
     // url -> file url of the saved cover; misses wait for a reconnect or retryArt()

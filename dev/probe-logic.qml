@@ -39,6 +39,7 @@ ShellRoot {
     property bool _helperUpdatesDone: false
     property bool _launchEnvDone: false
     property bool _zoneLinkDone: false
+    property bool _localArtDone: false
     property real _volumeCancelDeadline: 0
 
     QtObject {
@@ -8540,6 +8541,31 @@ ShellRoot {
                 && Media.trackDirectory("https://example.invalid/song.mp3") === ""
                 && Media.trackDirectory("file:///home/u/../etc/song.mp3") === "",
             "media artwork resolves a local album directory without climbing out of it")
+        const offered = [{ source: "file:///a.jpg", check: true }, { source: "file:///b.jpg", check: true },
+            { source: "file:///saved.img", check: false }, { source: "image://qsimage/1", check: false }]
+        root._check(JSON.stringify(Media.shownArt(offered, { "file:///a.jpg": true, "file:///b.jpg": false }))
+                === JSON.stringify(["file:///a.jpg", "file:///saved.img", "image://qsimage/1"])
+                && Media.shownArt(offered, {}).indexOf("file:///b.jpg") < 0,
+            "a player's local cover shows only once it was found to be a regular file; saved downloads need no check")
+        root._check(Media.localArtPath("file:///home/u/A%20B/cover.jpg") === "/home/u/A B/cover.jpg"
+                && Media.localArtPath("file:/x.png") === "/x.png" && Media.localArtPath("file:///bad%E0") === ""
+                && Media.localArtPath("image://qsimage/1") === "",
+            "a local cover url maps back to the path that is checked")
+        root._check(JSON.stringify(Media.keptLocalArt({ "file:///a.jpg": true, "file:///b.jpg": false })) === '{"file:///a.jpg":true}',
+            "a cover found missing is looked at again on the next opening, a found one is kept")
+        // the check, run as written: a regular file passes; a fifo, a directory, an unreadable or missing file do not
+        const artRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 1; trap 'chmod 600 \"$d/locked\" 2>/dev/null; rm -rf \"$d\"' EXIT; "
+            + "printf x > \"$d/ok\"; mkfifo \"$d/fifo\"; mkdir \"$d/dir\"; printf x > \"$d/locked\"; chmod 000 \"$d/locked\"; "
+            + "out=$(timeout 5 sh -c \"$1\" check \"$d/fifo\" \"$d/ok\" \"$d/dir\" \"$d/locked\" \"$d/none\" | tr '\\n' ,); "
+            + "[ \"$out\" = 2, ] || { [ \"$(id -u)\" = 0 ] && [ \"$out\" = 2,4, ]; }",
+            "check", Media._localArtScript] })
+        artRun.exited.connect(function(code) {
+            root._check(code === 0, "the cover check passes a regular file and refuses a fifo, a directory and an unreadable file")
+            root._localArtDone = true
+            artRun.destroy()
+        })
+        artRun.running = true
         root._check(Media.privacyPlaceholderSource("Zen is playing media") === "Zen"
                 && Media.privacyPlaceholderSource("Song is playing") === "",
             "media recognises a browser's generic playback placeholder")
@@ -15626,6 +15652,7 @@ ShellRoot {
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")
         root._check(root._launchEnvDone, "the launch fallback environment check completes")
         root._check(root._zoneLinkDone, "the time zone link check completes")
+        root._check(root._localArtDone, "the cover file check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()

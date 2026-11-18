@@ -49,7 +49,8 @@ players, which can reveal what you are playing. Player metadata is untrusted inp
 any app on the session bus can set a cover url. The shell never fetches it itself;
 `curl` downloads it over HTTPS only, capped at 10 MB and 10 seconds, into
 `~/.cache/silere-shell/art`, and the shell shows the saved file. Turning the setting
-off deletes that folder.
+off deletes that folder. A local cover a player names, or one beside its track, is shown
+only once it checks out as a readable regular file.
 
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,
