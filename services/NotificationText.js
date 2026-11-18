@@ -2,10 +2,11 @@
 
 // notification displays are plain text: strip presentation markup only from prose
 // commands and examples inside code must keep their tags, entities and punctuation
+// a tag stops at the next "<": with [^>]* every unclosed "<b" scanned to the end, 0.4 s for a 32 KB body
 function prose(source) {
     return source
-        .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s|em|strong|font|img)\b[^>]*>/gi, "")
-        .replace(/<br\s*\/?>|<\/?(p|div)\b[^>]*>/gi, " ")
+        .replace(/<\/?(b|i|u|a|span|small|big|tt|markup|sub|sup|s|em|strong|font|img)\b[^<>]*>/gi, "")
+        .replace(/<br\s*\/?>|<\/?(p|div)\b[^<>]*>/gi, " ")
         .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
         .replace(/&quot;/g, "\"").replace(/&apos;/g, "'")
         .replace(/&#(x[0-9a-f]{1,6}|[0-9]{1,7});/gi, (m, n) => {

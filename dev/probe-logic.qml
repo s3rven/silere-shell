@@ -6737,6 +6737,13 @@ ShellRoot {
             "history text drops markup and decodes entities")
         root._check(Notifications._normalizeEntry({ body: "a\u202Eb" }).body === "ab",
             "history text drops a bidi override a sender embedded")
+        root._check(Notifications.plainText("<b<i>kept</i>", 64) === "<bkept",
+            "a stray tag opening keeps the text after it instead of swallowing up to the next tag's end")
+        const hostileStarted = Date.now()
+        Notifications.plainText("<b".repeat(16384), 16384)
+        const hostileMs = Date.now() - hostileStarted
+        // about 1 ms when linear; the quadratic pattern took 385 ms here
+        root._check(hostileMs < 100, "a body of unclosed tags is cleaned in linear time (" + hostileMs + " ms)")
         root._check(Notifications.plainText("a\u061C\u200E\u206Ab", 32) === "ab",
             "notification body drops direction marks and deprecated bidi controls")
         root._check(Notifications.plainText("**Done.** Two **files** changed", 64)
