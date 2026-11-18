@@ -7870,6 +7870,9 @@ ShellRoot {
         root._check(SafeText.singleLineText("pay\u200Bpal\u200F", 32) === "pay pal"
                 && SafeText.singleLineText("a\u061C\u206Ab", 32) === "a b",
             "single-line labels flatten invisible direction marks")
+        const cutEmoji = SafeText.singleLineText(" ".repeat(8 * 8 + 63) + "😀", 8)
+        root._check(cutEmoji === "",
+            "a single-line label cut inside an emoji keeps no half of it (" + cutEmoji.length + " code units left)")
         root._check(SafeText.initial("👩🏽‍💻 developer", "?") === "👩🏽‍💻",
             "icon resolver keeps a joined emoji grapheme whole")
         root._check(SafeText.boundedText("ab👩🏽‍💻cd", 8) === "ab…",

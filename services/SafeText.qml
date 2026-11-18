@@ -31,8 +31,9 @@ Singleton {
     function singleLineText(value, limit): string {
         const cap = root._cap(limit, root.maxIdentityChars)
         const raw = String(value ?? "")
-        // bounded before the regexes: a runaway title would otherwise be scanned whole on every change
-        const text = (raw.length > cap * 8 + 64 ? raw.slice(0, cap * 8 + 64) : raw)
+        // bounded before the regexes: a runaway title would otherwise be scanned whole on every change. The cut
+        // can fall inside a surrogate pair, and with only spaces before it that half was all that remained
+        const text = (raw.length > cap * 8 + 64 ? raw.slice(0, cap * 8 + 64).replace(/[\uD800-\uDBFF]$/, "") : raw)
             .replace(/[\u0000-\u001F\u007F-\u009F\u061C\u200B\u200E\u200F\u202A-\u202E\u2066-\u206F]/g, " ")
             .replace(/\s+/g, " ")
             .trim()
