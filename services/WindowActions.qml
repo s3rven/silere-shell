@@ -178,9 +178,11 @@ Singleton {
         const cls  = root._compact(c.cls)
         const init = root._compact(c.initialClass)
 
+        // a vendor word in front of the class ("Google Chrome" for chrome) needs a class longer than a common word:
+        // "Claude Code", sent from kitty, took VS Code's "code" and turned away kitty raising its own window
         return cls === app || init === app
-            || (app.length > 2 && cls.length > 2 && (app.endsWith(cls)  || cls.endsWith(app)))
-            || (app.length > 2 && init.length > 2 && (app.endsWith(init) || init.endsWith(app)))
+            || (app.length > 2 && cls.length > 2 && (cls.endsWith(app) || (cls.length > 4 && app.endsWith(cls))))
+            || (app.length > 2 && init.length > 2 && (init.endsWith(app) || (init.length > 4 && app.endsWith(init))))
     }
 
     readonly property var _browserClasses: [

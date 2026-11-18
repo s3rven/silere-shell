@@ -4774,6 +4774,14 @@ ShellRoot {
                 && WindowActions._appMatches(matchingClients[2], "Launcher Example App")
                 && !WindowActions._appMatches(matchingClients[1], "Ex"),
             "window matching accepts bounded app-name suffixes without tiny fuzzy matches")
+        const named = cls => ({ cls: cls, initialClass: cls })
+        root._check(!WindowActions._appMatches(named("code"), "Claude Code")
+                && !WindowActions._appMatches(named("send"), "notify-send")
+                && WindowActions._appMatches(named("chrome"), "Google Chrome")
+                && WindowActions._appMatches(named("org.mozilla.firefox"), "Firefox")
+                && WindowActions._appMatches(named("dev.zed.Zed"), "Zed")
+                && WindowActions._appMatches(named("code"), "Code"),
+            "a word in front of a short class is not its vendor: Claude Code never matches VS Code's window")
         const byStartup = WindowActions._resolveByDesktopEntry(
             matchingClients, "Probe.desktop", function(identity) {
                 return identity === "probe"
