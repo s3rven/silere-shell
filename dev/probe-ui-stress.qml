@@ -315,7 +315,8 @@ ShellRoot {
         const opening = notifStack.itemAt(0).card.collapseRatio
         input.wait(400)
         const shown = notifStack.itemAt(0).card
-        root.check(opening < 0.5 && shown.collapseRatio === 1,
+        // below 1, not a frame count: the 200 ms open is half done ~40 ms in, which a loaded run's first look can miss
+        root.check(opening < 1 && shown.collapseRatio === 1,
             "a new card opens its slot over a few frames, so the cards below it glide rather than jump (" + opening + ")")
         const sent = notifStack.itemAt(0).modelData
         root.closeNotification(id)
