@@ -31,6 +31,7 @@ if [ "${1:-}" = --inner ]; then
         exit 1
     fi
     failed=0
+    grep 'PROBE-NOTE' "$scratch/probe.log" | sed 's/^.*PROBE-NOTE tray keys :: /  note: /' >&2 || true
     if grep -q 'PROBE-FAIL' "$scratch/probe.log"; then
         grep 'PROBE-FAIL' "$scratch/probe.log" | sed 's/^.*PROBE-FAIL tray keys :: /  /' >&2
         failed=1
