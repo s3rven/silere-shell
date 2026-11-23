@@ -14,10 +14,14 @@ Item {
 
     readonly property alias model: _rows
     readonly property int count: _rows.count
+    signal reconciled()
 
     // the reconcile edits only the rows that differ, and these count the edits it made: an arrival the filter excludes has to leave the drawn rows untouched
     property int inserts: 0
     property int removes: 0
+
+    // indexed by source row for the current revision, and kept only while a search uses it
+    property var _searchRows: []
 
     width: 0
     height: 0
@@ -103,19 +107,28 @@ Item {
     }
 
     function sync(): void {
+        root._searchRows = []
+        root._reconcile()
+    }
+
+    function _reconcile(): void {
         if (!root.active) return
         const src = root.source
         const want = root.filter
         const terms = root._searchText(root.query).trim().split(/\s+/).filter(t => t.length > 0)
+        const searching = terms.length > 0
+        if (!searching && root._searchRows.length > 0) root._searchRows = []
+        const searchRows = root._searchRows
         const rows = []
         for (let i = 0; src && i < src.count; i++) {
             const e = src.get(i)
             if (!e) continue
-            const name = root.identityOf(e.appName)
+            const name = searching || want.length > 0 ? root.identityOf(e.appName) : ""
             if (want.length > 0 && name !== want) continue
-            if (terms.length > 0) {
-                const text = root._searchText([name, e.summary, e.body].join(" "))
-                if (!terms.every(term => text.indexOf(term) >= 0)) continue
+            if (searching) {
+                if (searchRows[i] === undefined)
+                    searchRows[i] = root._searchText([name, e.summary, e.body].join(" "))
+                if (!terms.every(term => searchRows[i].indexOf(term) >= 0)) continue
             }
             rows.push(e)
         }
@@ -176,13 +189,16 @@ Item {
             changed = true
         }
         // excluded arrivals and an unchanged query leave every grouping flag valid
-        if (changed) root._syncFlags()
+        if (changed) {
+            root._syncFlags()
+            root.reconciled()
+        }
     }
 
     onSourceChanged: root.sync()
     onRevisionChanged: root.sync()
-    onFilterChanged: root.sync()
-    onQueryChanged: root.sync()
+    onFilterChanged: root._reconcile()
+    onQueryChanged: root._reconcile()
     onActiveChanged: root.sync()
     Component.onCompleted: root.sync()
 }
