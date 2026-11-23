@@ -24,12 +24,17 @@ FittedPopupWindow {
         anchorX: CalendarState.effectiveAnchorX
         barBottom: Metrics.barAtBottom
 
-        readonly property int  cell:     Metrics.rowHeightFor(32) + 4
-        // a short screen (768p at 2x) lowers the weeks on the 4px grid rather than run the card off its edge
-        readonly property real _gridRoom: winH - _edgeY - 8 - pad * 2 - _gridWrap.y
+        readonly property int  _preferredCell: Metrics.rowHeightFor(32) + 4
+        // leave room for both card insets on portrait outputs and at large interface sizes
+        readonly property int  cell: Math.max(4, Math.min(_preferredCell,
+            Metrics.snap4Down((winW - 2 * (_minX + pad) - weekCol) / 7)))
+        // tighten the rows first, then scroll if the text and day targets still need more room
+        readonly property int _heightLimit: Math.max(1,
+            Metrics.snap4Down(winH - Metrics.snap4Up(_edgeY) - 8))
+        readonly property real _gridRoom: _heightLimit - pad * 2 - _gridWrap.y
             - (_weather.visible ? _col.spacing + _weather.height : 0)
         readonly property int  rowH:     Math.max(Metrics.snap4Up(Settings.fontSize * 1.5),
-            Math.min(cell, Metrics.snap4Down(_gridRoom / _rowCount)))
+            Math.min(_preferredCell, Metrics.snap4Down(_gridRoom / _rowCount)))
         readonly property int  pad:      14
         // a multiple of 4: each day square sits 2 px into its cell, so 22 left every one half an output pixel off at 1.25.
         // It widens with the header's type: at a fixed 24 the numbers grew to 3 px from the rule above 115%
@@ -44,6 +49,12 @@ FittedPopupWindow {
         }
         readonly property int  gridW:    weekCol + cell * 7
         readonly property int  panelW:   Metrics.snap4Up(gridW + pad * 2)
+        readonly property int _naturalHeight: Metrics.snap4Up(_col.implicitHeight + card.pad * 2)
+        readonly property bool _needsScroll: _naturalHeight > _heightLimit
+        on_NeedsScrollChanged: {
+            Scroll.resetControl("calendar")
+            if (!_needsScroll) _viewport.scrollToTop()
+        }
 
         property int dispYear:  2000
         property int dispMonth: 0
@@ -136,10 +147,14 @@ FittedPopupWindow {
             target: CalendarState
             function onOpenChanged() {
                 if (CalendarState.open) {
+                    _viewport.scrollToTop()
                     card._snapToday()
                     card.forceActiveFocus()
                     card._requestWeather()
-                } else _gridSwap.stop()
+                } else {
+                    _gridSwap.stop()
+                    Scroll.resetControl("calendar")
+                }
             }
         }
         Connections {
@@ -191,16 +206,22 @@ FittedPopupWindow {
         }
 
         width:  panelW
-        height: _heightGlide.value
+        height: Math.min(_heightGlide.value, _heightLimit)
         SmoothGlide {
             id: _heightGlide
-            target: 4 * Math.ceil((_col.implicitHeight + card.pad * 2) / 4)
+            target: Math.min(card._naturalHeight, card._heightLimit)
             gate: card.geometryMotionReady
             duration: Motion.normal
         }
 
-        // the date-grid convention: Page Up and Page Down turn the month from wherever focus sits in the card
-        function _pageKey(key: int): bool {
+        function _navigateKey(key: int, modifiers: int): bool {
+            if (!CalendarState.open || (modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
+                return false
+            const shift = (modifiers & Qt.ShiftModifier) !== 0
+            if (key === Qt.Key_Home && !shift) {
+                card._goToday()
+                return true
+            }
             if (key !== Qt.Key_PageUp && key !== Qt.Key_PageDown) return false
             card._step((key === Qt.Key_PageUp ? -1 : 1) * (shift ? 12 : 1))
             return true
@@ -214,7 +235,7 @@ FittedPopupWindow {
         }
 
         WheelHandler {
-            enabled: CalendarState.open
+            enabled: CalendarState.open && !card._needsScroll
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: (e) => {
                 const n = Scroll.processControlWheel(e, "calendar")
@@ -224,7 +245,8 @@ FittedPopupWindow {
 
         Column {
             id: _col
-            x: Math.round((card.panelW - card.gridW) / 2); y: card.pad
+            parent: _viewport.contentItem
+            x: Math.round((card.panelW - card.gridW) / 2)
             width: card.gridW
             spacing: 6
 
@@ -266,12 +288,15 @@ FittedPopupWindow {
                         spacing: 11
 
                         ShellText {
+                            id: _todayNumber
                             anchors.verticalCenter: parent.verticalCenter
                             text: card._todayD < 0 ? "" : card._todayD
                             color: Theme.accentInk
                             font.pixelSize: Settings.fontSize + 15; font.weight: Font.DemiBold
                         }
                         Column {
+                            width: Math.max(0, Math.min(Math.max(_todayDayLabel.implicitWidth, _todayCaptionLabel.implicitWidth),
+                                _todayButton.parent.width - _todayNumber.width - _todayContent.spacing - 8))
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             ShellText {
@@ -313,15 +338,19 @@ FittedPopupWindow {
                 Item {
                     id: _monthButton
                     anchors.centerIn: parent
-                    // the grid it names starts a week column in, so centring on the row leaves it visibly left of the days
-                    anchors.horizontalCenterOffset: Math.round(card.weekCol / 2)
-                    width: _monthRow.width + 20
+                    readonly property real _room: Math.max(0,
+                        parent.width - _prevButton.width - _nextButton.width - 8)
+                    readonly property real _textRoom: Math.max(0, _room - 20)
+                    // centre over the day columns whenever the navigation arrows leave enough room
+                    anchors.horizontalCenterOffset: Math.max(0, Math.min(Math.round(card.weekCol / 2),
+                        Math.floor((_room - width) / 2)))
+                    width: Math.min(_room, _monthRow.width + 20)
                     height: Metrics.rowHeightFor(28)
 
                     Accessible.role: Accessible.Button
                     Accessible.name: "Return to current month"
                     Accessible.description: "Showing " + card.monthLabel
-                    Accessible.focusable: CalendarState.open
+                    Accessible.focusable: CalendarState.open && width > 0
                     Accessible.onPressAction: card._goToday()
                     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
                     HoverHandler { id: _mH; enabled: CalendarState.open && !card.onTodayMonth; cursorShape: Qt.PointingHandCursor }
@@ -346,9 +375,9 @@ FittedPopupWindow {
                             id: _mLabel
                             anchors.baseline: _yLabel.baseline
                             // a long localized name gives way to the arrows rather than running under them
-                            width: Math.max(0, Math.min(implicitWidth,
-                                _monthButton.parent.width - _prevButton.width - _nextButton.width
-                                    - card.weekCol - 44 - _monthRow.spacing - _yLabel.implicitWidth))
+                            width: Math.min(implicitWidth, Math.max(0,
+                                _monthButton._textRoom - _monthRow.spacing - _yLabel.width))
+                            visible: width > 0
                             elide: Text.ElideRight
                             text: card.monthName
                             color: _mH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
@@ -357,6 +386,9 @@ FittedPopupWindow {
                         }
                         ShellText {
                             id: _yLabel
+                            width: Math.min(implicitWidth, _monthButton._textRoom)
+                            visible: width > 0
+                            elide: Text.ElideRight
                             text: Qt.formatDateTime(new Date(card.dispYear, card.dispMonth, 1), "yyyy")
                             color: Theme.withAlpha(Theme.subtext, 0.78)
                             font.pixelSize: Settings.fontSize + 1

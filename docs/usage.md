@@ -161,8 +161,12 @@ headphone jack isn't covered.
 
 ## Calendar and weather
 
-In the calendar, scroll to change month, click the header to return to today, and click a date
-from the next or previous month to go there. Week start, week numbers and weather are under
+In the calendar, scroll or press **Page Up** or **Page Down** to change the month. Hold **Shift**
+with either page key to jump a year. Press **Home** or click the header to return to today.
+On short displays, scrolling moves through the calendar and forecast. Use the arrow buttons or
+page keys to change the month there.
+Click a date from the previous or next month to go there. An open calendar follows the date into
+the next month if it was showing the current one. Week start, week numbers and weather are under
 **Settings › Widgets › Clock**.
 
 **Weather** is off by default. When on, the calendar and Home fetch today's forecast from

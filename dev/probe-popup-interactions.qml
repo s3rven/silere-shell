@@ -163,6 +163,30 @@ Item {
         root._check(card.weekCol > 24 && card.weekCol % 4 === 0
                 && weekHead !== null && card.weekCol - weekHead.implicitWidth >= 12,
             "the week column widens with the type and keeps its numbers clear of the rule")
+        const calendarWindow = card.win
+        const wideCell = card.cell
+        card.win = { screen: null, width: 320, height: 640 }
+        root._check(card.cell < wideCell && card.cell >= 4 && card.cell % 4 === 0
+                && card.panelW + 2 * card._minX <= card.winW,
+            "the scaled calendar keeps all seven columns inside a narrow output")
+        const weekdayWas = card.todayWeekday
+        card.win = { screen: null, width: 224, height: 640 }
+        card.todayWeekday = "An unusually long localized weekday name"
+        const today = root._find(card, item => item.Accessible.name === "Today")
+        const weekday = today ? root._find(today, item => item.text === card.todayWeekday) : null
+        if (weekday) input.wait(20)
+        root._check(weekday !== null && weekday.width < weekday.implicitWidth
+                && weekday.elide === Text.ElideRight
+                && today.mapToItem(card, today.width, 0).x <= card.width - card.pad,
+            "the calendar's Today header fits a narrow output with a long locale label")
+        const previous = root._find(card, item => item.Accessible.name === "Previous month")
+        const next = root._find(card, item => item.Accessible.name === "Next month")
+        root._check(previous !== null && next !== null && monthButton !== null
+                && monthButton.x >= previous.x + previous.width + 3.5
+                && monthButton.x + monthButton.width <= next.x - 3.5,
+            "the month header gives both arrow buttons their own space on a narrow output")
+        card.todayWeekday = weekdayWas
+        card.win = calendarWindow
         const barHeightWas = ShellSettings.barHeight
         ShellSettings.barHeight = 24
         root._check(bar.surfaceHeight >= Metrics.barRowHeight + 4
@@ -211,6 +235,33 @@ Item {
         Weather.failure = "Can't reach Open-Meteo"
         root._check(weather !== null && weather.retry && weather.Accessible.name.indexOf("Weather unavailable") === 0,
             "a first weather failure still offers retry without inventing a temperature")
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        card.win = { screen: null, width: 320, height: 270 }
+        const viewport = root._find(card, item => item.contentItem !== undefined && item.contentY !== undefined)
+        for (const bottom of [false, true]) {
+            card.barBottom = bottom
+            input.wait(20)
+            root._check(card.y >= 8 && card.y + card.height <= card.winH - 8,
+                "the calendar card fits a short output with the bar at the " + (bottom ? "bottom" : "top"))
+            if (!viewport || !weather) continue
+            viewport.contentY = viewport.originY + viewport.contentHeight - viewport.height
+            const weatherBottom = weather.mapToItem(viewport, 0, weather.height).y
+            root._check(viewport.interactive && viewport.contentY > viewport.originY
+                    && weatherBottom <= viewport.height + 0.5,
+                "scrolling a short calendar reaches the weather row")
+        }
+        root._check(viewport !== null && viewport.clip, "a short calendar has a clipped scroll area")
+        CalendarState.close()
+        CalendarState.open = true
+        root._check(viewport !== null && viewport.contentY === viewport.originY,
+            "reopening the short calendar returns to the start of the month view")
+        if (viewport) viewport.contentY = viewport.originY + viewport.contentHeight - viewport.height
+        card.win = calendarWindow
+        card.barBottom = Qt.binding(() => Metrics.barAtBottom)
+        input.wait(20)
+        root._check(viewport !== null && !viewport.interactive && viewport.contentY === viewport.originY,
+            "enlarging the output removes calendar scrolling and restores the full view")
+        ShellSettings.uiScale = 1
         ShellSettings.weatherEnabled = false
         CalendarState.close()
     }
@@ -305,8 +356,8 @@ Item {
         root._check(sound, "every mix of optional quick actions draws one break between each pair of groups that show")
 
         // the card holds the focus as it opens; the arrows and a keybind open have to land on a row
-        const stops = column.children.filter(r => r.visible && r.enabled && r.activeFocusOnTab)
         QuickActionsState.open = true
+        const stops = column.children.filter(r => r.label !== undefined && r.visible && r.enabled)
         actions.popupCard.focusRow(false)
         const firstHeld = stops.length > 0 && stops[0].focus
         actions.popupCard.focusRow(true)
@@ -314,6 +365,38 @@ Item {
         QuickActionsState.open = false
         root._check(firstHeld && lastHeld,
             "quick actions' arrow keys reach the first and last rows from the card")
+        row.Accessible.pressAction()
+        row.Accessible.toggleAction()
+        root._check(!row.Accessible.focusable && !triggered && Notifications.dnd === wasDnd,
+            "a closing quick-actions card rejects retained accessibility actions")
+
+        const popup = actions.popupCard
+        const savedWindow = popup.win
+        const savedBottom = QuickActionsState.barBottom
+        const viewport = root._find(popup, item => item.contentItem !== undefined && item.contentY !== undefined)
+        popup.win = { width: 320, height: 300, screen: null }
+        optional.forEach(r => r.visible = true)
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        column.forceLayout()
+        let fits = viewport !== null
+        for (const bottom of [false, true]) {
+            QuickActionsState.barBottom = bottom
+            QuickActionsState.open = true
+            fits = fits && popup.x >= 0 && popup.x + popup.width <= popup.winW
+                && popup.y >= 0 && popup.y + popup.height <= popup.winH
+                && viewport.interactive && viewport.contentHeight > viewport.height
+            if (viewport) viewport.contentY = viewport.contentHeight - viewport.height
+            QuickActionsState.open = false
+        }
+        root._check(fits, "large quick actions fit a short, narrow output on either bar edge and scroll when needed")
+        QuickActionsState.open = true
+        root._check(viewport !== null && viewport.contentY === viewport.originY,
+            "reopening quick actions starts at the first row after a previous scroll")
+        QuickActionsState.open = false
+        popup.win = savedWindow
+        QuickActionsState.barBottom = savedBottom
+        optional.forEach((r, i) => r.visible = was[i])
+        ShellSettings.uiScale = 1
     }
 
     function _checkTray(): void {

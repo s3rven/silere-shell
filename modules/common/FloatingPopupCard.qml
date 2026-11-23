@@ -281,7 +281,10 @@ Rectangle {
     onWinWChanged: {
         if (!root.open) return
         const nx = root._targetX()
-        if (Math.abs(nx - root.x) > 0.5) root.place()
+        if (Math.abs(nx - root.x) <= 0.5) return
+        root._hardClamping = root.x + root.width > root.winW - root._minX
+        root.place()
+        root._hardClamping = false
     }
 
     Component.onCompleted: {
