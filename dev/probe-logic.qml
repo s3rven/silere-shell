@@ -9139,6 +9139,22 @@ ShellRoot {
                 && Media._cavaConfigText.includes("data_format = ascii")
                 && Media._cavaConfigText.includes("ascii_max_range = " + Media._cavaRange),
             "media service emits a valid bounded Cava raw-output profile")
+        const previousBars = Media.barHeights
+        const previousFrame = Media._cavaHasFrame
+        Media.barHeights = []
+        Media._cavaHasFrame = false
+        const silence = "0;".repeat(Media._cavaBars)
+        Media._consumeCavaFrame(silence + "invalid;")
+        Media._consumeCavaFrame("Infinity;" + silence.slice(2))
+        Media._consumeCavaFrame(" ;" + silence.slice(2))
+        root._check(!Media._cavaHasFrame && Media.barHeights.length === 0,
+            "a malformed Cava line cannot replace the media widget's fallback")
+        Media._consumeCavaFrame(silence)
+        root._check(Media._cavaHasFrame && Media.barHeights.length === Media._cavaBars
+                && Media.barHeights.every(level => level === 0),
+            "an intact silent Cava frame counts as ready")
+        Media.barHeights = previousBars
+        Media._cavaHasFrame = previousFrame
         root._check(Media.vizLevel(0, 64) === 0 && Media.vizLevel(64, 64) === 1
                 && Media.vizLevel(99, 64) === 1 && Media.vizLevel(-3, 64) === 0
                 && Media.vizLevel(NaN, 64) === 0 && Media.vizLevel(10, 0) === 0,
@@ -14231,6 +14247,17 @@ ShellRoot {
             "arrow keys walk the widget switches in the order drawn, not the order the rows were built")
         const gripOf = key => root._findTrayNode(settings, item =>
             item.Accessible.name === "Move " + ShellSettings.barWidgetMeta[key].label)
+        const readingsWas = [ShellSettings.systemShowCpu, ShellSettings.systemShowMemory, ShellSettings.systemShowTemp]
+        ShellSettings.systemShowCpu = false
+        ShellSettings.systemShowMemory = false
+        ShellSettings.systemShowTemp = false
+        const emptyMonitor = !SysInfo.monitorHasReadings && settings._noteFor("system") === "No readings to show"
+        ShellSettings.systemShowMemory = true
+        root._check(emptyMonitor && SysInfo.monitorHasReadings && settings._noteFor("system") === "",
+            "widget settings explain a monitor with no usable readings and clear the note when one is selected")
+        ShellSettings.systemShowCpu = readingsWas[0]
+        ShellSettings.systemShowMemory = readingsWas[1]
+        ShellSettings.systemShowTemp = readingsWas[2]
         const secondRight = ShellSettings.barWidgetOrderRightKeys[1]
         root._check(settings._tabTarget(toggleOf("clock"), true) === gripOf(secondRight)
                 && settings._tabTarget(gripOf(secondRight), false) === toggleOf("clock")

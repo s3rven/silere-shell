@@ -79,6 +79,8 @@ Singleton {
 
     property bool _active: false
     readonly property bool _homeWanted: MenuState.homeActive && !Idle.isIdle
+    readonly property bool monitorHasReadings: ShellSettings.systemShowCpu || ShellSettings.systemShowMemory
+        || (ShellSettings.systemShowTemp && !CpuTemp.sensorMissing)
     // the bar's monitor reads only /proc; disk and uptime stay with Home, so the bar never spawns df
     readonly property bool _barWanted: ShellSettings.barShowSystem
         && (ShellSettings.systemShowCpu || ShellSettings.systemShowMemory)

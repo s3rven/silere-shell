@@ -3,8 +3,14 @@ import "../../../services"
 import "../controls"
 
 Column {
+    id: root
     width: parent ? parent.width : 0
     spacing: 0
+
+    readonly property int _chipW: Math.max(_position.naturalChipWidth,
+        _shape.naturalChipWidth, _preset.naturalChipWidth)
+
+    Component.onCompleted: SystemTools.refreshIfStale(60000)
 
     SectionLabel { label: "NOW PLAYING"; first: true }
     SettingsCard {
@@ -36,6 +42,7 @@ Column {
     SectionLabel { label: "VISUALIZER" }
     SettingsCard {
         ToggleRow {
+            id: _visualizerToggle
             glyph: "󰱐"; label: "Audio visualizer"
             description: Media.visualizerStatus
             key: "mediaProgress"
@@ -43,10 +50,20 @@ Column {
             dependsNote: !SystemTools.ready ? "Checking"
                 : !SystemTools.hasCava ? "No cava" : "Runtime unavailable"
         }
+        ControlRow {
+            visible: Media.visualizerError.length > 0
+            glyph: "󰑐"; title: "Retry visualizer"
+            onActivated: {
+                if (activeFocus) _visualizerToggle.forceActiveFocus(Qt.TabFocusReason)
+                Media.retryVisualizer()
+            }
+        }
         CollapsibleSection {
             expanded: ShellSettings.mediaProgress && Media.cavaAvailable
             ChoiceChipRow {
+                id: _position
                 key: "mediaVisualizerPosition"
+                chipWidthFloor: root._chipW
                 glyph: "󰍹"; label: "Position"
                 model: [
                     { value: "media",     label: "Media" },
@@ -55,7 +72,9 @@ Column {
                 ]
             }
             ChoiceChipRow {
+                id: _shape
                 key: "mediaVisualizerStyle"
+                chipWidthFloor: root._chipW
                 glyph: "󰀁"; label: "Shape"
                 model: [
                     { value: "wave",  label: "Wave" },
@@ -64,7 +83,9 @@ Column {
                 ]
             }
             ChoiceChipRow {
+                id: _preset
                 key: "mediaVisualizerPreset"
+                chipWidthFloor: root._chipW
                 glyph: "󰓅"; label: "Preset"
                 model: [
                     { value: "eco",      label: "Eco" },

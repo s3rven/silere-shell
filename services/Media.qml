@@ -126,8 +126,10 @@ Singleton {
     onPlayingChanged:   {
         _syncShown()
         _reanchor()
-        if (playing) _cavaPlaying = true
-        else if (_cavaProc.running) _cavaPauseHold.restart()
+        if (playing) {
+            _cavaPlaying = true
+            _cavaPauseHold.stop()
+        } else if (_cavaProc.running) _cavaPauseHold.restart()
         else _cavaPlaying = false
     }
     // players already playing at start raise no change, so a later start would outrank them as new
@@ -596,6 +598,12 @@ Singleton {
     property var barHeights: []
     readonly property bool cavaAvailable: SystemTools.hasCava && _cavaConfigPath.length > 0
     readonly property bool cavaReady: cavaAvailable && ShellSettings.mediaProgress
+    readonly property bool cavaHasFrame: _cavaProc.running && _cavaHasFrame
+    property bool _cavaHasFrame: false
+    readonly property string visualizerError: !root.cavaReady ? ""
+        : root._cavaConfigFailed ? "Could not save the Cava profile"
+        : _cavaProc.gaveUp ? "Cava failed. Check PipeWire."
+        : ""
     property int _visualizerClients: 0
     property int _visualizerDemand: 0
     readonly property bool _visualizerLowPowerOnly: _visualizerClients > 0 && _visualizerDemand <= _visualizerClients
@@ -667,10 +675,14 @@ Singleton {
     }
 
     readonly property string visualizerStatus: {
+        if (!root.cavaReady) return ""
+        if (root.visualizerError.length > 0) return root.visualizerError
         if (ShellSettings.reduceMotion) return "Paused by Reduce motion"
         if (ShellSettings.mediaVisualizerPosition === "media" && !ShellSettings.barShowMedia)
             return "Needs the media widget on the bar"
         if (root._fsBlocked) return "Paused while a window is fullscreen"
+        // the preset chips still show the choice, which returns with the charger
+        if (root._vizPreset !== ShellSettings.mediaVisualizerPreset) return "Eco preset while on battery"
         return ""
     }
 
@@ -696,11 +708,6 @@ Singleton {
         }
     }
     readonly property int _cavaNoiseReduction: root.vizNoiseReduction(root._vizPreset)
-    readonly property var _zeroBars: {
-        const out = []
-        for (let i = 0; i < _cavaBars; i++) out.push(0)
-        return out
-    }
     readonly property string _cavaConfigText:
         "[general]\n" +
         "bars = " + _cavaBars + "\n" +
@@ -731,6 +738,7 @@ Singleton {
         ? XdgPaths.runtimeDir + "/silere-shell-cava-" + Quickshell.processId + ".conf"
         : ""
     property bool _cavaConfigReady: false
+    property bool _cavaConfigFailed: false
     property string _writtenCavaProfileKey: ""
     readonly property int _cavaReloadSignal: 10
     property bool _sweptStaleProfiles: false
@@ -761,11 +769,22 @@ Singleton {
         const reloadRunning = _cavaProc.running
             && root._writtenCavaProfileKey.length > 0
             && root._writtenCavaProfileKey !== nextProfile
-        root._cavaConfigReady = true
+        root._cavaConfigFailed = false
         _cavaConfig.setText(root._cavaConfigText)
-        if (!root._cavaConfigReady) return
+        if (root._cavaConfigFailed) {
+            // reload after the failed write so FileView accepts the same text on retry
+            _cavaConfig.reload()
+            return
+        }
         root._writtenCavaProfileKey = nextProfile
+        root._cavaConfigReady = true
         if (reloadRunning) _cavaProc.signal(root._cavaReloadSignal)
+    }
+
+    function retryVisualizer(): void {
+        if (root.visualizerError.length === 0) return
+        if (root._cavaConfigFailed) root._writeCavaConfig()
+        else _cavaProc.retry()
     }
 
     on_CavaProfileKeyChanged: if (root._visualizerClients > 0) _cavaConfigSync.restart()
@@ -783,11 +802,28 @@ Singleton {
         blockWrites: true
         printErrors: false
         onSaveFailed: {
+            root._cavaConfigFailed = true
             root._cavaConfigReady = false
             root._writtenCavaProfileKey = ""
-            // FileView coalesces an identical setText; without the reload a retry never writes
-            reload()
         }
+    }
+
+    function _consumeCavaFrame(line: string): void {
+        const parts = line.split(";")
+        if (parts[parts.length - 1] === "") parts.pop()
+        if (parts.length !== root._cavaBars) return
+        const result = []
+        for (const part of parts) {
+            const value = Number(part)
+            if (part.trim().length === 0 || !isFinite(value)) return
+            result.push(root.vizLevel(value, root._cavaRange))
+        }
+        const prev = root.barHeights
+        let changed = prev.length !== result.length
+        for (let i = 0; !changed && i < result.length; i++)
+            if (Math.abs(result[i] - prev[i]) > 0.02) changed = true
+        if (changed) root.barHeights = result
+        if (!root._cavaHasFrame) root._cavaHasFrame = true
     }
 
     property bool _fsBlocked: false
@@ -815,6 +851,7 @@ Singleton {
         command: ["cava", "-p", root._cavaConfigPath]
         environment: root.cavaEnvironment
         superviseWhen: root._cavaConfigReady && root.cavaReady
+            && !ShellSettings.reduceMotion
             && (root._visualizerClients > 0 || _visualizerStopGrace.running || _cavaPauseHold.running)
             && root._cavaPlaying && root.available && !Idle.isQuiet && !root._fsBlocked
         restartDelay: 1000
@@ -824,24 +861,12 @@ Singleton {
         // which respawning cannot fix; the playback gate retries when it next cycles
         giveUpCodes: [1]
         stdout: SplitParser {
-            onRead: line => {
-                const parts = line.split(";")
-                const result = []
-                for (let i = 0; i < parts.length; i++) {
-                    if (parts[i].length === 0) continue
-                    const value = Number(parts[i])
-                    if (isNaN(value)) continue
-                    result.push(root.vizLevel(value, root._cavaRange))
-                }
-                if (result.length !== root._cavaBars) return
-                const prev = root.barHeights
-                let changed = prev.length !== result.length
-                for (let i = 0; !changed && i < result.length; i++)
-                    if (Math.abs(result[i] - prev[i]) > 0.02) changed = true
-                if (changed) root.barHeights = result
-            }
+            onRead: line => root._consumeCavaFrame(line)
         }
-        onRunningChanged: if (!running) root.barHeights = root._zeroBars
+        onRunningChanged: {
+            root._cavaHasFrame = false
+            root.barHeights = []
+        }
     }
 
     // pulled at the reader's own pace, since a binding would re-evaluate at cava's frame rate; under 0 while cava is not running

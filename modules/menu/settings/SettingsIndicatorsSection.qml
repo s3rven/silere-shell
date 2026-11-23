@@ -58,6 +58,8 @@ Column {
         ToggleRow {
             glyph: "󰍛"; label: "System monitor"
             key: "barShowSystem"
+            description: ShellSettings.barShowSystem && !SysInfo.monitorHasReadings
+                ? "Choose a reading below to show it on the bar" : ""
         }
         CollapsibleSection {
             expanded: ShellSettings.barShowSystem

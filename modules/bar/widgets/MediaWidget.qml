@@ -44,7 +44,7 @@ Item {
         && ShellSettings.mediaVisualizerPosition === "media"
         && !ShellSettings.reduceMotion && !Idle.isQuiet && !Motion.unseen
         && root.visible && root.barActive && root.show && Media.playing && Media.cavaReady && root._onActiveBar
-    readonly property bool _vizVisible: _visualizerActive
+    readonly property bool _vizVisible: _visualizerActive && Media.cavaHasFrame && _vizLoader.width > 0
     readonly property bool _helperEnabled: ShellSettings.mediaWidgetHelper
     readonly property string _playGlyph: Media.playing ? "󰏤" : "󰐊"
     property real textBudget: -1
@@ -133,7 +133,7 @@ Item {
         active: _wanted || _vizHold.running
         on_WantedChanged: if (_wanted) _vizHold.stop(); else _vizHold.restart()
         Timer { id: _vizHold; interval: Motion.fast + 60 }
-        opacity: _wanted ? 1.0 : 0.0
+        opacity: root._vizVisible ? 1.0 : 0.0
         visible: opacity > 0.001
         MotionBehavior on opacity {
             NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
@@ -141,6 +141,7 @@ Item {
         sourceComponent: Component {
             MediaVisualizer {
                 screen: root.screen
+                presentationActive: _vizLoader._wanted
                 holdFrame: true
                 lowPower: root.compact
                 // the title's band, so the wave goes quiet where it passes behind the letters

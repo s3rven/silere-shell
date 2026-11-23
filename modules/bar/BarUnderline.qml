@@ -43,6 +43,8 @@ Item {
             : 0
         property alias _networkGlow: _netLossFlash.glow
         property bool _lastNetConnected: false
+        // Wi-Fi switched off by hand (the menu, nmcli, an airplane key) drops the link on purpose: no alarm for it
+        property bool _lastNetWifi: false
         readonly property real _tempGlowBase: (_tempGlowEnabled && CpuTemp.hot && !CpuTemp.critical) ? 0.32 : 0
         property real _tempPulseGlow: 0
         // a settled critical rests on the same steady 0.5 reduced motion already shows, so
@@ -70,7 +72,7 @@ Item {
         readonly property real _scaledGlow:  (_primaryGlow + _stackBonus) * _activeGlowStrength
         readonly property real _eventGlow:   Math.max(_scaledGlow, _batteryGlow, _tempGlow)
         // the spectrum is the lift at its own position; a flat floor under it only washes the wave out
-        property real _mediaGlow: (Media.shown && Media.playing && Media.cavaReady
+        property real _mediaGlow: (Media.shown && Media.playing && Media.cavaHasFrame
             && ShellSettings.mediaVisualizerPosition !== "underline") ? 0.18 : 0
         MotionBehavior on _mediaGlow {
             gate: !_ul.quiet

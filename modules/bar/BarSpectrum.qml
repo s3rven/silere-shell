@@ -24,7 +24,7 @@ Item {
         && Media.shown && Media.playing && Media.cavaReady
         && Monitors.isActive(root.screen)
 
-    opacity: root.wanted ? 1.0 : 0.0
+    opacity: root.wanted && Media.cavaHasFrame ? 1.0 : 0.0
     visible: opacity > 0.001
     MotionBehavior on opacity {
         NumberAnimation { duration: Motion.slow; easing.type: Easing.OutCubic }

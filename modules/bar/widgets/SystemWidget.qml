@@ -13,7 +13,7 @@ Pill {
     readonly property bool _memOn: ShellSettings.systemShowMemory
     // no sensor means no reading ever: drop the slot rather than hold a dash, and the pill when it was the only one
     readonly property bool _tempOn: ShellSettings.systemShowTemp && !CpuTemp.sensorMissing
-    readonly property bool show: ShellSettings.barShowSystem && (_cpuOn || _memOn || _tempOn)
+    readonly property bool show: ShellSettings.barShowSystem && SysInfo.monitorHasReadings
     readonly property bool layoutVisible: show || opacity > 0.001
     collapsed: !show
     visible: layoutVisible

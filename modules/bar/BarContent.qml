@@ -278,9 +278,10 @@ Item {
             }
         }
         visible: opacity > 0.001
-        opacity: !root._centerVizShowing ? 0.0
+        readonly property bool _shown: root._centerVizShowing && Media.cavaHasFrame
+        opacity: !_shown ? 0.0
             : root._centerVizBehind ? root._centerVizBehindOpacity : 1.0
-        scale: root._centerVizShowing ? 1.0 : 0.94
+        scale: _shown ? 1.0 : 0.94
         transformOrigin: Item.Center
         // behind the widgets and the title, still above the bar surface painted by Bar.qml
         z: root._centerVizBehind ? -1 : 1
