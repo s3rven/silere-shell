@@ -5,7 +5,7 @@
 #   dev/bench-lab.sh cycles   [--arm NAME=DIR ...] [--cycles 50]  whether memory settles over repeated opens
 #   dev/bench-lab.sh settings [--arm NAME=DIR]     [--n 10]    what each optional service setting saves and costs
 #   dev/bench-lab.sh soak     [--arm NAME=DIR]     [--hours 6] [--idle]  memory over a long session
-#   dev/bench-lab.sh visualizer [--arm NAME=DIR ...] [--n 2] [--window 20]  each visualizer setting's CPU, music playing
+#   dev/bench-lab.sh visualizer [--arm NAME=DIR ...] [--n 2] [--window 20] [--rows 'LABEL|LABEL']  each visualizer setting's CPU, music playing
 # Also: --settings FILE copies a settings.json in, --out FILE keeps the raw results. Run one at a time on a quiet machine
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

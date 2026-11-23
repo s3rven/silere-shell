@@ -15,6 +15,7 @@ IconButton 1.0 IconButton.qml
 OutlineBorder 1.0 OutlineBorder.qml
 FadingRim 1.0 FadingRim.qml
 PerimeterProgress 1.0 PerimeterProgress.qml
+RingGauge 1.0 RingGauge.qml
 ActionButton 1.0 ActionButton.qml
 ConfirmButton 1.0 ConfirmButton.qml
 ShellText 1.0 ShellText.qml

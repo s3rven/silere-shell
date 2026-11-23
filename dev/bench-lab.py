@@ -18,6 +18,8 @@ import threading
 import time
 
 EGL_VENDOR = "/usr/share/glvnd/egl_vendor.d/50_mesa.json"
+# the system bus stays real: nothing here may write the power mode, and there is no real night light to adopt
+SAFE_SETTINGS = {"powerProfileRemember": False, "nightLightAuto": False, "nightLightOn": False}
 ALLOCATOR = {"MALLOC_CONF": "narenas:1,tcache:false,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0"}
 NO_KDE_THEME = {"QT_QPA_PLATFORMTHEME": "", "QT_QUICK_CONTROLS_STYLE": ""}
 GRAY_TEXT = {"QSG_DISTANCEFIELD_ANTIALIASING": "gray"}
@@ -146,6 +148,14 @@ def read_process(pid):
     return out
 
 
+class Arm(str):
+    # a tree to measure with the environment and settings.json values this arm adds, so two arms can share a tree
+    def __new__(cls, tree, env=None, settings=None):
+        arm = super().__new__(cls, tree)
+        arm.env, arm.settings = dict(env or {}), dict(settings or {})
+        return arm
+
+
 class Lab:
     def __init__(self, args):
         self.root = os.environ["XDG_RUNTIME_DIR"]
@@ -160,16 +170,18 @@ class Lab:
         self._write_settings(args.settings)
 
     def _write_settings(self, source):
-        folder = os.environ["XDG_CONFIG_HOME"] + "/silere-shell"
-        os.makedirs(folder, exist_ok=True)
         data = {"__version": 2}
         if source:
             with open(source) as f:
                 data = json.load(f)
-        # the system bus stays real: nothing here may write the power mode, and there is no real night light to adopt
-        data.update({"powerProfileRemember": False, "nightLightAuto": False, "nightLightOn": False})
+        self.base_settings = data
+        self._settings_file(data)
+
+    def _settings_file(self, data):
+        folder = os.environ["XDG_CONFIG_HOME"] + "/silere-shell"
+        os.makedirs(folder, exist_ok=True)
         with open(folder + "/settings.json", "w") as f:
-            json.dump(data, f)
+            json.dump(dict(data, **SAFE_SETTINGS), f)
 
     def _spawn(self, argv, env, name):
         log = open(f"{self.root}/logs/{name}.log", "wb")
@@ -285,7 +297,9 @@ context.objects = [
     def start_shell(self, tree, env=None):
         self.tree = tree
         launch = dict(self.env, SILERE_WATCH_FILES="0", QS_PIPEWIRE_IMMEDIATE_RECONNECT="1")
+        launch.update(getattr(tree, "env", {}))
         launch.update(env or {})
+        self._settings_file(dict(self.base_settings, **getattr(tree, "settings", {})))
         self.log_path = f"{self.root}/logs/shell.log"
         log = open(self.log_path, "wb")
         started = time.monotonic()
@@ -559,13 +573,13 @@ def run_visualizer(lab, args, arms):
     music_wav(track)
     lab._spawn(["bash", "-c", f"while :; do pw-play --target Bench_Output {track} || sleep 1; done"], lab.env, "music")
     time.sleep(2)
-    plan = [(name, tree, row) for name, tree in arms.items() for row in VISUALIZER_ROWS] * args.n
+    wanted = [label for label in args.rows.split("|") if label]
+    rows = [row for row in VISUALIZER_ROWS if not wanted or row[0] in wanted]
+    plan = [(name, tree, row) for name, tree in arms.items() for row in rows] * args.n
     random.Random(args.seed).shuffle(plan)
     results = {}
     for name, tree, (label, overrides) in plan:
-        folder = os.environ["XDG_CONFIG_HOME"] + "/silere-shell"
-        with open(folder + "/settings.json", "w") as f:
-            json.dump(dict(base, **overrides, powerProfileRemember=False, nightLightAuto=False, nightLightOn=False), f)
+        lab.base_settings = dict(base, **overrides)
         lab.start_shell(tree)
         time.sleep(3)
         lab.ipc("quickActions", "keepAwake")
@@ -679,6 +693,11 @@ def main():
     parser = argparse.ArgumentParser(description="measure a whole shell in a private nested session")
     parser.add_argument("test", choices=("startup", "latency", "cycles", "settings", "soak", "visualizer"))
     parser.add_argument("--arm", action="append", default=[], metavar="NAME=DIR", help="a checkout to measure, repeatable; default: this one")
+    parser.add_argument("--arm-env", action="append", default=[], metavar="NAME=KEY=VALUE",
+                        help="an environment variable for one arm, repeatable; a NAME not given to --arm is this checkout")
+    parser.add_argument("--arm-setting", action="append", default=[], metavar="NAME=KEY=JSON",
+                        help="a settings.json value for one arm, repeatable, as for --arm-env; it wins over a visualizer row's")
+    parser.add_argument("--rows", default="", metavar="LABEL|LABEL", help="visualizer rows to run, by their printed labels; default: all")
     parser.add_argument("--n", type=int, default=None, help="trials per arm; default 20 for startup, 12 for latency, 10 for settings, 2 for cycles")
     parser.add_argument("--cycles", type=int, default=50, help="menu opens per cycles run")
     parser.add_argument("--hours", type=float, default=6.0, help="length of a soak")
@@ -693,7 +712,22 @@ def main():
         args.n = {"startup": 20, "latency": 12, "settings": 10, "cycles": 2, "visualizer": 2}.get(args.test, 1)
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     arms = dict(arm.split("=", 1) for arm in args.arm) or {"this checkout": here}
-    arms = {name: os.path.abspath(tree) for name, tree in arms.items()}
+    adds = {}
+    for flag, items, parse in (("--arm-env", args.arm_env, str), ("--arm-setting", args.arm_setting, json.loads)):
+        for item in items:
+            name, _, rest = item.partition("=")
+            key, eq, value = rest.partition("=")
+            if not name or not key or not eq:
+                sys.exit(f"{flag} takes NAME=KEY=VALUE, not {item!r}")
+            try:
+                adds.setdefault(name, ({}, {}))[flag == "--arm-setting"][key] = parse(value)
+            except ValueError:
+                sys.exit(f"{flag} {item!r}: the value must be JSON, such as 1, true or \"text\"")
+            arms.setdefault(name, here)
+    arms = {name: Arm(os.path.abspath(tree), *adds.get(name, ({}, {}))) for name, tree in arms.items()}
+    unknown = [label for label in args.rows.split("|") if label and label not in {row[0] for row in VISUALIZER_ROWS}]
+    if unknown:
+        sys.exit(f"no visualizer row named {unknown[0]!r}; the rows are: " + " | ".join(row[0] for row in VISUALIZER_ROWS))
     lab = Lab(args)
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     try:

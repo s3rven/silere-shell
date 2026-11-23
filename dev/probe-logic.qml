@@ -250,6 +250,7 @@ ShellRoot {
         }
     }
     Component { id: systemWidgetFactory; SystemWidget {} }
+    Component { id: ringGaugeFactory; RingGauge {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
     Component { id: updateStatusFactory; UpdateStatusCard { width: 320; title: "Probe update" } }
@@ -4161,6 +4162,7 @@ ShellRoot {
         root._checkBluetoothRowRelease()
         root._checkBrightnessChoices()
         root._checkSystemWidget()
+        root._checkSystemRings()
         root._checkReadingsOutlastFade()
         root._checkPageBuildHidden()
         root._checkCardWidenKeepsMargin()

@@ -64,6 +64,7 @@ Singleton {
     property bool   systemShowCpu:       true
     property bool   systemShowMemory:    true
     property bool   systemShowTemp:      false
+    property bool   systemRings:         false
     property bool   barShowShellUpdate:  true
     property bool   barShowVolume:       true
     property bool   barShowBrightness:   true

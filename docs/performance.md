@@ -98,6 +98,16 @@ bash dev/bench-lab.sh soak --hours 6                                  # memory o
 bash dev/bench-lab.sh visualizer --n 5                               # each visualizer setting's CPU, music playing
 ```
 
+To measure one checkout with something changed, give an arm its own environment variable or setting. A name
+not given to `--arm` is this checkout, so this compares an opaque bar with yours on two visualizer rows:
+
+```bash
+bash dev/bench-lab.sh visualizer --settings ~/.config/silere-shell/settings.json \
+    --arm-setting opaque=barOpacity=1 --rows 'Off|Media, Wave, Balanced'
+bash dev/bench-lab.sh cycles --arm-env threaded=mesa_glthread=true \
+    --arm-env threaded=GALLIUM_THREAD=1                                         # any test takes --arm-env
+```
+
 Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
 IPC client, as a keybind does, to the surface's first frame in the compositor. A `cycles` or `soak` run judges
 growth on `Pss_Anon`, the shell's own heap, because another Quickshell running at the same time moves shared

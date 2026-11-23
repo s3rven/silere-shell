@@ -350,7 +350,7 @@ Item {
                 text:            root._shownGlyph
                 color:           root._hoverGlyphColor
                 transformOrigin: Item.Center
-                font.pixelSize:  root.glyphPixelSize
+                font.pixelSize:  _glyphBox._ringed ? root._ringGlyphSize : root.glyphPixelSize
                 ColorFade on color {}
             }
         }
@@ -436,6 +436,7 @@ Item {
                 // held here, so a reading's tick, which hands every segment a new object, writes no colour: Text keeps
                 // 8 bits a channel, a computed colour never reads back equal, and each write restarted the 160 ms fade
                 readonly property color _ink: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
+                readonly property color _ringInk: root._glyphTint(_segment.seg.ringColor ?? root.glyphRingColor, root._contentHot)
                 height: row.height
                 // half again the glyph gap ahead of each pair: a glyph reads as its own reading's, yet the pairs stay one widget
                 leftPadding: Math.round(row.spacing / 2)
@@ -443,6 +444,8 @@ Item {
 
                 Item {
                     id: _segGlyphBox
+                    readonly property real _ring: typeof _segment.seg.ring === "number" ? _segment.seg.ring : -1
+                    readonly property bool _ringed: _ring >= 0
                     y: Math.round((parent.height - height) / 2)
                     implicitWidth: Metrics.iconCellFor(root.glyphPixelSize)
                     implicitHeight: _segGlyph.implicitHeight
@@ -451,7 +454,7 @@ Item {
                         anchors.centerIn: parent
                         text: _segment.seg.glyph ?? ""
                         color: _segment._ink
-                        font.pixelSize: root.glyphPixelSize
+                        font.pixelSize: _segGlyphBox._ringed ? root._ringGlyphSize : root.glyphPixelSize
                         ColorFade on color {}
                     }
                 }
