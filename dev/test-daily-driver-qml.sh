@@ -12,6 +12,7 @@ trap 'exit 130' INT TERM
 mkdir -p "$scratch/fixtures" "$scratch/services" "$scratch/config" "$scratch/bin" "$scratch/scripts" "$scratch/run"
 chmod 0700 "$scratch/run"
 cp "$ROOT/dev/probe-daily-driver.qml" "$scratch/probe.qml"
+cp "$ROOT/scripts/bluetooth-unblock.sh" "$scratch/scripts/"
 cp "$ROOT/services/Vpn.qml" "$ROOT/services/DisplayBrightness.qml" "$ROOT/services/FontScan.qml" \
     "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$ROOT/services/RequestSet.qml" \
     "$ROOT/services/PowerProfiles.qml" "$ROOT/services/KeyboardBrightness.qml" "$ROOT/services/BatteryLimit.qml" \
@@ -229,8 +230,13 @@ chmod +x "$scratch/bin/powerprofilesctl"
 cat > "$scratch/bin/rfkill" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$SILERE_DAILY_FIXTURES/rfkill-actions"
-[ ! -s "$SILERE_DAILY_FIXTURES/rfkill-fail" ]
+fixtures="$SILERE_DAILY_FIXTURES"
+if [ "$*" = '--noheadings --raw --output ID,DEVICE,HARD list bluetooth' ]; then
+    cat "$fixtures/rfkill-devices"
+else
+    printf '%s\n' "$*" >> "$fixtures/rfkill-actions"
+    [ ! -s "$fixtures/rfkill-fail" ]
+fi
 EOF
 chmod +x "$scratch/bin/rfkill"
 cat > "$scratch/bin/pw-dump" <<'EOF'

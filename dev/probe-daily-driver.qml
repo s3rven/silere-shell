@@ -905,12 +905,43 @@ Scope {
             "an old controller's in-flight rfkill reading cannot disable the replacement controller")
         service.hardBlockedChanged.disconnect(observe)
 
+        root.write("rfkill-devices", "4 ideapad_bluetooth unblocked\n19 hci0 unblocked\n27 hci1 unblocked\n")
         root.write("rfkill-fail", "fail")
         root.write("rfkill-actions", "")
         service.toggle()
-        root.waitFor(() => !service._unblockWanted && root.read("rfkill-actions").length > 0,
+        root.waitFor(() => !service._unblockAdapter && root.read("rfkill-actions").length > 0,
             "a failed rfkill command clears its pending enable request")
+        root.check(root.read("rfkill-actions").trim() === "unblock 27",
+            "a Bluetooth unblock targets only the selected controller's rfkill ID")
         root.waitFor(() => !lookup.running, "the failed unblock's switch refresh finishes")
+
+        root.write("rfkill-fail", "")
+        root.write("rfkill-actions", "")
+        root.write("rfkill-devices", "19 hci0 unblocked\n27 hci1 blocked\n")
+        service.toggle()
+        root.waitFor(() => !service._unblockAdapter, "an unblock rejected by the hardware check clears the request")
+        root.check(root.read("rfkill-actions") === "", "a fresh hardware block prevents the unblock command")
+
+        root.write("rfkill-devices", "19 hci0 unblocked\n27 hci1 unblocked\n")
+        service.toggle()
+        service.toggle()
+        root.waitFor(() => root.read("rfkill-actions").length > 0, "a soft-blocked Bluetooth controller receives an unblock")
+        second.state = Bt.BluetoothAdapterState.Disabled
+        root.check(second.enabled && !first.enabled && !service._unblockAdapter
+                && root.read("rfkill-actions").trim() === "unblock 27",
+            "a timely BlueZ reply enables only the selected controller and repeated taps send one request")
+
+        second.enabled = false
+        second.state = Bt.BluetoothAdapterState.Blocked
+        root.waitFor(() => !lookup.running, "the still-blocked controller refreshes its switch")
+        root.write("rfkill-actions", "")
+        service._unblockDeadline.interval = 500
+        service.toggle()
+        root.waitFor(() => root.read("rfkill-actions").length > 0 && !service._unblockAdapter,
+            "a successful unblock without a BlueZ reply expires its enable request")
+        second.state = Bt.BluetoothAdapterState.Disabled
+        root.check(!second.enabled, "an old unblock request cannot turn on a radio after the deadline")
+
         const replacement = radioFactory.createObject(root, { adapterId: "hci1" })
         service._adapters = [first, replacement]
         root.check(service.adapter === first && !service.selectAdapter("missing"),

@@ -70,8 +70,16 @@ Singleton {
         _rfkillProbe.generation = root._rfkillGeneration
         _rfkillProbe.running = true
     }
-    // bluez powers back on by itself after an unblock; quickshell refuses an enable write until the state has left Blocked
-    property bool _unblockWanted: false
+    // wait for BlueZ to leave Blocked before asking Quickshell to enable the adapter
+    property var _unblockAdapter: null
+    function _clearUnblock(): void {
+        root._unblockAdapter = null
+        root._unblockDeadline.stop()
+    }
+    readonly property Timer _unblockDeadline: Timer {
+        interval: 4000
+        onTriggered: root._clearUnblock()
+    }
     onBlockedChanged: {
         root._rfkillGeneration++
         if (blocked) {
@@ -79,9 +87,10 @@ Singleton {
             return
         }
         root._switchOff = false
-        if (!_unblockWanted) return
-        _unblockWanted = false
-        if (adapter && adapter.state === Bt.BluetoothAdapterState.Disabled) adapter.enabled = true
+        const requested = root._unblockAdapter
+        root._clearUnblock()
+        if (requested && requested === root.adapter && requested.state === Bt.BluetoothAdapterState.Disabled)
+            requested.enabled = true
     }
 
     // backend models can be momentarily empty while BlueZ re-enumerates
@@ -228,8 +237,11 @@ Singleton {
         if (!adapter || !SystemTools.writesDevices) return
         const step = root._toggleStep(root.blocked, root.hardBlocked, adapter.enabled)
         if (step === "unblock") {
-            root._unblockWanted = true
-            _rfkillUnblock.running = true
+            if (root._unblockAdapter || _rfkillUnblock.running) return
+            root._unblockAdapter = root.adapter
+            root._unblockDeadline.restart()
+            _rfkillUnblock.exec(["bash", Quickshell.shellDir + "/scripts/bluetooth-unblock.sh",
+                root.adapter.adapterId, String(root.adapterCount)])
         } else if (step !== "") {
             adapter.enabled = step === "on"
         }
@@ -267,9 +279,8 @@ Singleton {
     BoundedProcess {
         id: _rfkillUnblock
         timeoutMs: 3000
-        command: ["rfkill", "unblock", "bluetooth"]
         onExited: code => {
-            if (!_rfkillUnblock.completedSuccessfully(code)) root._unblockWanted = false
+            if (!_rfkillUnblock.completedSuccessfully(code)) root._clearUnblock()
             root.refreshBlockState()
         }
     }
@@ -344,7 +355,7 @@ Singleton {
     onAdapterChanged: {
         root._rfkillGeneration++
         root._switchOff = false
-        root._unblockWanted = false
+        root._clearUnblock()
         Qt.callLater(root.refreshBlockState)
         root.abandonAttempt()
         _scanSync.restart()
