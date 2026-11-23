@@ -7,6 +7,8 @@
 | Panel | Action |
 |---|---|
 | Main menu | Click the active workspace |
+| Settings | Open the menu and choose **Settings** |
+| Notification history | Open the menu and choose **Notifications** |
 | Quick actions | Right-click the active workspace |
 | Calendar | Click the clock |
 | Now Playing | Right-click the media widget |
@@ -96,6 +98,7 @@ under **Feedback › Notifications**. A reply field appears when the sender supp
 | Up, Down | Move between entries and back to Search |
 
 - Search ignores case and accents (`cafe` finds `Café`) and matches across sender, title and message.
+- If a search in one app finds nothing, **Search all apps** keeps your query and searches the full history.
 - A notification repeated word for word keeps one row, dated by its latest arrival.
 - **Keep history for**, under **Feedback › History**, removes entries older than a day, week or month. **Until cleared** keeps them up to the history limit.
 - When history is full, the app with the most entries loses its oldest one first, so one busy chat can't push the rest out.
@@ -216,8 +219,8 @@ its default and is named in `silere log`; Silere's next save drops it.
 | | Keybinds | Hyprland's shortcuts and what each does, with a filter |
 
 **Ctrl+F**, or the search icon beside the page title, finds a setting by its name, an everyday
-word (`zoom`, `night light`), its key (`notifHistoryDays`) or a typo (`brigthness`). Enter opens
-the top result.
+word (`zoom`, `night light`) or its config key (`notifHistoryDays`). Exact keys work regardless
+of case. Search also handles common typos such as `brigthness`. Enter opens the top result.
 
 ### Displays
 

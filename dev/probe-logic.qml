@@ -8298,6 +8298,19 @@ ShellRoot {
                 && MenuState.searchSettings("calendarWeekStart").some(row => row.section === "clock")
                 && MenuState.searchSettings("fontFamily").some(row => row.section === "interface"),
             "settings search accepts exact configuration names as well as plain-language queries")
+        const wrongKeys = []
+        for (const entry of ShellSettings._schema.filter(setting => setting.sec !== "-")) {
+            const sections = entry.sec.split(",")
+            for (const query of [entry.k, entry.k.toLowerCase()]) {
+                const results = MenuState.searchSettings(query)
+                if (results.length !== sections.length || results.some(row => row.key !== entry.k)
+                        || sections.some(section => !results.some(row => row.section === section))) {
+                    wrongKeys.push(query)
+                }
+            }
+        }
+        root._check(wrongKeys.length === 0,
+            "exact settings keys return their own rows regardless of case: " + wrongKeys.join(" "))
         root._check(MenuState.searchSettings("font battery").length === 0
                 && MenuState.searchSettings("no such feature qzx").length === 0,
             "unrelated terms cannot produce a misleading settings match")
@@ -15559,6 +15572,38 @@ ShellRoot {
                 "history says while popups are held, ends Do Not Disturb or Presentation Mode from there, and only names quiet hours")
             host.requestActivate()
             host.input.wait(40)
+            MenuState.setRecentFilter("Mail")
+            page.searchText = "Second"
+            const searchOutsideApp = root._findTrayNode(page, item => item.label === "Search all apps")
+            root._check(page.rowCount === 0 && searchOutsideApp && searchOutsideApp.visible,
+                "no results in one app offers to search all notification history")
+            if (searchOutsideApp) searchOutsideApp.Accessible.pressAction()
+            host.input.wait(10)
+            const broadenedField = root._findTrayNode(page, item => item.Accessible.name === "Search notifications")
+            root._check(page.filter === "" && page.searchText === "Second" && page.rowCount === 1
+                    && broadenedField && broadenedField.activeFocus,
+                "searching all apps keeps the query and field focus and finds the other app")
+            MenuState.setRecentFilter("")
+            page.searchText = "message"
+            const clearMatches = root._findTrayNode(page, item => item.label === "Clear matches")
+            clearMatches.request()
+            const armedForTwo = clearMatches.armed && clearMatches.armedLabel === "Clear 2?"
+            const nextTime = Date.now()
+            Notifications._prependHistory({ id: 905, appName: "Chat", summary: "Unrelated arrival", time: nextTime })
+            const keptForUnrelated = clearMatches.armed
+            Notifications._prependHistory({ id: 906, appName: "Mail", summary: "New matching message", time: nextTime + 1 })
+            root._check(armedForTwo && keptForUnrelated && !clearMatches.armed
+                    && clearMatches.armedLabel === "Clear 2?" && page.rowCount === 3,
+                "a matching arrival disarms Clear matches while a filtered-out arrival leaves it armed")
+            clearMatches.request()
+            const armedForThree = clearMatches.armed && clearMatches.armedLabel === "Clear 3?"
+            Notifications.historyModel.setProperty(0, "summary", "Revised matching message")
+            Notifications.historyRevision++
+            root._check(armedForThree && !clearMatches.armed && page.rowCount === 3,
+                "changing a match's contents disarms the pending clear even when the count stays the same")
+            Notifications.removeFromHistory(0)
+            Notifications.removeFromHistory(0)
+            page.searchText = ""
             const field = root._findTrayNode(page, item => item.Accessible.name === "Search notifications")
             const list = root._findTrayNode(page, item => typeof item.itemAtIndex === "function")
             list.forceLayout()

@@ -575,7 +575,7 @@ PageShell {
                     anchors.fill: parent
                     verticalAlignment: Text.AlignVCenter
                     visible: _searchInput.text.length === 0
-                    text: "Search notifications"
+                    text: root.filter.length > 0 ? "Search this app" : "Search notifications"
                     color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontSize
                     elide: Text.ElideRight
@@ -659,7 +659,10 @@ PageShell {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                    text: root.searching ? "No matches" : "All caught up"
+                    // a popup joins history when it closes, so with one on screen the list is not all there is
+                    text: root.searching ? (root.filter.length > 0 ? "No matches in this app" : "No matches")
+                        : root.filter.length === 0 && Notifications.activeCount > 0 ? "Nothing earlier"
+                        : "All caught up"
                     color: Theme.withAlpha(Theme.text, 0.78)
                     font.pixelSize: Settings.fontSize + 1
                     font.weight: Font.Medium
@@ -669,6 +672,7 @@ PageShell {
                     width: parent.width
                     horizontalAlignment: Text.AlignHCenter
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                    visible: !root.searching || root.filter.length === 0
                     text: root.searching ? "Try different search terms"
                         : root.filter.length > 0 ? "No notifications from this app"
                         : Notifications.activeCount === 1 ? "The one on screen moves here when it closes"
@@ -681,12 +685,12 @@ PageShell {
                 ActionButton {
                     anchors.horizontalCenter: parent.horizontalCenter
                     visible: root.hasHistory && (root.searching || root.filter.length > 0)
-                    label: root.searching ? "Clear search" : "Show all notifications"
+                    label: root.filter.length === 0 ? "Clear search"
+                        : root.searching ? "Search all apps" : "Show all notifications"
                     onTriggered: {
-                        if (root.searching) {
-                            root.searchText = ""
-                            _searchInput.forceActiveFocus()
-                        } else MenuState.setRecentFilter("")
+                        if (root.filter.length > 0) MenuState.setRecentFilter("")
+                        else root.searchText = ""
+                        _searchInput.forceActiveFocus()
                     }
                 }
             }

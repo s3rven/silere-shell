@@ -262,7 +262,20 @@ AnchoredPopupState {
     }
 
     function searchSettings(query: string): var {
-        const words = root._searchWords(query.slice(0, 256))
+        const text = query.slice(0, 256)
+        const identifier = text.trim().toLowerCase()
+        // a pasted setting name identifies a row even when its words match another page
+        if (/^[a-z][a-z0-9]*$/.test(identifier)) {
+            const exact = []
+            for (const row of root._settingsSearchEntries) {
+                const match = row.keys.find(entry => entry.key.toLowerCase() === identifier)
+                if (match) exact.push(Object.assign({}, row, {
+                    key: match.key, keyLabel: match.label || match.key
+                }))
+            }
+            if (exact.length > 0) return exact
+        }
+        const words = root._searchWords(text)
         if (words.length === 0) return []
         const found = root._searchTerms(words)
         if (found.length > 0) return found
