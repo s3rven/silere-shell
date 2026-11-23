@@ -14,6 +14,13 @@ PageShell {
         _search.searching ? 0 : _detail.height)
         : _detail.height
     property real _searchHeldHeight: 0
+    readonly property bool compactNavigation: root._pageLoader?.compactNavigation ?? false
+    signal sectionsRequested()
+
+    function focusSectionsButton(): void {
+        if (_sectionsButton.visible && _sectionsButton.enabled)
+            _sectionsButton.forceActiveFocus(Qt.TabFocusReason)
+    }
     // the outer SettingsPage can be Loader.Ready while its asynchronous section
     // body is still incubating. MenuWindow uses this to avoid sizing to that
     // short-lived header-only state during a tab transition
@@ -64,7 +71,7 @@ PageShell {
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         transform: PixelSnap { item: _search; dpr: _search._dpr }
         z: 10
-        shown: root.active && MenuState.settingsActive && !root.powerOpen
+        shown: root.active && root.enabled && MenuState.settingsActive && !root.powerOpen
         onExpanding: {
             root._searchHeldHeight = _detail.height
             MenuState.closeSettingsSelect()
@@ -386,6 +393,7 @@ PageShell {
             y: root._pin
             z: 1
             width: parent.width
+            readonly property bool _sectionsShown: root.compactNavigation && !_search.expanded
             readonly property real _mainH: _search.expanded ? _search.fieldHeight
                 : Math.max(Metrics.rowHeightFor(32), _hdrText.implicitHeight, _search.toggleHeight)
             // the description hangs below the row, so the row still shares the nav title's line
@@ -400,7 +408,7 @@ PageShell {
             // a tinted tile: the page's mark, quieter than the selection outline beside it
             Rectangle {
                 id: _hdrIconSlot
-                visible: !_search.expanded
+                visible: !_search.expanded && !root.compactNavigation
                 anchors.left: parent.left
                 y: Math.round((_detailHeader._mainH - height) / 2)
                 width: Metrics.rowHeightFor(28)
@@ -423,10 +431,11 @@ PageShell {
             Column {
                 id: _hdrText
                 visible: !_search.expanded
-                anchors.left: _hdrIconSlot.right
-                anchors.leftMargin: 10
+                anchors.left: root.compactNavigation ? parent.left : _hdrIconSlot.right
+                anchors.leftMargin: root.compactNavigation ? 0 : 10
                 anchors.right: parent.right
                 anchors.rightMargin: _search.toggleHeight + 8
+                    + (_detailHeader._sectionsShown ? _sectionsButton.width + 8 : 0)
                 y: Math.round((_detailHeader._mainH - implicitHeight) / 2)
                 height: implicitHeight
                 spacing: 1
@@ -443,12 +452,24 @@ PageShell {
                 }
             }
 
+            ActionButton {
+                id: _sectionsButton
+                visible: _detailHeader._sectionsShown
+                anchors.right: parent.right
+                anchors.rightMargin: _search.toggleHeight + 8
+                y: Math.round((_detailHeader._mainH - height) / 2)
+                glyph: "󰍜"
+                label: _detailHeader.width >= 288 ? "Sections" : ""
+                accessibleName: "Settings sections"
+                onTriggered: root.sectionsRequested()
+            }
+
             ShellText {
                 id: _hdrDesc
                 visible: !_search.expanded && text.length > 0
                 anchors.left: _hdrText.left
-                anchors.right: _hdrText.right
-                y: Math.round(_hdrText.y + _hdrText.height)
+                anchors.right: root.compactNavigation ? parent.right : _hdrText.right
+                y: root.compactNavigation ? _detailHeader._mainH : Math.round(_hdrText.y + _hdrText.height)
                 opacity: _detail._fade
                 text: _detailHeader._meta.description
                 color: Theme.withAlpha(Theme.subtext, 0.86)

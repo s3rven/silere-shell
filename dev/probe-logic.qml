@@ -2444,6 +2444,29 @@ ShellRoot {
         let requestedChoices = null
         const noteChoices = (control, choices) => requestedChoices = choices
         home.controlRequested.connect(noteChoices)
+        home._wiredShown = true
+        home._togglePicker("wifi")
+        MenuState.homePicker = "wired"
+        root._check(home._connShown && home._picker === "" && requested && requested.title === "Ethernet"
+                && requested.visible && requestedChoices === null,
+            "the wired shortcut closes other pickers and reveals the dedicated Ethernet row")
+        const radios = [
+            { picker: "wifi", title: "Wi-Fi", visibleKey: "_wifiAvailable", expands: () => Network.wifiEnabled },
+            { picker: "bt", title: "Bluetooth", visibleKey: "_btAvailable", expands: () => Bluetooth.enabled }
+        ]
+        for (const radio of radios) {
+            const available = home[radio.visibleKey]
+            home[radio.visibleKey] = true
+            const row = root._findTrayNode(home, item => item.title === radio.title && item.expandable !== undefined)
+            if (row) row.expandable = false
+            home._togglePicker("power")
+            requested = null
+            MenuState.homePicker = radio.picker
+            root._check(requested === row && requested !== null && requestedChoices === null && home._picker === "",
+                "the " + radio.title + " shortcut reveals the switch when its radio is off")
+            if (row) row.expandable = Qt.binding(radio.expands)
+            home[radio.visibleKey] = available
+        }
         home._closePicker()
         requested = null
         home._togglePicker("power")
@@ -2462,6 +2485,12 @@ ShellRoot {
             on: false, stopsAt: 80 }]
         if (vitals) vitals.batteryShown = true
         const detailsOpen = vitals !== null && vitals.batteryOpenable && home._picker === "battery"
+        const batteryTile = root._findTrayNode(vitals, item => item.label === "Battery" && item.openable)
+        if (vitals) vitals.active = false
+        if (batteryTile) batteryTile.Accessible.pressAction()
+        root._check(batteryTile && !batteryTile.Accessible.focusable && home._picker === "battery",
+            "an inactive Home battery control rejects its retained accessibility action")
+        if (vitals) vitals.active = Qt.binding(() => home.active)
         if (vitals) vitals.batteryShown = false
         root._check(detailsOpen && !vitals.batteryOpenable && home._picker === "",
             "battery details close with a battery UPower lost, so the next Escape is not spent on them")
@@ -15272,7 +15301,7 @@ ShellRoot {
                 const settings = root._motionSettings
                 if (root._motionNotYet(settings.contentReady)) break
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child._heldH !== undefined)
                 root._check(settings.contentReady, "settings content finishes its initial load")
                 body.active = false
                 settings._awaitingSectionEnter = true
@@ -15294,7 +15323,7 @@ ShellRoot {
                 if (root._motionNotYet(revealed)) break
                 root._check(revealed, "a ready settings section completes its reveal")
                 // a section change moves the body alone; the header frame and the search toggle hold still
-                const sectionBody = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
+                const sectionBody = root._findTrayNode(detail, child => child._heldH !== undefined)
                 const headerTitle = root._findTrayNode(detail, item => item.font !== undefined
                     && item.font.weight === Font.DemiBold && item.text === settings._sectionMeta[settings._shownSection]?.label)
                 detail._fade = 0.5
@@ -15343,7 +15372,7 @@ ShellRoot {
                         && root._findTrayNode(settings, item => item.key === "updatesWidget") !== null,
                     "the system overview builds update controls and diagnostics in one page")
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child._heldH !== undefined)
                 root._motionBodyItem = body.item
                 root._motionSectionSwaps = 0
                 settings.sectionSwapped.connect(() => root._motionSectionSwaps++)
@@ -15357,7 +15386,7 @@ ShellRoot {
             case 5: {
                 const settings = root._motionSettings
                 const detail = settings.children.find(child => child._bodyGap !== undefined)
-                const body = root._findTrayNode(detail, child => child.sourceComponent !== undefined)
+                const body = root._findTrayNode(detail, child => child._heldH !== undefined)
                 root._check(root._motionSectionSwaps === 0 && body.item === root._motionBodyItem
                         && detail._fade === 1 && detail._shift === 0 && detail._lift === 0,
                     "returning mid-fade keeps the settings body and reverses to a settled reveal")

@@ -10,6 +10,7 @@ Loader {
     // reads these through its parent, set before its bindings run. setSource() with properties leaks per open
     property bool pageActive: false
     property bool powerOpen: false
+    property bool compactNavigation: false
     property bool animateOnCreate: false
     property bool viewportReady: true
     property Flickable scroller: null

@@ -8,6 +8,7 @@ import "../config"
 import "../services"
 import "../modules/bar"
 import "../modules/calendar"
+import "../modules/menu"
 import "../modules/notifications"
 import "../modules/quickactions"
 import "../modules/traymenu"
@@ -20,12 +21,14 @@ Item {
     property int _checks: 0
 
     CalendarPopup { id: calendar; targetScreen: root.targetScreen; visible: false }
+    MenuWindow { id: menu; targetScreen: root.targetScreen; visible: false }
     QuickActionsPopup { id: actions; targetScreen: root.targetScreen; visible: false }
     TrayMenuPopup { id: tray; targetScreen: root.targetScreen; visible: false }
     NotificationPopups { id: notificationPopups; targetScreen: root.targetScreen; visible: false }
     OsdWindow { id: osd; targetScreen: root.targetScreen; visible: false }
     Bar { id: bar; targetScreen: root.targetScreen; visible: false }
     TestCase { id: input; when: false }
+    TextMetrics { id: osdLabelMetrics; elide: Text.ElideMiddle }
     // the shell builds the calendar on its first open, after the open edge its focus handler waits for
     Component { id: lateCalendar; CalendarPopup { targetScreen: root.targetScreen; visible: false } }
     QtObject { id: traySource; property string id: "popup-probe-tray" }

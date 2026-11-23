@@ -9,11 +9,13 @@ Item {
     id: root
 
     property bool powerOpen: false
+    property bool overlay: false
     readonly property bool active: MenuState.settingsActive && !powerOpen
     readonly property bool compact: width < 132
 
     signal currentPageRetapped()
     signal groupToggled()
+    signal dismissRequested()
 
     // pinned mode never assigns _expandedGroup, so it stays bound to the selected section's group
     property int _expandedGroup: _groupIndexForSection(MenuState.settingsSection)
@@ -193,7 +195,7 @@ Item {
         root._expandedGroup = opening ? index : -1
         root._settleTo(opening ? index : -1)
 
-        if (opening) {
+        if (opening && !root.overlay) {
             const group = MenuState.settingsTree[index]
             const leaves = root._leaves(group)
             if (leaves.length > 0 && !root._groupContainsSection(group, MenuState.settingsSection))
@@ -290,6 +292,8 @@ Item {
         id: _nav
         anchors.fill: parent
         title: "Settings"
+        closeLabel: root.overlay ? "Close settings sections" : ""
+        onCloseRequested: root.dismissRequested()
         contentHeight: root.implicitHeight
         onViewportResized: if (root.active) root._queueReveal(-1)
 
@@ -325,6 +329,12 @@ Item {
                     readonly property bool expanded: root._isExpanded(index)
                     readonly property bool groupActive: root._groupContainsSection(
                         modelData, MenuState.settingsSection)
+
+                    function focusSection(section: string): void {
+                        const leaf = _leafRepeater.itemAt(root._leafIndexForSection(index, section))
+                        const target = expanded && leaf ? leaf : _grpHeader
+                        target.forceActiveFocus(Qt.TabFocusReason)
+                    }
 
                     width: _groupColumn.width
                     height: _grpHeader.height + _leafBox.height
@@ -498,7 +508,7 @@ Item {
                                     Accessible.description: _leaf.showDot ? "Changed from its defaults" : ""
                                     Accessible.focusable: true
                                     Accessible.selected: _leaf.active
-                                    Accessible.onPressAction: root._activateSection(
+                                    Accessible.onPressAction: root._pickSection(
                                         _leaf.modelData.section)
                                     KeyboardFocus { listNavigation: true; onActivated: root._activateSection(_leaf.modelData.section) }
 
@@ -509,7 +519,7 @@ Item {
                                     TapHandler {
                                         id: _leafTap
                                         onTapped: {
-                                            root._activateSection(_leaf.modelData.section)
+                                            root._pickSection(_leaf.modelData.section)
                                         }
                                     }
 

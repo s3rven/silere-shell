@@ -10,7 +10,7 @@
 | Quick actions | Right-click the active workspace |
 | Calendar | Click the clock |
 | Now Playing | Right-click the media widget |
-| Wi-Fi or Bluetooth list | Click its bar widget (opens Home while the radio is off) |
+| Wi-Fi or Bluetooth list | Click its bar widget (reveals the power switch while the radio is off) |
 
 Clicking outside a popup closes it. The installer offers **Super + /** for the menu on Hyprland
 and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`; on Hyprland,

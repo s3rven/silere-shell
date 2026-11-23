@@ -72,7 +72,7 @@ FittedPopupWindow {
         readonly property int _recentBaseW: 492 + _typeGain + Metrics.menuContentGrowth
         readonly property int _recentW: _recentBaseW + _navMaxW + 16
         readonly property bool _settingsNavVisible:
-            activeTab === 1 && !powerOpen
+            activeTab === 1 && !powerOpen && (!_compactSettingsNav || _settingsNavOverlay)
         // one app cannot be filtered against anything, so the drawer stays out of its way
         readonly property bool _recentNavVisible:
             activeTab === 2 && !powerOpen && Notifications.historyApps.length > 1
@@ -170,7 +170,7 @@ FittedPopupWindow {
         property real _recentClosedH: 0
         property real _settingsNavClosedH: 0
         // the nav floors the settings panel and is unloaded with the page, so it stands in at its closing height too
-        readonly property real _settingsNavH: rail.settingsNavHeight > 0 ? rail.settingsNavHeight
+        readonly property real _settingsNavH: _compactSettingsNav ? 0 : rail.settingsNavHeight > 0 ? rail.settingsNavHeight
             : panel._settingsClosedSection === MenuState.settingsSection ? panel._settingsNavClosedH : 0
 
         Component.onCompleted: {
@@ -757,7 +757,7 @@ FittedPopupWindow {
                                 width: Math.max(1, _pagePlaceholder.width - 24)
                                 horizontalAlignment: Text.AlignHCenter
                                 text: tabContent._pageError
-                                    ? "Couldn’t load this page"
+                                    ? "Could not load this page"
                                     : panel.activeTab === 1 ? "Loading settings…" : "Loading notifications…"
                                 color: Theme.withAlpha(Theme.text, 0.76)
                                 font.pixelSize: Settings.fontSize
@@ -810,6 +810,7 @@ FittedPopupWindow {
                                 animateOnCreate: panel.fullyShown
                                 viewportReady: panel.pageViewportReady
                                 onControlRequested: (control, choices) => {
+                                    if (!contentFlick._homeRevealActive) return
                                     _homeReveal.control = control
                                     _homeReveal.choices = choices
                                     _homeReveal.restart()
@@ -832,6 +833,7 @@ FittedPopupWindow {
                         animateOnCreate: panel.fullyShown
                         viewportReady: panel.pageViewportReady
                         scroller: contentFlick
+                        compactNavigation: panel._compactSettingsNav
                         Connections {
                             target: settingsLoader.item
                             function onContentReadyChanged() { panel._scheduleTabHeightRelease() }

@@ -99,9 +99,9 @@ PageShell {
             const parts = root._pickerParts(want)
             root.controlRequested(parts[0], parts[1])
         }
-        else if (want === "power") {
+        else if (radioRow || want === "power") {
             root.dismissInline()
-            root.controlRequested(_vitals, null)
+            root.controlRequested(radioRow || _vitals, null)
         }
     }
     Connections {

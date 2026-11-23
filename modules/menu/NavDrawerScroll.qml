@@ -7,12 +7,15 @@ Item {
     id: root
 
     required property string title
+    property string closeLabel: ""
+    readonly property bool _closable: root.closeLabel.length > 0
     property real contentHeight: 0
     // the title shares the page header's line: MenuWindow's 12px page inset, then a 32px header row
     readonly property int listTop: _title.y + _title.height + 8
     default property alias content: _content.data
     readonly property alias viewportHeight: _scroll.height
     signal viewportResized()
+    signal closeRequested()
 
     // a range taller than the viewport keeps its top in view
     function reveal(top: real, bottom: real): void {
@@ -61,13 +64,24 @@ Item {
 
                 ShellText {
                     anchors.left: parent.left
-                    anchors.right: parent.right
+                    anchors.right: root._closable ? _closeButton.left : parent.right
+                    anchors.rightMargin: root._closable ? 8 : 0
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.title
                     color: Theme.withAlpha(Theme.text, 0.88)
                     font.pixelSize: Settings.fontSize
                     font.weight: Font.DemiBold
                     elide: Text.ElideRight
+                }
+
+                IconButton {
+                    id: _closeButton
+                    visible: root._closable
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    glyph: "󰅖"
+                    accessibleName: root.closeLabel
+                    onTriggered: root.closeRequested()
                 }
             }
         }
