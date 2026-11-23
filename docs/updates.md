@@ -75,7 +75,8 @@ from Silere releases. Use your package manager to install those updates.
 
 If power is lost or the updater is killed, the next update run checks its saved
 transaction and either keeps the validated revision or restores the previous one.
-It refuses to reset a checkout that gained local edits after the interruption.
+Recovery stops if switching revisions would replace local edits or collide with
+an untracked file. This includes ignored files and file-to-directory changes.
 
 If recovery reports damaged state, run `silere doctor`. Silere preserves the
 damaged journal under your XDG state directory and reports its location. That
@@ -85,7 +86,9 @@ failed run leaves the checkout alone; later update checks can run again.
 
 The updater stages the signed release in a separate, detached Git worktree. It
 checks QML types and starts the staged shell in a sandbox against a copy of your
-settings before changing the live checkout.
+settings before changing the live checkout. A staged shell that exits early
+fails validation. If the display is unreachable, the updater reports that it
+skipped the startup check.
 
 A private transaction journal records that validation passed. Recovery authenticates
 it against a snapshot of the previously installed release key. The journal remains

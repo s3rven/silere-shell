@@ -371,20 +371,15 @@ _has_local_changes() {
     [ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]
 }
 
-# reset --hard can replace ignored or untracked files when the destination
-# revision tracks their paths. --keep protects tracked edits and ordinary
-# untracked collisions, but Git still overwrites ignored collisions.
+# Checkout checks ignored files and file/directory collisions while it writes the tree.
+# -B moves the current branch only after checkout succeeds. Recovery should not run checkout hooks.
 _reset_preserving_user_files() {
-    local target="$1" path
-    git -C "$ROOT" cat-file -e "$target^{commit}" 2>/dev/null || return 1
-    while IFS= read -r -d '' path; do
-        if ! git -C "$ROOT" ls-files --error-unmatch -- ":(literal)$path" >/dev/null 2>&1 \
-                && { [ -e "$ROOT/$path" ] || [ -L "$ROOT/$path" ]; }; then
-            printf 'silere-update: local file blocks revision change: %s\n' "$path" >&2
-            return 1
-        fi
-    done < <(git -C "$ROOT" ls-tree -r -z --name-only "$target")
-    git -C "$ROOT" reset --keep --quiet "$target"
+    local target="$1" branch args=(--detach)
+    branch="$(git -C "$ROOT" symbolic-ref --quiet HEAD)" || branch=""
+    if [ -n "$branch" ]; then
+        args=(-B "${branch#refs/heads/}")
+    fi
+    git -C "$ROOT" -c core.hooksPath=/dev/null checkout --quiet --no-overwrite-ignore "${args[@]}" "$target"
 }
 
 # A blackholed network keeps a fetch running past the shell's own check timeout,
@@ -594,17 +589,20 @@ _candidate_tree_starts() {
     fi
     log="$(mktemp "${TMPDIR:-/tmp}/silere-update-smoke.XXXXXX.log")" \
         || { rm -rf -- "$sandbox"; return 1; }
-    XDG_CONFIG_HOME="$sandbox/config" XDG_CACHE_HOME="$sandbox/cache" \
-        XDG_STATE_HOME="$sandbox/state" SILERE_SMOKE_TEST=1 SILERE_SANDBOX=1 QML_DISABLE_DISK_CACHE=1 \
-        timeout --kill-after=5 5s env -u LC_ALL qs -p "$candidate_root/shell.qml" --no-color \
-        >"$log" 2>&1 9>&- || code=$?
-    # 124 is the timeout firing, i.e. it stayed up for the whole window
-    if [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; then
-        # an unreachable display is not the update's fault; never roll back over it
-        grep -qE 'Failed to create wl_display|could not connect to display|no Qt platform plugin could be initialized' "$log" \
-            || verdict=1
-    elif grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed' "$log"; then
+    {
+        XDG_CONFIG_HOME="$sandbox/config" XDG_CACHE_HOME="$sandbox/cache" \
+            XDG_STATE_HOME="$sandbox/state" SILERE_SMOKE_TEST=1 SILERE_SANDBOX=1 QML_DISABLE_DISK_CACHE=1 \
+            timeout --kill-after=5 5s env -u LC_ALL qs -p "$candidate_root/shell.qml" --no-color 9>&- || code=$?
+    } >"$log" 2>&1
+    if grep -qE 'Failed to load configuration|Type [^ ]+ unavailable|module ".*" is not installed' "$log"; then
         verdict=1
+    elif [ "$code" -ne 124 ]; then
+        # Only a timeout demonstrates that the shell stayed up for the whole window.
+        if [ "$code" -ne 0 ] && grep -qE 'Failed to create wl_display|could not connect to display' "$log"; then
+            CANDIDATE_GATE_NOTE="startup check skipped (could not connect to display)"
+        else
+            verdict=1
+        fi
     fi
     rm -f "$log"
     rm -rf -- "$sandbox"

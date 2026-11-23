@@ -1215,14 +1215,19 @@ test_interrupted_update_recovery() (
     _prepare_release_signer "$repo"
     printf 'known good\n' > "$repo/tracked.qml"
     printf 'old release\n' > "$repo/old-only"
-    printf 'new-only\n' > "$repo/.gitignore"
-    git -C "$repo" add security tracked.qml old-only .gitignore
+    printf 'new-only\nadded-dir\nretyped/local.json\n' > "$repo/.gitignore"
+    mkdir -p "$repo/retyped"
+    printf 'old shipped content\n' > "$repo/retyped/shipped"
+    git -C "$repo" add security tracked.qml old-only .gitignore retyped
     git -C "$repo" commit -qm "known good"
     old_rev="$(git -C "$repo" rev-parse HEAD)"
     printf 'signed update\n' > "$repo/tracked.qml"
-    git -C "$repo" rm -q old-only
+    git -C "$repo" rm -qr old-only retyped
     printf 'new release\n' > "$repo/new-only"
-    git -C "$repo" add -f new-only
+    mkdir -p "$repo/added-dir"
+    printf 'new shipped content\n' > "$repo/added-dir/shipped"
+    printf 'replacement file\n' > "$repo/retyped"
+    git -C "$repo" add -f new-only added-dir retyped
     git -C "$repo" commit -qam "signed update"
     _sign_release "$repo" v1.0.1
     new_rev="$(git -C "$repo" rev-parse HEAD)"
@@ -1256,6 +1261,39 @@ test_interrupted_update_recovery() (
     assert_eq "personal untracked data" "$(cat "$repo/old-only")" \
         "untracked file survives a blocked revision switch"
     rm -f "$repo/old-only"
+    git -C "$repo" reset --hard -q "$old_rev"
+
+    printf 'local parent data\n' > "$repo/added-dir"
+    if ( _reset_preserving_user_files "$new_rev" >/dev/null 2>&1 ); then
+        fail "revision switch replaced an ignored parent file with a directory"
+    fi
+    assert_eq "local parent data" "$(cat "$repo/added-dir")" "ignored parent survives revision switch"
+    rm -f "$repo/added-dir"
+    ln -s missing-local-dir "$repo/added-dir"
+    if ( _reset_preserving_user_files "$new_rev" >/dev/null 2>&1 ); then
+        fail "revision switch replaced an ignored parent symlink with a directory"
+    fi
+    assert_eq missing-local-dir "$(readlink "$repo/added-dir")" "ignored parent symlink survives revision switch"
+    rm -f "$repo/added-dir"
+    printf 'local child data\n' > "$repo/retyped/local.json"
+    if ( _reset_preserving_user_files "$new_rev" >/dev/null 2>&1 ); then
+        fail "revision switch replaced a directory containing an ignored file"
+    fi
+    assert_eq "local child data" "$(cat "$repo/retyped/local.json")" "ignored child survives revision switch"
+    assert_eq "$old_rev" "$(git -C "$repo" rev-parse HEAD)" "parent and child collisions leave HEAD untouched"
+    rm -f "$repo/retyped/local.json"
+
+    mkdir -p "$repo/added-dir"
+    printf 'unrelated data\n' > "$repo/added-dir/unrelated"
+    printf '#!/bin/sh\nexit 99\n' > "$repo/.git/hooks/post-checkout"
+    chmod +x "$repo/.git/hooks/post-checkout"
+    local branch
+    branch="$(git -C "$repo" symbolic-ref HEAD)"
+    _reset_preserving_user_files "$new_rev" || fail "a rollback refused an unrelated ignored file or ran a checkout hook"
+    assert_eq "$new_rev" "$(git -C "$repo" rev-parse HEAD)" "successful revision switch moves HEAD"
+    assert_eq "$branch" "$(git -C "$repo" symbolic-ref HEAD)" "successful revision switch keeps its branch"
+    assert_eq "unrelated data" "$(cat "$repo/added-dir/unrelated")" "revision switch keeps unrelated ignored files"
+    rm -f "$repo/added-dir/unrelated" "$repo/.git/hooks/post-checkout"
     git -C "$repo" reset --hard -q "$old_rev"
 
     # Interruption immediately after the merge still has a prepared journal.
@@ -1490,16 +1528,31 @@ printf '%s\n%s\n%s\n%s\n' "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
     > "${SILERE_RUNTIME_CAPTURE:?}"
 cat "$XDG_CONFIG_HOME/silere-shell/settings.json" >> "$SILERE_RUNTIME_CAPTURE"
 printf '{"candidate":"wrote here"}\n' > "$XDG_CONFIG_HOME/silere-shell/settings.json"
-exit 0
+case "${SILERE_TEST_CANDIDATE_MODE:-}" in
+    exits) exit 0 ;;
+    display) echo 'Failed to create wl_display (No such file or directory)' >&2; exit 1 ;;
+    platform) echo 'no Qt platform plugin could be initialized' >&2; exit 1 ;;
+    live) exec sleep 30 ;;
+esac
 EOF
     chmod +x "$stubs/qs"
 
     HOME="$home" XDG_CONFIG_HOME="$home/config" SILERE_SCRIPT_LIB_ONLY=1 \
         source "$ROOT/scripts/update.sh"
-    WAYLAND_DISPLAY=wayland-test XDG_RUNTIME_DIR="$runtime" \
-        SILERE_RUNTIME_CAPTURE="$capture" PATH="$stubs:$PATH" \
-        _candidate_tree_starts "$candidate" \
-        || fail "isolated candidate runtime was rejected"
+    export WAYLAND_DISPLAY=wayland-test XDG_RUNTIME_DIR="$runtime" SILERE_RUNTIME_CAPTURE="$capture" PATH="$stubs:$PATH"
+    if SILERE_TEST_CANDIDATE_MODE=exits _candidate_tree_starts "$candidate"; then
+        fail "candidate runtime accepted a shell that quit before validation"
+    fi
+    if SILERE_TEST_CANDIDATE_MODE=platform _candidate_tree_starts "$candidate"; then
+        fail "candidate runtime treated a failed Qt platform as an unreachable display"
+    fi
+    SILERE_TEST_CANDIDATE_MODE=display _candidate_tree_starts "$candidate" \
+        || fail "candidate runtime rejected a stale display"
+    assert_eq 'startup check skipped (could not connect to display)' "$CANDIDATE_GATE_NOTE" \
+        "unreachable display reports that startup was skipped"
+    CANDIDATE_GATE_NOTE=""
+    SILERE_TEST_CANDIDATE_MODE=live _candidate_tree_starts "$candidate" || fail "isolated candidate runtime was rejected"
+    assert_eq '' "$CANDIDATE_GATE_NOTE" "candidate that stays up passes startup validation"
     assert_eq '{"__version":1,"barHeight":40}' \
         "$(cat "$home/config/silere-shell/settings.json")" \
         "candidate runtime left live settings untouched"
