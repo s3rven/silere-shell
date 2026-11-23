@@ -691,10 +691,13 @@ _dry() { [ "$_dry_run" = "1" ]; }
 # shellcheck disable=SC2059
 _would() { printf "    ${CYAN}dry${R}     %s\n" "$*"; }
 _assume_yes() { [ "$_cli_yes" = 1 ] || [ "${SILERE_ASSUME_YES:-0}" = "1" ] || _dry; }
+# one yes up front stands for the default answer to each question after it, which is still printed as it is made
+_recommended=0
+_auto_answer() { _assume_yes || [ "$_recommended" = 1 ]; }
 
 _ask() {
     local reply
-    if _assume_yes; then
+    if _auto_answer; then
         printf "  ${CYAN}::${R}  %s ${DIM}[Y/n]${R} yes\n" "$1"
         return 0
     fi
@@ -706,7 +709,7 @@ _ask() {
 
 _ask_no() {
     local reply
-    if _assume_yes; then
+    if _auto_answer; then
         printf "  ${CYAN}::${R}  %s ${DIM}[y/N]${R} no\n" "$1"
         return 1
     fi
@@ -722,7 +725,7 @@ _ask_path() {
         printf '%s' "$_install_path_override"
         return 0
     fi
-    if _assume_yes; then
+    if _auto_answer; then
         printf '%s' "$DEFAULT_DIR"
         return 0
     fi
@@ -1147,6 +1150,13 @@ else
 fi
 
 _txn_begin
+
+if ! _assume_yes; then
+    _section "setup"
+    _info "The recommended setup takes the default answer to each question below and shows each one."
+    _info "Every file it edits is backed up first; bash scripts/install.sh --dry-run lists them all."
+    if _ask "Use the recommended setup? (n asks at each step)"; then _recommended=1; fi
+fi
 
 # ── font ─────────────────────────────────────────────────────────────────────────
 _section "JetBrainsMono Nerd Font"
@@ -1954,6 +1964,7 @@ if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scr
     if [ -z "$other_configs" ]; then
         start_prompt="Start silere now?"
         [ -n "$qs_configs" ] && start_prompt="Restart silere now to load this version?"
+        _recommended=0
         if _ask "$start_prompt"; then
             bash "$ROOT/scripts/silere" restart && started=true
         fi

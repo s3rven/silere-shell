@@ -41,11 +41,14 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
+After its checks, the installer asks once whether to use the recommended setup: yes takes the
+default answer to each question that follows and prints each one, no asks at every step.
 The installer:
 
 - checks every QML module Silere imports and names any that are missing
 - puts a checkout in your XDG config directory, or another path you choose
 - backs up files before editing them, and asks before touching compositor autostart
+- names each line of your Hyprland or niri config that still starts another bar or notification daemon
 - offers autostart and a menu shortcut for Hyprland. It preserves combinations already in use
   and checks Lua edits with `Hyprland --verify-config`, restoring the backup if verification fails.
   A Lua config ending in `return` gets instructions for adding the lines yourself

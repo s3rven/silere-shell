@@ -33,6 +33,7 @@ settings file carries its own `__version` and migrates separately.
 - On niri, focusing a window and cycling the keyboard layout use the compositor socket directly, avoiding a new process for each action.
 - `silere help` lists the commands that control the shell apart from the ones that run and maintain it, and `silere set` takes `on` and `off` for a true/false setting.
 - `silere use` moves the shell completions to the checkout it switches to, as it does the command.
+- The installer asks once whether to use the recommended setup, which takes the default answer to each question and shows it, instead of asking up to ten questions one by one. Answering no asks at each step as before.
 - Without Quickshell, the installer prints the command that installs it: pacman on Arch, the COPR on Fedora, or Quickshell's guide elsewhere.
 - Switching from another bar, the installer and `silere doctor` name each line of your Hyprland or niri config that still starts Waybar, mako, dunst or a similar bar or daemon at login, with its file and line number.
 - `silere doctor` names a notification daemon such as mako or dunst that D-Bus can start on its own, which takes notifications from Silere at a later login, and how to keep it off.
