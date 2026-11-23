@@ -190,7 +190,7 @@ ShellRoot {
                 console.warn("Failed to load configuration: " + _pl._compiling.errorString())
                 // otherwise it just never opens, and the bar is still up to say why
                 if (!root.smokeTest) SystemAlerts.send("A Silere panel could not load",
-                    "The bar keeps working. silere restart usually clears it; silere log has the details, and silere update --rollback puts the last version back.", "critical", "dialog-error")
+                    "The bar keeps working. Click here to reload Silere, which usually clears it; silere log has the details, and silere update --rollback puts the last version back.", "critical", "dialog-error", "reload")
             } else if (status === Component.Ready && !_pl.surface) {
                 _pl.surface = _pl._compiling
                 if (_pl.wantOpen) _pl._ensureLoaded()

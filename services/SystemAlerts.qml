@@ -22,11 +22,12 @@ Singleton {
         ShellSettings.notifCriticalBypass, Notifications.silencingActive)
     property bool _cpuCritSent:  false
 
-    function alertCommand(summary: string, body: string, urgency: string, icon: string, timeout: int): var {
-        return ["notify-send", "--urgency=" + urgency, "--expire-time=" + timeout, "--app-name=Silere Shell",
-            "--icon=" + (icon || "dialog-information"),
-            // a bluetooth device can be named "-x": without the end of options, notify-send refuses the alert
-            "--", summary, body]
+    function alertCommand(summary: string, body: string, urgency: string, icon: string, timeout: int, click = ""): var {
+        const argv = ["notify-send", "--urgency=" + urgency, "--expire-time=" + timeout, "--app-name=Silere Shell",
+            "--icon=" + (icon || "dialog-information")]
+        if (click.length > 0) argv.push("--hint=string:x-silere-click:" + click)
+        // a bluetooth device can be named "-x": without the end of options, notify-send refuses the alert
+        return argv.concat(["--", summary, body])
     }
 
     function _send(summary: string, body: string, urgency: string, icon: string): bool {
@@ -37,8 +38,8 @@ Singleton {
     }
 
     // for a service whose failure happens after the surface that started it has closed
-    function send(summary: string, body: string, urgency: string, icon: string): bool {
-        return root._send(summary, body, urgency, icon)
+    function send(summary: string, body: string, urgency: string, icon: string, click = ""): bool {
+        return root._send(summary, body, urgency, icon, click)
     }
 
     // the way into the menu is the active workspace, and otherwise only the installer's terminal output says so.

@@ -261,7 +261,7 @@ for _backlight in /sys/class/backlight/*; do
   [ -d "$_backlight" ] && _backlights+=("${_backlight##*/}")
 done
 if [ "${#_backlights[@]}" -gt 1 ]; then
-  ok "backlights" "${_backlights[*]} (choose the display in Settings > Interface)"
+  ok "backlights" "${_backlights[*]} (choose the display in Settings > System > Devices)"
 elif [ "${#_backlights[@]}" -eq 1 ]; then
   ok "backlight" "${_backlights[0]}"
 elif command -v brightnessctl >/dev/null 2>&1; then
@@ -511,7 +511,7 @@ if command -v matugen >/dev/null 2>&1; then
     # which surfaces as silently wrong colours rather than a load error
     _missing=""
     for _role in $(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' . \
-      | sed 's/^MatugenTheme\.//' | grep -vE '^(_|qml$|usingFallback$|paletteStale$)' | sort -u); do
+      | sed 's/^MatugenTheme\.//' | grep -vE '^(_|(qml|usingFallback|paletteStale|loadState|palettePath|reload)$)' | sort -u); do
       grep -qE "\"$_role\"[[:space:]]*:" "$_tmpl" \
         || _missing="$_missing $_role"
     done

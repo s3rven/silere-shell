@@ -535,6 +535,67 @@ test_assume_yes_prompts() (
     fi
 )
 
+# silere service install asks for run --supervised --startup in Silere's own block; reading it as an old form
+# offered to replace it with the unsupervised launcher, default yes
+test_supervised_autostart_is_current() (
+    local home="$TMP/supervised-home" conf form out
+    mkdir -p "$home/.config/hypr"
+    conf="$home/.config/hypr/hyprland.lua"
+    # the last is how docs/install.md and silere service install spell it
+    for form in 'exec \"/opt/silere/scripts/silere\" run --supervised --startup' \
+            'exec \"/opt/silere/scripts/silere\" run --startup' 'silere run --supervised --startup'; do
+        printf '%s\n' '-- silere-shell begin' 'hl.on("hyprland.start", function()' \
+            "    hl.exec_cmd(\"$form\")" 'end)' '-- silere-shell end' > "$conf"
+        out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+            bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" || fail "dry run exited non-zero"
+        case "$out" in
+            *"already present in"*) ;;
+            *) fail "the installer did not take its own '$form' block as current" ;;
+        esac
+    done
+    printf '%s\n' '-- silere-shell begin' 'hl.on("hyprland.start", function()' \
+        '    hl.exec_cmd("{ umask 077; sleep 1; env qs -p \"/opt/silere/shell.qml\"; }")' 'end)' '-- silere-shell end' > "$conf"
+    out="$(HOME="$home" XDG_CONFIG_HOME="$home/.config" SILERE_HYPR_CONFIG="$conf" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" || fail "dry run exited non-zero"
+    case "$out" in
+        *"migrate the Silere block"*) ;;
+        *) fail "the installer no longer migrates a block from before the shared launcher" ;;
+    esac
+)
+
+# the shell's health card runs this unprompted: a repeat changes nothing, even where diffutils is absent, and a
+# hand-written entry is refused before any file is written
+test_matugen_repair() (
+    local home="$TMP/matugen-repair" stubs="$TMP/matugen-repair-stubs" cfg tmpl before out
+    mkdir -p "$home/config" "$stubs"
+    cfg="$home/config/matugen/config.toml"
+    tmpl="$home/config/matugen/templates/silere-shell/Theme.json"
+    printf '#!/bin/sh\nexit 0\n' > "$stubs/matugen"
+    printf '#!/bin/sh\nexit 127\n' > "$stubs/cmp"
+    chmod +x "$stubs/matugen" "$stubs/cmp"
+    repair() {
+        HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" PATH="$stubs:$PATH" \
+            bash "$ROOT/scripts/install.sh" --repair-matugen </dev/null 2>&1
+    }
+    out="$(repair)" || fail "a first matugen repair failed: $out"
+    [ -f "$tmpl" ] || fail "the repair did not write the template"
+    assert_eq "$(<"$ROOT/assets/matugen-theme.json")" "$(<"$tmpl")" "the repair wrote the shipped template"
+    grep -qx '# silere-shell begin' "$cfg" || fail "the repair did not add its entry"
+    before="$(cat "$cfg" "$tmpl"; ls -A "${tmpl%/*}" "${cfg%/*}")"
+    out="$(repair)" || fail "a repeated matugen repair failed: $out"
+    case "$out" in
+        *"template already current"*"entry already correct"*) ;;
+        *) fail "a repeated repair rewrote what was current: $out" ;;
+    esac
+    assert_eq "$before" "$(cat "$cfg" "$tmpl"; ls -A "${tmpl%/*}" "${cfg%/*}")" "a repeated repair changed no file"
+
+    rm -rf "$home/config/matugen"
+    mkdir -p "${cfg%/*}"
+    printf '[templates.silere-shell]\ninput_path = "mine.json"\n' > "$cfg"
+    if out="$(repair)"; then fail "the repair took over a hand-written entry"; fi
+    [ ! -e "$tmpl" ] || fail "a refused repair still wrote the template"
+)
+
 test_dry_run_writes_nothing() (
     local home="$TMP/dry-run-home" conf before out
     mkdir -p "$home/.config/hypr"
@@ -1130,6 +1191,7 @@ test_shared_launcher() (
     printf '%s\n' \
         '#!/bin/sh' \
         'for arg do [ "$arg" = "${SILERE_STUB_REJECT-}" ] && exit 109; done' \
+        'for arg do [ "$arg" = --version ] && echo probe >> "$SILERE_LAUNCH_CAPTURE.probes"; done' \
         ': > "$SILERE_LAUNCH_CAPTURE"' \
         'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\npipewire=%s\nshortcuts=%s\nlogrules=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" "${QS_PIPEWIRE_IMMEDIATE_RECONNECT-}" "${SILERE_GLOBAL_SHORTCUTS-}" "${QT_LOGGING_RULES-<unset>}" >> "$SILERE_LAUNCH_CAPTURE"' \
         'for arg do printf "arg=%s\n" "$arg" >> "$SILERE_LAUNCH_CAPTURE"; done' \
@@ -1164,9 +1226,15 @@ test_shared_launcher() (
         || fail "shared launcher did not quiet Quickshell's remote property warnings"
     expected_args=$'arg=--no-duplicate\narg=--no-detailed-logs\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv"
-    # a quickshell without the hidden flag must still start
+    # the second start reuses the answer instead of starting the binary to ask again; a changed binary is asked anew
+    env PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" bash "$ROOT/scripts/silere" run --verbose
+    assert_eq 1 "$(grep -c probe "$capture.probes")" "a second start asks the same qs nothing"
+    touch -d '2001-01-01' "$stub_dir/qs"
+    env PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" bash "$ROOT/scripts/silere" run --verbose
+    assert_eq 2 "$(grep -c probe "$capture.probes")" "an upgraded qs is asked again"
+    # a quickshell without the hidden flag must still start (another binary: this stub only acts like one)
     env PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" SILERE_STUB_REJECT=--no-detailed-logs \
-        bash "$ROOT/scripts/silere" run --verbose
+        XDG_CACHE_HOME="$TMP/launcher-reject-cache" bash "$ROOT/scripts/silere" run --verbose
     expected_args=$'arg=--no-duplicate\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv without --no-detailed-logs"
     assert_eq "644" "$(stat -c '%a' "$capture")" "shared launcher state umask"
@@ -3013,7 +3081,16 @@ test_reset_workflow() (
         *) fail "the preview did not report an unreadable settings file: $out" ;;
     esac
     run_reset --apply --yes >/dev/null || fail "reset could not replace an unreadable settings file"
-    assert_eq '{ "barHeight": 40,' "$(cat "$saved/settings.pre-reset.json")" "the unreadable file is saved word for word"
+    assert_eq '{ "barHeight": 40,' "$(cat "$saved/reset-saved/settings.json")" "the unreadable file is saved word for word"
+
+    printf '[1, 2]\n' > "$config/settings.json"
+    out="$(run_reset)"
+    case "$out" in
+        *"cannot be read"*) ;;
+        *) fail "reset treated a settings array as a fresh install: $out" ;;
+    esac
+    run_reset --apply --yes >/dev/null || fail "reset could not replace a settings array"
+    assert_eq '[1, 2]' "$(cat "$saved/reset-saved/settings.json")" "reset saves an invalid settings root before replacing it"
 
     # a settings file in a dotfiles repo stays where it is, and history goes only when asked for
     printf '{\n  "barHeight": 40\n}\n' > "$home/dotfile.json"
@@ -3023,7 +3100,30 @@ test_reset_workflow() (
     run_reset --apply --yes --history >/dev/null || fail "reset --history failed"
     [ -L "$config/settings.json" ] || fail "reset replaced a linked settings file with a plain one"
     assert_eq $'{\n  "__version": '"$schema"$'\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
-    [ ! -e "$saved/notifications.json" ] || fail "--history left the history"
+    [ ! -e "$saved/notifications.json" ] && [ ! -e "$config/notifications.json" ] \
+        && [ ! -e "$saved/reset-saved/notifications.json" ] || fail "--history left a live or restorable copy"
+    run_reset --undo --yes >/dev/null || fail "undo after clearing history failed"
+    [ ! -e "$config/notifications.json" ] || fail "undo brought back history that was cleared"
+
+    printf '%s\n' "$legacy_history" > "$config/notifications.json"
+    run_reset --apply --yes >/dev/null || fail "reset with only legacy history failed"
+    assert_eq "$legacy_history" "$(cat "$config/notifications.json")" "reset keeps the only history copy available to migrate"
+    out="$(run_reset --apply --yes --history)" || fail "clearing only legacy history failed"
+    case "$out" in
+        *"Nothing to reset"*) fail "clearing legacy history was reported as a no-op" ;;
+    esac
+    [ ! -e "$config/notifications.json" ] || fail "a history-only reset kept legacy history"
+
+    printf '%s\n' "$legacy_history" > "$saved/reset-saved/notifications.json"
+    run_reset --apply --yes --history >/dev/null || fail "clearing history from an older reset backup failed"
+    [ ! -e "$saved/reset-saved/notifications.json" ] || fail "--history left a previous reset's restorable history"
+
+    printf '{"barHeight":44}\n' > "$config/settings.json"
+    printf '%s\n' "$legacy_history" > "$config/notifications.json"
+    SILERE_TEST_RESET_STATE_HOME="$home/config" run_reset --apply --yes >/dev/null \
+        || fail "reset with shared state and configuration directories failed"
+    assert_eq "$legacy_history" "$(cat "$config/notifications.json")" "reset keeps the live history when both XDG paths name it"
+    rm -f -- "$config/notifications.json"
 
     # a settings file written by hand or another tool need not be laid out the way Silere writes it
     printf '{"__version":2,"barHeight":40,"dnd":true}' > "$config/settings.json"
@@ -3205,6 +3305,38 @@ test_launcher_uses_real_name() (
         bash "$ROOT/scripts/silere" run >/dev/null 2>&1 || fail "the launcher failed behind a qs link"
     assert_eq "$(readlink -f "$stubs")/quickshell" "$(cat "$calls")" \
         "the shell starts as quickshell, which ananicy rules for qs do not reach"
+)
+
+test_startup_waits_for_wayland() (
+    command -v python3 >/dev/null 2>&1 || { printf 'SKIP: python3 not installed; the startup socket wait not tested\n'; return 0; }
+    local stubs="$TMP/wayland-wait-stubs" rt="$TMP/wayland-wait-rt" launched="$TMP/wayland-wait-launched" slow="$TMP/wayland-wait-slow"
+    mkdir -p "$stubs" "$rt" "$slow"
+    chmod 700 "$rt"
+    printf '%s\n' '#!/bin/sh' 'case "$1" in list) exit 0 ;; esac' \
+        'for a do [ "$a" = --version ] && exit 0; done' 'date +%s%N > "$SILERE_TEST_LAUNCHED"' > "$stubs/qs"
+    # a sleep without fractions, as some busybox builds have
+    printf '%s\n' '#!/bin/sh' 'case "$1" in *.*) exit 1 ;; esac' "exec $(command -v sleep) \"\$@\"" > "$slow/sleep"
+    chmod +x "$stubs/qs" "$slow/sleep"
+    delay() { # prints the ms from the call to the shell's launch
+        local start
+        : > "$launched"
+        start="$(date +%s%N)"
+        env -u NIRI_SOCKET -u HYPRLAND_INSTANCE_SIGNATURE SILERE_STARTUP_GRACE=0 XDG_RUNTIME_DIR="$rt" \
+            SILERE_TEST_LAUNCHED="$launched" "$@" bash "$ROOT/scripts/silere" run --startup >/dev/null 2>&1 || true
+        [ -s "$launched" ] || { printf 'none'; return 0; }
+        printf '%s' $(( ($(cat "$launched") - start) / 1000000 ))
+    }
+    local ms
+    ms="$(delay PATH="$stubs:$PATH" WAYLAND_DISPLAY=wl-absent)"
+    [ "$ms" != none ] && [ "$ms" -ge 900 ] || fail "a login start did not wait for a missing Wayland socket ($ms ms)"
+    python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$rt/wl-ready"
+    ms="$(delay PATH="$stubs:$PATH" WAYLAND_DISPLAY=wl-ready)"
+    [ "$ms" != none ] && [ "$ms" -lt 600 ] || fail "a login start waited for a Wayland socket that was there ($ms ms)"
+    ms="$(delay PATH="$stubs:$PATH" WAYLAND_DISPLAY="$rt/wl-ready")"
+    [ "$ms" != none ] && [ "$ms" -lt 600 ] || fail "an absolute WAYLAND_DISPLAY was not found ($ms ms)"
+    ms="$(delay PATH="$slow:$stubs:$PATH" WAYLAND_DISPLAY=wl-absent)"
+    [ "$ms" != none ] && [ "$ms" -ge 900 ] && [ "$ms" -lt 3000 ] \
+        || fail "a sleep without fractions did not wait once, as before ($ms ms)"
 )
 
 test_startup_failure_report() (
@@ -4050,6 +4182,132 @@ EOF
     assert_eq "" "$(<"$fixture/calls")" "refused and stale charge limit requests never reach upower"
 )
 
+test_layer_rule_detection() (
+    local dir="$TMP/layer-rule/hypr" verdict out
+    mkdir -p "$dir/conf"
+    verdict() { # $1 = file under the config dir, $2 = its text
+        rm -f "$dir"/*.lua "$dir"/*.conf "$dir"/conf/*
+        printf 'hl.config({})\n' > "$dir/hyprland.lua"
+        printf '%s\n' "$2" > "$dir/$1"
+        HYPR_CONFIG="$dir/hyprland.lua" bash -c '
+            SILERE_SCRIPT_LIB_ONLY=1 source "$1"
+            _silere_layer_anim_set && printf set || printf unset
+        ' _ "$ROOT/scripts/install.sh"
+    }
+    assert_eq set "$(verdict conf/rules.lua $'hl.layer_rule({\n    name  = "no-animation-silere",\n    match = { namespace = "^silere-.*$" },\n\n    no_anim = true,\n})')" \
+        "a rule spread over lines in another file"
+    assert_eq set "$(verdict hyprland.lua 'hl.layer_rule({ name = "x", match = { namespace = "^silere-.*$" }, no_anim = true })')" \
+        "a one-line Lua rule"
+    assert_eq set "$(verdict hyprland.lua 'hl.layer_rule({ name = "x", match = { namespace = "^silere-.*$" }, animation = "slide" })')" \
+        "an animation the user picked for Silere's layers"
+    assert_eq set "$(verdict rules.conf 'layerrule = no_anim on, match:namespace ^silere-.*$')" "a 0.53 .conf rule"
+    assert_eq set "$(verdict rules.conf 'layerrule = noanim, ^(silere-.*)$')" "an older .conf rule"
+    assert_eq unset "$(verdict hyprland.lua 'hl.layer_rule({ name = "x", match = { namespace = "^silere-.*$" }, ignore_alpha = 0.3 })')" \
+        "a blur rule for Silere says nothing about animation"
+    assert_eq unset "$(verdict hyprland.lua '-- hl.layer_rule({ match = { namespace = "^silere-.*$" }, no_anim = true })')" \
+        "a commented-out rule"
+    assert_eq unset "$(verdict hyprland.lua 'hl.layer_rule({ name = "x", match = { namespace = "^mpvpaper$" }, no_anim = true })')" \
+        "a rule for another app's layers"
+
+    rm -f "$dir"/conf/*
+    printf -- '-- lua config\n' > "$dir/hyprland.lua"
+    out="$(HOME="$TMP/layer-rule" XDG_CONFIG_HOME="$TMP/layer-rule" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" || fail "layer rule dry run exited non-zero"
+    case "$out" in
+        *"append to $dir/hyprland.lua: "'hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })'*) ;;
+        *) fail "a stock Lua config was not offered the layer rule: $out" ;;
+    esac
+    printf 'hl.layer_rule({ name = "mine", match = { namespace = "^silere-.*$" }, no_anim = true })\n' > "$dir/conf/rules.lua"
+    out="$(HOME="$TMP/layer-rule" XDG_CONFIG_HOME="$TMP/layer-rule" SILERE_HYPR_CONFIG="$dir/hyprland.lua" \
+        bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" || fail "layer rule dry run with a rule exited non-zero"
+    case "$out" in
+        *"append to $dir/hyprland.lua: hl.layer_rule("*) fail "a config with its own rule for Silere's layers was offered another" ;;
+    esac
+)
+
+test_motion_block() (
+    local dir="$TMP/motion/hypr" out
+    mkdir -p "$dir"
+    dry() { # $1 = the config file to point the installer at
+        HOME="$TMP/motion" XDG_CONFIG_HOME="$TMP/motion" SILERE_HYPR_CONFIG="$1" \
+            bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1
+    }
+    [ -f "$ROOT/hyprland/silere-motion.lua" ] || fail "the window motion module is missing from hyprland/"
+    printf -- '-- lua config\n' > "$dir/hyprland.lua"
+    out="$(dry "$dir/hyprland.lua")" || fail "window motion dry run exited non-zero"
+    case "$out" in
+        *"offer to append to $dir/hyprland.lua: dofile("*"/hyprland/silere-motion.lua\")"*) ;;
+        *) fail "a Lua config was not offered Silere's window motion: $out" ;;
+    esac
+    printf -- '-- lua config\n-- silere-shell motion begin\ndofile("%s/hyprland/silere-motion.lua")\n-- silere-shell motion end\n' "$ROOT" \
+        > "$dir/hyprland.lua"
+    out="$(dry "$dir/hyprland.lua")" || fail "window motion dry run with a block exited non-zero"
+    case "$out" in
+        *"offer to append to $dir/hyprland.lua: dofile("*) fail "a config that already loads the motion module was offered it again" ;;
+    esac
+    rm -f "$dir/hyprland.lua"
+    printf '# hyprlang config\n' > "$dir/hyprland.conf"
+    out="$(dry "$dir/hyprland.conf")" || fail "window motion dry run on a .conf exited non-zero"
+    case "$out" in
+        *"needs a Lua config"*) ;;
+        *) fail "a hyprlang config was not told the motion module needs Lua: $out" ;;
+    esac
+    # shipped to everyone: it may set animation curves and timings, never anyone's apps, paths, binds or rules
+    if grep -nE '/home/|~/|\.config/|class *=|exec_cmd|hl\.bind|hl\.monitor|window_rule|layer_rule' "$ROOT/hyprland/silere-motion.lua"; then
+        fail "the window motion module names apps, paths, binds, rules or monitors"
+    fi
+)
+
+test_cpu_sensor_choice() (
+    command -v python3 >/dev/null 2>&1 || { printf 'SKIP: python3 not installed; CPU sensor choice not tested\n'; return 0; }
+    local fx="$TMP/cpu-sensors" script="$TMP/cpu-sensors.sh"
+    # the detector as the shell runs it, pointed at a fixture tree instead of /sys/class
+    python3 - "$ROOT/services/CpuTemp.qml" "$fx" > "$script" <<'PY' || fail "could not extract the CPU sensor detector"
+import json, re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r'id: _detectProc.*?command: \["bash", "-c",\s*(.*?)\]\s*\n', src, re.S)
+print("".join(json.loads('"%s"' % l) for l in re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))).replace("/sys/class/", sys.argv[2] + "/"))
+PY
+    pick() { # $1 = layout name, then hwmon "name:label,label" and zone types as hw=... zone=...
+        local case_dir="$fx" i=0 j item name labels lbl
+        rm -rf "$fx"; mkdir -p "$fx/hwmon" "$fx/thermal"
+        shift
+        for item in "$@"; do
+            case "$item" in
+                hw=*) item="${item#hw=}"; name="${item%%:*}"; labels="${item#*:}"
+                    mkdir -p "$fx/hwmon/hwmon$i"; printf '%s\n' "$name" > "$fx/hwmon/hwmon$i/name"; j=1
+                    IFS=, read -ra lbl <<< "$labels"
+                    for l in "${lbl[@]:-}"; do
+                        printf '45000\n' > "$fx/hwmon/hwmon$i/temp${j}_input"
+                        [ -z "$l" ] || printf '%s\n' "$l" > "$fx/hwmon/hwmon$i/temp${j}_label"
+                        j=$((j + 1))
+                    done ;;
+                zone=*) mkdir -p "$fx/thermal/thermal_zone$i"; printf '%s\n' "${item#zone=}" > "$fx/thermal/thermal_zone$i/type"
+                    printf '45000\n' > "$fx/thermal/thermal_zone$i/temp" ;;
+            esac
+            i=$((i + 1))
+        done
+        local got
+        got="$(LC_ALL=C bash "$script" 2>&1)" || { printf none; return 0; }
+        case "$got" in
+            */thermal/*) cat "$(dirname "$got")/type" ;;
+            *) printf '%s:%s' "$(cat "$(dirname "$got")/name")" "$(cat "${got%_input}_label" 2>/dev/null)" ;;
+        esac
+    }
+    assert_eq "coretemp:Package id 0" "$(pick intel hw=acpitz: 'hw=coretemp:Package id 0,Core 0' zone=x86_pkg_temp)" "Intel keeps its package sensor"
+    assert_eq "k10temp:Tctl" "$(pick amd hw=amdgpu:edge hw=k10temp:Tctl,Tccd1)" "AMD keeps Tctl"
+    assert_eq "cpu_thermal:" "$(pick rpi hw=cpu_thermal: hw=cpu0_thermal: hw=rp1_adc:)" "a whole-CPU sensor beats a core's"
+    assert_eq "cpu7-thermal" "$(pick mt8195 zone=cpu0-thermal zone=cpu3-thermal zone=cpu4-thermal zone=cpu7-thermal zone=gpu-thermal)" \
+        "a big.LITTLE chip reads its last core, a big one"
+    assert_eq "cpu1-0-top-thermal" "$(pick hamoa zone=aoss0-thermal zone=cpu0-0-top-thermal zone=cpu0-3-top-thermal zone=cpu1-0-top-thermal zone=cpuss0-top-thermal)" \
+        "Snapdragon X reads a core of its last cluster"
+    assert_eq "cpu0_0_top_thermal:" "$(pick tsens hw=aoss0_thermal: hw=cpu0_0_top_thermal: zone=cpu0-0-top-thermal)" \
+        "a core sensor the thermal driver also lists under hwmon"
+    assert_eq "CPU5-THERMAL" "$(pick upper zone=CPU0-THERMAL zone=CPU5-THERMAL)" "a core sensor named in capitals"
+    assert_eq "x86_pkg_temp" "$(pick pkg zone=cpu0-thermal zone=cpu7-thermal zone=x86_pkg_temp)" "a package sensor listed after the cores"
+    assert_eq none "$(pick gpu zone=gpu-thermal zone=gpuss-0-thermal zone=cpuss0-thermal)" "no CPU core or package sensor, no reading"
+)
+
 if [ "${SILERE_TEST_LIB_ONLY:-0}" = 1 ]; then
     return 0 2>/dev/null || exit 0
 fi
@@ -4092,9 +4350,13 @@ test_shared_launcher
 test_reset_workflow
 test_try_config_quotes_paths
 test_lua_block_is_checked
+test_layer_rule_detection
+test_motion_block
+test_cpu_sensor_choice
 test_other_bars_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
+test_startup_waits_for_wayland
 test_fish_completion_scope
 test_bash_service_completion
 test_cli_restart_and_log

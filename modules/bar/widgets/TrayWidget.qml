@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import Quickshell.Services.SystemTray
 import "../../../config"
 import "../../../services"
@@ -354,11 +355,18 @@ Item {
                     x: _tile._iconX + (root.iconSize - width) / 2
                     anchors.verticalCenter: parent.verticalCenter
                     // a hidden app can keep animating its icon, and each frame goes through the icon theme loader
-                    source: _tile.hidden ? "" : _tile.iconSource
+                    asyncSource: _tile.hidden ? "" : _tile.iconSource
+                    layer.enabled: _tile._appMeta !== null && ShellSettings.wsAppIconColor === "accent" && ready
+                        && GraphicsInfo.api !== GraphicsInfo.Software
+                    layer.effect: MultiEffect {
+                        colorization: 1
+                        colorizationColor: Theme.barAccentMark
+                        contrast: -0.2
+                        brightness: 0.25
+                    }
                     // apps reuse an icon url across restarts and updates; a reload must not keep an earlier failed image
                     backer.cache: false
                     backer.retainWhileLoading: true
-                    asynchronous: true
                     visible: opacity > 0.01
                     opacity: shown ? 1.0 : 0.0
                     transformOrigin: Item.Center

@@ -122,6 +122,8 @@ printf "\n${BOLD}:: silere-shell uninstaller${R}\n"
 RECEIPT_CHECKOUT="$(_receipt_path checkoutPath 2>/dev/null || true)"
 RECEIPT_AUTOSTART="$(_receipt_path autostartPath 2>/dev/null || true)"
 RECEIPT_KEYBIND="$(_receipt_path keybindPath 2>/dev/null || true)"
+RECEIPT_LAYERS="$(_receipt_path layersPath 2>/dev/null || true)"
+RECEIPT_MOTION="$(_receipt_path motionPath 2>/dev/null || true)"
 RECEIPT_MODE="$(_receipt_value installMode 2>/dev/null || true)"
 if [[ "$RECEIPT_MODE" =~ ^(managed|development)$ ]] && [ -n "$RECEIPT_CHECKOUT" ]; then
     _info "using $RECEIPT_MODE install receipt for $RECEIPT_CHECKOUT"
@@ -129,6 +131,8 @@ else
     RECEIPT_CHECKOUT=""
     RECEIPT_AUTOSTART=""
     RECEIPT_KEYBIND=""
+    RECEIPT_LAYERS=""
+    RECEIPT_MOTION=""
     _info "no usable install receipt; using defensive discovery"
 fi
 
@@ -258,6 +262,8 @@ ACTIVE_NIRI_CONFIG="$(bash "$SCRIPT_DIR/install.sh" --niri-config-path 2>/dev/nu
 AUTOSTART_FILES=(
     "$RECEIPT_AUTOSTART"
     "$RECEIPT_KEYBIND"
+    "$RECEIPT_LAYERS"
+    "$RECEIPT_MOTION"
     "$CONFIG_HOME/hypr/custom/execs.lua"
     "$CONFIG_HOME/hypr/hyprland/execs.lua"
     "$CONFIG_HOME/hypr/execs.lua"
@@ -271,7 +277,8 @@ AUTOSTART_FILES=(
 if [ -d "$CONFIG_HOME/hypr" ]; then
     while IFS= read -r -d '' f; do AUTOSTART_FILES+=("$f"); done < <(
         grep -rlZF --include='*.conf' --include='*.lua' \
-            -e 'silere-shell begin' -e 'silere-shell keybind begin' \
+            -e 'silere-shell begin' -e 'silere-shell keybind begin' -e 'silere-shell layers begin' \
+            -e 'silere-shell motion begin' \
             "$CONFIG_HOME/hypr" 2>/dev/null || true
     )
 fi
@@ -286,12 +293,16 @@ for f in "${AUTOSTART_FILES[@]}"; do
     _seen_autostart[$f]=1
     has_block=false
     has_keybind=false
+    has_layers=false
+    has_motion=false
     has_backup=false
     grep -qF 'silere-shell begin' "$f" 2>/dev/null && has_block=true
     grep -qF 'silere-shell keybind begin' "$f" 2>/dev/null && has_keybind=true
+    grep -qF 'silere-shell layers begin' "$f" 2>/dev/null && has_layers=true
+    grep -qF 'silere-shell motion begin' "$f" 2>/dev/null && has_motion=true
     [ -f "${f}.bak" ] && has_backup=true
 
-    if ! $has_block && ! $has_keybind && ! $has_backup; then continue; fi
+    if ! $has_block && ! $has_keybind && ! $has_layers && ! $has_motion && ! $has_backup; then continue; fi
     found_any=true
 
     # Remove only our marked block when the live file still exists. Restoring
@@ -328,7 +339,32 @@ for f in "${AUTOSTART_FILES[@]}"; do
         fi
     fi
 
-    if ! $has_block && ! $has_keybind; then
+    if $has_layers; then
+        _info "silere-shell layer rule found in $f"
+        if _ask "Remove the rule that turns off Hyprland's fade for Silere's popups from $(basename "$f")?"; then
+            if [[ "$f" == *.lua ]]; then
+                _remove_block "$f" '-- silere-shell layers begin' \
+                    '-- silere-shell layers end' && _ok "removed the layer rule from $f"
+            else
+                _remove_block "$f" '# silere-shell layers begin' \
+                    '# silere-shell layers end' && _ok "removed the layer rule from $f"
+            fi
+        else
+            _skip "kept"
+        fi
+    fi
+
+    if $has_motion; then
+        _info "silere-shell window motion found in $f"
+        if _ask "Remove Silere's window motion from $(basename "$f")? Hyprland's own animations come back"; then
+            _remove_block "$f" '-- silere-shell motion begin' \
+                '-- silere-shell motion end' && _ok "removed Silere's window motion from $f"
+        else
+            _skip "kept"
+        fi
+    fi
+
+    if ! $has_block && ! $has_keybind && ! $has_layers; then
         if _backup_restore_allowed "$f"; then
             _info "live config is missing; backup found for $f"
             if _ask "Restore $(basename "$f") from backup?"; then

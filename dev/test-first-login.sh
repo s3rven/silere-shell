@@ -61,6 +61,8 @@ if [ "${1:-}" = --inner ]; then
         || fail "the installer set up no autostart on a stock config"
     grep -qF -- '-- silere-shell keybind begin' "$home/.config/hypr/hyprland.lua" \
         || fail "the installer set up no menu shortcut on a stock config"
+    grep -qF -- '-- silere-shell layers begin' "$home/.config/hypr/hyprland.lua" \
+        || fail "the installer left Hyprland's layer fade on Silere's popups on a stock config"
     env -u LC_ALL Hyprland --verify-config --config "$home/.config/hypr/hyprland.lua" >/dev/null 2>&1 \
         || fail "the installer left a config Hyprland rejects"
     cp "$home/.config/hypr/hyprland.lua" "$scratch/after-install.lua"

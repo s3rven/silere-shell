@@ -256,6 +256,12 @@ Item {
     // snapshot focus and urgency before invoking, since the app cannot answer before this returns
     function activatePrimary(): void {
         if (!card._canInteract) return
+        // files changed under a running shell: only a new engine compiles the panel against them
+        if (SystemAlerts.isReloadAlert(card.notification)) {
+            card.dismiss()
+            MenuState.reloadShell()
+            return
+        }
         const action = card._defaultAction
         const resident = !!card.notification?.resident
         if (action) {
@@ -670,12 +676,11 @@ Item {
                     && !card.showContentImage && _previewImg.status === Image.Ready
                     ? card.notificationImageSource : card.appIconSource
                 on_PrimaryChanged: _fellBack = false
-                source: _fellBack ? card.entryIconSource : _primary
+                asyncSource: _fellBack ? card.entryIconSource : _primary
                 onStatusChanged: if (status === Image.Error
                         && card.entryIconSource.length > 0
                         && card.entryIconSource !== _primary)
                     _fellBack = true
-                asynchronous: true
             }
         }
 
@@ -805,7 +810,8 @@ Item {
                     sourceSize.width: 640
                     sourceSize.height: 640
                     fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
+                    // its own source, read as it changes and before the load: a sender's pixmap stays off qt's image thread
+                    asynchronous: !IconResolver.isMemoryImage(source)
                     // one-shot content, keep it out of the pixmap cache
                     cache: false
                 }

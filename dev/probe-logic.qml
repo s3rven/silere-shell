@@ -6355,6 +6355,21 @@ ShellRoot {
         root._check(actionCard._defaultAction === null && actionCard.actionList.length === 1,
             "a capitalized action key remains a visible button without becoming the primary action")
         actionCard.destroy()
+        let reloadAlertInvoked = false
+        const reloadCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, notificationCard.notification, {
+                appName: "Silere Shell", hints: { "x-silere-click": "reload" }, expireTimeout: 0,
+                actions: [{ identifier: "default", text: "Open", invoke: function() { reloadAlertInvoked = true } }]
+            })
+        })
+        const reloadPendingWas = MenuState.reloadPending
+        reloadCard.activatePrimary()
+        const reloadAsked = MenuState.reloadPending && !reloadPendingWas
+        // the fallback timer's reloadNow stands down on this, so the probe itself never reloads
+        MenuState.reloadPending = reloadPendingWas
+        root._check(reloadAsked && reloadCard._leaving && !reloadAlertInvoked,
+            "clicking Silere's own panel alert reloads the shell and closes the alert instead of running the sender's action")
+        reloadCard.destroy()
 
         root._check(notificationCard.swipeOffset(120, 1) === 120
                 && notificationCard.swipeOffset(-120, -1) === -120
@@ -8515,9 +8530,36 @@ ShellRoot {
             "an icon whose theme request comes back unscaled asks once more at its full size")
         unscaled.destroy()
         scaledAsUsual.destroy()
+        root._check(IconResolver.isMemoryImage("image://qspixmap/7/0") && IconResolver.isMemoryImage("Image://QsImage/3")
+                && !IconResolver.isMemoryImage("image://icon/x") && !IconResolver.isMemoryImage("file:///usr/share/pixmaps/a.png")
+                && !IconResolver.isMemoryImage(""),
+            "only quickshell's in-memory pixmaps count as in-memory images")
+        // iconScale 2 gives the theme icon another decode size, so a swap also loads from its size change; a name nothing else caches
+        const swap = shellIconFactory.createObject(root, { side: 16, iconScale: 2, asyncSource: "image://icon/silere-probe-swap" })
+        const startedAsync = swap.asynchronous
+        const flagAtLoad = []
+        const noteLoad = () => flagAtLoad.push(swap.backer.asynchronous)
+        swap.backer.sourceChanged.connect(noteLoad)
+        swap.backer.sourceSizeChanged.connect(noteLoad)
+        swap.asyncSource = "image://qspixmap/999999/0"
+        const toMemory = flagAtLoad.splice(0)
+        swap.asyncSource = "image://icon/silere-probe-swap"
+        const toTheme = flagAtLoad.splice(0)
+        root._check(startedAsync && toMemory.length >= 2 && toMemory.every(a => !a)
+                && toTheme.length >= 2 && toTheme.every(a => a) && swap.source.toString() === "image://icon/silere-probe-swap",
+            "a tray or notification pixmap loads off qt's image thread, a theme icon on it, and every load a swap starts sees its own flag ("
+                + JSON.stringify(toMemory) + " " + JSON.stringify(toTheme) + ")")
+        swap.backer.sourceChanged.disconnect(noteLoad)
+        swap.backer.sourceSizeChanged.disconnect(noteLoad)
+        swap.destroy()
         root._check(IconResolver.senderImageSource("image://QsImage/1")
                 === "image://QsImage/1",
             "a mixed-case in-memory provider stays available")
+        root._check(IconResolver.senderIconSource("image://qspixmap/3/0") === "" && IconResolver.iconSource("image://qsimage/2") === ""
+                && IconResolver.senderIconSource("Image://QsImage/1") === ""
+                && Notifications.appIconSource("image://qsimage/1", "", "Probe App") === Notifications.appIconSource("", "", "Probe App")
+                && IconResolver.senderImageSource("image://qsimage/1") === "image://qsimage/1",
+            "an app_icon naming one of quickshell's in-memory images shows nothing of it; Quickshell's own image hint still does")
         root._check(IconResolver.senderIconSource("/tmp/fifo.png") === ""
                 && IconResolver.senderIconSource("file:///tmp/fifo.png") === "",
             "notification icons never open sender-provided filesystem nodes")
@@ -8674,6 +8716,30 @@ ShellRoot {
             hypr._acceptKeyboardSnapshot(keyboardSnapshot, hypr._keyboardRevision)
             root._check(hypr.keyboardLayout === "French",
                 "the keyboard snapshot selects the main keyboard and tolerates a missing entry")
+            const submapWas = hypr.submap
+            hypr._eventConn.onRawEvent({ name: "submap", data: "resize" })
+            const submapEntered = hypr.submap === "resize" && Compositor.submap === "resize"
+            hypr._eventConn.onRawEvent({ name: "submap", data: "(r)esize\n  (m)ove" })
+            const submapOneLine = hypr.submap === "(r)esize (m)ove"
+            hypr._eventConn.onRawEvent({ name: "submap", data: "default" })
+            const submapDefault = hypr.submap === ""
+            hypr._eventConn.onRawEvent({ name: "submap", data: "resize" })
+            hypr._eventConn.onRawEvent({ name: "submap", data: "" })
+            root._check(submapEntered && submapOneLine && submapDefault && hypr.submap === "" && Compositor.submap === "",
+                "a submap's name follows hyprland's events on one line, and the normal keymap shows none")
+            const askedAt = hypr._submapRevision
+            hypr._acceptSubmapSnapshot('"resize"', askedAt)
+            const startedInMode = hypr.submap === "resize"
+            hypr._acceptSubmapSnapshot('"default"', askedAt)
+            const startedNormal = hypr.submap === ""
+            hypr._acceptSubmapSnapshot("unknown request", askedAt)
+            hypr._acceptSubmapSnapshot("[]", askedAt)
+            const oddReplies = hypr.submap === ""
+            hypr._eventConn.onRawEvent({ name: "submap", data: "move" })
+            hypr._acceptSubmapSnapshot('"resize"', askedAt)
+            root._check(startedInMode && startedNormal && oddReplies && hypr.submap === "move",
+                "a shell started inside a submap reads it once, and an event that lands first wins over that late answer")
+            hypr.submap = submapWas
             const beforeLayoutEvent = hypr._keyboardRevision
             hypr.keyboardLayoutCount = 0
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard,English (US, intl.)" })
@@ -9297,8 +9363,8 @@ ShellRoot {
         root._check(Media.artSource("image://icon/x?path=/etc/passwd") === ""
                 && Media.artSource("IMAGE://icon/x?path=/etc/passwd") === "",
             "media artwork cannot reach the filesystem-backed icon provider")
-        root._check(Media.artSource("image://qsimage/1") === "image://qsimage/1",
-            "media artwork keeps the in-memory image provider")
+        root._check(Media.artSource("image://qsimage/1") === "" && Media.artSource("image://QsPixmap/4/0") === "",
+            "a player's art url naming one of quickshell's in-memory images shows nothing of it")
         root._check(Media.normalizedArtUrl("https://open.spotify.com/image/abc")
                 === "https://i.scdn.co/image/abc",
             "media artwork rewrites Spotify's dead image host")

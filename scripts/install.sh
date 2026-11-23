@@ -148,6 +148,8 @@ install_mode=development
 receipt_compositor=unknown
 receipt_autostart=""
 receipt_keybind=""
+receipt_layers=""
+receipt_motion=""
 
 _txn_escape() { _shell_printf_bytes "$1"; }
 _txn_unescape() { printf '%b' "$1"; }
@@ -314,6 +316,8 @@ _txn_commit() {
             "compositor=$receipt_compositor" \
             "autostartPath=$(_txn_escape "$receipt_autostart")" \
             "keybindPath=$(_txn_escape "$receipt_keybind")" \
+            "layersPath=$(_txn_escape "$receipt_layers")" \
+            "motionPath=$(_txn_escape "$receipt_motion")" \
             "fontInstalled=$($did_font && printf 1 || printf 0)" \
             "cliInstalled=$($did_cli && printf 1 || printf 0)" \
             "matugenTemplate=$($did_tmpl && printf 1 || printf 0)" \
@@ -620,6 +624,26 @@ _menu_bind_taken() {
     return 1
 }
 
+# any layer rule naming Silere's namespace and an animation is the user's call, whether it turns them off or picks one
+_silere_layer_anim_set() {
+    local dir f
+    dir="$(dirname -- "$HYPR_CONFIG")"
+    while IFS= read -r -d '' f; do
+        awk '
+            /^[ \t]*(--|#)/ { next }
+            /layer_?rule/ { inrule = 1; buf = "" }
+            inrule { buf = buf " " tolower($0) }
+            inrule && (/\)/ || /^[ \t]*layerrule[ \t]*=/) {
+                if (buf ~ /silere/ && buf ~ /anim/) found = 1
+                inrule = 0
+            }
+            END { exit !found }
+        ' "$f" && return 0
+    done < <({ printf '%s\0' "$HYPR_CONFIG"
+        [ -d "$dir" ] && find "$dir" -type f \( -name '*.lua' -o -name '*.conf' \) -print0; } 2>/dev/null)
+    return 1
+}
+
 _replace_owned_block() {
     local file="$1" begin="$2" end="$3" body="$4" target tmp line removing=false
     [ -f "$file" ] || return 1
@@ -739,8 +763,8 @@ Usage:
     bash scripts/install.sh --yes --dir "$HOME/.config/silere-shell" --no-start
 
   bash scripts/install.sh --dry-run
-        Report every file the install would create or edit, and the autostart
-        and keybind lines it would add, then exit without writing anything.
+        Report every file the install would create or edit, and the autostart,
+        keybind and layer rule lines it would add, then exit without writing anything.
         Answers the prompts the way SILERE_ASSUME_YES=1 does, so it shows the
         fullest plan.
 
@@ -1332,9 +1356,9 @@ fi
 
 ROOT="$INSTALL_DIR"
 did_tmpl=false did_toml=false did_autostart=false did_update=false did_cli=false
-did_keybind=false
+did_keybind=false did_layers=false did_motion=false
 # set up by an earlier run and left as it was; the summary reports these as in place, not skipped
-had_tmpl=false had_toml=false had_update=false had_cli=false had_keybind=false
+had_tmpl=false had_toml=false had_update=false had_cli=false had_keybind=false had_layers=false had_motion=false
 cli_planned=false
 autostart_ready=false
 ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
@@ -1737,6 +1761,105 @@ else
     _skip "skipped — add manually: $HYPR_BIND_SHOWN"
 fi
 
+# ── layer animations ───────────────────────────────────────────────────────────
+_section "layer animations"
+
+LAYER_RULE_LUA='hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })'
+# 0.53 rewrote the rule syntax
+if [[ "$(Hyprland --version 2>/dev/null | head -n 1)" =~ ^Hyprland\ 0\.([0-9]+)\. ]] && [ "${BASH_REMATCH[1]}" -lt 53 ]; then
+    LAYER_RULE_CONF='layerrule = noanim, ^silere-.*$'
+else
+    LAYER_RULE_CONF='layerrule = no_anim on, match:namespace ^silere-.*$'
+fi
+LAYERS_ASK="Turn off Hyprland's fade for Silere's popups? They animate themselves, and the two play on top of each other"
+
+if [ "$receipt_compositor" = niri ]; then
+    _skip "Hyprland only"
+elif [ -z "$HYPR_CONFIG" ] || [ ! -f "$HYPR_CONFIG" ]; then
+    _skip "no Hyprland config found — add manually:"
+    _info "  $LAYER_RULE_LUA"
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _owned_block_contains "$HYPR_CONFIG" '-- silere-shell layers begin' \
+        '-- silere-shell layers end' 'silere-no-anim'; then
+    _ok "already present in $(_tilde "$HYPR_CONFIG")"
+    had_layers=true
+    receipt_layers="$HYPR_CONFIG"
+elif [[ "$HYPR_CONFIG" != *.lua ]] && _owned_block_contains "$HYPR_CONFIG" '# silere-shell layers begin' \
+        '# silere-shell layers end' 'silere-'; then
+    _ok "already present in $(_tilde "$HYPR_CONFIG")"
+    had_layers=true
+    receipt_layers="$HYPR_CONFIG"
+elif _silere_layer_anim_set; then
+    _ok "your Hyprland config already sets how Silere's layers animate"
+    had_layers=true
+elif [[ "$HYPR_CONFIG" == *.lua ]] && _lua_ends_in_return "$HYPR_CONFIG"; then
+    _skip "$(_tilde "$HYPR_CONFIG") ends in a return — add this where your config declares its rules:"
+    _info "  $LAYER_RULE_LUA"
+elif _dry; then
+    if [[ "$HYPR_CONFIG" == *.lua ]]; then _would "append to $HYPR_CONFIG: $LAYER_RULE_LUA"
+    else _would "append to $HYPR_CONFIG: $LAYER_RULE_CONF"; fi
+elif [[ "$HYPR_CONFIG" == *.lua ]]; then
+    if _ask "$LAYERS_ASK"; then
+        _backup "$HYPR_CONFIG"
+        if _append_lua_block "$HYPR_CONFIG" '-- silere-shell layers begin' '-- silere-shell layers end' "$LAYER_RULE_LUA"; then
+            _ok "Silere's popups keep only their own animation"
+            did_layers=true
+            receipt_layers="$HYPR_CONFIG"
+        else
+            _warn "Hyprland rejected the config with this added, so it was put back: $LAYER_RULE_LUA"
+        fi
+    else
+        _skip "skipped — add manually: $LAYER_RULE_LUA"
+    fi
+elif _ask "$LAYERS_ASK"; then
+    _reject_unsafe_path "$HYPR_CONFIG"
+    _backup "$HYPR_CONFIG"
+    # a .conf gets the same check and roll-back as Lua, where this Hyprland can still read one
+    if _append_lua_block "$HYPR_CONFIG" '# silere-shell layers begin' '# silere-shell layers end' "$LAYER_RULE_CONF"; then
+        _ok "Silere's popups keep only their own animation"
+        did_layers=true
+        receipt_layers="$HYPR_CONFIG"
+    else
+        _warn "Hyprland rejected the config with this added, so it was put back: $LAYER_RULE_CONF"
+    fi
+else
+    _skip "skipped — add manually: $LAYER_RULE_CONF"
+fi
+
+# ── window motion ─────────────────────────────────────────────────────────────────
+_section "window motion"
+
+# opt in, default no: it replaces how the user's windows animate, which is taste, not a fix
+MOTION_LUA="dofile($(_lua_string "$ROOT/hyprland/silere-motion.lua"))"
+MOTION_ASK="Move Hyprland's windows at Silere's pace? It replaces your window, workspace and focus animations; what your config sets after it still wins"
+
+if [ "$receipt_compositor" = niri ]; then
+    _skip "Hyprland only"
+elif [ -z "$HYPR_CONFIG" ] || [ ! -f "$HYPR_CONFIG" ]; then
+    _skip "no Hyprland config found — to opt in, add to hyprland.lua:"
+    _info "  $MOTION_LUA"
+elif [[ "$HYPR_CONFIG" != *.lua ]]; then
+    _skip "needs a Lua config (Hyprland 0.55 and later)"
+elif _owned_block_contains "$HYPR_CONFIG" '-- silere-shell motion begin' '-- silere-shell motion end' 'silere-motion.lua'; then
+    _ok "already present in $(_tilde "$HYPR_CONFIG")"
+    had_motion=true
+    receipt_motion="$HYPR_CONFIG"
+elif _lua_ends_in_return "$HYPR_CONFIG"; then
+    _skip "$(_tilde "$HYPR_CONFIG") ends in a return — to opt in, add this before it: $MOTION_LUA"
+elif _dry; then
+    _would "offer to append to $HYPR_CONFIG: $MOTION_LUA"
+elif _ask_no "$MOTION_ASK"; then
+    _backup "$HYPR_CONFIG"
+    if _append_lua_block "$HYPR_CONFIG" '-- silere-shell motion begin' '-- silere-shell motion end' "$MOTION_LUA"; then
+        _ok "windows, workspaces and focus move at Silere's pace"
+        did_motion=true
+        receipt_motion="$HYPR_CONFIG"
+    else
+        _warn "Hyprland rejected the config with this added, so it was put back: $MOTION_LUA"
+    fi
+else
+    _skip "skipped — to opt in later, add: $MOTION_LUA"
+fi
+
 # ── update-check timer ──────────────────────────────────────────────────────────────
 _section "update-check timer"
 
@@ -1787,6 +1910,8 @@ _done_row "matugen template" "$did_tmpl" "$had_tmpl"
 _done_row "matugen toml" "$did_toml" "$had_toml"
 _done_row "autostart" "$did_autostart" "$autostart_ready"
 _done_row "menu keybind" "$did_keybind" "$had_keybind"
+_done_row "layer animation rule" "$did_layers" "$had_layers"
+_done_row "window motion" "$did_motion" "$had_motion"
 _done_row "update-check timer" "$did_update" "$had_update"
 _done_row "silere maintenance command" "$did_cli" "$had_cli"
 # the hints below name the command the way the user can type it

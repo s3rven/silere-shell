@@ -70,12 +70,13 @@ new revision. From a working terminal, `silere update --rollback` restores the p
 revision, and restarts the shell when a systemd user unit runs it. Otherwise, run
 `silere restart` afterwards. See [updates and recovery](updates.md).
 
-### A menu page says it couldn't load
+### A menu page or panel says it couldn't load
 
 Panels load from disk the first time they open, so files that changed while the shell
 was running (a package upgrade, a `git pull` or a local edit) can fail against the version
-still running. Press **Reload** on the page, or run `silere restart`. If the page fails
-again after that, `silere log` shows the error.
+still running. Press **Reload** on the page, click the "A Silere panel could not load"
+notification, or run `silere restart`. If it fails again after that, `silere log` shows
+the error.
 
 ### A shell update is blocked by local edits
 
@@ -106,8 +107,8 @@ every core and can drag a desktop below 50 fps, even though it runs at idle prio
 
 ### Popups and the OSD open sluggishly on Hyprland
 
-Hyprland fades layers in on top of Silere's own animation. Turn that off for Silere's
-layers only:
+Hyprland fades layers in on top of Silere's own animation. The installer offers to turn
+that off for Silere's layers only; to add it yourself:
 
 ```lua
 hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })

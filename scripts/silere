@@ -80,8 +80,7 @@ run_shell() {
     [ -f "$ROOT/shell.qml" ] || die "shell.qml is missing from $ROOT"
     command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
 
-    # at compositor boot the wayland endpoints can lag the autostart event
-    [ "$startup" -eq 0 ] || sleep 1
+    [ "$startup" -eq 0 ] || wait_for_wayland
 
     if [ "$supervised" -eq 1 ]; then
         [ "$#" -eq 0 ] || die "--supervised does not accept Quickshell arguments"
@@ -127,12 +126,16 @@ run_shell() {
     export SILERE_GLOBAL_SHORTCUTS=1
     # the detailed log keeps every debug line in the RAM-backed runtime dir, about 3 MB an hour; warnings still land
     # the flag is hidden, and an unknown flag stops qs from starting, so probe it first
-    local detail=()
-    qs --no-detailed-logs --version >/dev/null 2>&1 && detail=(--no-detailed-logs)
     # CachyOS ananicy rules send a process named qs to nice 10, and a bar is not a background job.
     # qs links to quickshell where both exist, so start it under its own name
-    local shell_bin
+    local shell_bin launch_revision="" detail=()
     shell_bin="$(readlink -f -- "$(command -v qs)")" || shell_bin=qs
+    qs_takes_flag "$shell_bin" --no-detailed-logs && detail=(--no-detailed-logs)
+    # Capture the checkout revision at launch so a later update cannot change what this process reports.
+    if [ -e "$ROOT/.git" ]; then
+        launch_revision="$(git -C "$ROOT" rev-parse --verify HEAD 2>/dev/null || true)"
+    fi
+    export SILERE_LAUNCH_REVISION="$launch_revision"
     exec "$shell_bin" --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml" "$@"
 }
 

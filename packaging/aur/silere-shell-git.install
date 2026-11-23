@@ -13,6 +13,10 @@ post_install() {
   click the active workspace to open the menu and settings,
   or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
+  Hyprland fades layers on top of Silere's own popup animations. to
+  leave Silere's to their own, add to hyprland.lua:
+    hl.layer_rule({ name = "silere-no-anim", match = { namespace = "^silere-.*$" }, no_anim = true })
+
   wallpaper colours need a one-time matugen setup:
     bash /usr/share/silere-shell/scripts/install.sh --repair-matugen
 
@@ -51,6 +55,7 @@ post_remove() {
 
     the autostart line you added to your compositor config
       (the hl.exec_cmd line in hyprland.lua, or niri's `spawn-at-startup`)
+    and the silere-no-anim layer rule, if you added it
 
     matugen, if you ran --repair-matugen: the block marked
       `# silere-shell begin` in ~/.config/matugen/config.toml, plus

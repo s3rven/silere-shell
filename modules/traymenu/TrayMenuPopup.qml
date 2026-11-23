@@ -373,8 +373,7 @@ FittedPopupWindow {
                     visible: !_entry.checkable && _entry.iconSrc !== "" && status === Image.Ready
                     anchors.centerIn: _lead
                     side: win.leadWidth
-                    source: _entry.iconSrc
-                    asynchronous: true
+                    asyncSource: _entry.iconSrc
                 }
 
                 ShellText {

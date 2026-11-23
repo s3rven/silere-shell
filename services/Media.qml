@@ -27,6 +27,8 @@ Singleton {
         if (/^https:\/\//i.test(value))
             return ShellSettings.mediaRemoteArt ? value : ""
         if (/^http:\/\//i.test(value)) return ""
+        // a player's text naming one of quickshell's in-memory images shows another app's, loaded on qt's image thread
+        if (IconResolver.isMemoryImage(value)) return ""
         return IconResolver.safeLocalSource(value)
     }
 

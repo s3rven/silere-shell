@@ -2372,6 +2372,19 @@ else
   structural_skip "comments" "python3 or the comment style check is unavailable"
 fi
 
+section "settings paths"
+# docs, changelog, install notes and messages name pages by their place in the Settings rail
+if command -v python3 >/dev/null 2>&1 && [ -f dev/check-settings-paths.py ]; then
+  if path_drift="$(python3 dev/check-settings-paths.py)"; then
+    ok "settings paths" "every Settings › group › page named outside the rail exists"
+  else
+    fail "a Settings path names a group or page the rail does not have:"
+    printf '%s\n' "$path_drift"
+  fi
+else
+  structural_skip "settings paths" "python3 or the settings path check is unavailable"
+fi
+
 section "settings search labels"
 # search reads each schema entry's l: without building a page, so it must match the row's label
 if command -v python3 >/dev/null 2>&1 && [ -f dev/check-setting-labels.py ]; then

@@ -53,6 +53,175 @@ Item {
         return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
     }
 
+    function _checkResponsiveSettings(): void {
+        const panel = menu.popupCard
+        if (!panel) {
+            root._check(false, "the menu builds for the narrow Settings probe")
+            return
+        }
+        const savedWin = panel.win
+        const previousTab = MenuState.activeTab
+        const previousSection = MenuState.settingsSection
+        const previousScale = ShellSettings.uiScale
+        const previousMotion = ShellSettings.reduceMotion
+        const previousPinned = ShellSettings.settingsNavPinned
+        ShellSettings.reduceMotion = true
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        ShellSettings.settingsNavPinned = false
+        panel.win = { screen: null, width: 480, height: 640 }
+        MenuState.setSettingsSection("theme")
+        MenuState.selectTab(MenuState.settingsTab)
+        MenuState.open = true
+
+        const findControl = (name, role) => root._find(panel, item => item.Accessible.name === name
+            && item.Accessible.role === role && item.visible && item.enabled)
+        const waitForControl = (name, role) => {
+            let item = findControl(name, role)
+            for (let i = 0; !item && i < 500; i++) {
+                input.wait(10)
+                item = findControl(name, role)
+            }
+            return item
+        }
+        const sections = waitForControl("Settings sections", Accessible.Button)
+        const dockedWidth = panel.panelW - panel.railExpandedW - panel._targetContentPad * 2
+        const paneWidth = panel.pageLayoutW
+        root._check(sections !== null && dockedWidth < 332 && paneWidth >= 332
+                && paneWidth - dockedWidth === panel.navW,
+            "on a narrow display Settings gives the sidebar's width to its controls")
+
+        if (sections) {
+            sections.Accessible.pressAction()
+            const close = waitForControl("Close settings sections", Accessible.Button)
+            root._check(close !== null && panel._settingsNavOverlay && panel.pageLayoutW === paneWidth
+                    && !sections.enabled,
+                "the sections drawer opens without reflowing or leaving the settings underneath interactive")
+            if (close) close.Accessible.pressAction()
+            root._check(MenuState.open && !panel._settingsNavOverlay && sections.enabled,
+                "the drawer's close button returns to the Settings controls")
+
+            sections.Accessible.pressAction()
+            menu.escapePressed()
+            root._check(MenuState.open && !panel._settingsNavOverlay && sections.enabled,
+                "Escape closes the narrow drawer and keeps Settings open")
+
+            sections.Accessible.pressAction()
+            const group = waitForControl("Widgets", Accessible.Button)
+            if (group) group.Accessible.pressAction()
+            const clock = waitForControl("Clock", Accessible.PageTab)
+            root._check(clock !== null && panel._settingsNavOverlay && MenuState.settingsSection === "theme",
+                "opening a group in the narrow drawer waits for a specific section to be chosen")
+            if (clock) clock.Accessible.pressAction()
+            root._check(MenuState.settingsSection === "clock" && !panel._settingsNavOverlay
+                    && panel.pageLayoutW === paneWidth,
+                "choosing a section closes the drawer and keeps the wider pane")
+
+            sections.Accessible.pressAction()
+        }
+        panel.win = { screen: null, width: 1280, height: 800 }
+        root._check(!panel._compactSettingsNav && !panel._settingsNavOverlay
+                && panel._settingsNavVisible && panel._railExpanded
+                && findControl("Settings sections", Accessible.Button) === null,
+            "a wider display restores the docked Settings sidebar")
+        {
+            // Tab reads the columns left to right: the rail's buttons, then the section list beside them. Qt's Tab chain
+            // is the item tree depth first, in declaration order, and the probe's unmapped window has no chain to walk.
+            // Any section stands for the list: only the open group's are built, and the drawer checks above leave Clock open
+            const isLeaf = it => it.Accessible.role === Accessible.PageTab && it.objectName === "settings-section"
+            for (let i = 0; !root._find(panel, isLeaf) && i < 500; i++) input.wait(10)
+            const order = []
+            const walk = it => { order.push(it); for (const child of it.children) walk(child) }
+            walk(panel)
+            const power = order.findIndex(it => it.Accessible.name === "Power")
+            const section = order.findIndex(isLeaf)
+            root._check(power > 0 && section > power,
+                "Tab reaches the rail's buttons, power included, before the Settings section list")
+        }
+
+        MenuState.close()
+        MenuState.selectTab(previousTab)
+        MenuState.setSettingsSection(previousSection)
+        panel.win = savedWin
+        ShellSettings.settingsNavPinned = previousPinned
+        ShellSettings.uiScale = previousScale
+        ShellSettings.reduceMotion = previousMotion
+    }
+
+    function _checkResponsiveHistory(): void {
+        const panel = menu.popupCard
+        if (!panel) return
+        const savedWin = panel.win
+        const previousTab = MenuState.activeTab
+        const previousScale = ShellSettings.uiScale
+        const previousMotion = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        panel.win = { screen: null, width: 480, height: 640 }
+        Notifications.clearHistory()
+        Notifications._prependHistory({ id: 901, appName: "Build Manager", summary: "First build", time: Date.now() })
+        MenuState.selectTab(MenuState.recentTab)
+        MenuState.open = true
+        const oneAppWidth = panel.pageLayoutW
+
+        const waitForControl = (name, role) => {
+            // up to 5 s: a page built under load (a browser, a dev server) took longer than 1.2 s
+            for (let i = 0; i < 500; i++) {
+                const item = root._find(panel, node => node.Accessible.name.startsWith(name)
+                    && node.Accessible.role === role && node.visible && node.enabled)
+                if (item) return item
+                input.wait(10)
+            }
+            return null
+        }
+        Notifications._prependHistory({ id: 902, appName: "Mail", summary: "Second sender", time: Date.now() })
+        const apps = waitForControl("Filter history by app", Accessible.Button)
+        root._check(apps !== null && panel._compactRecentNav && !panel._recentNavVisible
+                && panel.pageLayoutW === oneAppWidth && oneAppWidth >= 332,
+            "a new sender exposes the Apps control without reflowing narrow history")
+
+        if (apps) {
+            apps.Accessible.pressAction()
+            const close = waitForControl("Close app filters", Accessible.Button)
+            root._check(close !== null && panel._recentNavOverlay && panel.pageLayoutW === oneAppWidth
+                    && !apps.enabled,
+                "opening Apps keeps the message width and disables the controls underneath")
+            const closingMail = waitForControl("Mail,", Accessible.PageTab)
+            menu.escapePressed()
+            root._check(MenuState.open && !panel._recentNavOverlay && apps.enabled,
+                "Escape closes the app picker and keeps History open")
+            if (closingMail) closingMail.Accessible.pressAction()
+            root._check(closingMail !== null && !closingMail.Accessible.focusable && MenuState.recentFilter === "",
+                "a closed app picker rejects retained accessibility actions")
+
+            apps.Accessible.pressAction()
+            const mail = waitForControl("Mail,", Accessible.PageTab)
+            if (mail) mail.Accessible.pressAction()
+            root._check(mail !== null && MenuState.recentFilter === "Mail" && !panel._recentNavOverlay
+                    && panel.pageLayoutW === oneAppWidth,
+                "choosing an app applies its filter and closes the picker")
+
+            apps.Accessible.pressAction()
+            panel.win = { screen: null, width: 1280, height: 800 }
+            root._check(panel._recentNavDocked && !panel._recentNavOverlay && !apps.visible
+                    && MenuState.recentFilter === "Mail",
+                "wider History docks the filter list and keeps its selection")
+
+            panel.win = { screen: null, width: 480, height: 640 }
+            apps.Accessible.pressAction()
+            Notifications.removeFromHistory(Notifications.historyModel.get(0))
+            root._check(!panel._recentNavOverlay && !apps.visible && MenuState.recentFilter === ""
+                    && panel.pageLayoutW === oneAppWidth,
+                "losing the second sender clears its filter and closes Apps without moving the pane")
+        }
+
+        MenuState.close()
+        MenuState.selectTab(previousTab)
+        Notifications.clearHistory()
+        panel.win = savedWin
+        ShellSettings.uiScale = previousScale
+        ShellSettings.reduceMotion = previousMotion
+    }
+
     function _checkCalendar(): void {
         const card = calendar.popupCard
         root._check(card !== null, "calendar card exists")

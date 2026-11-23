@@ -102,7 +102,7 @@ Run `bash scripts/install.sh --help` for the full list. `--check` and
 ## Previewing the install
 
 `bash scripts/install.sh --dry-run` lists every file the install would create or edit and
-the autostart and keybind lines it would add, then exits without writing anything. It
+the autostart, keybind, layer rule and window motion lines it would add, then exits without writing anything. It
 answers the prompts the way an unattended install does, so it shows the fullest plan.
 
 ## Unattended installs
@@ -261,7 +261,7 @@ currently unsupervised shell, run `silere stop` first, then `silere run --superv
 ## Removing it
 
 Run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, the
-menu keybind, theme and update-timer integrations, but keeps the checkout, your settings,
+menu keybind, the layer rule, theme and update-timer integrations, but keeps the checkout, your settings,
 your notification history and the installed font.
 
 A package install has no `uninstall.sh`. Remove the package instead; it prints what is

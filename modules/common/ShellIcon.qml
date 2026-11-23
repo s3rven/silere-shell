@@ -29,8 +29,18 @@ IconImage {
                 root.source, root.backer.implicitWidth, root.side, root.dpr, root.iconScale))
             root.themeScaled = false
     }
+    // quickshell reads tray and notification pixmaps from an unlocked map on qt's image thread (#1534), so those load here: flag before source, as a swap's size change loads too
+    property string asyncSource: ""
+    onAsyncSourceChanged: root._showAsync()
+    function _showAsync(): void {
+        root.asynchronous = !IconResolver.isMemoryImage(root.asyncSource)
+        root.source = root.asyncSource
+    }
     // a synchronous load can finish before this connection exists
-    Component.onCompleted: root._learnScale()
+    Component.onCompleted: {
+        if (root.asyncSource.length > 0) root._showAsync()
+        root._learnScale()
+    }
     Connections {
         target: root
         function onStatusChanged() { root._learnScale() }

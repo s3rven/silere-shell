@@ -25,6 +25,10 @@ Singleton {
         return authority === "qsimage" || authority === "qspixmap"
             || authority.startsWith("qsimage/") || authority.startsWith("qspixmap/")
     }
+    function isMemoryImage(source): bool {
+        const value = String(source ?? "")
+        return root._imageScheme.test(value) && root._isSafeImageProvider(value)
+    }
 
     // a tray item's icon arrives from Quickshell as image://icon/<name>?path=<dir>, so
     // refusing the provider outright leaves every app shipping its own icons unrendered
@@ -149,7 +153,9 @@ Singleton {
     function iconSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length === 0 || value.length > root.maxSourceChars) return ""
-        // raw text skips the theme-existence check iconPath() applies below, so an image: URI only passes here as Quickshell's safe in-memory handle
+        // a name from an app or a desktop file: quickshell numbers its own images in order, so a handle named here is another app's, or after a restart whatever took the number
+        if (root.isMemoryImage(value)) return ""
+        // raw text skips the theme-existence check iconPath() applies below
         if (value.startsWith("/") || root._scheme.test(value))
             return root.safeLocalSource(value)
         return root.localSource(Quickshell.iconPath(value, true))
@@ -206,6 +212,20 @@ Singleton {
         return root.iconSource(value)
     }
 
+    // a game Proton runs is the window class steam_app_<id>, and Steam installs its icon as steam_icon_<id>
+    function steamGameIcon(identity: string): string {
+        const game = /^steam_app_(\d+)$/i.exec(String(identity || ""))
+        return game ? "steam_icon_" + game[1] : ""
+    }
+
+    // a game's own Steam shortcut first: the fuzzy lookup could take Steam itself
+    function appEntry(identity: string): var {
+        const steamIcon = root.steamGameIcon(identity)
+        const game = steamIcon.length > 0
+            ? (DesktopEntries.applications.values || []).find(e => e && e.icon === steamIcon) : null
+        return game || DesktopEntries.heuristicLookup(identity)
+    }
+
     function appMeta(identity): var {
         const original = SafeText.boundedText(identity, root.maxIdentityChars).trim()
         if (original.length === 0) return null
@@ -217,10 +237,11 @@ Singleton {
         const tailOf = s => /^[a-z][a-z0-9-]*(\.[a-z0-9_-]+){2,}$/i.test(s)
             ? s.slice(s.lastIndexOf(".") + 1) : s.replace(/\.exe$/i, "")
         const tail = tailOf(lower)
-        const entry = DesktopEntries.heuristicLookup(original)
-            || DesktopEntries.heuristicLookup(noDesktop)
+        const steamIcon = root.steamGameIcon(lower)
+        const entry = root.appEntry(original) || DesktopEntries.heuristicLookup(noDesktop)
         const candidates = [
             entry && entry.icon,
+            steamIcon,
             noDesktop,
             lower,
             tail

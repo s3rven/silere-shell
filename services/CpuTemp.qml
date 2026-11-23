@@ -209,7 +209,7 @@ Singleton {
         environment: ({ "LC_ALL": "C", "SILERE_SKIP_SENSORS": root._badSensorPaths })
         command: ["bash", "-c",
             "detect_sensor() { " +
-            "  local best=\"\" best_score=0 name n dir f lf lbl score type tf; " +
+            "  local best=\"\" best_rank=0 name n dir f lf lbl score core rank type tf; " +
             "  for name in /sys/class/hwmon/hwmon*/name; do " +
             "    [ -r \"$name\" ] || continue; " +
             "    n=; { IFS= read -r n < \"$name\"; } 2>/dev/null || true; " +
@@ -219,7 +219,7 @@ Singleton {
             "      case \"$SILERE_SKIP_SENSORS\" in *\":$f:\"*) continue ;; esac; " +
             "      lf=\"${f%_input}_label\"; lbl=\"\"; " +
             "      { IFS= read -r lbl < \"$lf\"; } 2>/dev/null || true; " +
-            "      score=0; key=\"${n,,}:${lbl,,}\"; " +
+            "      score=0; core=0; key=\"${n,,}:${lbl,,}\"; " +
             "      case \"$key\" in " +
             "        k10temp:*tdie*|zenpower:*tdie*|coretemp:*package*|coretemp:*physical*) score=100 ;; " +
             "        k10temp:*tctl*|zenpower:*tctl*) score=90 ;; " +
@@ -227,22 +227,26 @@ Singleton {
             "        k10temp:*tccd1*|zenpower:*tccd1*) score=75 ;; " +
             "        coretemp:*core*) score=60 ;; " +
             "        cpu_thermal:*|cpu-thermal:*|soc_thermal:*|bcm2835_thermal:*) score=55 ;; " +
+            "        cpu[0-9]*thermal:*) score=52; core=${key#cpu} ;; " +
             "        *:*cpu*|*:*package*|*:*physical*|*:*tctl*|*:*tdie*) score=50 ;; " +
             "        acpitz:*) score=15 ;; " +
             "      esac; " +
-            "      if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$f\"; fi; " +
+            "      core=${core%%[!0-9]*}; core=${core:0:3}; rank=$((score * 1000 + 10#${core:-0})); " +
+            "      if [ \"$rank\" -gt \"$best_rank\" ]; then best_rank=\"$rank\"; best=\"$f\"; fi; " +
             "    done; " +
             "  done; " +
             "  for tf in /sys/class/thermal/thermal_zone*/temp; do " +
             "    [ -r \"$tf\" ] || continue; " +
             "    case \"$SILERE_SKIP_SENSORS\" in *\":$tf:\"*) continue ;; esac; " +
-            "    type=\"\"; { IFS= read -r type < \"${tf%/temp}/type\"; } 2>/dev/null || true; " +
+            "    type=\"\"; core=0; { IFS= read -r type < \"${tf%/temp}/type\"; } 2>/dev/null || true; " +
             "    case \"${type,,}\" in " +
             "      x86_pkg_temp|cpu_thermal|cpu-thermal|soc_thermal|bcm2835_thermal) score=50 ;; " +
+            "      cpu[0-9]*thermal) score=48; core=${type,,}; core=${core#cpu} ;; " +
             "      acpitz) score=10 ;; " +
             "      *) score=0 ;; " +
             "    esac; " +
-            "    if [ \"$score\" -gt \"$best_score\" ]; then best_score=\"$score\"; best=\"$tf\"; fi; " +
+            "    core=${core%%[!0-9]*}; core=${core:0:3}; rank=$((score * 1000 + 10#${core:-0})); " +
+            "    if [ \"$rank\" -gt \"$best_rank\" ]; then best_rank=\"$rank\"; best=\"$tf\"; fi; " +
             "  done; " +
             "  [ -n \"$best\" ] || return 3; printf '%s\\n' \"$best\"; " +
             "}; " +

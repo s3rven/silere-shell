@@ -15,6 +15,34 @@ QtObject {
     function cycleKeyboardLayout(): void {
         Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
     }
+    property string submap: ""
+    // the event names the submap entered, empty on the way back; "default" is what hyprctl calls that normal one
+    function submapFrom(data): string {
+        const name = SafeText.singleLineText(data, 64)
+        return name === "default" ? "" : name
+    }
+    function leaveSubmap(): void {
+        if (root.submap.length > 0) HyprDispatch.dispatch("submap", "reset")
+    }
+    // a shell started inside a mode (a restart while resizing) hears no event until the mode changes, so it asks once
+    property int _submapRevision: 0
+    function _acceptSubmapSnapshot(raw: string, revision: int): void {
+        if (revision !== root._submapRevision) return
+        try {
+            const name = JSON.parse(raw)
+            if (typeof name === "string") root.submap = root.submapFrom(name)
+        } catch (e) {}
+    }
+    property BoundedProcess _submapProbe: BoundedProcess {
+        id: _submapProbe
+        property int revision: -1
+        timeoutMs: 3000
+        command: ["hyprctl", "-j", "submap"]
+        stdout: StdioCollector { id: _submapOut }
+        onExited: code => {
+            if (_submapProbe.completedSuccessfully(code)) root._acceptSubmapSnapshot(_submapOut.text, _submapProbe.revision)
+        }
+    }
     property bool _keyboardWanted: ShellSettings.barShowKeyboard
     property int _keyboardRevision: 0
     property int _keyboardProbeRevision: 0
@@ -661,6 +689,8 @@ QtObject {
 
     Component.onCompleted: {
         root._refreshKeyboard()
+        _submapProbe.revision = root._submapRevision
+        _submapProbe.running = true
         root._probeUnit()
         root.checkBlur()
         Qt.callLater(function() {
@@ -778,6 +808,11 @@ QtObject {
             const n = event.name
             if (n === "activelayout") {
                 root._updateKeyboardLayout(event.data)
+                return
+            }
+            if (n === "submap") {
+                root._submapRevision++
+                root.submap = root.submapFrom(event.data)
                 return
             }
             // hyprland pairs each event with its v2 form; only v2 carries the title
