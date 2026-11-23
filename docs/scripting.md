@@ -58,14 +58,14 @@ save; once Hyprland reloads, the page shows the keys it is on.
 
 ## Surfaces
 
-| call | opens |
-|---|---|
-| `menu toggle` | the menu |
-| `menu tab <n>` | the menu on `0` Home, `1` Settings, `2` Notifications or `3` Now Playing (only while something plays) |
-| `menu settings <name>` | Settings on one page — names below |
-| `calendar toggle` | the calendar |
-| `quickActions toggle` | Do Not Disturb, Presentation Mode, keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode |
-| `tray toggle` | the first tray app's menu, on its first entry; Left and Right move to the other apps' menus |
+| call | opens | short form |
+|---|---|---|
+| `menu toggle` | the menu | `silere menu` |
+| `menu tab <n>` | the menu on `0` Home, `1` Settings, `2` Notifications or `3` Now Playing when its tab is available | `silere menu home` |
+| `menu settings <name>` | Settings on one page — names below | `silere menu <name>` |
+| `calendar toggle` | the calendar | `silere calendar` |
+| `quickActions toggle` | Do Not Disturb, Presentation Mode, keep awake, night light, power mode, Wi-Fi, Bluetooth and airplane mode | `silere quick` |
+| `tray toggle` | the first tray app's menu, on its first entry; Left and Right move to the other apps' menus | `silere tray` |
 
 `menu`, `calendar`, `quickActions` and `tray` each take `close` as well as `toggle`, for a keybind
 that dismisses without opening anything.

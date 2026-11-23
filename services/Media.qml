@@ -76,15 +76,16 @@ Singleton {
         for (const name in now) if (!root._wasPlaying[name]) changed.push(name)
         for (const name in root._wasPlaying) if (!now[name]) changed.push(name)
         root._wasPlaying = now
-        if (changed.length === 0) return
+        const previous = root._lastActive
         const next = {}
         const listed = {}
         for (const p of root.playerList) {
             if (!p) continue
             listed[p.dbusName] = true
-            if (root._lastActive[p.dbusName] !== undefined) next[p.dbusName] = root._lastActive[p.dbusName]
+            if (previous[p.dbusName] !== undefined) next[p.dbusName] = previous[p.dbusName]
         }
-        // a player that left while playing keeps no rank to win ties with if its name returns
+        // a paused player can leave without a playback change
+        if (changed.length === 0 && Object.keys(next).length === Object.keys(previous).length) return
         for (const name of changed) if (listed[name]) next[name] = ++root._activeSeq
         root._lastActive = next
     }
@@ -117,6 +118,8 @@ Singleton {
     readonly property bool canGoPrevious:    player ? player.canGoPrevious : false
 
     property bool shown: false
+    // the bar can hide a paused track while its open page still has controls
+    readonly property bool menuShown: root.shown || (root.available && MenuState.mediaActive)
 
     function _syncShown(): void {
         if (!available)  { _pauseTimer.stop(); _hideTimer.stop(); if (shown) shown = false; return }

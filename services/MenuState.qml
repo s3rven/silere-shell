@@ -516,7 +516,7 @@ AnchoredPopupState {
         function tab(index: int): string {
             if (index < root.homeTab || index > root.mediaTab)
                 return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (notifications), 3 (now playing)"
-            if (index === root.mediaTab && !Media.shown)
+            if (index === root.mediaTab && !Media.menuShown)
                 return "error: nothing is playing"
             root._unanchor()
             root.showTab(index)

@@ -173,9 +173,9 @@ Item {
             readonly property string _title: Media.displayTitle.length > 0
                 ? Media.displayTitle : "Now Playing"
             visible: opacity > 0.01
-            enabled: Media.shown
-            opacity: Media.shown ? 1 : 0
-            scale: Media.shown ? 1 : 0.8
+            enabled: Media.menuShown
+            opacity: Media.menuShown ? 1 : 0
+            scale: Media.menuShown ? 1 : 0.8
             MotionBehavior on opacity { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
             MotionBehavior on scale { NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
             labels: _railLabels

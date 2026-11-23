@@ -35,13 +35,13 @@ FittedPopupWindow {
         sequence: "Ctrl+Tab"
         context: Qt.ApplicationShortcut
         enabled: MenuState.open
-        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.shown, 1))
+        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.menuShown, 1))
     }
     Shortcut {
         sequences: ["Ctrl+Shift+Tab", "Ctrl+Backtab"]
         context: Qt.ApplicationShortcut
         enabled: MenuState.open
-        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.shown, -1))
+        onActivated: panel.switchTab(MenuState.adjacentTab(panel.activeTab, Media.menuShown, -1))
     }
 
     FloatingPopupCard {
@@ -374,7 +374,7 @@ FittedPopupWindow {
                     panel._syncPageRetention()
                     // closeFinished is canceled when a close animation reverses; transient drawer state must not depend on that callback
                     panel.powerOpen = false
-                    if (panel.activeTab === MenuState.mediaTab && !Media.shown)
+                    if (panel.activeTab === MenuState.mediaTab && !Media.menuShown)
                         MenuState.selectTab(MenuState.homeTab)
                     panel._outerHeightMotion = false
                     panel._tabHeightHeld = false
@@ -485,8 +485,8 @@ FittedPopupWindow {
 
         Connections {
             target: Media
-            function onShownChanged() {
-                if (!Media.shown && panel.activeTab === MenuState.mediaTab)
+            function onMenuShownChanged() {
+                if (MenuState.open && !Media.menuShown && panel.activeTab === MenuState.mediaTab)
                     panel.switchTab(MenuState.homeTab)
             }
         }

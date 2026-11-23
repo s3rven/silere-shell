@@ -9908,6 +9908,13 @@ ShellRoot {
                 && Media.pickPlayer([radio, video], "video", {}) === video
                 && Media.pickPlayer([null, loadedPlayer], "", {}) === loadedPlayer,
             "the media card follows the most recently active player, like the media keys, unless one is pinned")
+        const lastActive = Media._lastActive
+        const departedPlayer = "org.mpris.MediaPlayer2.silere_probe"
+        Media._lastActive = Object.assign({}, lastActive, { [departedPlayer]: 42 })
+        Media._trackActivity()
+        root._check(!(departedPlayer in Media._lastActive),
+            "a departed paused player loses its rank even without a playback change")
+        Media._lastActive = lastActive
         root._check(Audio._out._clampVolume(NaN) === 0
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,

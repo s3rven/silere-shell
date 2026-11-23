@@ -156,7 +156,12 @@ None of these ask for administrator rights.
 | Start or end | Home, End |
 
 Click the track length to show the time left instead. With several players open, choose one under
-**Players**.
+**Players** to pin it for the session. Choose **Automatic** to follow playback again.
+If you pause playback in Now Playing, the page stays open after the bar hides the track.
+
+The **Audio visualizer** under **Settings › Widgets › Media** uses Cava's PipeWire input.
+The media widget keeps its playback progress line while Cava starts or if it fails. If a failure
+appears in Media settings, use **Retry visualizer** after checking Cava and PipeWire.
 
 When Bluetooth or USB headphones disconnect or run flat during playback, Silere pauses the player
 instead of letting it carry on through the speakers. Switching outputs yourself never pauses.
