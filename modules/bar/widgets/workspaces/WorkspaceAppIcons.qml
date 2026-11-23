@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import "../../../../config"
 import "../../../../services"
@@ -38,6 +39,16 @@ Row {
                 side: root.iconSize
                 source: appIcon.app?.icon ?? ""
                 asynchronous: true
+                layer.enabled: root._accent && status === Image.Ready
+                    && GraphicsInfo.api !== GraphicsInfo.Software
+                layer.effect: MultiEffect {
+                    colorization: 1
+                    colorizationColor: Theme.barAccentMark
+                    // the tint keeps only luminance: -0.5 left Discord, Spotify and Code one pale blob, and any steeper than
+                    // this drops a near-black plate (OBS, Steam's own icon) into a dark bar. Measured over Papirus, Breeze and hicolor
+                    contrast: -0.2
+                    brightness: 0.25
+                }
             }
 
             Rectangle {
@@ -48,8 +59,9 @@ Row {
 
                 ShellText {
                     anchors.centerIn: parent
-                    text: appIcon.modelData.fallback || "?"
-                    color: Theme.barSubtext
+                    anchors.alignWhenCentered: false
+                    text: appIcon.app?.fallback || "?"
+                    color: root._accent ? Theme.barAccent : Theme.barSubtext
                     font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
                 }
             }

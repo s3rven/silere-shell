@@ -328,6 +328,7 @@ PageShell {
                 ShellText {
                     id: _countTxt
                     anchors.centerIn: parent
+                    anchors.alignWhenCentered: false
                     text: String(root.rowCount)
                     color: Theme.withAlpha(Theme.text, 0.82)
                     font.pixelSize: Settings.fontMicro
@@ -1011,6 +1012,7 @@ PageShell {
 
                                     ShellText {
                                         anchors.centerIn: parent
+                                        anchors.alignWhenCentered: false
                                         visible: _recentAppIcon.status !== Image.Ready
                                         text: SafeText.initial(_appIconSlot._fallbackSource, "N")
                                         color: Theme.withAlpha(Theme.subtext, 0.70)
@@ -1099,6 +1101,7 @@ PageShell {
                                 text: { void root._timeTick; return root.formatTime(_entry.modelData.time) }
                                 color: Theme.withAlpha(Theme.subtext, 0.78)
                                 font.pixelSize: Settings.fontMicro
+                                font.features: ({ "case": 1 })
                                 opacity: _entryHover.hovered || _card.activeFocus || _removeButton.activeFocus ? 0 : 1
                                 MotionBehavior on opacity { gate: _entry._heightReady; NumberAnimation { duration: Motion.fast } }
                             }

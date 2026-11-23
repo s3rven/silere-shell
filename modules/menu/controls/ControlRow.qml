@@ -151,6 +151,7 @@ MenuRow {
             ShellText {
                 id: _badgeTxt
                 anchors.centerIn: parent
+                anchors.alignWhenCentered: false
                 text:  root.badgeCount > 99 ? "99+" : root.badgeCount
                 color: Theme.background
                 font.pixelSize: Settings.fontTiny

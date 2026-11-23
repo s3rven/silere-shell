@@ -34,6 +34,13 @@ Item {
     property bool   animateGlyph: true
     property bool   animateText: false
     property int    glyphPixelSize: Settings.iconSize + 2
+    // 0 to 1 draws the glyph inside a ring filled that far, as a segment's `ring` does for its own glyph; under 0, no ring
+    property real   glyphRing: -1
+    property color  glyphRingColor: Theme.barAccentMark
+    // the icon's own cell and a stroke either side, its glyph a size down: sized off the row, the ring stood twice the
+    // reading's height, two pixels inside the hover capsule, round a glyph three sizes smaller than the bar's others
+    readonly property int ringSize: Metrics.iconCellFor(root.glyphPixelSize) + 2
+    readonly property int _ringGlyphSize: Math.max(8, root.glyphPixelSize - 2)
     // a reading sits left in its reserve: one digit keeps to its glyph and the spare room trails it
     property string reserveText: ""
     readonly property real _reserveW: reserveText.length > 0 ? Math.ceil(_reserveMetrics.implicitWidth) : 0
@@ -88,7 +95,7 @@ Item {
     // and slid back on every hover, and jumped back and slid out again on leaving
     readonly property bool _glideReadings: root.segments.length > 0
     // the row's width once its readings land, so the pill heads there from the first frame. Summed from the boxes'
-    // own targets, as the Row lays out (a zero-width part takes no gap): the Row measures only at its next polish,
+    // own targets, each holding the gap before it: the Row measures only at its next polish,
     // and its width plus what the boxes still had to cover mixed two frames, so the pill's glide chased a target
     // that jumped twice a frame, parked a pixel wide and stepped back once the readings settled
     readonly property real _finalRowW: {
@@ -335,7 +342,9 @@ Item {
             ? Math.round(Math.min((parent.width - width) / 2, root.horizontalPadding))
             : root.horizontalPadding
         height: parent.height
-        spacing: Metrics.pillGapFor(root.compact)
+        // with several readings each part carries the gap before it, so the gap glides with its reading: a Row adds or
+        // drops its spacing at once as a box crosses zero width, and each ring after a closing reading stepped 5 px
+        spacing: root._glideReadings ? 0 : root._gap
 
         Item {
             id: _glyphBox
@@ -347,6 +356,8 @@ Item {
             ShellText {
                 id: _glyphText
                 anchors.centerIn: parent
+                // a ring shows any rounding: centred to the whole pixel, half down, the glyph sat 0.75 px high and left in it
+                anchors.alignWhenCentered: !_glyphBox._ringed
                 text:            root._shownGlyph
                 color:           root._hoverGlyphColor
                 transformOrigin: Item.Center
@@ -438,9 +449,8 @@ Item {
                 readonly property color _ink: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
                 readonly property color _ringInk: root._glyphTint(_segment.seg.ringColor ?? root.glyphRingColor, root._contentHot)
                 height: row.height
-                // half again the glyph gap ahead of each pair: a glyph reads as its own reading's, yet the pairs stay one widget
-                leftPadding: Math.round(row.spacing / 2)
-                spacing: row.spacing
+                // the glyph gap and half again ahead of each pair: a glyph reads as its own reading's, yet the pairs stay one widget
+                leftPadding: root._gap + Math.round(root._gap / 2)
 
                 Item {
                     id: _segGlyphBox
@@ -452,6 +462,7 @@ Item {
                     ShellText {
                         id: _segGlyph
                         anchors.centerIn: parent
+                        anchors.alignWhenCentered: !_segGlyphBox._ringed
                         text: _segment.seg.glyph ?? ""
                         color: _segment._ink
                         font.pixelSize: _segGlyphBox._ringed ? root._ringGlyphSize : root.glyphPixelSize
@@ -468,12 +479,13 @@ Item {
                     clip: width < _targetW - 0.5
                     SmoothGlide {
                         id: _segGlide
-                        target: _segBox._targetW
+                        target: _segBox._spanW
                         duration: Motion.width
                         gate: root._ready && root.barActive
                     }
                     ShellText {
                         id: _segText
+                        x: root._gap
                         anchors.verticalCenter: parent.verticalCenter
                         width: _segBox._targetW
                         text: _segment.seg.text ?? ""
@@ -491,8 +503,7 @@ Item {
                         }
                     }
                 }
-                readonly property real _finalW: leftPadding + _segGlyphBox.implicitWidth
-                    + (_segBox._targetW > 0 ? spacing + _segBox._targetW : 0)
+                readonly property real _finalW: leftPadding + _segGlyphBox.implicitWidth + _segBox._spanW
             }
         }
     }

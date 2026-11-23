@@ -76,7 +76,7 @@ Item {
         text:           root._shown
         color:          root.color
         font.pixelSize: Settings.fontSize
-        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
+        font.features: root.tabularDigits ? ({ "tnum": 1, "case": 1 }) : ({})
         width: root.width
         horizontalAlignment: root.horizontalAlignment
         property real rise: 0
@@ -91,7 +91,7 @@ Item {
         visible: opacity > 0.001
         color:          root.color
         font.pixelSize: Settings.fontSize
-        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
+        font.features: root.tabularDigits ? ({ "tnum": 1, "case": 1 }) : ({})
         width: root.width
         horizontalAlignment: root.horizontalAlignment
         property real rise: 0

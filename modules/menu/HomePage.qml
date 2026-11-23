@@ -300,11 +300,10 @@ PageShell {
                     statusColor: Network.wifiHardBlocked ? Theme.warning
                         : Network.wifiConnecting.length > 0 ? Theme.accent
                         : Network.wifiError.length > 0 ? Theme.error
-                        : Network.connectivityText.length > 0 ? Theme.warning
+                        : _issue.length > 0 ? Theme.warning
+                        // the accent is for a live connection: on with nothing joined, the line is a plain detail
+                        : Network.wifiEnabled && !Network.wifiConnected ? Theme.menuTextDetail
                         : "transparent"
-                    function _withIssue(link: string): string {
-                        return Network.connectivityText.length > 0 ? link + " · " + Network.connectivityText : link
-                    }
                     showSwitch: true
                     available: !Network.wifiHardBlocked
                     expandable: Network.wifiEnabled
@@ -379,7 +378,8 @@ PageShell {
                     title: "Bluetooth"
                     status: Bluetooth.hardBlocked ? "Blocked by the hardware switch"
                         : Bluetooth.enabled ? Bluetooth.statusText : ""
-                    statusColor: Bluetooth.hardBlocked ? Theme.warning : "transparent"
+                    statusColor: Bluetooth.hardBlocked ? Theme.warning
+                        : Bluetooth.enabled && Bluetooth.connectedCount === 0 ? Theme.menuTextDetail : "transparent"
                     showSwitch: true
                     available: !Bluetooth.hardBlocked
                     expandable: Bluetooth.enabled

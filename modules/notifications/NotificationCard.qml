@@ -645,6 +645,7 @@ Item {
 
             ShellText {
                 anchors.centerIn: parent
+                anchors.alignWhenCentered: false
                 visible: _headerIcon.status !== Image.Ready
                 text: card.fallbackInitial
                 color: Theme.withAlpha(Theme.subtext, 0.86)

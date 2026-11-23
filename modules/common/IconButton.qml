@@ -75,6 +75,8 @@ Item {
 
     ShellText {
         anchors.centerIn: parent
+        // its circle shows any rounding: to the whole pixel, half down, the glyph sat 0.75 px high and left in it
+        anchors.alignWhenCentered: false
         text: root.glyph
         color: _hover.hovered || root.pressed
             ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)

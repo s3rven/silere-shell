@@ -40,6 +40,11 @@ function _v3ToV4(input) {
     return _copy(input)
 }
 
+// the same mark for 1.8: its file holds the workspace icon color and the system monitor's rings, which 1.8 cannot read
+function _v4ToV5(input) {
+    return _copy(input)
+}
+
 const registry = [
     { from: 0, to: 1, apply: _v0ToV1 },
     { from: 1, to: 2, apply: _v1ToV2 },

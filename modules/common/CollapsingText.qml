@@ -41,7 +41,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         color:          root.color
         font.pixelSize: Settings.fontSize
-        font.features: root.tabularDigits ? ({ "tnum": 1 }) : ({})
+        font.features: root.tabularDigits ? ({ "tnum": 1, "case": 1 }) : ({})
         ColorFade on color {}
         opacity:        root.expanded ? 1.0 : 0.0
         MotionBehavior on opacity {

@@ -211,7 +211,8 @@ Item {
                 color:   root._cText
                 animate: root._animatable
             }
-            RollingText { text: ":"; color: root._cText; animate: root._animatable }
+            // figures, so it takes their "case" colon: the font's own sits on the x-height, a pixel under the digits' middle
+            RollingText { text: ":"; tabularDigits: true; color: root._cText; animate: root._animatable }
             RollingText {
                 tabularDigits: true
                 reserveText: "00"

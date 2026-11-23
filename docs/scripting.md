@@ -32,7 +32,7 @@ anything:
 
 ```lua
 hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))   -- open or close the menu
-hl.bind("SUPER + period", hl.dsp.global("silere:tray"))  -- the first tray app's menu
+hl.bind("SUPER + SHIFT + slash", hl.dsp.global("silere:tray"))  -- the first tray app's menu
 ```
 
 In a `.conf` config the first is `bind = SUPER, slash, global, silere:menu`. Only the shell

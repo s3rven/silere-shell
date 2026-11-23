@@ -410,10 +410,11 @@ PageShell {
                 id: _elapsedLabel
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 width: _seek._timeW
-                text: Media.formatElapsed(_seekTrack.dragging
-                    ? _seekTrack.shownValue * Media.length : Media.positionNow, Media.length)
-                color: _seekTrack.dragging ? Theme.withAlpha(Theme.text, 0.85) : Theme.menuTextDetail
+                text: Media.formatElapsed(_seek._position, Media.length)
+                color: _seekTrack.previewing ? Theme.withAlpha(Theme.text, 0.85) : Theme.menuTextDetail
                 font.pixelSize: Settings.fontMicro
+                // the colon at the digits' height, as the bar clock's: the font's own sits on the x-height
+                font.features: ({ "case": 1 })
                 ColorFade on color {}
             }
 
@@ -424,16 +425,16 @@ PageShell {
                     right: _totalLabel.left; rightMargin: 10
                     verticalCenter: parent.verticalCenter
                 }
-                min: 0; max: 1; step: 0
-                nudgeStep: Media.lengthKnown ? Math.min(1, 5 / Media.length) : 0
-                value: Media.positionRatio
+                min: 0; max: Media.length; step: 0
+                nudgeStep: 5
+                value: Media.positionNow
                 interactive: Media.canSeek && Media.lengthKnown
                 showThumb: interactive
                 railHeight: 4
                 thumbWidth: 12; thumbHeight: 12
                 wavy: true
                 waveAmplitude: Media.playing ? 2.5 : 0
-                waveFlowing: Media.playing && root._motionOk && !_seekTrack.dragging
+                waveFlowing: Media.playing && root._motionOk && !_seekTrack.previewing
                 waveSwellSource: root._swellWanted ? (() => root.swellLevel()) : null
                 hitPad: 8
                 commitOnRelease: true
@@ -441,10 +442,10 @@ PageShell {
                 wheelKey: "seek:" + Media.trackRevision
                 wheelNeedsRest: true
                 accessibleName: "Playback position"
-                accessibleValueText: Media.formatTime(Media.positionNow) + " of "
+                accessibleValueText: Media.formatTime(_seek._position) + " of "
                     + (Media.lengthKnown ? Media.formatTime(Media.length)
                         : Media.endless ? "live" : "unknown")
-                onChanged: (v) => Media.seekToRatio(v)
+                onChanged: position => Media.seekToPosition(position)
             }
 
             ShellText {
@@ -456,12 +457,13 @@ PageShell {
                 width: _seek._timeW
                 horizontalAlignment: Text.AlignRight
                 text: _totalLabel._remaining
-                        ? Media.formatRemaining(_seekTrack.dragging
-                            ? _seekTrack.shownValue * Media.length : Media.positionNow, Media.length)
+                        ? Media.formatRemaining(_seek._position, Media.length)
                     : Media.lengthKnown ? Media.formatTime(Media.length)
                     : Media.endless ? "LIVE" : "--:--"
-                color: _totalHover.hovered ? Theme.withAlpha(Theme.text, 0.85) : Theme.menuTextDetail
+                color: _totalHover.hovered || (_totalLabel._remaining && _seekTrack.previewing)
+                    ? Theme.withAlpha(Theme.text, 0.85) : Theme.menuTextDetail
                 font.pixelSize: Settings.fontMicro
+                font.features: ({ "case": 1 })
                 ColorFade on color {}
                 Accessible.role: Accessible.Button
                 Accessible.name: _totalLabel._remaining ? "Time left, press to show the length"
@@ -565,26 +567,37 @@ PageShell {
 
         Column {
             width: parent.width
-            visible: Media.playerCount > 1
+            visible: Media.playerCount > 1 || Media.preferredPlayer.length > 0
 
             SectionLabel { label: "Players" }
             SettingsCard {
                 dividerIndent: 14 + Metrics.glyphSlotWidth + 10
 
+                InlineOptionRow {
+                    glyph: "󰑐"
+                    label: "Automatic"
+                    accessiblePrefix: "Media player"
+                    Accessible.description: "Follow the active player"
+                    selected: Media.preferredPlayer.length === 0
+                    onTriggered: Media.preferredPlayer = ""
+                }
+
                 Repeater {
                     model: Media.playerList
 
-                    ControlRow {
+                    InlineOptionRow {
                         id: _playerRow
                         required property var modelData
-                        readonly property string _name: SafeText.singleLineText(
-                            modelData.identity || modelData.desktopEntry || modelData.dbusName, 128)
-                        glyph: modelData.isPlaying ? "󰐊" : "󰏤"
-                        title: _playerRow._name
+                        glyph: modelData.isPlaying ? "󰐊"
+                            : modelData.playbackState === MprisPlaybackState.Stopped ? "󰓛" : "󰏤"
+                        label: SafeText.singleLineText(modelData.identity || modelData.desktopEntry || modelData.dbusName, 128)
                         status: SafeText.singleLineText(modelData.trackTitle, 128)
-                        statusOneLine: true
-                        active: modelData === Media.player
-                        onActivated: Media.preferredPlayer = modelData.dbusName
+                        accessiblePrefix: "Media player"
+                        Accessible.description: [highlighted ? "Current player" : "", status]
+                            .filter(s => s.length > 0).join(" · ")
+                        highlighted: modelData === Media.player
+                        selected: modelData.dbusName === Media.preferredPlayer
+                        onTriggered: Media.preferredPlayer = modelData.dbusName
                     }
                 }
             }

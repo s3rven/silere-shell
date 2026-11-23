@@ -330,7 +330,8 @@ Column {
             symmetric: true
 
             SwatchPickerRow {
-                glyph: "󰔎"; label: "Accent"
+                glyph: "󰢵"; label: "Accent role"
+                searchKey: "matugenAccentRole"
                 options: [
                     { value: "primary",   name: "Primary"   },
                     { value: "secondary", name: "Secondary" },

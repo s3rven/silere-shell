@@ -317,6 +317,7 @@ Item {
 
                     ShellText {
                         anchors.centerIn: parent
+                        anchors.alignWhenCentered: false
                         text: SafeText.initial(_tile.label, "?")
                         color: Theme.barSubtext
                         font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))

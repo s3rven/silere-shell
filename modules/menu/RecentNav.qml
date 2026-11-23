@@ -177,8 +177,19 @@ Item {
                         width: Metrics.iconCellFor(Settings.fontLabel)
                         height: width
 
+                        // the popup card's initial tile, at the icon's 16 px: a bare dim letter reads as a missing glyph
+                        Rectangle {
+                            anchors.centerIn: parent
+                            anchors.alignWhenCentered: false
+                            width: 16; height: 16
+                            visible: !_row.isAll && _rowIcon.status !== Image.Ready
+                            radius: Math.round(Theme.radiusField * 2 / 3)
+                            color: Theme.withAlpha(Theme.subtext, 0.12)
+                        }
+
                         ShellText {
                             anchors.centerIn: parent
+                            anchors.alignWhenCentered: false
                             visible: _row.isAll || _rowIcon.status !== Image.Ready
                             text: _row.isAll ? "󰂚"
                                 : SafeText.initial(_row.label, "N")
