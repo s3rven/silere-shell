@@ -18,6 +18,16 @@ identity() {
     busctl --system --timeout=2 get-property org.freedesktop.UPower "$1" "$interface" NativePath 2>/dev/null \
         || printf 'unknown\n'
 }
+# a machine without UPower has no keyboard light to read, which is not a failed read. Unsure counts as present
+upower_on_bus() {
+    local reply
+    reply="$(busctl --system --timeout=2 call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus \
+        NameHasOwner s org.freedesktop.UPower 2>/dev/null)" || return 0
+    [ "$reply" != "b true" ] || return 0
+    reply="$(busctl --system --timeout=2 call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus \
+        ListActivatableNames 2>/dev/null)" || return 0
+    [[ " $reply " = *' "org.freedesktop.UPower" '* ]]
+}
 has_light_interface() {
     busctl --system --timeout=2 introspect org.freedesktop.UPower "$1" "$interface" 2>/dev/null \
         | awk '$1 == ".GetMaxBrightness" && $2 == "method" { found=1 } END { exit !found }'
@@ -25,7 +35,7 @@ has_light_interface() {
 
 case "${1:-}" in
     list)
-        tree="$(busctl --system --timeout=2 --list tree org.freedesktop.UPower 2>/dev/null)" || exit 1
+        tree="$(busctl --system --timeout=2 --list tree org.freedesktop.UPower 2>/dev/null)" || { upower_on_bus || exit 0; exit 1; }
         mapfile -t paths <<< "$tree"
         seen=()
         failed=0
