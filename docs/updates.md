@@ -68,6 +68,11 @@ still needs confirmation. It does not silently install a new shell version.
 If a timer change fails, Settings shows the error and refreshes the switch to
 match the timer's actual state.
 
+When NetworkManager marks the active connection as metered, Silere skips automatic
+package checks and the daily release check. Package checks retry after switching
+networks or within five minutes while the session is awake. The release timer tries
+again on its next daily run. Use **Check** in Overview to check immediately.
+
 The bar's package update badge counts distribution and AUR packages separately
 from Silere releases. Use your package manager to install those updates.
 On Arch with `paru` or `yay` as the only available checker, enable **Include AUR packages**

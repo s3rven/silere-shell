@@ -1004,8 +1004,16 @@ test_atomic_units() (
         && fail "service placeholder was not replaced"
     grep -qF "scripts/update.sh" "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
         || fail "service ExecStart was not generated"
+    grep -qF -- '--scheduled' "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
+        || fail "service did not mark the check as scheduled"
     grep -qF 'TimeoutStartSec=5min' "$SYSTEMD_USER_DIR/$SERVICE_UNIT" \
         || fail "generated update service has no bounded start timeout"
+    printf '0::/user.slice/app.slice/silere-update.service\n' > "$TMP/update-cgroup"
+    REQUESTED_MODE='' SYSTEMD_EXEC_PID=$$ _scheduled_update "$TMP/update-cgroup" \
+        || fail "legacy scheduled update service was treated as a manual check"
+    if REQUESTED_MODE='' SYSTEMD_EXEC_PID=1 _scheduled_update "$TMP/update-cgroup"; then
+        fail "a child of the scheduled service was treated as the service process"
+    fi
     if find "$SYSTEMD_USER_DIR" -maxdepth 1 -name '.silere-update.*.??????' -print -quit | grep -q .; then
         fail "temporary unit file was left behind"
     fi
@@ -1756,6 +1764,7 @@ test_update_reporting() (
     cp "$ROOT/scripts/lib/qml-modules.sh" "$seed/scripts/lib/qml-modules.sh"
     cp "$ROOT/scripts/lib/unit.sh" "$seed/scripts/lib/unit.sh"
     cp "$ROOT/scripts/lib/instances.sh" "$seed/scripts/lib/instances.sh"
+    cp "$ROOT/scripts/lib/network.sh" "$seed/scripts/lib/network.sh"
     printf 'v1\n' > "$seed/tracked.qml"
     git -C "$seed" add scripts security tracked.qml
     git -C "$seed" commit -qm "initial"
@@ -1817,7 +1826,8 @@ EOF
         'esac' > "$stub_dir/systemctl"
     printf '#!/bin/sh\nexit 0\n' > "$stub_dir/notify-send"
     printf '#!/bin/sh\n[ "${1:-}" = --version ] && echo "Quickshell 0.3.1"\n' > "$stub_dir/qs"
-    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send" "$stub_dir/qs"
+    printf '#!/bin/sh\nprintf "v u %%s\\n" "${SILERE_TEST_METERED:-2}"\n' > "$stub_dir/busctl"
+    chmod +x "$stub_dir/systemctl" "$stub_dir/notify-send" "$stub_dir/qs" "$stub_dir/busctl"
 
     _run() { HOME="$test_home" XDG_CACHE_HOME="$test_home/cache" PATH="$stub_dir:$PATH" \
         bash "$client/scripts/update.sh" "$@"; }
@@ -1835,7 +1845,15 @@ EOF
 
     mkdir -p "$cache"
     printf '%s\n' 1 'stale timer failure' > "$cache/update-error"
-    _run >/dev/null
+    out="$(SILERE_TEST_METERED=3 _run --scheduled)"
+    [[ "$out" == *'scheduled check paused on a metered connection'* ]] \
+        || fail "scheduled update check did not pause on inferred metering"
+    [ ! -e "$cache/update-checked" ] && [ ! -e "$cache/update-pending" ] \
+        && [ -e "$cache/update-error" ] \
+        || fail "metered deferral changed the previous update status"
+    assert_eq "true" "$(git -C "$client" rev-parse --is-shallow-repository)" \
+        "metered scheduled check leaves the remote unfetched"
+    SILERE_TEST_METERED=3 _run >/dev/null
     [ ! -e "$cache/update-error" ] \
         || fail "successful update check left a stale failure status"
     assert_eq "false" "$(git -C "$client" rev-parse --is-shallow-repository)" \
@@ -1878,7 +1896,7 @@ EOF
 
     printf '1\nstale pending entry\n' > "$cache/update-pending"
     printf '1\n' > "$cache/update-checked"
-    _run >/dev/null
+    SILERE_TEST_METERED=2 _run --scheduled >/dev/null
     [ ! -e "$cache/update-pending" ] \
         || fail "already-current check did not clear a stale pending flag"
     [ "$(cat "$cache/update-checked")" -gt 1 ] \

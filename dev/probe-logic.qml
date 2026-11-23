@@ -37,6 +37,7 @@ ShellRoot {
     property PwVolumeControl _volumeCancelProbe: null
     property bool _volumeCancelDone: false
     property bool _ignoredUpdatesDone: false
+    property bool _meteredUpdatesDone: false
     property bool _helperUpdatesDone: false
     property bool _updateWidthDone: false
     property bool _launchEnvDone: false
@@ -10362,7 +10363,7 @@ ShellRoot {
                 && !Updates.lastFailed && Updates._failStreak === 0,
             "a successful package checker publishes its count and details")
         Updates._acceptCheckResult(9, "0\n")
-        root._check(Updates.count === 3 && Updates.packages === lastGoodPackages
+        root._check(Updates.count === 3 && Updates.packages === resumedPackages
                 && Updates.lastFailed && Updates._failStreak === 1
                 && Updates.lastError === "Package check failed (exit 9)",
             "a failed package checker cannot replace good results with partial output")
@@ -10426,6 +10427,23 @@ ShellRoot {
         root._check(!Updates._cmd().includes("paru -Qua")
                 && Updates.managerLabel === "pacman",
             "package updates honor the disabled AUR source")
+        const automatic = Updates._checkCommand(true)
+        const meteredScript = "busctl() { [ \"$kind\" = fallback ] && return 1; printf 'v u %s\\n' \"$kind\"; }; "
+            + "nmcli() { printf 'yes (guessed)\\n'; }; "
+            + "checkupdates() { printf 'core 1-1 -> 1-2\\n'; }; "
+            + "check() { out=$(" + automatic[2] + "); [ \"${out%%$'\\n'*}\" = \"$expect\" ]; }; "
+            + "kind=1 expect='DEFER metered' check \"$1\" && kind=3 expect='DEFER metered' check \"$1\" "
+            + "&& kind=fallback expect='DEFER metered' check \"$1\" "
+            + "&& kind=2 expect=1 check \"$1\" && kind=0 expect=1 check \"$1\" "
+            + "&& out=$(kind=3; " + Updates._checkCommand(false)[2] + ") && [ \"${out%%$'\\n'*}\" = 1 ]"
+        const meteredRun = processFactory.createObject(root, { command: ["bash", "-c", meteredScript,
+            automatic[3], automatic[4]] })
+        meteredRun.exited.connect(function(code) {
+            root._check(code === 0, "automatic package checks defer explicit and inferred metering, with a manual override")
+            root._meteredUpdatesDone = true
+            meteredRun.destroy()
+        })
+        meteredRun.running = true
         ShellSettings.updatesIncludeAur = true
         // the generated check, run as written: paru tags a package held in IgnorePkg, in German unless LC_ALL=C
         const ignoredStubs = "checkupdates() { printf 'core 1-1 -> 1-2\\n'; }; "
@@ -16865,6 +16883,7 @@ ShellRoot {
         root._checkModeSwitchFades()
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
+        root._check(root._meteredUpdatesDone, "the metered package check completes")
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")
         root._check(root._updateWidthDone, "the package checker width check completes")
         root._check(root._launchEnvDone, "the launch fallback environment check completes")

@@ -656,7 +656,14 @@ _systemd_execstart() {
     # literal dollar as $$.
     escaped="${escaped//\$/\$\$}"
     escaped="${escaped//%/%%}"
-    printf '/bin/sh -c '\''exec "$1"'\'' silere-update "%s"\n' "$escaped"
+    printf '/bin/sh -c '\''exec "$1" --scheduled'\'' silere-update "%s"\n' "$escaped"
+}
+
+_scheduled_update() {
+    [ "$REQUESTED_MODE" = --scheduled ] && return 0
+    # The unit installed by older versions execs this script with no argument.
+    [ -z "$REQUESTED_MODE" ] && [ "${SYSTEMD_EXEC_PID:-}" = "$$" ] \
+        && grep -q '/silere-update\.service$' "${1:-/proc/$$/cgroup}"
 }
 
 _render_update_service() {
@@ -1037,6 +1044,14 @@ fi
 
 # Default (check): fetch and flag a pending update; never restarts on its own, so
 # the shell can surface an indicator instead of vanishing mid-session.
+
+if _scheduled_update; then
+    source "$ROOT/scripts/lib/network.sh"
+    if _silere_network_metered; then
+        printf 'silere-update: scheduled check paused on a metered connection\n'
+        exit 0
+    fi
+fi
 
 _fetch_main || _quiet_fail "git fetch failed (check network / connectivity)"
 

@@ -1201,7 +1201,7 @@ else
   # scripts/lib is copied wholesale by name, so its own tracked contents are the allowlist:
   # anything landing there ships, which is why the probe harness lives in dev/ instead
   lib_extra="$(git ls-files scripts/lib | sed 's|^scripts/lib/||' \
-    | grep -vxE 'xdg\.sh|qml-modules\.sh|ui\.sh|unit\.sh|completions\.sh|instances\.sh')"
+    | grep -vxE 'xdg\.sh|qml-modules\.sh|ui\.sh|unit\.sh|completions\.sh|instances\.sh|network\.sh')"
   [ -n "$lib_extra" ] && payload_extra="$payload_extra scripts/lib/{$(printf '%s' "$lib_extra" | tr '\n' ',')}"
 
   # the packaged installer still reads this one out of the pruned assets/ tree

@@ -17,6 +17,8 @@ Singleton {
     property bool lastFailed: false
     property string lastError: ""
     property real lastCheckMs: 0
+    property bool backgroundDeferred: false
+    property bool _automaticCheck: false
     property bool _discardResult: false
     // a check fails for a night offline as readily as for a wedged package database; only a failure that outlives a retry says the checker itself is broken
     property int  _failStreak: 0
@@ -78,7 +80,7 @@ Singleton {
         : !SystemTools.ready ? "Detecting"
         : !supported ? "Unsupported"
         : ready ? (count > 0 ? label : "Up to date")
-        : "Waiting"
+        : root.backgroundDeferred ? "Paused on metered connection" : "Waiting"
     readonly property string lastCheckedText: DateTime.agoText(lastCheckMs, _nowMs)
     readonly property string lastCheckLabel: lastCheckedText.length > 0
         ? "Checked " + lastCheckedText : ""
@@ -285,6 +287,10 @@ Singleton {
     }
 
     function refresh(): void {
+        root._refresh(false)
+    }
+
+    function _refresh(automatic: bool): void {
         // read the setting directly — on a manual toggle the `enabled` alias may not have re-evaluated yet
         if (!ShellSettings.updatesWidget || !supported || _proc.running
                 || root._discardResult) return
@@ -293,12 +299,20 @@ Singleton {
         _sourceRefresh.stop()
         _retry.stop()
         _reconnect.stop()
-        _proc.exec(["bash", "-c", root._cmd()])
+        root._automaticCheck = automatic
+        _proc.exec(root._checkCommand(automatic))
+    }
+
+    function _checkCommand(automatic: bool): var {
+        if (!automatic) return ["bash", "-c", root._cmd()]
+        return ["bash", "-c",
+            'if . "$1" && _silere_network_metered; then printf "DEFER metered\\n"; exit 0; fi\n' + root._cmd(),
+            "silere-package-check", Quickshell.shellDir + "/scripts/lib/network.sh"]
     }
 
     function _refreshBackground(): void {
         if (Idle.isIdle || !root._online) return
-        root.refresh()
+        root._refresh(true)
     }
 
     function _resetDisabledState(): void {
@@ -457,6 +471,13 @@ Singleton {
         onTriggered: root._refreshBackground()
     }
 
+    Timer {
+        interval: 300000
+        repeat: true
+        running: root.backgroundDeferred && root.enabled && root.supported && !Idle.isIdle && root._online
+        onTriggered: root._refreshBackground()
+    }
+
     function backgroundCheckDue(lastCheck: real, failed: bool, now: real): bool {
         const age = now - lastCheck
         return failed || lastCheck <= 0 || age < 0 || age >= _poll.interval
@@ -495,6 +516,12 @@ Singleton {
         function onConnectedChanged() {
             if (Network.connected) root._resumeBackgroundCheck()
         }
+        function onDeviceNameChanged() {
+            if (root.backgroundDeferred) root._resumeBackgroundCheck()
+        }
+        function onConnectionNameChanged() {
+            if (root.backgroundDeferred) root._resumeBackgroundCheck()
+        }
         function onConnectivityIssueChanged() {
             if (Network.connected && Network.connectivityIssue.length === 0)
                 root._resumeBackgroundCheck()
@@ -515,7 +542,7 @@ Singleton {
     Connections {
         target: ShellSettings
         function onUpdatesWidgetChanged() {
-            if (ShellSettings.updatesWidget) root.refresh()
+            if (ShellSettings.updatesWidget) root._refreshBackground()
             else root._resetDisabledState()
         }
         function onUpdatesIncludeAurChanged() {

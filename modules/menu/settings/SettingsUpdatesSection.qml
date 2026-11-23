@@ -315,6 +315,11 @@ Column {
                     trailingSuffix: "AUR"
                 }
             }
+            HintText {
+                visible: Updates.backgroundDeferred && Updates.supported
+                    && (Updates.ready || Updates.isChecking || Updates.lastFailed)
+                text: "Automatic checks paused on metered connection"
+            }
         }
         ToggleRow {
             glyph: "󰚰"; label: "Track package updates"
