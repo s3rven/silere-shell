@@ -106,6 +106,7 @@ Item {
         // whole px: a fractional text width puts the pill and every widget after it off-pixel
         return Math.ceil(sum)
     }
+    readonly property real layoutWidthTarget: _widthGlide.target
     implicitWidth: _widthGlide.value
     SmoothGlide {
         id: _widthGlide
@@ -389,9 +390,12 @@ Item {
             id: _textBox
             readonly property bool _hasShownText: _textEl._hasShownText
             anchors.verticalCenter: parent.verticalCenter
-            visible: _hasShownText
+            // gliding, it closes after its text clears: hidden at once, it pulled every ring after it 28 px left in a frame
+            visible: _targetW > 0 || (root._glideReadings && width > 0.5)
             readonly property real _targetW: _hasShownText
                 ? Math.ceil(Math.min(Math.max(implicitWidth, root._reserveW), root.maxTextWidth)) : 0
+            readonly property real _lead: _glyphBox.implicitWidth > 0 ? root._gap : 0
+            readonly property real _spanW: _targetW > 0 ? _lead + _targetW : 0
             width: root._glideReadings ? _textGlide.value : _targetW
             height: _textEl.implicitHeight
             implicitWidth: _textEl.implicitWidth
@@ -500,7 +504,11 @@ Item {
 
                 Item {
                     id: _segBox
-                    readonly property real _targetW: Math.ceil(Math.max(_segText.implicitWidth, _segReserve.implicitWidth))
+                    readonly property bool _concealing: _segment._shownText !== _segment._requestedText
+                    readonly property real _targetW: Math.ceil(Math.min(_segment.seg.maxTextWidth ?? Infinity,
+                        Math.max(_segment._requestedText.length > 0 ? _segText.implicitWidth : 0,
+                            _segReserve.implicitWidth)))
+                    readonly property real _spanW: _targetW > 0 ? root._gap + _targetW : 0
                     anchors.verticalCenter: parent.verticalCenter
                     width: _segGlide.value
                     height: _segText.implicitHeight
@@ -516,8 +524,9 @@ Item {
                         id: _segText
                         x: root._gap
                         anchors.verticalCenter: parent.verticalCenter
-                        width: _segBox._targetW
-                        text: _segment.seg.text ?? ""
+                        width: _segBox._concealing ? Math.ceil(implicitWidth) : _segBox._targetW
+                        text: _segment._shownText
+                        elide: Text.ElideRight
                         color: root._hoverTextColor
                         font.pixelSize: Settings.fontSize
                         font.features: ({ "tnum": 1 })

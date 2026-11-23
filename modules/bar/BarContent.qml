@@ -13,10 +13,12 @@ Item {
     required property ShellScreen screen
     property bool barActive: true
     property real fitWidth: 0
+    property real maximumWidth: width
 
     property bool _autoCompact: false
     property real _expandedWidthEstimate: 0
     property real _lastCompactWidth: 0
+    property bool _compactRemeasurePending: false
     readonly property bool effectiveCompact: ShellSettings.barCompact || _autoCompact
     readonly property int gap: Metrics.titleGapFor(effectiveCompact)
     readonly property bool centerHasWidgets:
@@ -33,6 +35,12 @@ Item {
     readonly property real _widgetLayoutWidth: Metrics.barLayoutWidth(
         leftZone.implicitWidth, centerZone.implicitWidth, rightZone.implicitWidth,
         centerHasWidgets, gap, ShellSettings.barCenterInGap)
+    // start widening from the pills' destinations so the floating surface and its contents move together
+    readonly property real _targetWidgetLayoutWidth: Metrics.barLayoutWidth(
+        leftZone.implicitWidth + leftZone.widthMetrics.pendingWidth,
+        centerZone.implicitWidth + centerZone.widthMetrics.pendingWidth,
+        rightZone.implicitWidth + rightZone.widthMetrics.pendingWidth,
+        centerHasWidgets, gap, ShellSettings.barCenterInGap)
     readonly property real _osdLayoutWidth: _osdBarShowing && _osdLoader.item
         ? _osdLoader.item.implicitWidth
             + (ShellSettings.barCenterInGap
@@ -41,7 +49,7 @@ Item {
             + gap * 2
         : 0
     readonly property real minimumSurfaceWidth:
-        Math.max(_widgetLayoutWidth, _osdLayoutWidth) + Settings.hPad * 2
+        Math.max(_widgetLayoutWidth, _targetWidgetLayoutWidth, _osdLayoutWidth) + Settings.hPad * 2
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
@@ -177,7 +185,17 @@ Item {
     Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cNetwork;     NetworkWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBluetooth;   BluetoothWidget  { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
-    Component { id: _cSystem; SystemWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component {
+        id: _cSystem
+        SystemWidget {
+            anchors.verticalCenter: parent.verticalCenter
+            height: root.height
+            screen: root.screen
+            compact: root.effectiveCompact
+            barActive: root.barActive
+            layoutWidthBudget: root.systemWidthBudget
+        }
+    }
     Component { id: _cKeyboard; KeyboardWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cMic;         MicWidget        { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }

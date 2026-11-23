@@ -8,6 +8,7 @@ import "../../common"
 Pill {
     id: root
     property var screen: null
+    property real layoutWidthBudget: -1
 
     readonly property bool _cpuOn: ShellSettings.systemShowCpu
     readonly property bool _memOn: ShellSettings.systemShowMemory
@@ -66,18 +67,25 @@ Pill {
                 : "CPU " + root.percent(root._cpu) + (root._busiest.length > 0 ? ", most by " + SysInfo.topName : "") })
         if (root._memOn) {
             const used = SysInfo.memTotalKb - SysInfo.memAvailKb
+            const amount = root._mem < 0 ? "—"
+                : root.gigabytes(used) + " of " + root.gigabytes(SysInfo.memTotalKb)
+            const swap = SysInfo.swapActive ? root.gigabytes(SysInfo.swapUsedKb) + " swap" : ""
             parts.push({ glyph: "󰘚", value: root.percent(root._mem), reserve: "00%",
-                detail: root._mem < 0 ? "—"
-                    : root.gigabytes(used) + " of " + root.gigabytes(SysInfo.memTotalKb)
-                        + (SysInfo.swapActive ? " · " + root.gigabytes(SysInfo.swapUsedKb) + " swap" : ""),
-                level: root._memLevel,
-                spoken: "memory " + root.percent(root._mem)
-                    + (SysInfo.swapActive ? ", " + root.gigabytes(SysInfo.swapUsedKb) + " swap" : "") })
+                shortDetail: amount,
+                detail: root._mem >= 0 && swap.length > 0 ? amount + " · " + swap : amount,
+                ready: root._mem >= 0, level: root._memLevel, ring: Math.max(0, root._mem),
+                spoken: root._mem < 0 ? "memory usage unavailable" : "memory " + root.percent(root._mem)
+                    + ", " + amount + (swap.length > 0 ? ", " + swap : "") })
         }
         if (root._tempOn) {
             const t = root._temp < 0 ? "—" : Math.round(root._temp) + "°"
-            parts.push({ glyph: "󰔏", value: t, reserve: "00°", detail: t + "C", level: root._tempLevel,
-                spoken: "temperature " + t + "C" })
+            // a ring on the 0 to 100 °C scale: the warning lines sit high on it, where a full ring reads as hot
+            parts.push({ glyph: "󰔏", value: t, reserve: "00°", shortDetail: t,
+                detail: root._temp < 0 ? t : t + "C",
+                ready: root._temp >= 0, level: root._tempLevel,
+                ring: Math.max(0, Math.min(1, root._temp / 100)),
+                spoken: root._temp < 0 ? "CPU temperature unavailable"
+                    : "CPU temperature " + Math.round(root._temp) + " degrees Celsius" })
         }
         return parts
     }
@@ -95,13 +103,63 @@ Pill {
     reserveText: root._parts.length > 0 ? root._parts[0].reserve : ""
     // above the 2 s poll, so a reading that shortens does not re-animate the width every tick
     shrinkDelay: 2400
-    maxTextWidth: compact ? 160 : 280
+    readonly property int _detailLimit: compact ? 160 : 280
+    readonly property var _readingWidths: {
+        if (root.layoutWidthBudget < 0) return root._parts.map(() => root._detailLimit)
+        const cell = root._rings ? root.ringSize : Metrics.iconCellFor(root.glyphPixelSize)
+        const between = root._gap + Math.round(root._gap / 2)
+        const count = root._parts.length
+        let available = root.layoutWidthBudget - 2 * root.horizontalPadding
+            - count * cell - Math.max(0, count - 1) * between
+        let shown = 0
+        // fit complete readings before offering any room to their longer hover text
+        const widths = root._parts.map(part => {
+            const minimum = Math.max(root._readoutWidth(part.value), root._readoutWidth(part.reserve))
+            if (minimum + root._gap > available) return 0
+            available -= minimum + root._gap
+            shown++
+            return minimum
+        })
+        const extra = shown > 0 ? Math.floor(available / shown) : 0
+        return widths.map(width => width > 0 ? Math.min(root._detailLimit, width + extra) : 0)
+    }
+    on_ReadingWidthsChanged: if (root.layoutWidthBudget >= 0
+            && root._minW > root.layoutWidthBudget - root.horizontalPadding * 2) root._releaseHold()
+    maxTextWidth: root._readingWidths[0] ?? 0
 
-    text: !root._readingsShown || root._parts.length === 0 ? ""
-        : root.expanded ? root._parts[0].detail : root._parts[0].value
-    segments: !root._readingsShown ? [] : root._parts.slice(1).map(p => ({
-        glyph: p.glyph, text: root.expanded ? p.detail : p.value, reserve: p.reserve,
-        color: root._levelTint(p.level) }))
+    FontMetrics {
+        id: _readoutFont
+        font.family: Settings.font
+        font.pixelSize: Settings.fontSize
+        font.features: ({ "tnum": 1 })
+    }
+
+    function _readoutWidth(text: string): int {
+        void _readoutFont.font
+        return Math.ceil(_readoutFont.advanceWidth(text)) + 1
+    }
+
+    function _readout(part, width: int): string {
+        if (!root._readingsShown || width <= 0) return ""
+        if (!root.expanded) return part.value
+        const base = part.shortDetail ?? part.value
+        // keep the amount or percentage legible before adding a process or swap usage
+        if (root._readoutWidth(base) > width) return part.value
+        if (part.shortDetail !== undefined && root._readoutWidth(part.detail) > width)
+            return base
+        if (part.shortDetail === undefined && width < root._readoutWidth(base) + Settings.fontSize)
+            return base
+        return part.detail
+    }
+
+    text: root._parts.length > 0 ? root._readout(root._parts[0], root.maxTextWidth) : ""
+    // an empty reserve with the text: a held reserve would leave a reading's gap after each ring
+    segments: !root._readingsShown && !root._rings ? [] : root._parts.slice(1).map((p, index) => {
+        const width = root._readingWidths[index + 1] ?? 0
+        return { glyph: p.glyph, text: root._readout(p, width), maxTextWidth: width,
+            reserve: root._readingsShown && width > 0 ? p.reserve : "", color: root._levelTint(p.level, p.ready),
+            ring: root._rings ? p.ring : -1, ringColor: root._ringTint(p.level) }
+    })
     accessibleName: "System, " + root._parts.map(p => p.spoken).join(", ")
         + (root.severity === 2 ? ", critical" : root.severity === 1 ? ", high" : "")
 

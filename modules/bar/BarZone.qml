@@ -82,6 +82,7 @@ Row {
             if (!slot || (slot.flexible ? slot.flexibleWidth <= 0 : !slot.show)) continue
             fixed += slot.fixedWidth
             flexible += slot.flexibleWidth
+            pendingWidth += slot.pendingWidth
         }
         return { fixed: fixed, flexible: flexible }
     }
@@ -122,10 +123,11 @@ Row {
             readonly property string key: modelData
             readonly property bool wanted: zone._widgetEnabled(key)
             property bool keepLoaded: false
+            readonly property bool widthClosing: _loader.item?.collapsed === true && _loader.width > 0
             readonly property bool show: _loader.loadedKey === key && _loader.item
-                && (_loader.item.layoutVisible !== undefined
+                && (widthClosing || (_loader.item.layoutVisible !== undefined
                     ? _loader.item.layoutVisible
-                    : wanted && _loader.item.show)
+                    : wanted && _loader.item.show))
             // a widget can keep its reserved width while its own content already faded out;
             // divider placement follows content, not a lingering width-collapse animation. Without its own
             // content flag a widget's target state stands in: its layout stays visible until the fold ends,
@@ -137,7 +139,10 @@ Row {
             readonly property bool flexible: key === "windowTitle" || key === "media"
             readonly property real flexibleWidth: flexible && _loader.item
                 ? Math.ceil(_loader.item.preferredWidth) : 0
-            readonly property real fixedWidth: _divider.implicitWidth + (flexible ? 0 : _loader.width)
+            readonly property real dividerWidth: _divider.implicitWidth
+            readonly property real fixedWidth: dividerWidth + (flexible ? 0 : _loader.width)
+            readonly property real pendingWidth: flexible ? 0
+                : Math.ceil(_loader.item?.layoutWidthTarget ?? _loader.width) - _loader.width
             // per-slot primitives so a placement change invalidates one divider, not a map rebuilt for every widget
             readonly property int visibleIndex: zone.visibleKeys.indexOf(key)
             readonly property bool hasNext: visibleIndex >= 0
@@ -171,7 +176,10 @@ Row {
             Timer {
                 id: _unload
                 interval: 300
-                onTriggered: _slot.keepLoaded = false
+                onTriggered: {
+                    if (_slot.widthClosing) restart()
+                    else _slot.keepLoaded = false
+                }
             }
 
             Loader {

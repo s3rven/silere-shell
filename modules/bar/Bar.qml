@@ -120,7 +120,7 @@ PanelWindow {
         anchors.topMargin:    bar.visualSurfaceInset
         anchors.bottomMargin: bar.visualSurfaceInset
         anchors.horizontalCenter: parent.horizontalCenter
-        width: bar.surfaceWidth
+        width: Math.min(bar.width, _surfaceGlide.value)
         height: bar.surfaceHeight
 
         MotionBehavior on width {
@@ -346,11 +346,12 @@ PanelWindow {
                 barActive: contents.opacity > 0.001 && !bar.concealed
                 // the configured span, not the grown one: surfaceWidth derives from the zone widths, so measuring crowding against it is circular
                 fitWidth: bar.configuredSurfaceWidth - Settings.hPad * 2
+                maximumWidth: Math.max(0, bar.width - Settings.hPad * 2)
                 anchors.fill:        parent
                 anchors.leftMargin:  Settings.hPad
                 anchors.rightMargin: Settings.hPad
-                onMinimumSurfaceWidthChanged: _surfaceFitSync.restart()
-                Component.onCompleted: _surfaceFitSync.restart()
+                onMinimumSurfaceWidthChanged: _surfaceFitSync.start()
+                Component.onCompleted: _surfaceFitSync.start()
             }
         }
 

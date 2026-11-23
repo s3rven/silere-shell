@@ -140,6 +140,19 @@ ShellRoot {
     }
     Component { id: fadingRimFactory; FadingRim {} }
     Component {
+        id: menuControlsWindowFactory
+        // a Quickshell window, so a hairline reads the real device-pixel ratio, which a plain Window leaves at 1
+        FloatingWindow {
+            implicitWidth: 420; implicitHeight: 360; visible: true
+            property alias select: controlsSelect
+            property alias entries: controlsEntries
+            property alias input: controlsInput
+            SelectRow { id: controlsSelect; width: 400; label: "Grid picker"; model: [{ value: 1, label: "One" }, { value: 2, label: "Two" }, { value: 3, label: "Three" }]; currentValue: 1 }
+            EntryList { id: controlsEntries; y: 200; width: 400; textRole: "name"; model: [{ name: "One" }, { name: "Two" }, { name: "Three" }] }
+            TestCase { id: controlsInput; when: false }
+        }
+    }
+    Component {
         id: listKeyboardWindowFactory
         Window {
             id: fixture
@@ -340,7 +353,16 @@ ShellRoot {
     Component { id: barUnderlineFactory; BarUnderline {} }
     Component { id: barLeftFactory; Item { property bool show: true; implicitWidth: 240; implicitHeight: 24 } }
     Component { id: barCenterFactory; Item { property bool show: true; implicitWidth: 120; implicitHeight: 24 } }
-    Component { id: barRightFactory; Item { property bool show: true; implicitWidth: 60; implicitHeight: 24 } }
+    Component {
+        id: barRightFactory
+        Item {
+            property bool show: true
+            readonly property bool layoutVisible: show
+            readonly property bool collapsed: !show
+            implicitWidth: 60
+            implicitHeight: 24
+        }
+    }
     Component {
         id: barFlexibleFactory
         Item {
