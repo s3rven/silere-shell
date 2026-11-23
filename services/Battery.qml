@@ -213,18 +213,24 @@ Singleton {
     }
     readonly property string timeLabel: {
         if (!available) return ""
-        if (charging) return root.timeText(timeToFull, true)
+        if (charging) return root.timeText(timeToFull)
         if (state === UPowerDeviceState.Discharging || onBattery)
-            return root.timeText(timeToEmpty, false)
+            return root.timeText(timeToEmpty)
         return ""
     }
+    readonly property string estimateLabel: root.estimateFor(timeLabel, charging, chargeStop)
 
-    function timeText(seconds: real, charging: bool): string {
+    function timeText(seconds: real): string {
         if (!isFinite(seconds) || seconds <= 0) return ""
         const minutes = Math.ceil(seconds / 60)
         const h = Math.floor(minutes / 60), m = minutes % 60
-        const text = h > 0 ? `${h}h ${m}m` : `${m}m`
-        return charging ? `+ ${text}` : text
+        return h > 0 ? `${h}h ${m}m` : `${m}m`
+    }
+
+    function estimateFor(duration: string, charging: bool, stop: int): string {
+        if (duration.length === 0) return ""
+        if (charging) return (stop > 0 ? stop + "% in " : "Full in ") + duration
+        return duration + " left"
     }
 
     // a charge limit (Lenovo conservation mode, ThinkPad thresholds) parks the battery on AC

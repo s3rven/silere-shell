@@ -43,10 +43,9 @@ Pill {
         return parts.join(", ")
     }
     readonly property string _level: Math.round(Audio.micVolume * 100) + "%"
-    text: !Audio.micReady ? ""
-        : expanded && Audio.captureSummary.length > 0 ? Audio.captureSummary + " · " + root._level
-        : (ShellSettings.valuesOnHover && !expanded) ? ""
-        : root._level
+    text: !Audio.micReady || (ShellSettings.valuesOnHover && !expanded) ? ""
+        : (expanded && Audio.micMuted ? "Muted" : root._level)
+            + (expanded && Audio.captureSummary.length > 0 ? " · " + Audio.captureSummary : "")
     maxTextWidth: compact ? 150 : 260
     levelValue: Audio.micReady ? Audio.micVolume : -1
     levelVisible: Audio.micReady && ShellSettings.valuesOnHover

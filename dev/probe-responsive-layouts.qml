@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Services.UPower as Up
 import "../modules/menu/controls"
 import "../config" as Config
 
@@ -66,6 +67,21 @@ Item {
             if (bars.some(bar => !bar || Math.abs(bar.width - bars[0].width) > 0.5
                     || Math.abs(bar.x - bars[0].x) > 0.5))
                 failures.push("vital bars differ in width or start at " + loader.width + "px")
+            const cpu = rows.find(row => row.label === "CPU")
+            if (cpu) {
+                const names = cpu.children.find(child => child.inline !== undefined)
+                const caption = cpu.sub
+                const barWidth = loader.item._barW
+                const rowHeight = cpu.height
+                cpu.sub = ""
+                const labelY = names?.y
+                cpu.sub = "125° · A very long process name from the desktop launcher (123456)"
+                if (cpu.height !== rowHeight || loader.item._barW !== barWidth || names?.y !== labelY)
+                    failures.push("a busy process changed Home's vital layout at " + loader.width + "px"
+                        + " (CPU height " + rowHeight + " → " + cpu.height
+                        + ", bar width " + barWidth + " → " + loader.item._barW + ")")
+                cpu.sub = caption
+            }
             for (const row of rows) {
                 const names = row.children.find(child => child.inline !== undefined)
                 const value = row.children.find(child => child.horizontalAlignment === Text.AlignRight)

@@ -22,12 +22,12 @@ Pill {
 
     readonly property real _cpu: root._cpuOn && SysInfo.cpuReady ? SysInfo.cpuPct : -1
     readonly property real _mem: root._memOn && SysInfo.memTotalKb > 0 ? SysInfo.memPct : -1
-    readonly property real _temp: root._tempOn && CpuTemp.available ? CpuTemp.temp : -1
+    readonly property real _temp: root._tempOn && CpuTemp.available ? CpuTemp.reading : -1
 
     readonly property bool _busiestWanted: root.show && root._cpuOn && root.expanded
     on_BusiestWantedChanged: SysInfo.requestTopProcess(root, root._busiestWanted)
     Component.onDestruction: SysInfo.requestTopProcess(root, false)
-    readonly property string _busiest: root._cpuOn && SysInfo.topShown
+    readonly property string _busiest: root._cpu >= 0 && SysInfo.topShown
         ? SysInfo.topName + " (" + SysInfo.topPid + ")" : ""
     // a part coming or going from the detail is not a reading that flickers: held for the shrink delay, a busiest
     // process going left 120 px of empty pill for 2.4 s. Another process taking its place is still held
@@ -39,8 +39,13 @@ Pill {
     readonly property int _memLevel: root._mem < 0 ? 0 : SysInfo.memLevel
     readonly property int _tempLevel: root._temp < 0 ? 0 : CpuTemp.critical ? 2 : CpuTemp.hot ? 1 : 0
     readonly property int severity: Math.max(root._cpuLevel, root._memLevel, root._tempLevel)
-    function _levelTint(level: int): color {
-        return level === 2 ? Theme.barError : level === 1 ? Theme.barWarning : Theme.barText
+    function _levelTint(level: int, ready: bool): color {
+        return level === 2 ? Theme.barError : level === 1 ? Theme.barWarning
+            : ready ? Theme.barText : Theme.barSubtext
+    }
+    readonly property bool _rings: ShellSettings.systemRings
+    function _ringTint(level: int): color {
+        return level === 2 ? Theme.barError : level === 1 ? Theme.barWarning : Theme.barAccentMark
     }
 
     function percent(value: real): string {
@@ -56,8 +61,9 @@ Pill {
         // two digits reserved per reading: the pill keeps its width as values tick, and only grows at 100%
         if (root._cpuOn) parts.push({ glyph: "󰍛", value: root.percent(root._cpu), reserve: "00%",
             detail: root.percent(root._cpu) + (root._busiest.length > 0 ? " · " + root._busiest : ""),
-            level: root._cpuLevel,
-            spoken: "CPU " + root.percent(root._cpu) + (root._busiest.length > 0 ? ", most by " + SysInfo.topName : "") })
+            ready: root._cpu >= 0, level: root._cpuLevel, ring: Math.max(0, root._cpu),
+            spoken: root._cpu < 0 ? "CPU usage unavailable"
+                : "CPU " + root.percent(root._cpu) + (root._busiest.length > 0 ? ", most by " + SysInfo.topName : "") })
         if (root._memOn) {
             const used = SysInfo.memTotalKb - SysInfo.memAvailKb
             parts.push({ glyph: "󰘚", value: root.percent(root._mem), reserve: "00%",
@@ -79,7 +85,11 @@ Pill {
     // resting as the glyph alone, it speaks for every reading; beside the readings, each glyph speaks for its own
     readonly property bool _readingsShown: !ShellSettings.valuesOnHover || root.expanded
     glyph: root._parts.length > 0 ? root._parts[0].glyph : "󰍛"
-    glyphColor: root._levelTint(root._readingsShown && root._parts.length > 0 ? root._parts[0].level : root.severity)
+    glyphColor: (root._readingsShown || root._rings) && root._parts.length > 0
+        ? root._levelTint(root._parts[0].level, root._parts[0].ready)
+        : root._levelTint(root.severity, root._parts.some(p => p.ready))
+    glyphRing: root._rings && root._parts.length > 0 ? root._parts[0].ring : -1
+    glyphRingColor: root._ringTint(root._parts.length > 0 ? root._parts[0].level : 0)
     textColor: Theme.barSubtext
     animateGlyph: false
     reserveText: root._parts.length > 0 ? root._parts[0].reserve : ""

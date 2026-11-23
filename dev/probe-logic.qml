@@ -2399,6 +2399,20 @@ ShellRoot {
             "the volume glyph warns below the same mark when its output is a Bluetooth device")
         if (vol) vol.destroy()
         volComponent.destroy()
+        const audioWidgets = ["Volume", "MicWidget"].map(name =>
+            Qt.createComponent("modules/bar/widgets/" + name + ".qml").createObject(barFixtureHost,
+                { collapsed: false, visible: true, hoverActive: true }))
+        const audioWas = Audio._profilePresentation
+        Audio._profilePresentation = { ready: true, micReady: true, muted: true, micMuted: true,
+            volume: 0, micVolume: 0, effectiveVolume: 0.43, micEffectiveVolume: 0.62,
+            name: "Probe speakers", sourceName: "Probe microphone" }
+        const mutedDetails = audioWidgets.every(widget => widget.text.split(" · ")[0] === "Muted")
+        Audio._profilePresentation = Object.assign({}, Audio._profilePresentation,
+            { muted: false, micMuted: false, volume: 0, micVolume: 0 })
+        root._check(mutedDetails && audioWidgets.every(widget => widget.text.split(" · ")[0] === "0%"),
+            "speaker and microphone hover distinguish a muted control from an unmuted zero level")
+        Audio._profilePresentation = audioWas
+        audioWidgets.forEach(widget => widget.destroy())
         MenuState.selectTab(was.tab)
         MenuState._previousTab = was.previous
         if (was.open) MenuState.openAt(was.x, was.screen, was.anchor)
@@ -3054,6 +3068,8 @@ ShellRoot {
                 && SysInfo.usageLevel(0.88, 2) === 2 && SysInfo.usageLevel(0.86, 2) === 1
                 && SysInfo.usageLevel(0.74, 0) === 0 && SysInfo.usageLevel(0.95, 0) === 2,
             "memory and disk warnings let go only three points under their line, so a reading on it does not blink")
+        SysInfo.cpuReady = true
+        SysInfo.cpuPct = 0.14
         SysInfo.memAvailKb = 32 * 1048576 * 0.03
         root._check(w.severity === 2 && Qt.colorEqual(w.segments[0].color, Theme.error)
                 && Qt.colorEqual(w.glyphColor, Theme.barText),
@@ -12053,6 +12069,38 @@ ShellRoot {
                 && BatteryLimit.describe({ on: true, stopsAt: 0 }) === "Stops short of full to slow wear"
                 && BatteryLimit.describe(null) === "",
             "the charge limit names its stop where the kernel gives one, and only its intent where it gives none")
+        const liveBattery = Qt.createQmlObject(
+            'import QtQuick; QtObject { property int type; property int state; property real changeRate: 12.3; property string nativePath: "BAT1" }',
+            root)
+        liveBattery.type = detailBattery.type
+        liveBattery.state = detailBattery.state
+        const limitsBefore = BatteryLimit.devices
+        const listedBefore = BatteryLimit._listed
+        BatteryLimit.devices = []
+        BatteryLimit._listed = true
+        const batteryHost = keyboardFixtureFactory.createObject(root)
+        const detailsComponent = Qt.createComponent("modules/menu/BatteryDetails.qml")
+        const detailsPage = detailsComponent.createObject(batteryHost.contentItem, { width: 232, devices: [liveBattery] })
+        BatteryLimit.devices = [limitRows[0]]
+        batteryHost.requestActivate()
+        batteryHost.input.wait(15)
+        const limitControl = () => root._findTrayNode(detailsPage, item => item.label === "Charge limit")
+        const limit = limitControl()
+        if (limit) limit.forceActiveFocus(Qt.TabFocusReason)
+        const focusedBefore = limit && limit.activeFocus && limit.checked
+        liveBattery.changeRate = 8.5
+        batteryHost.input.wait(15)
+        const powerRow = root._findTrayNode(detailsPage, item => item.title === "Power use")
+        root._check(focusedBefore && limitControl() === limit && limit.activeFocus
+                && powerRow && powerRow.valueText === "8.5 W",
+            "live battery power updates preserve the same focused charge limit switch")
+        detailsPage.destroy()
+        detailsComponent.destroy()
+        batteryHost.close()
+        batteryHost.destroy()
+        liveBattery.destroy()
+        BatteryLimit._listed = listedBefore
+        BatteryLimit.devices = limitsBefore
         const bareBattery = Battery.detailsFor([Object.assign({}, detailBattery, { state: Up.UPowerDeviceState.FullyCharged,
             healthSupported: false, energyCapacity: 0, changeRate: 0 })])
         root._check(bareBattery.length === 1 && !Battery.detailsShown(bareBattery) && Battery.detailsShown(batteryDetails)
@@ -12093,10 +12141,14 @@ ShellRoot {
         root._check(Battery.statusFor(true, Up.UPowerDeviceState.FullyCharged, false, false) === "charged"
                 && Battery.statusFor(false, Up.UPowerDeviceState.Charging, false, false) === "",
             "battery status respects fully charged and absent devices")
-        root._check(Battery.timeText(25, false) === "1m"
-                && Battery.timeText(3601, true) === "+ 1h 1m"
-                && Battery.timeText(Infinity, true) === "" && Battery.timeText(-1, false) === "",
+        root._check(Battery.timeText(25) === "1m" && Battery.timeText(3601) === "1h 1m"
+                && Battery.timeText(Infinity) === "" && Battery.timeText(-1) === "",
             "battery estimates round up to a useful minute and reject invalid times")
+        root._check(Battery.estimateFor("2h 10m", false, 0) === "2h 10m left"
+                && Battery.estimateFor("12m", true, 0) === "Full in 12m"
+                && Battery.estimateFor("12m", true, 80) === "80% in 12m"
+                && Battery.estimateFor("", true, 80) === "",
+            "Home and the bar share a battery estimate that says what the time is measured to")
         let batteryNotice = Battery.notificationStateFor(null, false, 0,
             false, false, false, 20, 10)
         root._check(batteryNotice === null,

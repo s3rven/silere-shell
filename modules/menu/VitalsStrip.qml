@@ -52,13 +52,8 @@ SettingsCard {
     }
 
     function batteryDetail(): string {
-        if (!Battery.available) return ""
-        if (Battery.timeLabel.length === 0) {
-            const s = Battery.statusLabel
-            return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : ""
-        }
-        return Battery.charging ? "Full in " + Battery.timeText(Battery.timeToFull, false)
-            : Battery.timeLabel + " left"
+        const status = Battery.statusLabel
+        return Battery.estimateLabel || status.charAt(0).toUpperCase() + status.slice(1)
     }
 
     component Vital: Item {
@@ -68,6 +63,8 @@ SettingsCard {
         property string label: ""
         property string value: ""
         property string sub: ""
+        // size the row for a typical caption so live readings and process names cannot move the controls below it
+        property string captionReserve: ""
         property real   progress: 0
         property int    status: 0
         property real   pulse: 0
@@ -96,7 +93,7 @@ SettingsCard {
             font.family: Settings.font
             font.pixelSize: Settings.fontCaption
             font.weight: Font.Medium
-            text: tile.sub
+            text: tile.captionReserve
         }
 
         width: parent ? parent.width : 0
@@ -107,9 +104,9 @@ SettingsCard {
         Accessible.description: tile.openable && tile.sub.length > 0
             ? tile.sub + ". " + tile.actionDescription
             : tile.openable ? tile.actionDescription : tile.sub
-        Accessible.focusable: tile.openable && root.active
-        Accessible.onPressAction: if (tile.openable) tile.activated()
-        KeyboardFocus { interactive: tile.openable && root.active; onActivated: tile.activated() }
+        Accessible.focusable: tile._canOpen
+        Accessible.onPressAction: if (tile._canOpen) tile.activated()
+        KeyboardFocus { interactive: tile._canOpen; onActivated: tile.activated() }
 
         RowHoverBg {
             anchors.fill: parent
@@ -119,12 +116,12 @@ SettingsCard {
         }
         HoverHandler {
             id: _tileHover
-            enabled: tile.openable && root.active
+            enabled: tile._canOpen
             cursorShape: Qt.PointingHandCursor
         }
         TapHandler {
             id: _tileTap
-            enabled: tile.openable && root.active
+            enabled: tile._canOpen
             onTapped: tile.activated()
         }
 
@@ -190,9 +187,9 @@ SettingsCard {
             anchors.right: _bar.left
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            readonly property bool inline: tile.sub.length === 0
-                || Math.ceil(_labelMetrics.advanceWidth) + 8 + Math.ceil(_detailMetrics.advanceWidth) <= width
-            height: inline || tile.sub.length === 0 || _detailText.width <= 12 ? _labelText.height
+            readonly property bool inline: Math.ceil(_labelMetrics.advanceWidth) + 8
+                + Math.ceil(_detailMetrics.advanceWidth) <= width
+            height: inline || _detailText.width <= 12 ? _labelText.height
                 : _labelText.height + 1 + _detailText.height
 
             ShellText {
@@ -277,9 +274,10 @@ SettingsCard {
         // the bar's CPU glyph; the temperature it alerts on rides in the caption and tint
         glyph: "󰍛"
         label: "CPU"
+        captionReserve: "100° · Browser (12345)"
         value: SysInfo.cpuReady ? Math.round(SysInfo.cpuPct * 100) + "%" : "—"
         sub: {
-            const temp = CpuTemp.available ? Math.round(CpuTemp.temp) + "°" : ""
+            const temp = CpuTemp.available ? Math.round(CpuTemp.reading) + "°" : ""
             const busiest = SysInfo.topShown ? SysInfo.topName + " (" + SysInfo.topPid + ")" : ""
             return temp.length > 0 && busiest.length > 0 ? temp + " · " + busiest : temp + busiest
         }
@@ -296,6 +294,7 @@ SettingsCard {
         onActivated: root.openMonitor()
         glyph: "󰘚"
         label: "Memory"
+        captionReserve: "999G used · 9.9G swap"
         value: SysInfo.memTotalKb > 0 ? Math.round(SysInfo.memPct * 100) + "%" : "—"
         // swap only joins the line while memory is actually stalling work, so a healthy machine stays quiet
         sub: SysInfo.memTotalKb > 0
@@ -311,6 +310,7 @@ SettingsCard {
         live: root.active
         glyph: "󰋊"
         label: "Disk"
+        captionReserve: "999G free"
         value: SysInfo.diskTotalKb > 0 ? Math.round(SysInfo.diskPct * 100) + "%" : "—"
         // a full disk is when the caption matters most, so it says so rather than going blank
         sub: SysInfo.diskTotalKb <= 0 ? "" : SysInfo.diskAvailKb > 0 ? root.sizeText(SysInfo.diskAvailKb) + " free" : "Full"
@@ -333,6 +333,7 @@ SettingsCard {
         onActivated: root.batteryActivated()
         glyph: Battery.icon
         label: "Battery"
+        captionReserve: "Full in 12h 59m"
         value: Battery.available ? Battery.label : "—"
         sub: root.batteryDetail()
         progress: Battery.available ? Math.min(Battery.pct / 100, 1.0) : 0
