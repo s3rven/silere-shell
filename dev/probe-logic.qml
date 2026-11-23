@@ -1722,7 +1722,10 @@ ShellRoot {
 
     // over a bottom bar a picker opens above its row, and switching pickers arms two holds on one page
     function _checkScrollHolds(): void {
-        const flick = flickableFactory.createObject(root)
+        const host = keyboardFixtureFactory.createObject(root)
+        const flick = flickableFactory.createObject(host.contentItem)
+        host.requestActivate()
+        host.input.wait(20)
         const holdFor = y => {
             const row = Qt.createQmlObject("import QtQuick; Item { width: 100; height: 40 }", flick.contentItem)
             row.y = y
@@ -1795,6 +1798,30 @@ ShellRoot {
             home.destroy()
             host.input.wait(10)
         }
+        // switching pickers: the old list folds on the new one's curve and only once the new one is built, so the card's
+        // height moves one way (a faster fold that started before Wi-Fi's build shrank the card 100 px, then it grew)
+        ShellSettings.barPosition = "top"
+        const swapHome = homeComponent.createObject(host.contentItem, { width: 440, active: true })
+        swapHome._togglePicker("dnd")
+        host.input.wait(20)
+        const dndList = swapHome._pickerParts("dnd")[1]
+        const awakeList = swapHome._pickerParts("awake")[1]
+        let builtBeforeFold = false, foldSymmetric = false
+        const noteFold = () => {
+            if (dndList.open) return
+            builtBeforeFold = awakeList.open && root._findTrayNode(awakeList, item => item.label === "For 2 hours") !== null
+            foldSymmetric = dndList.symmetric
+        }
+        dndList.openChanged.connect(noteFold)
+        swapHome._togglePicker("awake")
+        dndList.openChanged.disconnect(noteFold)
+        root._check(builtBeforeFold && foldSymmetric,
+            "switching Home pickers folds the old list after the new one is built, on the opening curve")
+        host.input.wait(Motion.medium + 120)
+        swapHome._closePicker()
+        root._check(!awakeList.symmetric && !awakeList.open,
+            "a picker closed on its own keeps the quicker exit fold")
+        swapHome.destroy()
         homeComponent.destroy()
         ShellSettings.reduceMotion = true
         Audio._profilePresentation = { ready: true, micReady: true, volume: 0.5, effectiveVolume: 0.5,
@@ -1895,6 +1922,49 @@ ShellRoot {
         wifi.open = false
         wifi.destroy()
         component.destroy()
+
+        const vpnWas = { profiles: Vpn.profiles, peek: Vpn._peek }
+        const viewportComponent = Qt.createComponent("modules/common/ShellFlickable.qml")
+        const viewport = viewportComponent.createObject(host.contentItem, {
+            width: 440, height: Metrics.rowHeightFor(32)
+        })
+        const vpnComponent = Qt.createComponent("modules/menu/VpnList.qml")
+        const vpn = vpnComponent.createObject(viewport.contentItem, { width: 440, open: true })
+        viewport.contentHeight = Qt.binding(() => vpn.height)
+        // the focus test owns the profile replies instead of reading the host's saved profiles
+        Vpn.requestList(vpn, false)
+        Vpn._peek = false
+        const work = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:wireguard:Work:"
+        const travel = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:vpn:Travel:"
+        Vpn._publishProfiles(Vpn.parseProfiles(travel + "no\n" + work + "no"))
+        host.input.wait(20)
+        const workRow = root._findTrayNode(vpn, item => item.label === "Work")
+        const travelRow = root._findTrayNode(vpn, item => item.label === "Travel")
+        workRow?.forceActiveFocus(Qt.TabFocusReason)
+        // bounded waits, not one frame: under check.sh's parallel load a layout pass can take longer than 20 ms
+        for (let tries = 0; tries < 50 && !(viewport.contentY > 0); tries++) host.input.wait(20)
+        const beforeActivation = workRow !== null && travelRow !== null && workRow.activeFocus
+            && workRow.y > travelRow.y
+        const scrolledBeforeActivation = viewport.contentY > 0
+        Vpn._publishProfiles(Vpn.parseProfiles(travel + "no\n" + work + "yes"))
+        for (let tries = 0; tries < 50 && !(workRow && travelRow && workRow.y < travelRow.y && viewport.contentY === 0); tries++)
+            host.input.wait(20)
+        root._check(beforeActivation && host.activeFocusItem === workRow && workRow.selected
+                && workRow.y < travelRow.y, "a VPN that connects moves up and keeps keyboard focus on its row")
+        root._check(scrolledBeforeActivation && viewport.contentY === 0,
+            "a VPN that moves above the viewport scrolls back into view while focused")
+        host.outside.forceActiveFocus(Qt.TabFocusReason)
+        Vpn._publishProfiles(Vpn.parseProfiles(work + "no"))
+        host.input.wait(20)
+        root._check(host.outside.activeFocus && root._findTrayNode(vpn, item => item.label === "Work") === workRow
+                && !workRow.selected && !root._findTrayNode(vpn, item => item.label === "Travel"),
+            "a VPN refresh removes deleted profiles and updates the remaining row without taking outside focus")
+        viewport.destroy()
+        viewportComponent.destroy()
+        vpnComponent.destroy()
+        Vpn.profiles = vpnWas.profiles
+        Vpn._peek = vpnWas.peek
+
         const editorComponent = Qt.createComponent("modules/menu/settings/CommandEditor.qml")
         const editor = editorComponent.createObject(host.contentItem, { width: 440, settingKey: "lockCommandCustom" })
         const command = root._findTrayNode(editor, item => item.maximumLength === 4096)
@@ -3435,6 +3505,14 @@ ShellRoot {
         const narrowed = inside() && card.x === Metrics.snap4(card._targetX())
         root._check(narrow && wide && narrowed,
             "a popup card widened while open keeps its margin to the screen's edge (x " + card.x + ", width " + card.width + ")")
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        card._transitionReady = true
+        card._placementSettled = true
+        host.width = 800
+        root._check(inside() && card.placementSpan.y + card.width <= host.width - card._minX,
+            "a shrinking output keeps the open popup and its input region on screen immediately")
+        ShellSettings.reduceMotion = motionWas
         card.destroy(); host.destroy()
     }
 
@@ -4707,6 +4785,291 @@ ShellRoot {
         root._checksNotificationTitlesIconsAndLimit()
         root._checksDisplayIdentityAndBluetoothDiscovery()
         root._checksBluetoothBrightnessAndHookQueue()
+        root._checksThemeAndPrimitives()
+        root._checksBarFrameAndPopups()
+        root._checksMenuControls()
+    }
+
+    function _checksThemeAndPrimitives(): void {
+        const zalgo = "e" + "\u0301".repeat(5000000)
+        const started = Date.now()
+        const clipped = SafeText.boundedText(zalgo, 512)
+        root._check(clipped === "…" && Date.now() - started < 300,
+            "a cut walks only to its cap, not through a five-million-mark cluster")
+        const england = "\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}"
+        root._check(SafeText.boundedText("ab" + england + "cd", 6) === "ab…",
+            "a cut keeps a subdivision flag's tags with its black flag, or drops the whole flag")
+        root._checkPaletteWatch()
+        root._checkFocusHandoff()
+    }
+
+    // a card that takes Down for itself, as the popups' cards do, around a group of controls that can go away
+    Component {
+        id: focusHandoffFactory
+        Window {
+            width: 420; height: 300; visible: true
+            property alias card: handoffCard
+            property alias box: handoffBox
+            property alias button: handoffButton
+            property alias toggle: handoffToggle
+            property alias confirm: handoffConfirm
+            property alias other: handoffOther
+            property alias scope: handoffScope
+            property alias scoped: handoffScoped
+            property alias input: handoffInput
+            Item {
+                id: handoffCard
+                anchors.fill: parent
+                property int downs: 0
+                Keys.onPressed: event => { if (event.key === Qt.Key_Down) { handoffCard.downs++; event.accepted = true } }
+                Item {
+                    id: handoffBox
+                    width: 400; height: 200
+                    ActionButton { id: handoffButton; label: "Check" }
+                    ToggleRow { id: handoffToggle; y: 40; width: 400; label: "Feature"; checked: true }
+                    ConfirmButton { id: handoffConfirm; y: 120; label: "Clear" }
+                }
+                ActionButton { id: handoffOther; y: 240; label: "Elsewhere" }
+                // a list's current row: focus: true inside its scope, with no key pressed and nothing focused
+                FocusScope {
+                    id: handoffScope
+                    y: 270; width: 400; height: 30
+                    ActionButton { id: handoffScoped; label: "Row"; focus: true }
+                }
+            }
+            TestCase { id: handoffInput; when: false }
+        }
+    }
+    function _checkFocusHandoff(): void {
+        const host = focusHandoffFactory.createObject(root)
+        host.requestActivate()
+        host.input.wait(20)
+        const parks = (control, off, on) => {
+            control.forceActiveFocus(Qt.TabFocusReason)
+            const had = control.activeFocus
+            const downs = host.card.downs
+            off()
+            host.input.keyClick(Qt.Key_Down)
+            const reached = host.card.downs === downs + 1 && host.activeFocusItem === host.box
+            on()
+            return had && reached && control.activeFocus
+        }
+        root._check(parks(host.button, () => { host.button.enabled = false }, () => { host.button.enabled = true }),
+            "a button disabled under the keyboard, as Check is while it runs, keeps keys reaching its card and gets the focus back")
+        root._check(parks(host.toggle, () => { host.toggle.available = false; host.toggle.checked = false },
+                () => { host.toggle.available = true }),
+            "a toggle switched off as its feature goes away keeps keys reaching its card and gets the focus back")
+        root._check(parks(host.confirm, () => { host.confirm.busy = true }, () => { host.confirm.busy = false }),
+            "a confirm button gone busy keeps keys reaching its card and gets the focus back")
+        host.button.forceActiveFocus(Qt.TabFocusReason)
+        host.box.visible = false
+        const pastHidden = host.activeFocusItem === host.card
+        host.box.visible = true
+        root._check(pastHidden && host.button.activeFocus,
+            "a control hidden with its group parks the focus on the nearest shown ancestor, never the hidden group")
+        host.button.forceActiveFocus(Qt.TabFocusReason)
+        host.button.enabled = false
+        host.other.forceActiveFocus(Qt.TabFocusReason)
+        host.button.enabled = true
+        root._check(host.other.activeFocus && !host.button.activeFocus,
+            "a control coming back leaves the focus where the user moved it meanwhile")
+        // focus taken away by hand, as a mouse user's menu has it: only the window root holds it
+        if (host.activeFocusItem) host.activeFocusItem.focus = false
+        const nothingFocused = host.activeFocusItem === host.contentItem && host.scoped.focus && !host.scoped.activeFocus
+        host.scope.visible = false
+        const leftAlone = host.activeFocusItem === host.contentItem
+        host.scope.visible = true
+        root._check(nothingFocused && leftAlone && host.activeFocusItem === host.contentItem,
+            "a list's current row that never had the keyboard leaves the focus alone as it hides and returns")
+        root._check(JSON.stringify(IconResolver.trayAppNames("discord_status_icon_1", "Discord")) === '["discord","Discord"]'
+                && JSON.stringify(IconResolver.trayAppNames("chrome_status_icon_1", "Slack")) === '["Slack"]'
+                && JSON.stringify(IconResolver.trayAppNames("steam", "steam")) === '["steam"]'
+                && JSON.stringify(IconResolver.trayAppNames("nm-applet", "")) === '["nm-applet"]'
+                && JSON.stringify(IconResolver.trayAppNames("KeePassXC-tray", "KeePassXC")) === '["KeePassXC"]'
+                && IconResolver.trayAppNames("", "").length === 0,
+            "a tray item names its app by its id less Electron's status-icon suffix, or by its title when the id is Chrome's")
+        {
+            const was = ShellSettings.trayAppIcons
+            ShellSettings.trayAppIcons = false
+            const own = IconResolver.trayItemIconSource("image://icon/own-tray-icon?path=/opt/app/icons", "no-such-app-anywhere", "")
+            ShellSettings.trayAppIcons = true
+            const kept = IconResolver.trayItemIconSource("image://icon/own-tray-icon?path=/opt/app/icons", "no-such-app-anywhere", "")
+            ShellSettings.trayAppIcons = was
+            root._check(own === "image://icon/own-tray-icon?path=/opt/app/icons" && kept === own,
+                "a tray app with no desktop entry keeps its own icon either way")
+            // the theme lacking it, Quickshell would draw its magenta "missing" squares; the initial takes over instead
+            root._check(IconResolver.trayIconSource("image://icon/silere-no-such-icon-anywhere") === ""
+                    && IconResolver.trayItemIconSource("image://icon/silere-no-such-icon-anywhere", "no-such-app-anywhere", "") === "",
+                "a tray icon named for a theme icon that does not exist falls back instead of drawing a missing pattern")
+        }
+        host.close()
+        host.destroy()
+    }
+
+    // the private config home has no matugen directory: make it, touch unrelated files, write a palette, undo it all
+    property bool _paletteWatchDone: false
+    property var _paletteWait: null
+    Timer {
+        id: _paletteWaitTick
+        interval: 50
+        repeat: true
+        onTriggered: {
+            const wait = root._paletteWait
+            if (!wait) { stop(); return }
+            const met = wait.until()
+            if (!met && Date.now() < wait.deadline) return
+            stop()
+            root._paletteWait = null
+            wait.then(met)
+        }
+    }
+    function _paletteAfter(until: var, ms: int, then: var): void {
+        root._paletteWait = { until: until, deadline: Date.now() + ms, then: then }
+        _paletteWaitTick.restart()
+    }
+    function _paletteShell(script: string, then: var): void {
+        const run = processFactory.createObject(root, { command: ["bash", "-c", script, "palette",
+            MatugenTheme._directory, XdgPaths.configHome, JSON.stringify(MatugenTheme._fallback)] })
+        run.exited.connect(code => { run.destroy(); then(code) })
+        run.running = true
+    }
+    function _checkPaletteWatch(): void {
+        const view = MatugenTheme._paletteView
+        const fresh = !!view && MatugenTheme.loadState === "missing" && MatugenTheme.usingFallback
+            && MatugenTheme._directory.length > 0
+        root._check(fresh, "the palette watch fixture starts with no palette and finds the palette's file watch")
+        if (!fresh) { root._paletteWatchDone = true; return }
+        const paletteWas = MatugenTheme._palette
+        let reads = 0
+        const count = () => reads++
+        view.loadFailed.connect(count)
+        const finish = () => {
+            view.loadFailed.disconnect(count)
+            MatugenTheme._palette = paletteWas
+            MatugenTheme._everLoaded = false
+            root._paletteWatchDone = true
+        }
+        const write = "printf '%s' \"$3\" > \"$1/.probe.json\" && mv -f -- \"$1/.probe.json\" \"$1/silere-shell.json\""
+        const remove = then => root._paletteShell(
+            "rm -f -- \"$1/silere-shell.json\" \"$1/unrelated.toml\" \"$2/silere-probe-unrelated\"; rmdir -- \"$1\"",
+            () => root._paletteAfter(() => MatugenTheme.loadState === "missing", 3000, then))
+        const cleanup = () => remove(gone => {
+            root._check(gone, "a palette removed with its Matugen directory is reported missing")
+            root._paletteShell("mkdir -- \"$1\" && " + write,
+                () => root._paletteAfter(() => MatugenTheme.loadState === "ready", 3000, again => {
+                    root._check(again, "a Matugen directory removed and made again still delivers its palette")
+                    remove(finish)
+                }))
+        })
+        reads = 0
+        root._paletteShell("mkdir -- \"$1\"", code => {
+            root._check(code === 0, "the palette watch fixture creates the Matugen directory itself")
+            if (code !== 0) { finish(); return }
+            root._paletteAfter(() => false, 800, () => {
+                root._check(reads > 0, "a Matugen directory made after start is noticed and the palette reread")
+                reads = 0
+                root._paletteShell("touch -- \"$2/silere-probe-unrelated\" \"$1/unrelated.toml\"", () => {
+                    root._paletteAfter(() => false, 800, () => {
+                        root._check(reads === 0,
+                            "touching unrelated files under the config home leaves the missing palette unread")
+                        root._paletteShell(write,
+                            () => root._paletteAfter(() => MatugenTheme.loadState === "ready", 3000, ready => {
+                                root._check(ready && !MatugenTheme.usingFallback,
+                                    "a palette written into a Matugen directory made after start loads")
+                                cleanup()
+                            }))
+                    })
+                })
+            })
+        })
+    }
+
+    function _checksBarFrameAndPopups(): void {
+        // the orphan scan as written, against a busctl that lists two orphans, one item registered by bus address and
+        // one name that is no tray item; with the watcher's list unreadable nothing may be registered
+        const fakeBusctl = [
+            "#!/bin/sh",
+            "case \"$2\" in",
+            "get-property) [ -n \"$FAKE_NOPROP\" ] && exit 1; echo 'as 1 \":1.55/StatusNotifierItem\"' ;;",
+            "list) printf '%s\\n' 'org.kde.StatusNotifierItem-10-1 10' 'org.freedesktop.StatusNotifierItem-20-1 20'"
+                + " 'org.freedesktop.StatusNotifierItem-30-1 30' 'org.example.Other 40' ;;",
+            "call) case \"$6\" in",
+            "GetNameOwner) [ \"$8\" = org.freedesktop.StatusNotifierItem-20-1 ] || exit 1; echo 's \":1.55\"' ;;",
+            "RegisterStatusNotifierItem) echo \"$8\" >> \"$FAKE_LOG\" ;;",
+            "esac ;;",
+            "esac"
+        ].join("\n")
+        const scanRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; printf '%s\\n' \"$2\" > \"$d/busctl\"; chmod +x \"$d/busctl\"; "
+            + "run() { : > \"$d/log\"; PATH=\"$d:$PATH\" FAKE_LOG=\"$d/log\" FAKE_NOPROP=\"$1\" sh -c \"$scan\"; sort \"$d/log\" | tr '\\n' ' '; }; "
+            + "scan=\"$1\"; [ \"$(run '')\" = 'org.freedesktop.StatusNotifierItem-30-1 org.kde.StatusNotifierItem-10-1 ' ] "
+            + "&& [ -z \"$(run 1)\" ]",
+            "check", TrayMenuState._orphanScan.command[2], fakeBusctl] })
+        scanRun.exited.connect(function(code) {
+            root._check(code === 0,
+                "the tray orphan scan adopts both name prefixes, skips an item registered by its bus address, and stops when the watcher's list cannot be read")
+            root._trayScanDone = true
+            scanRun.destroy()
+        })
+        scanRun.running = true
+
+        // a zone named through the tz database's posix/ or right/ copies is the same place
+        const zonePrefixRun = processFactory.createObject(root, { command: ["bash", "-c",
+            "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; printf 'GR\\t+3758+02343\\tEurope/Athens\\n' > \"$d/zone1970.tab\"; "
+            + "want=\"$(printf '+3758+02343\\tEurope/Athens\\tGR')\"; "
+            + "[ \"$(bash -c \"$1\" tz posix/Europe/Athens \"$d\")\" = \"$want\" ] && [ \"$(bash -c \"$1\" tz right/Europe/Athens \"$d\")\" = \"$want\" ]",
+            "check", TimeZonePlace.script] })
+        zonePrefixRun.exited.connect(function(code) {
+            root._check(code === 0, "a time zone read through the posix/ or right/ tables still finds its city")
+            root._zonePrefixDone = true
+            zonePrefixRun.destroy()
+        })
+        zonePrefixRun.running = true
+    }
+
+    function _checksMenuControls(): void {
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = true
+        const onGrid = v => v > 0 && Math.abs(v / 4 - Math.round(v / 4)) < 0.001
+        const grid = menuControlsWindowFactory.createObject(root)
+        grid.input.wait(20)
+        grid.select._setOpen(true)
+        grid.input.wait(50)
+        const selectHeight = grid.select.height
+        grid.select._setOpen(false)
+        const scaleWas = ShellSettings.uiScale
+        const listHeights = []
+        for (const scale of [1.0, 1.1, 1.2]) {
+            ShellSettings.uiScale = scale
+            grid.input.wait(30)
+            listHeights.push(grid.entries.height)
+        }
+        ShellSettings.uiScale = scaleWas
+        root._check(onGrid(selectHeight) && listHeights.every(onGrid),
+            "an open dropdown and a short list end on the 4 px grid, so the rows below them stay on whole device pixels")
+        grid.destroy()
+        ShellSettings.reduceMotion = motionWas
+
+        const host = keyboardFixtureFactory.createObject(root)
+        const option = inlineOptionFactory.createObject(host.contentItem, { y: 240 })
+        let presses = 0
+        option.triggered.connect(() => { presses++; option.busy = true })
+        host.requestActivate()
+        host.input.wait(20)
+        option.forceActiveFocus(Qt.TabFocusReason)
+        const focusedFirst = option.activeFocus
+        host.input.keyClick(Qt.Key_Return)
+        host.input.wait(1)
+        option.trigger()
+        const heldWhileBusy = option.busy && option.activeFocus && option.activeFocusOnTab
+            && option.Accessible.focusable && presses === 1
+        option.busy = false
+        option.trigger()
+        root._check(focusedFirst && heldWhileBusy && option.activeFocus && presses === 2,
+            "a row made busy by Enter keeps the keyboard focus, ignores presses meanwhile and takes them again once done")
+        option.destroy()
+        host.close()
+        host.destroy()
     }
 
     function _checksRailScrollAndMic(): void {
@@ -9849,6 +10212,44 @@ ShellRoot {
             DisplayBrightness.displays = [{ key: ddcKey, connector: "card1-DP-1", label: "DP-1", bus: "7",
                 identity: "a".repeat(64), unreadable: false, percent: 50 }]
             const ddcShown = home._displayShown
+            const ddc = root._findTrayNode(home, item => item.label === "DP-1 brightness")
+            const ddcTrack = root._findTrayNode(ddc, item => item.Accessible.role === Accessible.Slider)
+            if (ddcTrack) ddcTrack._press(ddcTrack.width)
+            root._check(ddc && ddcTrack && ddcTrack.dragging && ddc.displayValue === "100%" && ddc.value === 50,
+                "the display brightness label previews a drag before sending a monitor write")
+            if (ddcTrack) ddcTrack.cancelInteraction()
+            const widget = brightnessPillFactory.createObject(host.contentItem)
+            root._check(widget && widget.show && widget.accessibleName === "Brightness 50%, DP-1",
+                "an external-only display has a brightness widget with its own reading")
+            // the zone decides whether the widget is built at all: a backlight alone used to count
+            const brightnessZone = Qt.createComponent("modules/bar/BarZone.qml").createObject(barFixtureHost, {
+                orderKeys: ["brightness"], compact: false, height: 36,
+                widgetComponents: { brightness: brightnessPillFactory }
+            })
+            root._check(brightnessZone && brightnessZone._widgetEnabled("brightness"),
+                "the bar builds the brightness widget for an external display when there is no backlight")
+            if (brightnessZone) brightnessZone.destroy()
+            // a rescan that only read a new level, as opening Home after a bar scroll does, keeps the slider in use
+            const glyphAtHalf = widget ? widget.glyph : ""
+            const scanStateWas = { values: DisplayBrightness.values, lastScan: DisplayBrightness._lastScan }
+            DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 0, false,
+                "card1-DP-1\t7\t" + "a".repeat(64) + "\t80\t100\n")
+            const ddcAfterScan = root._findTrayNode(home, item => item.label === "DP-1 brightness")
+            root._check(ddc !== null && ddcAfterScan === ddc && ddc.value === 80,
+                "a rescan with a new level updates the external slider instead of rebuilding it")
+            root._check(widget && glyphAtHalf === Brightness.iconFor(0.5) && widget.glyph === Brightness.iconFor(0.8)
+                    && widget.glyph !== glyphAtHalf,
+                "an external-only brightness widget's sun follows the display's level, as the backlight's does")
+            DisplayBrightness.values = scanStateWas.values
+            DisplayBrightness._lastScan = scanStateWas.lastScan
+            let requestedDisplay = null
+            const noteDisplay = control => requestedDisplay = control
+            home.controlRequested.connect(noteDisplay)
+            MenuState.homePicker = "brightness"
+            root._check(requestedDisplay === ddc && ddc !== null,
+                "the brightness shortcut reveals its external slider when there is no system backlight")
+            home.controlRequested.disconnect(noteDisplay)
+            if (widget) widget.destroy()
             ShellSettings.ddcDisabledDisplays = ddcKey
             const ddcOffHidden = !home._displayShown
             ShellSettings.ddcDisabledDisplays = ddcOffWas
@@ -10652,6 +11053,75 @@ ShellRoot {
             "package updates build the AUR fallback command")
         root._check(Updates._cmd().includes('[ "$rc" -ne 1 ]'),
             "the AUR-only checker treats timeouts as failures")
+        const trackingWas = ShellSettings.updatesWidget
+        ShellSettings.updatesWidget = false
+        ShellSettings.updatesIncludeAur = false
+        updateCommand("pacman", { paru: true })
+        const sectionType = Qt.createComponent(Qt.resolvedUrl("modules/menu/settings/SettingsUpdatesSection.qml"))
+        const section = sectionType.createObject(barFixtureHost, { width: 420 })
+        const track = root._findTrayNode(section, item => item.key === "updatesWidget")
+        const aur = root._findTrayNode(section, item => item.key === "updatesIncludeAur")
+        root._check(track && aur && !track._canToggle && aur._canToggle
+                && track.dependsNote.includes("AUR"),
+            "the Updates page offers the AUR option before tracking when the helper is the only checker")
+        if (aur) aur._activate()
+        root._check(track && track._canToggle && Updates.manager === "aur" && !ShellSettings.updatesWidget,
+            "including AUR packages unlocks tracking without turning it on")
+        if (section) section.destroy()
+        ShellSettings.updatesIncludeAur = false
+        updateCommand("pacman", { checkupdates: true, paru: true })
+        const repoSection = sectionType.createObject(barFixtureHost, { width: 420 })
+        const repoAur = root._findTrayNode(repoSection, item => item.key === "updatesIncludeAur")
+        let repoFold = repoAur ? repoAur.parent : null
+        while (repoFold && repoFold.expanded === undefined) repoFold = repoFold.parent
+        const foldedOff = repoFold && repoFold.expanded === false && !Updates.aurOnly
+        ShellSettings.updatesWidget = true
+        root._check(foldedOff && repoFold.expanded === true,
+            "with a repository checker, the AUR option folds under tracking like other dependent rows")
+        ShellSettings.updatesWidget = false
+        if (repoSection) repoSection.destroy()
+        // a list closing under its row keeps its entries while it folds: emptied first, the fold animated a blank card
+        const recentWas = ShellUpdate.recentCommits
+        const foldMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        ShellUpdate.recentCommits = [{ subject: "probe recent fold", hash: "abc1234" }]
+        // a window of its own: off-window, the list never lays out and the section has no height to fold
+        const foldHost = keyboardFixtureFactory.createObject(root)
+        const foldSection = sectionType.createObject(foldHost.contentItem, { width: 420 })
+        foldHost.input.wait(20)
+        const recentRows = () => root._findTrayNode(foldSection, item => item.textRole === "subject"
+            && item.model !== undefined && item.model.length > 0 && item.model[0].subject === "probe recent fold")
+        const recentClosedEmpty = recentRows() === null
+        foldSection._recentOpen = true
+        foldHost.input.wait(Motion.medium + 80)
+        const recentOpenRows = recentRows() !== null
+        foldSection._recentOpen = false
+        const recentFoldingRows = recentRows() !== null
+        foldHost.input.wait(Motion.fast + 150)
+        root._check(recentClosedEmpty && recentOpenRows && recentFoldingRows && recentRows() === null,
+            "an Updates list keeps its entries while it folds shut and frees them once folded")
+        foldSection.destroy()
+        foldHost.destroy()
+        ShellUpdate.recentCommits = recentWas
+        ShellSettings.reduceMotion = foldMotionWas
+        ShellSettings.updatesIncludeAur = false
+        updateCommand("", { apt: true, paru: true })
+        root._check(Updates.manager === "apt" && !Updates.canConfigureAur,
+            "an unidentified distro prefers its available repository checker")
+        updateCommand("", { yay: true })
+        root._check(Updates.canConfigureAur && !Updates.supported,
+            "a fallback AUR checker is available to configure and waits for opt-in")
+        ShellSettings.updatesIncludeAur = true
+        root._check(Updates.manager === "aur", "the fallback helper is selected after opting in")
+        Updates.count = 2
+        Updates.repoCount = 2
+        Updates.lastFailed = true
+        ShellSettings.updatesIncludeAur = false
+        root._check(!Updates.supported && Updates.count === 0 && !Updates.lastFailed,
+            "turning off the sole checker clears the package badge and its previous error")
+        ShellSettings.updatesIncludeAur = true
+        updateCommand("apt", { apt: true })
+        ShellSettings.updatesWidget = trackingWas
         root._check(updateCommand("apt", { apt: true }).includes("apt list --upgradable"),
             "package updates build the apt command")
         root._check(updateCommand("dnf", { dnf: true }).includes("dnf -q check-update"),
@@ -15681,6 +16151,24 @@ ShellRoot {
             host.input.wait(20)
             root._check(Notifications.historyCount === 1 && cardAt(0).activeFocus,
                 "focus moves to the next message while the removed card is still animating out")
+            Notifications._prependHistory({ id: 9205, appName: "Chat", summary: "Selected sender", time: Date.now() })
+            const navComponent = Qt.createComponent("modules/menu/RecentNav.qml")
+            const nav = navComponent.status === Component.Ready ? navComponent.createObject(host.contentItem) : null
+            root._check(nav !== null, "the recent app drawer builds beside history")
+            if (nav) {
+                MenuState.setRecentFilter("Chat")
+                host.input.wait(Motion.fast * 2 + 90)
+                page._focusRow(0)
+                host.input.keyClick(Qt.Key_Delete)
+                host.input.wait(20)
+                root._check(MenuState.recentFilter === "" && field.activeFocus,
+                    "removing the selected app's last notification clears its filter and restores keyboard focus")
+                host.input.wait(Motion.fast * 2 + 90)
+                root._check(page.rowCount === 1 && page._appliedFilter === "",
+                    "the last sender shows its notifications as the app drawer closes")
+                nav.destroy()
+            }
+            navComponent.destroy()
             page.destroy()
         }
         host.close()

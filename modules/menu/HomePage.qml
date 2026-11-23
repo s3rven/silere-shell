@@ -41,20 +41,36 @@ PageShell {
     readonly property int _rowTextX: 14 + Metrics.glyphSlotWidth + 10
     property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     property bool _btAvailable: Bluetooth.available
+    property bool _wiredShown: Network.deviceType === "ethernet"
     readonly property bool _signInShown: Network.signInNeeded && Network.canOpenSignIn
     readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
+
+    // switching lists, the old one folds on the new one's curve and only once the new one is built: a faster fold, or one
+    // that started before a Wi-Fi list's build frame, shrank the card up to 100 px before it grew again
+    property string _pickerLeaving: ""
+    property bool _swapFold: false
+    function _listOpen(which: string): bool { return root._picker === which || root._pickerLeaving === which }
+    function _armSwapFold(): void {
+        if (root._picker === "" && !_volumeRow.open && !_brightnessRow.open) return
+        root._swapFold = true
+        _swapFoldEnd.restart()
+    }
+    Timer { id: _swapFoldEnd; interval: Motion.medium + 60; onTriggered: root._swapFold = false }
 
     function _togglePicker(which: string): void {
         if (_picker === which) {
             root._closePicker()
             return
         }
+        root._armSwapFold()
+        root._pickerLeaving = root._picker
         root._closePicker()
+        _picker = which
+        root._pickerLeaving = ""
         _volumeRow.closeInline()
         _brightnessRow.closeInline()
-        _picker = which
         // opened by hand or by a bar shortcut alike: a list past the edge of a tall Home scrolls in, and no further than it must
         const parts = root._pickerParts(which)
         if (parts[0]) root.controlRequested(parts[0], parts[1])
@@ -195,7 +211,9 @@ PageShell {
                     id: _volumeRow
                     visible: Audio.ready
                     reserveExpandSlot: _brightnessRow.visible && _brightnessRow.expandable
+                    symmetricFold: root._swapFold
                     onOpenChanged: if (open) {
+                        root._armSwapFold()
                         root._closePicker()
                         _brightnessRow.closeInline()
                     }
@@ -204,7 +222,9 @@ PageShell {
                     id: _brightnessRow
                     visible: root._brightnessAvailable
                     reserveExpandSlot: _volumeRow.visible && _volumeRow.expandable
+                    symmetricFold: root._swapFold
                     onOpenChanged: if (open) {
+                        root._armSwapFold()
                         root._closePicker()
                         _volumeRow.closeInline()
                     }
@@ -311,7 +331,8 @@ PageShell {
 
                 InlinePicker {
                     id: _wifiPicker
-                    open: root._wifiPickerOpen
+                    open: root._listOpen("wifi")
+                    symmetric: root._swapFold
                     content: Component {
                         WifiList {
                             width: parent.width
@@ -360,7 +381,8 @@ PageShell {
 
                 InlinePicker {
                     id: _vpnPicker
-                    open: root._picker === "vpn"
+                    open: root._listOpen("vpn")
+                    symmetric: root._swapFold
                     content: Component { VpnList { open: root._picker === "vpn" } }
                 }
 
@@ -387,7 +409,8 @@ PageShell {
 
                 InlinePicker {
                     id: _btPicker
-                    open: root._btPickerOpen
+                    open: root._listOpen("bt")
+                    symmetric: root._swapFold
                     content: Component {
                         BluetoothList {
                             width: parent.width
@@ -430,7 +453,8 @@ PageShell {
 
                 InlinePicker {
                     id: _nightPicker
-                    open: root._picker === "nightlight"
+                    open: root._listOpen("nightlight")
+                    symmetric: root._swapFold
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
@@ -487,7 +511,8 @@ PageShell {
 
                 InlinePicker {
                     id: _dndPicker
-                    open: root._picker === "dnd"
+                    open: root._listOpen("dnd")
+                    symmetric: root._swapFold
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
@@ -540,7 +565,8 @@ PageShell {
 
                 InlinePicker {
                     id: _awakePicker
-                    open: root._picker === "awake"
+                    open: root._listOpen("awake")
+                    symmetric: root._swapFold
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
@@ -592,7 +618,8 @@ PageShell {
 
                 InlinePicker {
                     id: _powerPicker
-                    open: root._picker === "power"
+                    open: root._listOpen("power")
+                    symmetric: root._swapFold
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0

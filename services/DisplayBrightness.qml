@@ -15,6 +15,10 @@ Singleton {
     readonly property bool _wanted: root.available && !Idle.isIdle
         && (ShellSettings.barShowBrightness || root._menuWanted)
     property var displays: []
+    readonly property var controllableDisplays: root.displays.filter(d =>
+        d.percent >= 0 && !d.unreadable && !root.disabled(d.key))
+    // the bar's brightness widget shows for these alone, on a computer with no backlight of its own
+    readonly property bool hasControl: root.available && root.controllableDisplays.length > 0
     property var values: ({})
     property string _scanError: ""
     property string _writeError: ""
@@ -90,6 +94,23 @@ Singleton {
         function onIsIdleChanged() { if (!Idle.isIdle) root.invalidate() }
     }
     function levelFor(key: string): real { return Number(root.values[key] ?? 50) }
+    // a wheel notch lands on the 5% grid, as the backlight's does, so a display that started off it lines up after one
+    function notchPercent(current: int, delta: int): int {
+        const notches = Math.round(delta / 5)
+        if (notches === 0) return Math.max(1, Math.min(100, current + delta))
+        const base = notches > 0 ? Math.floor(current / 5) : Math.ceil(current / 5)
+        return Math.max(1, Math.min(100, (base + notches) * 5))
+    }
+    function bumpAllBy(delta: int, backlight: string): void {
+        if (!root.available || delta === 0) return
+        for (const display of root.controllableDisplays) {
+            // a selected kernel DDC backlight already moves this I2C bus
+            if (backlight === "ddcci" + display.bus) continue
+            const current = Math.round(root.levelFor(display.key))
+            const next = root.notchPercent(current, delta)
+            if (next !== current) root.setPercent(display.key, next)
+        }
+    }
     function setPercent(key: string, percent: real): void {
         if (!root.available || !isFinite(percent)
                 || Quickshell.env("SILERE_SANDBOX") === "1") return

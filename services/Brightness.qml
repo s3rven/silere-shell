@@ -61,10 +61,12 @@ Singleton {
     readonly property int    percent: Math.round(pct * 100)
     readonly property int    stepPct: 5
     readonly property string label:   `${percent}%`
-    readonly property string icon: {
-        if (pct <= 0)        return "󰃝"
-        if (pct < 0.33)      return "󰃞"
-        if (pct < 0.66)      return "󰃟"
+    readonly property string icon: root.iconFor(root.pct)
+    // shared with an external display that stands in for the backlight on the bar
+    function iconFor(level: real): string {
+        if (level <= 0)      return "󰃝"
+        if (level < 0.33)    return "󰃞"
+        if (level < 0.66)    return "󰃟"
         return "󰃠"
     }
 

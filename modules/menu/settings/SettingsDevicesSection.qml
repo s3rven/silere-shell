@@ -120,7 +120,9 @@ Column {
                 : ""
         }
         Repeater {
-            model: ShellSettings.ddcBrightnessEnabled ? DisplayBrightness.displays : []
+            // without the scanned level, so the rescan a switch starts keeps its row (and its focus)
+            model: ShellSettings.ddcBrightnessEnabled
+                ? DisplayBrightness.displays.map(d => ({ key: d.key, label: d.label })) : []
             ToggleRow {
                 required property var modelData
                 glyph: "󰹑"

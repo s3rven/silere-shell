@@ -165,10 +165,11 @@ Column {
                 onActivated: root._notesOpen = !root._notesOpen
             }
             CollapsibleSection {
+                id: _notesFold
                 expanded: root._notesOpen && root._releaseNotesAvailable
                 EntryList {
-                    model: root._notesOpen && root._releaseNotesAvailable
-                        ? ShellUpdate.releaseNotes : []
+                    // kept through the fold, or closing emptied it first and the fold animated a blank card
+                    model: _notesFold.expanded || _notesFold.layoutPresent ? ShellUpdate.releaseNotes : []
                     textRole: "subject"
                     trailingRole: "category"
                 }
@@ -188,10 +189,10 @@ Column {
                 onActivated: root._changesOpen = !root._changesOpen
             }
             CollapsibleSection {
+                id: _changesFold
                 expanded: root._changesOpen && root._changesAvailable
                 EntryList {
-                    model: root._changesOpen && root._changesAvailable
-                        ? ShellUpdate.pendingCommits : []
+                    model: _changesFold.expanded || _changesFold.layoutPresent ? ShellUpdate.pendingCommits : []
                     textRole: "subject"
                     trailingRole: "hash"
                 }
@@ -210,9 +211,10 @@ Column {
                 onActivated: root._toggleRecent()
             }
             CollapsibleSection {
+                id: _recentFold
                 expanded: root._recentOpen
                 EntryList {
-                    model: root._recentOpen ? ShellUpdate.recentCommits : []
+                    model: _recentFold.expanded || _recentFold.layoutPresent ? ShellUpdate.recentCommits : []
                     textRole: "subject"
                     trailingRole: "hash"
                 }
@@ -306,10 +308,10 @@ Column {
                 onActivated: root._listOpen = !root._listOpen
             }
             CollapsibleSection {
+                id: _packagesFold
                 expanded: root._listOpen && root._packagesAvailable
                 EntryList {
-                    model: root._listOpen && root._packagesAvailable
-                        ? Updates.packages : []
+                    model: _packagesFold.expanded || _packagesFold.layoutPresent ? Updates.packages : []
                     textRole: "name"
                     trailingRole: "to"
                     emphasisRole: "aur"

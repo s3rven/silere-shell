@@ -10,6 +10,8 @@ Item {
     id: root
 
     property bool open: false
+    // as InlinePicker's: the list folds on the curve of the one opening in its place
+    property bool symmetricFold: false
     property real topRadius:    0
     property real bottomRadius: 0
     property real cardInset:    1
@@ -166,6 +168,7 @@ Item {
         y: root._optionsAbove ? 0 : _slider.height
         width: parent.width
         expanded: root.open
+        symmetric: root.symmetricFold
 
         // built while they show, as InlinePicker's are: Home builds this row closed on nearly every
         // open, and the options were 90 of its 129 items

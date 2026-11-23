@@ -21,7 +21,7 @@ Pill {
     collapsed: !show
     opacity: _baseOpacity
     visible: layoutVisible
-    glyph:           Brightness.icon
+    glyph:           Brightness.controllable ? Brightness.icon : Brightness.iconFor(root._percent / 100)
     // the sun's rays fill its whole em, a quarter more ink than the bar's other glyphs at the same size
     glyphPixelSize:  Settings.iconSize
     accessibleName: root.canControl

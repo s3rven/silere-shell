@@ -428,6 +428,9 @@ Scope {
         root.write("ddc-scan-fail", "")
         root.write("ddc-displays", root.display(35) + "card1-DP-2\t8\t" + root.identity + "\t-1\t100\n")
         DisplayBrightness.setEnabled(silentKey, false)
+        // the switch just pressed is one of these rows: the list stays while the rescan reads
+        root.check(DisplayBrightness.displays.length === 2,
+            "switching a display's control keeps the display list while it rescans")
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2
                 && DisplayBrightness.lastError.length === 0 && DisplayBrightness._lastScan > 0,
             "switching off an unreadable display ends its warning and the scan caches again")

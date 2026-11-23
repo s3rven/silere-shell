@@ -115,8 +115,10 @@ Item {
             return ShellSettings.batteryAutoHide ? "When unplugged" : ""
         case "bluetooth":
             return Bluetooth.available ? "" : "No adapter"
+        case "network":
+            return Network.toolAvailable ? "" : "Needs NetworkManager"
         case "brightness":
-            if (!SystemTools.ready || Brightness.controllable) return ""
+            if (!SystemTools.ready || Brightness.controllable || DisplayBrightness.hasControl) return ""
             return Brightness.toolAvailable ? "No backlight" : "No brightnessctl"
         // the one row without a switch says why
         case "workspaces": return "Always shown"

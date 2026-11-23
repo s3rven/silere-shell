@@ -6,6 +6,8 @@ Column {
 
     property bool open: false
     property Component content: null
+    // set while another list opens as this one closes: both fold on one curve, so the card's height moves one way
+    property bool symmetric: false
     // a twin declared just above the row: with the bar below, the card grows upward, so it opens there
     property Item mirror: null
     readonly property bool above: root.mirror !== null
@@ -34,6 +36,7 @@ Column {
         id: _section
         width: root.width
         expanded: root.shown
+        symmetric: root.above ? root.mirror.symmetric : root.symmetric
 
         Loader {
             width: parent.width
