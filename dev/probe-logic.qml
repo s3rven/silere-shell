@@ -3138,20 +3138,20 @@ ShellRoot {
         ShellSettings.barOpacity = 0.58
         const pill = pillFactory.createObject(root, { text: "48%" })
         ShellSettings.barAccentPills = false
-        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barText),
+        root._check(Qt.colorEqual(pill._hoverGlyphColor, Theme.barText),
             "bar icons rest at the neutral text colour by default")
         ShellSettings.barAccentPills = true
-        root._check(Qt.colorEqual(pill._restGlyphColor, Theme.barAccentMark)
+        root._check(Qt.colorEqual(pill._hoverGlyphColor, Theme.barAccentMark)
                 && !Qt.colorEqual(Theme.barAccentMark, Theme.barAccent)
                 && Qt.colorEqual(pill.levelColor, Theme.barAccentMark)
                 && Qt.colorEqual(pill.textColor, Theme.barSubtext),
             "accent widget icons tint the glyph and leave the text alone")
         pill.glyphColor = Theme.subtext
-        const inactive = Qt.colorEqual(pill._restGlyphColor, Theme.subtext)
+        const inactive = Qt.colorEqual(pill._hoverGlyphColor, Theme.subtext)
         pill.glyphColor = Theme.warning
-        const warning = Qt.colorEqual(pill._restGlyphColor, Theme.warning)
+        const warning = Qt.colorEqual(pill._hoverGlyphColor, Theme.warning)
         pill.glyphColor = Theme.error
-        root._check(inactive && warning && Qt.colorEqual(pill._restGlyphColor, Theme.error),
+        root._check(inactive && warning && Qt.colorEqual(pill._hoverGlyphColor, Theme.error),
             "accent widget icons keep inactive, warning and error glyphs meaningful")
         pill.destroy()
         ShellSettings.barAccentPills = was
@@ -7795,14 +7795,13 @@ ShellRoot {
 
         const savedNight = ShellSettings.nightLightTemp
         ShellSettings.nightLightTemp = savedNight === 4000 ? 3500 : 4000
-        root._check(ShellSettings.modifiedCount === 0
-                && Object.keys(ShellSettings.modifiedSections).length === 0,
+        root._check(Object.keys(ShellSettings.modifiedSections).length === 0,
             "a setting with no page of its own does not offer a reset")
         ShellSettings.nightLightTemp = savedNight
         const dndBeforeSave = ShellSettings.dnd
         ShellSettings.dnd = !dndBeforeSave
         void ShellSettings._serialize()
-        root._check(ShellSettings.modifiedCount === 0,
+        root._check(Object.keys(ShellSettings.modifiedSections).length === 0,
             "saving a setting with no page of its own does not offer a reset either")
         ShellSettings.dnd = dndBeforeSave
 
@@ -18021,7 +18020,7 @@ ShellRoot {
         ShellSettings.dnd = true
         ShellSettings.nightLightTemp = ShellSettings._defaults.nightLightTemp - 500
         ShellSettings.showSeconds = !ShellSettings._defaults.showSeconds
-        root._check(ShellSettings.modifiedTotal >= 3 && ShellSettings.modifiedTotal > ShellSettings.modifiedCount,
+        root._check(ShellSettings.modifiedTotal >= 3,
             "the restore row counts settings no page lists, or it could not be pressed for them")
         root._check(ShellSettings.resetToDefaults() === true, "a restore with room for its copy goes ahead")
         root._check(ShellSettings.dnd === false && ShellSettings.modifiedTotal === 0

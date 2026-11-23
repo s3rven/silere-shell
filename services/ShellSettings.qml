@@ -656,7 +656,6 @@ Singleton {
         }
     }
 
-    property int _modifiedCount: 0
     // the pages' dots count what a page shows; a reset also covers what no page lists, such as Do Not Disturb
     property int _modifiedTotal: 0
     readonly property int modifiedTotal: _modifiedTotal
@@ -669,7 +668,6 @@ Singleton {
     // reset assigns every key at once; one write at the end, not one per toggle
     property bool _bulkAssign: false
     property bool _applying: false
-    readonly property int modifiedCount: _modifiedCount
 
     property var _modifiedSections: Object.create(null)
     readonly property var modifiedSections: _modifiedSections
@@ -783,17 +781,14 @@ Singleton {
     }
 
     function _recountModified(): void {
-        let n = 0
         const keys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
             const entry = _schema[i]
             const key = entry.k
             if (root._sameValue(root[key], root._defaults[key])) continue
             keys[key] = true
-            if (entry.sec !== "-") n++
         }
         root._modifiedKeys = keys
-        root._modifiedCount = n
         root._modifiedTotal = Object.keys(keys).length
         root._rebuildModifiedSections()
     }
@@ -897,7 +892,6 @@ Singleton {
         if (modified !== wasModified) {
             if (modified) root._modifiedKeys[key] = true
             else delete root._modifiedKeys[key]
-            if (root._sectionOf[key] !== "-") root._modifiedCount += modified ? 1 : -1
             root._modifiedTotal += modified ? 1 : -1
             // only when a key crosses its default, not on every slider tick
             root._rebuildModifiedSections()
@@ -1103,16 +1097,12 @@ Singleton {
         const out = preserveFuture
             ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
         out.__version = preserveFuture ? _loadedVersion : _settingsVersion
-        let changed = 0
         const modifiedKeys = Object.create(null)
         for (let i = 0; i < _schema.length; i++) {
             const entry = _schema[i]
             const key = entry.k
             const modified = !root._sameValue(root[key], root._defaults[key])
-            if (modified) {
-                modifiedKeys[key] = true
-                if (entry.sec !== "-") changed++
-            }
+            if (modified) modifiedKeys[key] = true
             // a newer release may allow a value this one clamps, so its raw value stands until edited here
             if (preserveFuture && root._futureTouched[key] !== true
                     && Object.prototype.hasOwnProperty.call(out, key)) continue
@@ -1120,7 +1110,6 @@ Singleton {
             else delete out[key]
         }
         root._modifiedKeys = modifiedKeys
-        root._modifiedCount = changed
         root._modifiedTotal = Object.keys(modifiedKeys).length
         root._rebuildModifiedSections()
         if (preserveFuture) _futureSettings = out

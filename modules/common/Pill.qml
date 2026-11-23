@@ -345,7 +345,6 @@ Item {
         const rest = ShellSettings.barAccentPills && Qt.colorEqual(c, Theme.barText) ? Theme.barAccentMark : c
         return hot ? Theme.mix(rest, Theme.barAccentMark, 0.20) : rest
     }
-    readonly property color _restGlyphColor: _glyphTint(glyphColor, false)
     readonly property color _hoverGlyphColor: _glyphTint(glyphColor, _contentHot)
     readonly property color _hoverTextColor: _contentHot
         ? Theme.mix(textColor, Theme.barAccent, 0.16) : textColor
