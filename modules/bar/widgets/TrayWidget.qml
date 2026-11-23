@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell.Services.SystemTray
 import "../../../config"
 import "../../../services"
@@ -163,11 +162,7 @@ Item {
                     : modelData.id, 128)
                 readonly property string _providedIconSource: IconResolver.trayIconSource(modelData.icon)
                 property bool _providedIconFailed: false
-                // with Same icons in the tray, the app's workspace icon, tinted as the workspaces tint theirs
-                readonly property var _appMeta: ShellSettings.trayAppIcons
-                    ? IconResolver.trayAppMeta(modelData.id, modelData.title) : null
-                readonly property string iconSource: _tile._appMeta ? _tile._appMeta.icon
-                    : IconResolver.trayAppIconSource(_tile._providedIconFailed ? "" : _tile._providedIconSource, modelData.id)
+                readonly property string iconSource: IconResolver.trayAppIconSource(_tile._providedIconFailed ? "" : _tile._providedIconSource, modelData.id)
                 readonly property bool fallbackVisible: !_icon.shown
                     && (_tile.iconSource.length === 0 || _icon.status === Image.Error || _tile._fallbackDue)
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
@@ -356,14 +351,6 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     // a hidden app can keep animating its icon, and each frame goes through the icon theme loader
                     asyncSource: _tile.hidden ? "" : _tile.iconSource
-                    layer.enabled: _tile._appMeta !== null && ShellSettings.wsAppIconColor === "accent" && ready
-                        && GraphicsInfo.api !== GraphicsInfo.Software
-                    layer.effect: MultiEffect {
-                        colorization: 1
-                        colorizationColor: Theme.barAccentMark
-                        contrast: -0.2
-                        brightness: 0.25
-                    }
                     // apps reuse an icon url across restarts and updates; a reload must not keep an earlier failed image
                     backer.cache: false
                     backer.retainWhileLoading: true

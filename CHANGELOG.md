@@ -14,7 +14,6 @@ settings file carries its own `__version` and migrates separately.
 ### Added
 
 - Short commands for the running shell: `silere menu`, `calendar`, `quick` and `tray` open their panels, `silere toggle dnd` (or `wifi`, `night-light`, any on/off setting) flips one, `silere volume up`, `mute`, `next` or `40` and `silere mic` change audio, `silere dismiss` clears popups, and `silere get`, `set` and `settings` read, change and list settings.
-- Settings › Widgets › Workspaces › Same icons in the tray draws tray apps with the icons their windows have on the workspaces, tinted with them, instead of each app's own tray icon.
 - Home shows an Ethernet row when a cable carries the connection, even on a desktop without Wi-Fi or Bluetooth, and the bar's network widget opens Home at it.
 - In the calendar, Shift + Page Up and Shift + Page Down move by a year, and Home returns to today.
 - With weather on, the calendar shows the next twelve hours under today's reading, three hours apart.

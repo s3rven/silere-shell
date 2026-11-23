@@ -4881,27 +4881,12 @@ ShellRoot {
         host.scope.visible = true
         root._check(nothingFocused && leftAlone && host.activeFocusItem === host.contentItem,
             "a list's current row that never had the keyboard leaves the focus alone as it hides and returns")
-        root._check(JSON.stringify(IconResolver.trayAppNames("discord_status_icon_1", "Discord")) === '["discord","Discord"]'
-                && JSON.stringify(IconResolver.trayAppNames("chrome_status_icon_1", "Slack")) === '["Slack"]'
-                && JSON.stringify(IconResolver.trayAppNames("steam", "steam")) === '["steam"]'
-                && JSON.stringify(IconResolver.trayAppNames("nm-applet", "")) === '["nm-applet"]'
-                && JSON.stringify(IconResolver.trayAppNames("KeePassXC-tray", "KeePassXC")) === '["KeePassXC"]'
-                && IconResolver.trayAppNames("", "").length === 0,
-            "a tray item names its app by its id less Electron's status-icon suffix, or by its title when the id is Chrome's")
-        {
-            const was = ShellSettings.trayAppIcons
-            ShellSettings.trayAppIcons = false
-            const own = IconResolver.trayItemIconSource("image://icon/own-tray-icon?path=/opt/app/icons", "no-such-app-anywhere", "")
-            ShellSettings.trayAppIcons = true
-            const kept = IconResolver.trayItemIconSource("image://icon/own-tray-icon?path=/opt/app/icons", "no-such-app-anywhere", "")
-            ShellSettings.trayAppIcons = was
-            root._check(own === "image://icon/own-tray-icon?path=/opt/app/icons" && kept === own,
-                "a tray app with no desktop entry keeps its own icon either way")
-            // the theme lacking it, Quickshell would draw its magenta "missing" squares; the initial takes over instead
-            root._check(IconResolver.trayIconSource("image://icon/silere-no-such-icon-anywhere") === ""
-                    && IconResolver.trayItemIconSource("image://icon/silere-no-such-icon-anywhere", "no-such-app-anywhere", "") === "",
-                "a tray icon named for a theme icon that does not exist falls back instead of drawing a missing pattern")
-        }
+        // the theme lacking it, Quickshell would draw its magenta "missing" squares; the initial takes over instead
+        root._check(IconResolver.trayIconSource("image://icon/silere-no-such-icon-anywhere") === ""
+                && IconResolver.trayAppIconSource("image://icon/silere-no-such-icon-anywhere", "no-such-app-anywhere") === ""
+                && IconResolver.trayAppIconSource("image://icon/own-tray-icon?path=/opt/app/icons", "no-such-app-anywhere")
+                    === "image://icon/own-tray-icon?path=/opt/app/icons",
+            "a tray icon named for a theme icon that does not exist falls back instead of drawing a missing pattern")
         host.close()
         host.destroy()
     }

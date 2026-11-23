@@ -37,13 +37,8 @@ Column {
             key: "wsShowAppIcons"
             description: "Line shows icons on the active workspace"
         }
-        ToggleRow {
-            glyph: "󰌷"; label: "Same icons in the tray"
-            key: "trayAppIcons"
-            description: "Not each app's own tray icon"
-        }
         CollapsibleSection {
-            expanded: ShellSettings.wsShowAppIcons || ShellSettings.trayAppIcons
+            expanded: ShellSettings.wsShowAppIcons
             ChoiceChipRow {
                 glyph: "󰏘"; label: "App icon color"
                 key: "wsAppIconColor"

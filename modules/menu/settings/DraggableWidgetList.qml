@@ -901,10 +901,8 @@ Item {
                                 id: _subImage
                                 anchors.centerIn: parent
                                 side: parent.width
-                                // as the bar draws it, Same icons in the tray included
-                                asyncSource: IconResolver.trayItemIconSource(
-                                    _sub._providedIconFailed ? "" : _sub._providedIconSource, _sub.modelData,
-                                    _sub.running ? _sub.item.title : "")
+                                asyncSource: IconResolver.trayAppIconSource(
+                                    _sub._providedIconFailed ? "" : _sub._providedIconSource, _sub.modelData)
                                 backer.cache: false
                                 visible: status === Image.Ready
                                 onStatusChanged: {

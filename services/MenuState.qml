@@ -185,7 +185,6 @@ AnchoredPopupState {
         barSpacing: "tight wide",
         wsActiveMarker: "gem dot line",
         wsAppIconColor: "accent original tint workspace",
-        trayAppIcons: "tray icons theme match workspace app icon",
         dotStyle: "bullet ring slash",
         barSeparatorMode: "groups every",
         notifMaxVisible: "stack",

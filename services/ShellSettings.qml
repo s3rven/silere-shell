@@ -49,7 +49,6 @@ Singleton {
     property bool   updatesIncludeAur:   false
     property bool   trayWidget:          false
     // the tray draws each app with the icon its windows have on the workspaces, not the one the app sends
-    property bool   trayAppIcons:        false
     // uri-encoded ids, so a comma inside an id cannot split it
     property string trayHidden:          ""
     property bool   valuesOnHover:       true
@@ -506,7 +505,6 @@ Singleton {
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces", l: "Scroll to switch" },
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces", l: "Show app icons" },
         { k: "wsAppIconColor",      t: "enum", vals: ["original", "accent"], sec: "workspaces", l: "App icon color" },
-        { k: "trayAppIcons",        t: "bool", sec: "workspaces", l: "Same icons in the tray" },
         { k: "wsNotifPulse",        t: "bool", sec: "workspaces", l: "Notification pulse" },
         { k: "wsUrgentPulse",       t: "bool", sec: "workspaces", l: "Urgent window pulse" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces", l: "Active marker" }

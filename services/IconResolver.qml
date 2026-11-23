@@ -73,31 +73,6 @@ Singleton {
         return source.length > 0 ? source : (root.appMeta(identity)?.icon ?? "")
     }
 
-    // the app behind a tray item, by its desktop entry. Electron names its item <app>_status_icon_<n>, or chrome_... for
-    // any app, where only the title names it. Null without an entry: a theme icon guessed from a bare id could be anyone's
-    function trayAppNames(id, title): var {
-        const cleaned = SafeText.boundedText(id, root.maxIdentityChars).trim()
-            .replace(/[_-](status[_-]?icon|tray(icon)?|indicator)([_-]?\d+)?$/i, "")
-        const named = SafeText.boundedText(title, root.maxIdentityChars).trim()
-        const tries = /^(chrome|chromium|electron)$/i.test(cleaned) ? [named] : [cleaned, named]
-        return tries.filter((name, i) => name.length > 0 && tries.indexOf(name) === i)
-    }
-    function trayAppMeta(id, title): var {
-        const tries = root.trayAppNames(id, title)
-        for (let i = 0; i < tries.length; i++) {
-            const name = tries[i]
-            if (!root.appEntry(name)) continue
-            const meta = root.appMeta(name)
-            if (meta && meta.icon.length > 0) return meta
-        }
-        return null
-    }
-    // as the setting has it: the icon the app sends, or the one its windows show on the workspaces
-    function trayItemIconSource(raw, id, title): string {
-        const meta = ShellSettings.trayAppIcons ? root.trayAppMeta(id, title) : null
-        return meta ? meta.icon : root.trayAppIconSource(raw, id)
-    }
-
     // QIcon's own factor: the largest screen ratio, which Wayland reports as the whole output scale (2 for a 1.25 screen)
     readonly property real screenScale: {
         let scale = 1
