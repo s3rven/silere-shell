@@ -3260,6 +3260,49 @@ test_try_config_quotes_paths() (
         "niri's terminal shortcut names a terminal path with quotes"
 )
 
+test_niri_block_is_checked() (
+    local dir="$TMP/niri-block" stubs="$TMP/niri-block-stubs" config before status
+    mkdir -p "$dir" "$stubs"
+    # stands in for niri validate: rejects anything marked BROKEN, and a relative include that does not resolve
+    printf '#!/bin/sh\n[ "$1 $2" = "validate --config" ] || exit 9\n[ -f "$(dirname "$3")/inc.kdl" ] && ! grep -q BROKEN "$3"\n' \
+        > "$stubs/niri"
+    chmod +x "$stubs/niri"
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/install.sh"
+    export PATH="$stubs:$PATH"
+    config="$dir/config.kdl"
+    : > "$dir/inc.kdl"
+    printf 'include "inc.kdl"\n' > "$config"
+
+    _niri_append_checked "$config" 'spawn-at-startup "silere"' || fail "a block a working niri config accepts was refused"
+    assert_eq $'include "inc.kdl"\n\n// silere-shell begin\nspawn-at-startup "silere"\n// silere-shell end' "$(<"$config")" \
+        "the block goes at the end, between its markers, checked beside the config so its include resolves"
+
+    printf 'include "inc.kdl"\n' > "$config"
+    before="$(<"$config")"
+    status=0
+    _niri_append_checked "$config" 'BROKEN' || status=$?
+    assert_eq 3 "$status" "a block niri rejects is reported as rejected"
+    assert_eq "$before" "$(<"$config")" "a block niri rejects never reaches the config"
+    assert_eq "" "$(find "$dir" -name '.silere-niri.*')" "the staged copy is gone either way"
+
+    # a dotfiles link stays a link and is written through
+    mv "$config" "$dir/real.kdl"
+    ln -s "$dir/real.kdl" "$config"
+    _niri_append_checked "$config" 'spawn-at-startup "silere"' || fail "a linked niri config refused the block"
+    [ -L "$config" ] || fail "adding the block replaced a linked niri config with a plain file"
+    grep -qF 'spawn-at-startup "silere"' "$dir/real.kdl" || fail "the block did not reach the linked file"
+    rm -f "$config"; mv "$dir/real.kdl" "$config"
+
+    # a config already failing says nothing about the block, and no niri installed cannot judge it
+    printf 'BROKEN\n' > "$config"
+    _niri_append_checked "$config" 'spawn-at-startup "silere"' || fail "a niri config that was already failing refused the block"
+    grep -qF 'spawn-at-startup "silere"' "$config" || fail "a niri config that was already failing lost the block"
+    rm -f "$stubs/niri"
+    printf 'include "inc.kdl"\n' > "$config"
+    _niri_append_checked "$config" 'spawn-at-startup "silere"' || fail "no niri to ask refused the block"
+    grep -qF 'spawn-at-startup "silere"' "$config" || fail "no niri to ask lost the block"
+)
+
 test_lua_block_is_checked() (
     local dir="$TMP/lua-block" stubs="$TMP/lua-block-stubs" before
     mkdir -p "$dir" "$stubs"
@@ -4565,6 +4608,7 @@ test_shared_launcher
 test_reset_workflow
 test_try_config_quotes_paths
 test_lua_block_is_checked
+test_niri_block_is_checked
 test_layer_rule_detection
 test_motion_block
 test_cpu_sensor_choice

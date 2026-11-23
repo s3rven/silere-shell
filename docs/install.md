@@ -53,7 +53,8 @@ The installer:
   and checks Lua edits with `Hyprland --verify-config`, restoring the backup if verification fails.
   A Lua config ending in `return` gets instructions for adding the lines yourself
 - offers to add `spawn-at-startup` to an existing niri config, or prints the line if that
-  config is missing. It also prints a menu shortcut to add inside your `binds` block
+  config is missing. It checks the edited config with `niri validate` before writing it and leaves
+  the file alone if niri rejects it. It also prints a menu shortcut to add inside your `binds` block
 - offers to turn off Hyprland's layer fade for Silere's popups, which animate themselves, the same way,
   unless your config already has a layer rule that sets how Silere's layers animate
 - with a Lua config, offers Silere's window motion (asked, default no): `hyprland/silere-motion.lua` sets

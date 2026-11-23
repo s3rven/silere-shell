@@ -550,6 +550,31 @@ _append_lua_block() { # $1 = file, $2 = begin marker, $3 = end marker, $4 = body
     rm -f "$saved"
 }
 
+# niri reloads its config the moment it changes, so the edit is staged beside it, where its relative includes still
+# resolve, and written only once niri accepts it. A config already failing says nothing about the block, as for Hyprland
+_niri_validates() {
+    command -v niri >/dev/null 2>&1 || return 2
+    env -u LC_ALL timeout 10 niri validate --config "$1" >/dev/null 2>&1
+}
+
+_niri_append_checked() { # $1 = file, $2 = body between the silere-shell markers; 3 when niri rejects it
+    local file="$1" target staged
+    target="$file"
+    if [ -L "$file" ]; then target="$(readlink -f -- "$file")" || return 1; fi
+    staged="$(mktemp "$(dirname -- "$target")/.silere-niri.XXXXXX")" || return 1
+    if ! { cat -- "$target" && printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$2"; } > "$staged"; then
+        rm -f -- "$staged"
+        return 1
+    fi
+    if _niri_validates "$target" && ! _niri_validates "$staged"; then
+        rm -f -- "$staged"
+        return 3
+    fi
+    # through a link when it is one, keeping the file's own mode
+    cat -- "$staged" > "$target" || { rm -f -- "$staged"; return 1; }
+    rm -f -- "$staged"
+}
+
 # binds in Lua are often data in another file, so a line naming both the modifiers and the key counts as taken
 _lua_bind_taken() {
     local dir f
@@ -1587,8 +1612,16 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
         elif _ask "Add spawn-at-startup to $(_tilde "$NIRI_CONFIG")?"; then
             _reject_unsafe_path "$NIRI_CONFIG"
             _backup "$NIRI_CONFIG"
-            printf '\n// silere-shell begin\n%s\n// silere-shell end\n' "$NIRI_SPAWN" >> "$NIRI_CONFIG"
-            _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true autostart_ready=true
+            niri_status=0
+            _niri_append_checked "$NIRI_CONFIG" "$NIRI_SPAWN" || niri_status=$?
+            if [ "$niri_status" = 0 ]; then
+                _ok "added to $(_tilde "$NIRI_CONFIG")"; did_autostart=true autostart_ready=true
+            elif [ "$niri_status" = 3 ]; then
+                _warn "niri rejected $(_tilde "$NIRI_CONFIG") with this added, so it was left as it was. Add it where it fits:"
+                _warn "  spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_SHOWN")"
+            else
+                _die "could not write $NIRI_CONFIG"
+            fi
         else
             _skip "skipped — add manually: spawn-at-startup \"sh\" \"-c\" $(_lua_string "$LAUNCH_SHOWN")"
         fi
