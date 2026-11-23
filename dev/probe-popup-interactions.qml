@@ -921,6 +921,64 @@ Item {
         ShellSettings.uiScale = 1
         root._check(entry.pillW === base.pill && entry.trackW === base.track,
             "the OSD returns to its 1.0 frame")
+        // the row is centred, so equal parts keep the glyph and track still when the level becomes Muted
+        const unmutedLabel = entry.label
+        OsdBarState._setEntryProperty("volume", "label", "48%")
+        const unmuted = [entry.pillW, entry.trackW, entry._labelFit]
+        OsdBarState._setEntryProperty("volume", "muted", true)
+        OsdBarState._setEntryProperty("volume", "label", "Muted")
+        root._check(entry.pillW === unmuted[0] && entry.trackW === unmuted[1] && entry._labelFit === unmuted[2],
+            "muting keeps the OSD's glyph and track in place")
+        OsdBarState._setEntryProperty("volume", "muted", false)
+        OsdBarState._setEntryProperty("volume", "label", "Speakers · 48%")
+        const named = [entry.pillW, entry.trackW, entry._labelFit]
+        OsdBarState._setEntryProperty("volume", "muted", true)
+        OsdBarState._setEntryProperty("volume", "label", "Speakers · Muted")
+        root._check(entry.pillW === named[0] && entry.trackW === named[1] && entry._labelFit === named[2]
+                && entry._labelW % 4 === 0,
+            "muting a named output keeps the OSD's glyph and track in place")
+        OsdBarState._setEntryProperty("volume", "muted", false)
+        OsdBarState._setEntryProperty("volume", "label", unmutedLabel)
+
+        // a longer device label widens the pill on the card's glide, not in one frame
+        const glideMotionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        const pill = root._find(entry, item => item.parent === entry && item.transform && item.transform.length > 0)
+        OsdBarState._setEntryProperty("volume", "label", "48%")
+        input.wait(Motion.medium)
+        const narrowPill = entry.pillW
+        OsdBarState._setEntryProperty("volume", "label", "A much longer output name · 48%")
+        const gliding = pill !== null && entry.pillW > narrowPill && pill.width === entry.width && pill.width < entry.pillW
+        input.wait(Motion.medium + 60)
+        root._check(gliding && pill.width === entry.pillW,
+            "a longer OSD label widens the drawn pill on the card's glide and settles at its full width")
+        OsdBarState._setEntryProperty("volume", "label", unmutedLabel)
+        ShellSettings.reduceMotion = glideMotionWas
+
+        const savedWidth = osd.implicitWidth
+        const savedLabel = entry.label
+        osd.implicitWidth = 288
+        ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
+        const narrowLevel = root._find(entry, item => item.elide === Text.ElideMiddle)
+        for (const muted of [false, true]) {
+            const levelText = muted ? "Muted" : "48%"
+            OsdBarState._setEntryProperty("volume", "muted", muted)
+            OsdBarState._setEntryProperty("volume", "label", "USB headset with a long device name · " + levelText)
+            if (narrowLevel) {
+                osdLabelMetrics.font = narrowLevel.font
+                osdLabelMetrics.text = narrowLevel.text
+                osdLabelMetrics.elideWidth = narrowLevel.width
+            }
+            root._check(narrowLevel !== null && entry.pillW <= osd.implicitWidth - 32
+                    && entry.trackW > 0 && entry.trackW < entry._preferredTrackW
+                    && entry.chromeW + narrowLevel.width <= entry.pillW
+                    && osdLabelMetrics.elidedText.endsWith(levelText) && entry.Accessible.name === entry.label,
+                "a floating volume OSD fits a narrow output and keeps " + levelText + " and the full accessible label")
+        }
+        OsdBarState._setEntryProperty("volume", "muted", false)
+        OsdBarState._setEntryProperty("volume", "label", savedLabel)
+        ShellSettings.uiScale = 1
+        osd.implicitWidth = savedWidth
     }
 
     function _checkPopupOpacityEntries(): void {

@@ -253,7 +253,9 @@ PanelWindow {
 
                 Item {
                     id: pillWrap
-                    width: card.pillW
+                    // the card's glide: bound to pillW, a new device label snapped the pill 36 px wider while the
+                    // card's animation moved nothing drawn. The readout sits 40 px inside each edge, so it never overhangs
+                    width: card.width
                     height: card.pillH
                     anchors.horizontalCenter: parent.horizontalCenter
                     opacity: card._op
@@ -313,7 +315,7 @@ PanelWindow {
 
                             Rectangle {
                                 anchors.verticalCenter: parent.verticalCenter
-                                visible: card.hasBar
+                                visible: card.trackW > 0
                                 width:  card.trackW
                                 height: 6
                                 radius: 3
@@ -323,10 +325,11 @@ PanelWindow {
                                     id: _fill
                                     readonly property real _target: {
                                         const v = card.clamped
-                                        return v <= 0 ? 0 : Math.max(parent.radius * 2, parent.width * v)
+                                        return v <= 0 ? 0 : Math.min(parent.width,
+                                            Math.max(parent.radius * 2, parent.width * v))
                                     }
                                     // a glide follows held keys smoothly; a restarted ease kicked on every step
-                                    width: _fillGlide.value
+                                    width: Math.min(parent.width, _fillGlide.value)
                                     readonly property SmoothGlide _fillGlide: SmoothGlide {
                                         target: _fill._target; duration: Motion.normal; gate: !card.closing
                                     }
@@ -340,21 +343,13 @@ PanelWindow {
                                 }
                             }
 
-                            TextMetrics {
-                                id: tm
-                                font.family:    Settings.font
-                                font.pixelSize: Settings.fontSize
-                                text: "Muted"
-                            }
-
                             ShellText {
                                 anchors.verticalCenter: parent.verticalCenter
-                                width: Math.max(Math.ceil(tm.advanceWidth),
-                                    Math.min(Math.ceil(_labelMetrics.advanceWidth), card.pillW - card.chromeW)) + 2
+                                width: card._labelFit
                                 horizontalAlignment: Text.AlignRight
                                 // an output switch reads "name · 45%": a long device name cut the level off its end
                                 elide:          Text.ElideMiddle
-                                text:           card.label
+                                text:           card._displayLabel
                                 // the glyph and rim carry the alert; a coloured readout only costs contrast
                                 color:          card.muted
                                     ? Theme.withAlpha(Theme.subtext, 0.82)
