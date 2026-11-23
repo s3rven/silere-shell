@@ -167,22 +167,22 @@ Column {
     readonly property int _deviceWarnings: root._deviceChecks.filter(c => c.warning).length
     // checks settle after the page builds; one that needs attention opens the list until it is folded by hand
     on_DeviceWarningsChanged: if (!root._devicesTouched && root._deviceWarnings > 0) root._devicesExpanded = true
+    // the headline sums both lists: a green "No issues found" read wrong above a device that needs attention
+    readonly property int _attentionCount: root._attentionIssues.length + root._deviceWarnings
     readonly property bool _healthBusy: !SystemTools.ready || SystemTools.checking
         || FontScan.scanning
     readonly property string _healthStatus: {
         if (!SystemTools.ready) return "Checking installed features…"
         if (SystemTools.checking || FontScan.scanning) return "Refreshing availability…"
         if (SystemTools.probeFailed) return "The feature check could not finish"
-        if (root._attentionIssues.length > 0)
-            return root._attentionIssues.length
-                + (root._attentionIssues.length === 1
-                    ? " item needs attention" : " items need attention")
+        if (root._attentionCount > 0)
+            return root._attentionCount + (root._attentionCount === 1 ? " item needs attention" : " items need attention")
         return "No issues found"
     }
     readonly property string _healthDetail: {
         if (SystemTools.probeFailed) return SystemTools.lastError
         if (root._healthBusy) return "The last confirmed results stay visible while Silere checks again."
-        if (root._attentionIssues.length > 0)
+        if (root._attentionCount > 0)
             return "Review the items below. Expand Optional features to see available add-ons."
         if (root._optionalIssues.length > 0)
             return "Expand Optional features to see packages you can add when you want them."
@@ -194,13 +194,13 @@ Column {
         UpdateStatusCard {
             glyph: root._healthBusy ? "󰑐"
                 : SystemTools.probeFailed ? "󰀦"
-                : root._attentionIssues.length > 0 ? "󰀪" : "󰄬"
+                : root._attentionCount > 0 ? "󰀪" : "󰄬"
             title: "Feature readiness"
             status: root._healthStatus
             detail: root._healthDetail
             detailError: SystemTools.probeFailed
             statusColor: SystemTools.probeFailed ? Theme.error
-                : root._attentionIssues.length > 0 ? Theme.warning
+                : root._attentionCount > 0 ? Theme.warning
                 : root._healthBusy ? Theme.accent : Theme.success
             busy: root._healthBusy
             animationActive: root.animationActive && MenuState.settingsActive && !Idle.isIdle

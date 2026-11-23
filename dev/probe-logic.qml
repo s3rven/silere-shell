@@ -4539,6 +4539,14 @@ ShellRoot {
             Brightness.lastError = writeErrorsWas[0]
             DisplayBrightness._writeError = writeErrorsWas[1]
             KeyboardBrightness._writeError = writeErrorsWas[2]
+            const headlineBefore = diagnostics._attentionCount
+            KeyboardBrightness._writeError = "Keyboard light could not be changed."
+            const headlineAfter = diagnostics._attentionCount
+            const headlineText = diagnostics._healthStatus
+            KeyboardBrightness._writeError = writeErrorsWas[2]
+            root._check(headlineAfter === headlineBefore + 1 && headlineText.startsWith(headlineAfter + " item"),
+                "the health headline counts a device that needs attention, not only missing tools (got "
+                    + headlineBefore + " -> " + headlineAfter + ", " + headlineText + ")")
             const summary = DeviceDiagnostics.snapshot()
             root._check(summary.schemaVersion === 1 && summary.audio.name === undefined
                     && summary.bluetooth.name === undefined && summary.network.ssid === undefined
