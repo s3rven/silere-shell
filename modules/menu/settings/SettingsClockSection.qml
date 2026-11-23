@@ -8,15 +8,7 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    // the chips show what the bar would, so they follow the clock's own minute tick
-    function _sample(format: string): string {
-        void DateTime.cachedMinute
-        return Qt.formatDateTime(new Date(), format)
-    }
-    readonly property string _dateCore: DateTime.cachedDateCore.length > 0
-        ? DateTime.cachedDateCore : root._sample("MMM dd")
-    readonly property string _dayName: DateTime.cachedDayName.length > 0
-        ? DateTime.cachedDayName : root._sample("ddd ")
+    readonly property int _calendarChipW: Math.max(_weekStart.naturalChipWidth, _units.naturalChipWidth)
 
     SectionLabel { label: "TIME & DATE"; first: true }
     SettingsCard {
@@ -24,10 +16,18 @@ Column {
             glyph: "󰔟"; label: "Format"
             searchKey: "clock12h"
             currentValue: ShellSettings.clock12h ? "12h" : "24h"
-            model: [
-                { value: "24h", label: root._sample("HH:mm") },
-                { value: "12h", label: root._sample("h:mm AP") }
-            ]
+            // keep the focused chip alive as its preview changes
+            model: [_time24, _time12]
+            QtObject {
+                id: _time24
+                readonly property string value: "24h"
+                readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "HH:mm")
+            }
+            QtObject {
+                id: _time12
+                readonly property string value: "12h"
+                readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "h:mm AP")
+            }
             onChosen: (v) => ShellSettings.clock12h = v === "12h"
         }
         ToggleRow {
@@ -44,10 +44,17 @@ Column {
                 glyph: "󰸗"; label: "Style"
                 searchKey: "compactDate"
                 currentValue: ShellSettings.compactDate ? "compact" : "normal"
-                model: [
-                    { value: "normal",  label: root._dayName + root._dateCore },
-                    { value: "compact", label: root._dateCore }
-                ]
+                model: [_dateNormal, _dateCompact]
+                QtObject {
+                    id: _dateNormal
+                    readonly property string value: "normal"
+                    readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "ddd MMM dd")
+                }
+                QtObject {
+                    id: _dateCompact
+                    readonly property string value: "compact"
+                    readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "MMM dd")
+                }
                 onChosen: (v) => ShellSettings.compactDate = v === "compact"
             }
         }
@@ -56,7 +63,9 @@ Column {
     SectionLabel { label: "CALENDAR" }
     SettingsCard {
         ChoiceChipRow {
+            id: _weekStart
             key: "calendarWeekStart"
+            chipWidthFloor: root._calendarChipW
             glyph: "󰨴"; label: "Week starts"
             model: [
                 { value: "monday", label: "Mon" },
@@ -82,17 +91,16 @@ Column {
                 description: "Beside the clock, refreshed every 30 min"
                 key: "clockShowWeather"
             }
-            // shows the unit in effect, so Auto needs no chip of its own; a pick is kept from then on
             ChoiceChipRow {
+                id: _units
+                key: "weatherUnit"
+                chipWidthFloor: root._calendarChipW
                 glyph: "󰔐"; label: "Units"
-                searchKey: "weatherUnit"
-                currentValue: ShellSettings.weatherUnit !== "auto" ? ShellSettings.weatherUnit
-                    : ShellSettings.weatherEnabled && Weather.fahrenheit ? "f" : "c"
                 model: [
+                    { value: "auto", label: "Auto" },
                     { value: "c", label: "°C" },
                     { value: "f", label: "°F" }
                 ]
-                onChosen: (v) => ShellSettings.weatherUnit = v
             }
         }
     }

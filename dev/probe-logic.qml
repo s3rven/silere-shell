@@ -4152,6 +4152,7 @@ ShellRoot {
         root._checkPillTextBaseline()
         root._checkStackTags()
         root._checkThreadFolding()
+        root._checkClockSettings()
         root._checkWeather()
         root._checkInputRecovery()
         root._checkBarSizing()

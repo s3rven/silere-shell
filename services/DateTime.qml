@@ -7,14 +7,15 @@ Singleton {
     id: root
 
     function clockNeeded(barClock: bool, overview: bool, scheduled: bool,
-            homeActive: bool, calendarOpen: bool): bool {
-        return (barClock && !overview) || scheduled || homeActive || calendarOpen
+            menuClock: bool, calendarOpen: bool): bool {
+        return (barClock && !overview) || scheduled || menuClock || calendarOpen
     }
 
     readonly property bool _clockNeeded: root.clockNeeded(
         ShellSettings.barShowClock, OverviewState.active,
         ShellSettings.dndSchedule || Notifications.dndUntil > 0 || Idle.keepAwakeUntil > 0,
-        MenuState.homeActive, CalendarState.open)
+        MenuState.homeActive || (MenuState.settingsActive && MenuState.settingsSection === "clock"),
+        CalendarState.open)
 
     // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake
     property bool _resync: false
@@ -28,6 +29,8 @@ Singleton {
     }
 
     readonly property date currentDate: clock.date
+    // a minute sample keeps the format previews from updating on every second tick
+    property date minuteSample: new Date()
 
     property string _lastDay:       ""
     property string _lastMinute:    ""
@@ -141,11 +144,11 @@ Singleton {
         root._update()
     }
 
-    function _update(): void {
-        const current = clock.date
+    function _update(current = clock.date): void {
         const minute = Qt.formatDateTime(current, "yyyyMMddHHmm")
         if (minute !== _lastMinute) {
             _lastMinute = minute
+            minuteSample = current
             const day = minute.slice(0, 8)
             if (day !== _lastDay) {
                 _lastDay        = day
