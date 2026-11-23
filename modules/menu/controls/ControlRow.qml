@@ -277,7 +277,7 @@ MenuRow {
                 anchors.centerIn: parent
                 text: "󰅀"
                 color: (_chevHover.hovered) ? Theme.text
-                     : Theme.withAlpha(Theme.subtext, root.expanded ? 0.85 : 0.55)
+                     : root.expanded ? Theme.menuTextDetail : Theme.menuTextQuiet
                 font.pixelSize: Settings.fontSize
                 rotation: root.expanded ? 180 : 0
                 transformOrigin: Item.Center

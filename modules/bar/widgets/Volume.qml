@@ -25,7 +25,7 @@ Pill {
             && root.warnsForOutput(ShellSettings.barShowBluetooth, Bluetooth.connectedCount)
         ? Bluetooth.batteryForAddress(Audio.sinkBluetoothAddress) : -1
     function outputLow(battery: int): bool {
-        return battery >= 0 && battery < SystemAlerts.btLowPct
+        return battery >= 0 && battery <= SystemAlerts.btLowPct
     }
     readonly property bool _outputLow: root.outputLow(root._outputBattery)
     readonly property string _outputNote: root._outputLow ? "battery " + root._outputBattery + "%" : ""

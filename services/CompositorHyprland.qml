@@ -75,6 +75,8 @@ QtObject {
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
     signal screencast(bool started)
+    // a saved config, so what reads it (the Keybinds page) can read it again
+    signal configReloaded()
 
     property int _layoutTick: 0
     property var _liveTitles: ({})
@@ -836,6 +838,7 @@ QtObject {
             if (n === "configreloaded") {
                 root.checkBlur()
                 root._refreshKeyboard()
+                root.configReloaded()
             }
             // quickshell 0.3.2 resolves focusedmon's workspace by name and drops a named numbered one (quickshell#1427)
             if (n === "focusedmon") Hyprland.refreshMonitors()
@@ -848,4 +851,5 @@ QtObject {
 
     // silere:menu and silere:tray for Hyprland binds
     readonly property CompositorHyprlandShortcuts _shortcuts: CompositorHyprlandShortcuts {}
+    readonly property bool globalShortcuts: root._shortcuts.owns
 }

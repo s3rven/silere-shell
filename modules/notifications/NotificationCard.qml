@@ -393,16 +393,23 @@ Item {
         if (card._paused) card._hoverStartMs = Date.now()
     }
     property bool _entryPending: false
+    // false while the popup window the card arrived in has not drawn yet: built with it, the card's slide
+    // began before the window's first frame, which showed it already half faded in and halfway along
+    property bool windowPresented: true
+    function _enterIfPending(): void {
+        // a turn later: the motion gates read visible too, and a handler can run before their bindings do
+        if (card._entryPending) Qt.callLater(() => {
+            if (!card._entryPending || !card.visible || !card.windowPresented) return
+            card._entryPending = false
+            cardRect.enter()
+        })
+    }
+    onWindowPresentedChanged: if (windowPresented && visible) card._enterIfPending()
     onVisibleChanged: {
         if (!visible && card._leaving) card._completeDismiss()
         else if (visible) {
             card._updateTime()
-            // a turn later: the motion gates read visible too, and a handler can run before their bindings do
-            if (card._entryPending) Qt.callLater(() => {
-                if (!card._entryPending) return
-                card._entryPending = false
-                cardRect.enter()
-            })
+            if (card.windowPresented) card._enterIfPending()
         }
     }
 
@@ -608,7 +615,7 @@ Item {
                 Notifications.markSeen(card.notifId)
                 // the stack still reads empty while its first card builds, so that card is hidden for a moment and
                 // entering now drew it in place with no motion: it enters when it is first shown instead
-                if (!card.visible) card._entryPending = true
+                if (!card.visible || !card.windowPresented) card._entryPending = true
                 else cardRect.enter()
             } else {
                 x = 0
@@ -648,7 +655,7 @@ Item {
                 anchors.alignWhenCentered: false
                 visible: _headerIcon.status !== Image.Ready
                 text: card.fallbackInitial
-                color: Theme.withAlpha(Theme.subtext, 0.86)
+                color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.DemiBold
             }
@@ -951,7 +958,7 @@ Item {
                         visible: _replyInput.text.length === 0
                         text: Notifications.plainText(
                             card.notification.inlineReplyPlaceholder, 128).trim() || "Reply"
-                        color: Theme.withAlpha(Theme.subtext, 0.76)
+                        color: Theme.menuTextDetail
                         font.pixelSize: Settings.fontSize
                         elide: Text.ElideRight
                     }

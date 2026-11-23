@@ -121,7 +121,10 @@ Item {
         // the one row without a switch says why
         case "workspaces": return "Always shown"
         case "microphone": return "While in use"
-        case "media": return "While playing"
+        case "media": return "After playback starts"
+        case "system": return SysInfo.monitorHasReadings ? "" : "No readings to show"
+        // on with no command, it would show nothing and say nothing
+        case "custom": return ShellSettings.customCommand.trim().length > 0 ? "" : "Needs a command"
         case "shellUpdate":
         case "updates": return "When pending"
         case "tray": {
@@ -644,7 +647,7 @@ Item {
                     rotation: root._trayOpen ? 180 : 0
                     transformOrigin: Item.Center
                     color: _chevHover.hovered ? Theme.text
-                        : Theme.withAlpha(Theme.subtext, root._trayOpen ? 0.85 : 0.55)
+                        : root._trayOpen ? Theme.menuTextDetail : Theme.menuTextQuiet
                     font.pixelSize: Settings.fontSize
                     Disclosure on rotation {}
                     ColorFade on color {}
@@ -787,7 +790,7 @@ Item {
             ShellText {
                 anchors.centerIn: parent
                 text: root._draggingKey.length > 0 ? "Drop here" : "Empty"
-                color: Theme.withAlpha(Theme.subtext, _empty.hot ? 0.70 : 0.46)
+                color: _empty.hot ? Theme.menuTextDetail : Theme.menuTextQuiet
                 font.pixelSize: Settings.fontMicro
             }
 

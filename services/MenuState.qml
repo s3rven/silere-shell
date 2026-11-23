@@ -140,7 +140,9 @@ AnchoredPopupState {
             { glyph: "󰒓", label: "Overview", section: "updates",
               description: "Updates, diagnostics, and recovery" },
             { glyph: "󰦉", label: "Devices", section: "devices",
-              description: "Displays, lighting, Bluetooth, and programs" }
+              description: "Displays, lighting, Bluetooth, and programs" },
+            { glyph: "󰌌", label: "Keybinds", section: "keybinds",
+              description: "Shortcuts and what each does" }
         ]}
     ]
 
@@ -157,6 +159,7 @@ AnchoredPopupState {
     readonly property var _settingsSearchAliases: ({
         theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
         interface: "font typeface text size bigger larger smaller zoom icons scale accessibility animations contrast menu groups",
+        keybinds: "shortcuts hotkeys bindings binds cheatsheet hyprland",
         devices: "display monitor screen multi primary brightness ddc ddcutil external backlight keyboard light bluetooth controller adapter lock command hyprlock swaylock gtklock night light blue hyprsunset wlsunset dock overlay",
         surface: "bar position top bottom size shape corners rounded floating margin tooltip",
         underline: "underline glow screenshot pulse activity",
@@ -181,6 +184,8 @@ AnchoredPopupState {
         barHeight: "compact tall",
         barSpacing: "tight wide",
         wsActiveMarker: "gem dot line",
+        wsAppIconColor: "accent original tint workspace",
+        trayAppIcons: "tray icons theme match workspace app icon",
         dotStyle: "bullet ring slash",
         barSeparatorMode: "groups every",
         notifMaxVisible: "stack",
@@ -193,6 +198,8 @@ AnchoredPopupState {
         osdChargedNotify: "charging",
         uiScale: "scaling",
         trayWidget: "systray",
+        systemRings: "rings circles gauges",
+        barShowCustom: "custom script waybar module output",
         weatherUnit: "celsius fahrenheit"
     })
 

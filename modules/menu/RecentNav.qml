@@ -212,8 +212,8 @@ Item {
                                 : SafeText.initial(_row.label, "N")
                             color: _row.active
                                 ? Theme.mix(Theme.accentInk, Theme.text, 0.10)
-                                : Theme.withAlpha(Theme.subtext,
-                                    _rowHover.hovered ? 0.92 : 0.76)
+                                : _rowHover.hovered ? Theme.subtext : Theme.menuTextDetail
+                            // the initial is held at its 100% size: its tile stays 16 px, as the icon does
                             font.pixelSize: _row.isAll
                                 ? Settings.fontLabel : Math.min(Settings.fontMicro, Settings.fontSizeBase - 3)
                             font.weight: _row.isAll ? Font.Normal : Font.DemiBold
@@ -253,7 +253,7 @@ Item {
                         anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
                         text: String(_row.count)
-                        color: Theme.withAlpha(Theme.subtext, _row.active ? 0.92 : 0.76)
+                        color: _row.active ? Theme.subtext : Theme.menuTextDetail
                         font.pixelSize: Settings.fontMicro
                         font.weight: Font.DemiBold
                         ColorFade on color {}
@@ -268,7 +268,7 @@ Item {
                         anchors.rightMargin: 5
                         anchors.verticalCenter: parent.verticalCenter
                         text: "󰪑"
-                        color: Theme.withAlpha(Theme.subtext, _row.active ? 0.86 : 0.64)
+                        color: _row.active ? Theme.menuTextDetail : Theme.menuTextQuiet
                         font.pixelSize: Settings.fontMicro
                         ColorFade on color {}
                     }

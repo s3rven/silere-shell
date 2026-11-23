@@ -38,10 +38,13 @@ Item {
         root.menuAnchorX = pt.x
         root._publishFallbackAnchor()
     }
+    // only for an open no widget holds: this runs as the menu opens, and over the network icon's anchor it sent the
+    // card to the workspaces at the other end of the bar
     function _publishFallbackAnchor(): void {
         if (!root._anchorFallbackBar) return
-        MenuState.anchorX = root.menuAnchorX
-        QuickActionsState.anchorX = root.menuAnchorX
+        if (!MenuState.anchorSource || MenuState.anchorSource === root) MenuState.anchorX = root.menuAnchorX
+        if (!QuickActionsState.anchorSource || QuickActionsState.anchorSource === root)
+            QuickActionsState.anchorX = root.menuAnchorX
     }
     on_AnchorFallbackBarChanged: root._syncMenuAnchor()
 

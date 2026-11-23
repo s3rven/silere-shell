@@ -116,6 +116,10 @@ ShellRoot {
         void DeviceDiagnostics.armed
         // nothing else references Hooks: unarmed it never scans, and no hook ever fires
         void Hooks.armed
+        // `ipc call custom refresh` is documented as always callable; it runs nothing until a command is set
+        void CustomCommand.armed
+        // the notification keybinds answer before the first popup ever builds its window
+        void NotificationKeys.armed
         root.armNightLightIfNeeded()
         root.armSystemAlertsIfNeeded()
     }

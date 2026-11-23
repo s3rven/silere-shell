@@ -119,8 +119,11 @@ Singleton {
         root._battCritSent = state.critical
     }
 
+    // a headset that reports in 10% steps can read 20 for a charge under it, so the mark itself counts as low: below it,
+    // such a headset warned only at 10
     readonly property int btLowPct: 20
-    readonly property int btRearmPct: 25
+    // over one 10% step above the mark, so a reading that flips between 20 and 30 as it drains warns once
+    readonly property int btRearmPct: 35
     function btAlertStep(warned, readings, low: int, rearm: int): var {
         const next = {}
         const alerts = []
@@ -132,7 +135,7 @@ Singleton {
             }
             if (r.pct >= rearm) continue
             if (warned[r.address] === true) next[r.address] = true
-            else if (r.pct < low) {
+            else if (r.pct <= low) {
                 next[r.address] = true
                 alerts.push(r)
             }

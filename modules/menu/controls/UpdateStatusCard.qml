@@ -180,7 +180,7 @@ Rectangle {
                 opacity: root.detail.length > 0 ? 1 : 0
                 color: root.detailError
                     ? Theme.withAlpha(Theme.warning, 0.85)
-                    : Theme.menuTextQuiet
+                    : Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
                 lineHeight: 1.15
                 MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }

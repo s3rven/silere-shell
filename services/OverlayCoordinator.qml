@@ -49,8 +49,25 @@ Singleton {
     function _closeOthers(opener): void {
         const list = root._popups.slice()
         for (let i = 0; i < list.length; i++) {
-            if (list[i] !== opener) list[i].close()
+            if (list[i] === opener) continue
+            if (list[i].open) root._handOver()
+            list[i].close()
         }
+    }
+
+    // true for a moment after an open popup gave way to another (a keybind for the calendar over the menu). The one
+    // leaving drops its surface from under the pointer, and Hyprland reads that as a click outside the new one's focus
+    // grab, so the new one closed as it opened. Set on the edge, read only when a grab clears, so nothing binds a timer
+    property bool handingOver: false
+    function _handOver(): void {
+        root.handingOver = true
+        _handoverEnd.restart()
+    }
+    // past the leaving card's fade, when its surface unmaps
+    Timer {
+        id: _handoverEnd
+        interval: 600
+        onTriggered: root.handingOver = false
     }
 
     Connections {

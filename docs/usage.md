@@ -36,9 +36,10 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 | Shell update | Settings › System › Overview | | | | |
 | Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name, unless widgets are compact |
 
-- **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**. The microphone appears while an app is listening.
-- **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge below 20% turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
-- **Workspace markers:** rings are empty workspaces and dots have windows. With app icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page.
+- **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**, where the monitor's **Style** can draw each reading as a ring around its icon. The microphone appears while an app is listening.
+- **Command widget:** **Settings › Widgets › Indicators › Command** shows a script's output on the bar, run every 5 seconds to an hour while the widget is on, never in a test copy. It reads waybar's custom-module output as is: plain lines (text, tooltip, class) or a JSON object with `text`, `tooltip` and `class`, where `warning` and `critical` colour it. A script still running a second after its first line is followed, as waybar follows a module with no interval: each line it prints is a new reading (JSON or plain text, an empty one hides the widget), and it starts again at the next interval if it exits. One that prints more than 20 lines a second is stopped, and a one-shot run keeps only its first 8 lines. The tooltip shows on hover; a click runs **On click**, or the command again. No shell runs it, so call `sh -c` for pipes; `~/` works. `silere ipc custom refresh` reads it again at once, from a script or a keybind.
+- **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge at 20% or less turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
+- **Workspaces:** rings are empty workspaces and dots have windows. In **Settings › Widgets › Workspaces**, enable **Show app icons** and choose **Accent** under **App icon color** to follow the theme. Turn on **Numbers** to show them alongside the icons. Choose **Line** to keep both visible on the active workspace. With icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page. On Hyprland, a submap you enter shows its name after the workspaces on the focused monitor; click it to leave. **Same icons in the tray**, on the same page, draws tray apps with the icons their windows have there instead of the icon each app sends (an unread dot an app draws on its own icon then no longer shows).
 - **Hover:** a widget shows the table's last column when the pointer rests on it. **Reveal values on hover** under **Bar › Layout**, on by default, also keeps plain readings such as the volume and battery percentages hidden until then; off, they show all the time. A detail stays open while the pointer moves on over the same part of the bar (left, centre or right), so the widgets beside it don't slide as you move along. It folds when the pointer rests on another widget, a moment after you leave that part of the bar, or when a menu opened from it closes.
 - **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
 - **Reduced motion:** hover a shortened window or media title to read its ending without scrolling it.
@@ -104,8 +105,8 @@ under **Feedback › Notifications**. A reply field appears when the sender supp
 | Hide content while presenting | **Presentation Mode**, in Quick Actions or under Do Not Disturb's options. It hides notification content, critical ones and cards already on screen included, and keeps the screen awake until you turn it off. |
 | Keep popups off a shared screen | On by default where Hyprland or niri send cast events. A red mark sits beside the clock while you share. Turn off with **Hide while sharing screen** under **Feedback › Notifications**. |
 
-While popups are held back, the bell beside the clock takes the accent colour when one arrives,
-until you open History.
+When a notification arrives while popups are held back, the bell beside the clock takes the accent colour and stays
+until you open History, with a badge once popups are back, as after a fullscreen game.
 
 ## Home
 
@@ -170,16 +171,19 @@ the next month if it was showing the current one. Week start, week numbers and w
 **Settings › Widgets › Clock**.
 
 **Weather** is off by default. When on, the calendar and Home fetch today's forecast from
-[Open-Meteo](https://open-meteo.com/) and reuse it for 30 minutes. The request carries your time
-zone's main city, rounded to about a kilometre, the same place Night Light uses. **Show on bar**
-adds the temperature beside the clock. **Units** picks Celsius or Fahrenheit; until you pick, a
-metric locale means Celsius, and the default US locale means Fahrenheit only where that city uses it.
+[Open-Meteo](https://open-meteo.com/) and reuse it for up to 30 minutes. Each refresh looks up the
+current time zone's main city and sends coordinates rounded to about a kilometre. **Show on bar**
+adds the temperature beside the clock. **Units** offers Auto, Celsius and Fahrenheit. With Auto, a
+metric locale uses Celsius, and a US locale uses Fahrenheit where the forecast city uses it.
+The calendar shows the next twelve hours under today's reading, three hours apart, from the same request.
 After a failed refresh the calendar shows the previous reading, marked as old; click it to retry.
 
 ## Settings
 
 Most changes apply at once. Only values that differ from the defaults are saved, in
 `~/.config/silere-shell/settings.json`. A dot beside a page marks one you've changed.
+Edits to the file apply as you save it. A value Silere can't use, or a key it doesn't know, stays at
+its default and is named in `silere log`; Silere's next save drops it.
 
 | Group | Page | Covers |
 |---|---|---|
@@ -199,6 +203,7 @@ Most changes apply at once. Only values that differ from the defaults are saved,
 | | Alerts | Battery and temperature limits |
 | System | Overview | Updates, diagnostics and recovery |
 | | Devices | Displays, lighting, Bluetooth and programs |
+| | Keybinds | Hyprland's shortcuts and what each does, with a filter |
 
 **Ctrl+F**, or the search icon beside the page title, finds a setting by its name, an everyday
 word (`zoom`, `night light`), its key (`notifHistoryDays`) or a typo (`brigthness`). Enter opens

@@ -80,6 +80,24 @@ SettingsCard {
         readonly property color tint: status === 2 ? Theme.error
                                     : status === 1 ? Theme.warning
                                     : Theme.menuTextMuted
+        // each status's resting ink, faded as the status changes; an alert's pulse lifts the glyph and value from it toward
+        // the tint and back. Switched on pulse > 0 instead, both flashed their rest colour at the floor of every swing
+        property color _glyphInk: tile.status > 0 ? Theme.mix(Theme.subtext, tile.tint, 0.55)
+            : Theme.withAlpha(Theme.subtext, 0.85)
+        ColorFade on _glyphInk {}
+        property color _valueInk: tile.status > 0 ? Theme.mix(Theme.text, tile.tint, 0.45)
+            : Theme.withAlpha(Theme.text, 0.92)
+        ColorFade on _valueInk {}
+        property color _detailInk: tile.status > 0 ? Theme.mix(Theme.menuTextDetail, tile.tint, 0.5)
+            : Theme.menuTextDetail
+        ColorFade on _detailInk {}
+        // alpha included: Theme.mix returns an opaque colour, and the resting inks are translucent
+        function _toward(base: color, amount: real): color {
+            if (amount <= 0) return base
+            return Qt.rgba(base.r + (tile.tint.r - base.r) * amount, base.g + (tile.tint.g - base.g) * amount,
+                base.b + (tile.tint.b - base.b) * amount, base.a + (tile.tint.a - base.a) * amount)
+        }
+        readonly property bool _canOpen: root.active && tile.enabled && tile.visible && tile.openable
 
         TextMetrics {
             id: _labelMetrics
@@ -171,10 +189,8 @@ SettingsCard {
             ShellText {
                 anchors.centerIn: parent
                 text: tile.glyph
-                color: tile.pulse > 0.001
-                    ? Theme.mix(Theme.subtext, tile.tint, 0.36 + tile.pulse * 0.38)
-                    : tile.status > 0 ? Theme.mix(Theme.subtext, tile.tint, 0.55)
-                    : Theme.withAlpha(Theme.subtext, 0.85)
+                // peaks at the same 0.74 of the tint as before
+                color: tile._toward(tile._glyphInk, tile.pulse * 0.42)
                 font.pixelSize: Settings.iconSize + 2
             }
         }
@@ -208,8 +224,7 @@ SettingsCard {
                 y: _textCol.inline ? _labelText.baselineOffset - baselineOffset : _labelText.height + 1
                 width: Math.max(0, parent.width - x)
                 text: tile.sub
-                color: tile.status > 0 ? Theme.mix(Theme.menuTextDetail, tile.tint, 0.5)
-                    : Theme.menuTextDetail
+                color: tile._detailInk
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -249,11 +264,7 @@ SettingsCard {
             width: Math.ceil(_valReserve.implicitWidth)
             horizontalAlignment: Text.AlignRight
             text: tile.value
-            color: tile.pulse > 0.001
-                ? Theme.mix(Theme.text, tile.tint, tile.pulse * 0.5)
-                : tile.status > 0
-                    ? Theme.mix(Theme.text, tile.tint, 0.45)
-                    : Theme.withAlpha(Theme.text, 0.92)
+            color: tile._toward(tile._valueInk, tile.pulse * 0.2)
             font.pixelSize: Settings.fontSize
             font.weight: Font.DemiBold
         }

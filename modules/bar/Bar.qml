@@ -123,8 +123,20 @@ PanelWindow {
         width: Math.min(bar.width, _surfaceGlide.value)
         height: bar.surfaceHeight
 
-        MotionBehavior on width {
-            NumberAnimation { duration: Motion.barMorph; easing.type: Easing.OutCubic }
+        // until its first frame the window reports Qt's placeholder width, not the compositor's: a glide from there
+        // stretched the bar out from half its width at every start, and the reveal below had ended before it showed
+        property bool presented: false
+        Connections {
+            target: surface.presented ? null : surface.Window.window
+            function onFrameSwapped() { surface.presented = true }
+        }
+
+        SmoothGlide {
+            id: _surfaceGlide
+            target: bar.surfaceWidth
+            duration: Motion.barMorph
+            gate: !bar.concealed && surface.presented
+            precision: 0.5
         }
 
         readonly property real radius: Math.min(bar.cornerRadius, width / 2)
@@ -234,11 +246,18 @@ PanelWindow {
                 contents._slideY = shown ? 0 : contents._hideY
             }
 
-            Component.onCompleted: Qt.callLater(function() {
-                if (!bar) return
+            // a shown bar reveals from its first frame; one built hidden (check.sh's smoke shells) never draws one
+            function _reveal(): void {
                 if (ShellSettings.reduceMotion) contents.settle(!bar.concealed)
-                else if (!bar.concealed) _enterAnim.start()
+                else if (!bar.concealed && !_enterAnim.running && contents.opacity < 1) _enterAnim.start()
+            }
+            Component.onCompleted: Qt.callLater(function() {
+                if (bar && (surface.presented || !bar.visible)) contents._reveal()
             })
+            Connections {
+                target: surface
+                function onPresentedChanged() { if (surface.presented) contents._reveal() }
+            }
 
             ParallelAnimation {
                 id: _enterAnim

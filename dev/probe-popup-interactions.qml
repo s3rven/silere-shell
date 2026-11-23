@@ -579,6 +579,18 @@ Item {
                     "the " + f.name + " focus grab keeps the pointer for the card window")
                 grab.cleared()
                 root._check(!f.state.open, "a cleared focus grab closes " + f.name)
+                // another popup giving way to this one leaves the pointer, which Hyprland reports as a cleared grab
+                f.state.open = true
+                OverlayCoordinator._handOver()
+                grab.cleared()
+                const kept = f.state.open
+                grab.cleared()
+                grab.cleared()
+                grab.cleared()
+                const capped = !f.state.open
+                OverlayCoordinator.handingOver = false
+                root._check(kept && capped,
+                    "a grab cleared while another popup hands over to " + f.name + " is taken again, three times at most")
             }
         }
     }

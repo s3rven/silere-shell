@@ -79,7 +79,7 @@ Item {
         anchors.alignWhenCentered: false
         text: root.glyph
         color: _hover.hovered || root.pressed
-            ? Theme.text : Theme.withAlpha(Theme.subtext, 0.72)
+            ? Theme.text : Theme.menuTextDetail
         font.pixelSize: root.glyphPixelSize
 
         ColorFade on color {}

@@ -381,7 +381,7 @@ Item {
             rotation: root._open ? 180 : 0
             transformOrigin: Item.Center
             color: root._open ? root._ink
-                : Theme.withAlpha(Theme.subtext, _hov.hovered ? 0.86 : 0.66)
+                : _hov.hovered ? Theme.menuTextDetail : Theme.menuTextQuiet
             font.pixelSize: Settings.fontSize
             MotionBehavior on rotation {NumberAnimation { duration: Motion.normal; easing.type: Easing.OutCubic } }
             ColorFade on color {}

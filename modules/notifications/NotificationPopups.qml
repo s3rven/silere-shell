@@ -293,6 +293,39 @@ PanelWindow {
         if (Notifications.activeCount > 0) win._showAll = true
     }
 
+    // the keyboard's verbs (NotificationKeys). The newest card still on screen is what dunst and mako mean by the last one;
+    // arrival time picks it, since a top bar stacks the newest first and a bottom bar last
+    function _newestCard(): var {
+        let best = null, bestTime = -Infinity
+        for (let i = 0; i < stack.count; i++) {
+            const slot = stack.itemAt(i)
+            const card = slot ? slot.cardItem : null
+            if (!card || card._leaving || !card._canInteract) continue
+            const t = Number(slot.modelData?.time ?? 0)
+            if (t >= bestTime) { best = card; bestTime = t }
+        }
+        return best
+    }
+    function keyDismissNewest(): bool {
+        const card = win._newestCard()
+        if (!card) return false
+        card.dismiss()
+        return true
+    }
+    function keyInvokeNewest(): bool {
+        const card = win._newestCard()
+        if (!card) return false
+        card.activatePrimary()
+        return true
+    }
+    function keyDismissAll(): bool {
+        if (win._dismissing || !win._newestCard()) return false
+        win.dismissAll()
+        return true
+    }
+    Component.onCompleted: NotificationKeys.surface = win
+    Component.onDestruction: if (NotificationKeys.surface === win) NotificationKeys.surface = null
+
     function dismissAll(): void {
         if (win._dismissing) return
 
@@ -426,6 +459,16 @@ PanelWindow {
         onTriggered: {
             if (win._pendingDismissAll > 0) win._dismissPendingSnapshot()
         }
+    }
+
+    // the window is built when a notification arrives, and draws only once the compositor has configured it:
+    // its cards wait for that first frame to slide in (NotificationCard.windowPresented)
+    property bool presented: false
+    // hidden for a screen share and shown again, the window waits on the compositor once more
+    onVisibleChanged: if (!visible) win.presented = false
+    Connections {
+        target: win.presented ? null : outerCol.Window.window
+        function onFrameSwapped() { win.presented = true }
     }
 
     Item {
@@ -679,6 +722,7 @@ PanelWindow {
                                     createdAt: Notifications.timeFor(_slot.modelData.id)
                                     timeoutStartedAt: _slot.timeoutStartedAt
                                     slideDir: win._slideDir
+                                    windowPresented: win.presented
                                     quietPaint: win._quietPaint
                                     countdownClock: _countdownClock
                                     stackHovered: _stackHover.hovered

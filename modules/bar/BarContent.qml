@@ -53,6 +53,10 @@ Item {
     readonly property real titleFreeLeft:  leftZone.implicitWidth + gap
     readonly property real titleFreeRight: width - rightZone.implicitWidth - gap
     readonly property real titleAvailableWidth: Math.max(0, titleFreeRight - titleFreeLeft)
+    // side widgets may shift the centre into the gap, but their combined widths must leave that gap open
+    readonly property real systemWidthBudget: Math.max(0, maximumWidth - gap * (centerZone.budgetMetrics.occupied ? 2 : 1)
+        - leftZone.budgetMetrics.fixedWithoutMonitor - centerZone.budgetMetrics.fixedWithoutMonitor
+        - rightZone.budgetMetrics.fixedWithoutMonitor)
 
     // animate the axis, not the zone's x: a title resize recentres at once while a side-widget change still carries the whole middle group
     readonly property real centerAxis: _centerGlide.value
@@ -82,6 +86,7 @@ Item {
         _autoCompact = false
         _expandedWidthEstimate = 0
         _lastCompactWidth = 0
+        _compactRemeasurePending = false
     }
 
     // compact cannot measure what it is hiding: the expanded layout only exists while the
@@ -91,11 +96,19 @@ Item {
         if (ShellSettings.barCompact || !ShellSettings.barAutoCompact || width <= 0) {
             _clearCompactMeasure()
             _compactModeSettle.stop()
+            _layoutSettle.stop()
             return
         }
         // details held open under the pointer are not the bar's layout: measured, they could tighten the whole bar
         // under the pointer and loosen it again on the way out. It is measured once they have closed
-        if (root._pointerOver || _pointerSettle.running) return
+        if (root._pointerOver || _pointerSettle.running || _layoutSettle.running) return
+
+        if (_compactRemeasurePending) {
+            _clearCompactMeasure()
+            _compactModeSettle.stop()
+            _queueAutoCompact()
+            return
+        }
 
         // the title is a zone widget, so an empty centre needs no reserve of its own
         const layoutW = _preferredLayoutWidth
@@ -197,6 +210,7 @@ Item {
         }
     }
     Component { id: _cKeyboard; KeyboardWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cCustom; CustomWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cVolume;      Volume           { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cMic;         MicWidget        { anchors.verticalCenter: parent.verticalCenter; height: root.height; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -211,7 +225,7 @@ Item {
         shellUpdate: _cShellUpdate, tray: _cTray, updates: _cUpdates,
         network: _cNetwork, bluetooth: _cBluetooth, volume: _cVolume, microphone: _cMic,
         keyboard: _cKeyboard, system: _cSystem,
-        brightness: _cBrightness, battery: _cBattery,
+        brightness: _cBrightness, battery: _cBattery, custom: _cCustom,
         media: _cMedia, clock: _cClock
     })
 

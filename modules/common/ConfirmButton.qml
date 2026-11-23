@@ -150,7 +150,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             visible: root.glyph.length > 0
             text: root.glyph
-            color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.withAlpha(Theme.subtext, 0.72)
+            color: _hover.hovered ? Theme.withAlpha(Theme.text, 0.88) : Theme.menuTextDetail
             font.pixelSize: Settings.fontSize
             ColorFade on color {}
         }

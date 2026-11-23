@@ -55,7 +55,8 @@ ShellRoot {
         }
 
         function _checkControlReveal(obj): void {
-            const view = host._controlViewport(obj.popupCard || obj.contentItem)
+            const panel = obj.popupCard || obj.contentItem
+            const view = host._controlViewport(panel)
             if (!view) {
                 console.warn("PROBE-FAIL MenuWindow :: control reveal viewport missing")
                 root._failed++
@@ -101,6 +102,33 @@ ShellRoot {
             }
             if (!below || !above || !tall || !choicesBelow || !choicesAbove) {
                 console.warn("PROBE-FAIL MenuWindow :: requested controls must scroll into view, stop a flick and retain tall rows' headers")
+                root._failed++
+            }
+            const MenuState = host._service("MenuState")
+            const oldSection = MenuState.settingsSection
+            const oldTab = MenuState.activeTab
+            const oldOpen = MenuState.open
+            const reveal = view._toggleRevealTimer
+            MenuState.open = true
+            MenuState.selectTab(MenuState.settingsTab)
+            MenuState.setSettingsSection("theme")
+            MenuState.settingsRevealRequested(row)
+            const queued = reveal?.running && reveal.row === row
+            MenuState.setSettingsSection("media")
+            const canceledOnSection = reveal && !reveal.running && reveal.row === null
+            MenuState.settingsRevealRequested(row)
+            MenuState.selectTab(MenuState.homeTab)
+            MenuState.selectTab(MenuState.settingsTab)
+            const canceledOnReturn = reveal && !reveal.running && reveal.row === null
+            MenuState.settingsRevealRequested(row)
+            panel.powerOpen = true
+            const canceledOnPower = reveal && !reveal.running && reveal.row === null
+            panel.powerOpen = false
+            MenuState.open = oldOpen
+            MenuState.selectTab(oldTab)
+            MenuState.setSettingsSection(oldSection)
+            if (!queued || !canceledOnSection || !canceledOnReturn || !canceledOnPower) {
+                console.warn("PROBE-FAIL MenuWindow :: a pending scroll reveal survives its settings section, tab or power context")
                 root._failed++
             }
             choices.destroy()

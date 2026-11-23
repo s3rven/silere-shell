@@ -52,6 +52,7 @@ PageShell {
 
     // the seek wave swells with the music; while it shows, the page keeps cava awake on its low-power profile
     readonly property bool _swellWanted: root._motionOk && Media.playing && Media.cavaReady
+        && Media.hasPosition && Media.lengthKnown
     property bool _swellClient: false
     on_SwellWantedChanged: root._syncSwellClient()
     function _syncSwellClient(): void {
@@ -142,7 +143,7 @@ PageShell {
                 id: _source
                 anchors { top: _heading.bottom; topMargin: 2; left: parent.left; right: _open.left; rightMargin: 12 }
                 text: [Media.sourceLabel, Media.playing ? "" : "Paused"].filter(s => s.length > 0).join(" · ")
-                color: Theme.withAlpha(Theme.subtext, 0.78)
+                color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontLabel
                 font.weight: Font.Medium
                 elide: Text.ElideRight
@@ -168,7 +169,7 @@ PageShell {
                     id: _openText
                     anchors.centerIn: parent
                     text: "Open  󰏌"
-                    color: _open._hot ? Theme.withAlpha(Theme.text, 0.92) : Theme.withAlpha(Theme.subtext, 0.82)
+                    color: _open._hot ? Theme.withAlpha(Theme.text, 0.92) : Theme.menuTextDetail
                     font.pixelSize: Settings.fontLabel
                     font.weight: Font.Medium
                     ColorFade on color {}
@@ -383,7 +384,7 @@ PageShell {
                 width: parent.width - 8
                 topPadding: 3
                 text: root._shownSub
-                color: Theme.withAlpha(Theme.subtext, 0.86)
+                color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontSize
                 elide: Text.ElideRight
             }
@@ -399,6 +400,7 @@ PageShell {
             x: 4
             width: parent.width - 8
             height: 22
+            readonly property real _position: _seekTrack.previewing ? _seekTrack.shownValue : Media.positionNow
             // the minus sign of a time left is reserved either way, so the track does not shift when the label swaps
             readonly property real _timeW: Math.max(_elapsedLabel.implicitWidth, _totalLabel.implicitWidth, _leftReserve.advanceWidth)
             TextMetrics {

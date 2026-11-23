@@ -446,20 +446,18 @@ PageShell {
                                 checked: ShellSettings.nightLightAuto
                                 onToggled: nextChecked => ShellSettings.nightLightAuto = nextChecked
                             }
-                            CollapsibleSection {
-                                expanded: !ShellSettings.nightLightAuto
-                                SliderRow {
-                                    id: _nightTemp
-                                    glyph: "󰔄"
-                                    label: "Temperature"
-                                    displayValue: Math.round(_nightTemp.shownValue) + "K"
-                                    value: ShellSettings.nightLightTemp
-                                    min: 1000; max: 6500; step: 100
-                                    // each value relaunches the gamma tool, which drops to white in between
-                                    commitOnRelease: true
-                                    glyphColor: Theme.withAlpha(Theme.warning, 0.85)
-                                    onChanged: (v) => ShellSettings.nightLightTemp = v
-                                }
+                            SliderRow {
+                                id: _nightTemp
+                                glyph: "󰔄"
+                                // following the sun, this is where dusk ends
+                                label: ShellSettings.nightLightAuto ? "Night temperature" : "Temperature"
+                                displayValue: Math.round(_nightTemp.shownValue) + "K"
+                                value: ShellSettings.nightLightTemp
+                                min: 1000; max: 6500; step: 100
+                                // each value relaunches the gamma tool, which drops to white in between
+                                commitOnRelease: true
+                                glyphColor: Theme.withAlpha(Theme.warning, 0.85)
+                                onChanged: (v) => ShellSettings.nightLightTemp = v
                             }
                             SunArc {
                                 // not the picker's own state: the arc stays drawn while its picker folds away
@@ -484,7 +482,7 @@ PageShell {
                     showSwitch: true
                     expandable: true
                     expanded: root._picker === "dnd"
-                    badgeCount: Notifications.silencingActive ? Notifications.missedCount : 0
+                    badgeCount: Notifications.missedShown
                     onActivated: Notifications.toggleDnd()
                     onExpandToggled: root._togglePicker("dnd")
                     onBadgeActivated: MenuState.showTab(MenuState.recentTab)

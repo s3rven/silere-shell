@@ -52,6 +52,7 @@ Column {
     function dismissInline(): bool {
         if (!root.expanded) return false
         root.closeSearch()
+        if (root._canSearch) _toggle.forceActiveFocus(Qt.BacktabFocusReason)
         return true
     }
     function choose(section: string): void {
@@ -63,7 +64,7 @@ Column {
     }
     // the Down key in the field lands on the first result; Up from the first result comes back
     function _focusResult(index: int): bool {
-        if (!root.searching || index >= _results.count) return false
+        if (!root._canSearch || !root.searching || index < 0 || index >= _results.count) return false
         _results.currentIndex = index
         _results.positionViewAtIndex(index, ListView.Contain)
         _results.forceLayout()
@@ -268,7 +269,12 @@ Column {
                         buttonSize: root.toggleHeight
                         glyph: "󰅃"
                         accessibleName: "Close settings search"
-                        onTriggered: root.closeSearch()
+                        // clicked, the field still holds the focus, and handing it to the search button drew that
+                        // button's keyboard ring under the mouse; only a key press on this button hands it back
+                        onTriggered: {
+                            if (_close.activeFocus) root.dismissInline()
+                            else root.closeSearch()
+                        }
                     }
                 }
             }

@@ -368,10 +368,27 @@ Item {
 
         Item {
             id: _glyphBox
+            readonly property bool _ringed: root.glyphRing >= 0
+            // held, as a segment's ink is, so a reading's tick writes no colour and the arc's fade runs only on a change
+            readonly property color _ringInk: root._glyphTint(root.glyphRingColor, root._contentHot)
             // Math.round, as the row did before it filled the pill: centre anchors round half down and lift the glyph
             y: Math.round((parent.height - height) / 2)
-            implicitWidth:  root._shownGlyph.length > 0 ? Metrics.iconCellFor(root.glyphPixelSize) : 0
-            implicitHeight: _glyphText.implicitHeight
+            implicitWidth:  root._shownGlyph.length === 0 ? 0
+                : _ringed ? root.ringSize : Metrics.iconCellFor(root.glyphPixelSize)
+            implicitHeight: _ringed ? root.ringSize : _glyphText.implicitHeight
+
+            Loader {
+                anchors.fill: parent
+                active: _glyphBox._ringed && root._shownGlyph.length > 0
+                sourceComponent: RingGauge {
+                    value: root.glyphRing
+                    arcColor: _glyphBox._ringInk
+                    // turns with its glyph: snapped, a reading going high showed an amber ring round a blue glyph for a whole fade
+                    ColorFade on arcColor {}
+                    // a neutral track, as the level bar's: tinted like its arc, the ring's empty part blurred into its filled part
+                    trackColor: Theme.withAlpha(Theme.barSubtext, 0.22)
+                }
+            }
 
             ShellText {
                 id: _glyphText
@@ -489,8 +506,18 @@ Item {
                     readonly property real _ring: typeof _segment.seg.ring === "number" ? _segment.seg.ring : -1
                     readonly property bool _ringed: _ring >= 0
                     y: Math.round((parent.height - height) / 2)
-                    implicitWidth: Metrics.iconCellFor(root.glyphPixelSize)
-                    implicitHeight: _segGlyph.implicitHeight
+                    implicitWidth: _ringed ? root.ringSize : Metrics.iconCellFor(root.glyphPixelSize)
+                    implicitHeight: _ringed ? root.ringSize : _segGlyph.implicitHeight
+                    Loader {
+                        anchors.fill: parent
+                        active: _segGlyphBox._ringed
+                        sourceComponent: RingGauge {
+                            value: _segGlyphBox._ring
+                            arcColor: _segment._ringInk
+                            ColorFade on arcColor {}
+                            trackColor: Theme.withAlpha(Theme.barSubtext, 0.22)
+                        }
+                    }
                     ShellText {
                         id: _segGlyph
                         anchors.centerIn: parent

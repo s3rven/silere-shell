@@ -344,7 +344,7 @@ FittedPopupWindow {
                         OutlineBorder {
                             radius: _box.radius
                             outlineColor: _entry.checked
-                                ? "transparent" : Theme.withAlpha(Theme.subtext, 0.5)
+                                ? "transparent" : Theme.menuTextQuiet
                         }
                         ShellText {
                             anchors.centerIn: parent
@@ -363,7 +363,7 @@ FittedPopupWindow {
                         OutlineBorder {
                             radius: parent.radius
                             outlineColor: _entry.checked
-                                ? "transparent" : Theme.withAlpha(Theme.subtext, 0.5)
+                                ? "transparent" : Theme.menuTextQuiet
                         }
                     }
                 }
@@ -397,7 +397,7 @@ FittedPopupWindow {
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: "󰅂"
-                    color: Theme.withAlpha(Theme.subtext, 0.7)
+                    color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontSize
                 }
             }
@@ -690,7 +690,7 @@ FittedPopupWindow {
                         anchors.rightMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         text: "Hide from bar"
-                        color: _hideHover.hovered ? Theme.text : Theme.withAlpha(Theme.subtext, 0.86)
+                        color: _hideHover.hovered ? Theme.text : Theme.menuTextDetail
                         font.pixelSize: Settings.fontSize
                         elide: Text.ElideRight
                         ColorFade on color {}

@@ -27,6 +27,10 @@ Singleton {
     property int code: -1
     property bool isDay: true
     property string place: ""
+    // later today from the same answer: four slots three hours apart ({ hour, temp, code, isDay }), empty unless all four are sound
+    property var hours: []
+    readonly property int hourStep: 3
+    readonly property int hourSlots: 4
     // the unit the shown reading came in: a switch keeps it until the new reading lands
     readonly property string unit: (root.hasData ? root._readingFahrenheit : root.fahrenheit) ? "°F" : "°C"
     readonly property string glyph: root.glyphFor(root.code, root.isDay)
@@ -92,6 +96,7 @@ Singleton {
             + "&longitude=" + lon.toFixed(2)
             + "&current=temperature_2m,weather_code,is_day"
             + "&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto"
+            + "&hourly=temperature_2m,weather_code,is_day&forecast_hours=" + (root.hourStep * root.hourSlots + 1)
             + (fahrenheit ? "&temperature_unit=fahrenheit" : "")
     }
 
@@ -116,6 +121,38 @@ Singleton {
             low: Math.round(values[3]),
             isDay: current.is_day !== 0
         }
+    }
+
+    // forecast_hours counts from the current hour, so slot n is n steps ahead. All or nothing, like the current
+    // reading: a strip with a hole would read as a forecast for the wrong hour
+    function parseHours(data, step: int, slots: int): var {
+        const h = data?.hourly
+        const times = h?.time, temps = h?.temperature_2m, codes = h?.weather_code, days = h?.is_day
+        if (![times, temps, codes, days].every(a => Array.isArray(a))) return []
+        const out = []
+        for (let i = step; out.length < slots && i < times.length; i += step) {
+            const m = typeof times[i] === "string" ? /^\d{4}-\d{2}-\d{2}T(\d{2}):00$/.exec(times[i]) : null
+            const temp = temps[i], code = codes[i], day = days[i]
+            if (!m || typeof temp !== "number" || !isFinite(temp) || !Number.isInteger(code)
+                    || root.conditionFor(code).length === 0 || (day !== 0 && day !== 1)) return []
+            const at = new Date(Number(times[i].slice(0, 4)), Number(times[i].slice(5, 7)) - 1,
+                Number(times[i].slice(8, 10)), Number(m[1])).getTime()
+            out.push({ hour: Number(m[1]), at: at, temp: Math.round(temp), code: code, isDay: day === 1 })
+        }
+        return out.length === slots ? out : []
+    }
+
+    // a failed refresh keeps the last reading, so hours read while online can pass while the strip still shows them;
+    // only those still ahead count, by the shell's minute clock
+    function upcoming(list, nowMs: real): var {
+        return (list || []).filter(h => h.at > nowMs)
+    }
+    readonly property var upcomingHours: root.upcoming(root.hours, DateTime.minuteSample.getTime())
+
+    // the clock's own format: 21:00, or 9 PM
+    function hourLabel(hour: int, twelveHour: bool): string {
+        if (!twelveHour) return (hour < 10 ? "0" : "") + hour + ":00"
+        return (hour % 12 === 0 ? 12 : hour % 12) + (hour < 12 ? " AM" : " PM")
     }
 
     function _key(nowMs: real): string {
@@ -186,6 +223,7 @@ Singleton {
             root.high = reading.high
             root.low = reading.low
             root.isDay = reading.isDay
+            root.hours = root.parseHours(data, root.hourStep, root.hourSlots)
             root._readingFahrenheit = fahrenheit
             root.place = place.name
             root._fetchedFor = key
@@ -291,6 +329,7 @@ Singleton {
         root.failure = ""
         root._fetchedAt = 0
         root._fetchedFor = ""
+        root.hours = []
         if (_zoneProc.running) {
             root._discardLookup = true
             _zoneProc.running = false

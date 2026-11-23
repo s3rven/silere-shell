@@ -70,7 +70,7 @@ Item {
         && (CalendarState.anchorSource === root
             || (CalendarState.anchorSource === null && root._anchorFallbackBar))
     readonly property bool _pressed: _calTap.pressed || _cycleTap.pressed
-    readonly property bool _missed: Notifications.silencingActive && Notifications.missedCount > 0
+    readonly property bool _missed: Notifications.missedShown > 0
     readonly property bool _hov: root.barActive && root.show
         && _hover.hovered && ShellSettings.barHoverHighlight
     readonly property color _cSub:   _hov ? Theme.mix(Theme.barSubtext, Theme.barAccent, 0.30) : Theme.barSubtext
@@ -197,7 +197,8 @@ Item {
                 expanded: Idle.keepAwake && !Notifications.presentationMode
             }
             CollapsingText {
-                text:     "󰂛 "
+                // Do Not Disturb's bell while popups are held back; once they are not, a badged one for what came meanwhile
+                text:     root._missed && !Notifications.silencingActive ? "󱅫 " : "󰂛 "
                 color:    root._missed ? Theme.barAccentMark : root._cSub
                 animate:  root._animatable
                 expanded: Notifications.effectiveDnd || root._missed
@@ -247,8 +248,8 @@ Item {
         + (Idle.keepAwake ? ", Keep Awake" : "")
         + (Notifications.effectiveDnd ? ", Do Not Disturb" : "")
         + (Notifications.dndUntil > 0 ? " until " + DateTime.clockText(new Date(Notifications.dndUntil)) : "")
-        + (!root._missed ? "" : Notifications.missedCount === 1 ? ", 1 missed notification"
-            : ", " + Notifications.missedCount + " missed notifications")
+        + (!root._missed ? "" : Notifications.missedShown === 1 ? ", 1 missed notification"
+            : ", " + Notifications.missedShown + " missed notifications")
     Accessible.role: Accessible.Button
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canInteract

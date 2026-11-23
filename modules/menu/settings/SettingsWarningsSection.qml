@@ -80,7 +80,7 @@ Column {
         visible: root._bluetoothOnly
         ToggleRow {
             glyph: "󰥉"; label: "Low battery warning"
-            description: "Bluetooth devices below " + SystemAlerts.btLowPct + "%"
+            description: "Bluetooth devices at " + SystemAlerts.btLowPct + "% or less"
             key: "osdBatteryWarn"
         }
     }

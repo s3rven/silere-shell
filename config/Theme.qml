@@ -78,7 +78,9 @@ Singleton {
         }
         return ShellSettings.matugenAccentBalance ? balancedAccent(c) : c
     }
-    readonly property color _tAccent:   _n ? (ShellSettings.neutralAccentAuto ? sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent) : sourcedAccent(_matuAccent)
+    readonly property color wallpaperAccent: sourcedAccent(_matuAccent)
+    readonly property color _tAccent: _n && !ShellSettings.neutralAccentAuto
+        ? ShellSettings.neutralAccent : wallpaperAccent
     property color accent: root._tAccent
     PaletteFade on accent { gate: root._paletteReady }
     // the accent as a word or a glyph. Fills, rings, tracks and knobs keep the chosen accent; its ink holds a
@@ -183,13 +185,13 @@ Singleton {
     property bool _paletteReady: false
     Timer { interval: 700; running: true; onTriggered: root._paletteReady = true }
 
-    readonly property string _paletteKey: "" + _tBackground + _tSurface + _tText
+    readonly property string paletteSignature: "" + _tBackground + _tSurface + _tText
         + _tSubtext + _tAccent + _tError + _tWarning + _tSuccess + _tLineBase
         + _tMenuTextDetail + _tMenuTextWarning + _tMenuTextQuiet + _tAccentInk
     // high contrast and the colour source flip the formulas themselves, not only the colours they read, and that flip has no
     // fade of its own: the local fades carry it, or a switch's knob went from the accent to dark grey in one frame
     readonly property bool paletteShifting: _shiftWindow.running && !_modeWindow.running
-    on_PaletteKeyChanged: {
+    onPaletteSignatureChanged: {
         if (!root._paletteReady
                 || !Motion.allowsMotion(Idle.isIdle, ShellSettings.reduceMotion)) return
         _shiftWindow.restart()

@@ -236,16 +236,16 @@ Singleton {
         }
     }
 
-    // the accent rails write per pointer frame; fire on the colour the drag lands on
+    // the accent rails write per pointer frame; report the palette the drag lands on
     Timer {
-        id: _accentSettle
-        interval: 400
+        id: _themeSettle
+        interval: Math.max(400, Motion.palette + 50)
         onTriggered: root.fire("theme-changed", [String(Theme.accent)])
     }
 
     Connections {
         target: root._present["theme-changed"] === true ? Theme : null
-        function onAccentChanged() { _accentSettle.restart() }
+        function onPaletteSignatureChanged() { _themeSettle.restart() }
     }
 
     property int _lastUpdateCount: 0

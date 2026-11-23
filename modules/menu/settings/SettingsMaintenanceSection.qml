@@ -86,16 +86,25 @@ Column {
                 MatugenTheme.usingFallback ? "Wallpaper colors are unavailable"
                     : "Last palette stays; sync stops",
                 "matugen", true)
-        else if (MatugenTheme.paletteStale)
+        else if (MatugenTheme.loadState === "unreadable")
             add(attention, "󰉦", "Wallpaper palette unreadable",
-                "Showing the last colors that loaded", "Template", false,
+                MatugenTheme.paletteStale ? "Showing the last colors that loaded" : "Showing built-in colors",
+                "", false,
                 "", Theme.warning)
-        else if (MatugenTheme.usingFallback) {
+        else if (MatugenTheme.loadState === "missing" || MatugenTheme.loadState === "invalid") {
             const repaired = SystemTools.matugenRepairState === "done"
-            add(repaired ? optional : attention, "󰉦", "Wallpaper palette",
+            // the Neutral colours read the palette only for an accent taken from the wallpaper; a fresh install has none,
+            // so until Wallpaper colours are chosen it is an add-on, not a fault
+            const used = !ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto
+            if (!used && SystemTools.matugenRepairState.length === 0)
+                add(optional, "󰉦", "Wallpaper palette", MatugenTheme.loadState === "invalid"
+                    ? "Has missing colors; Wallpaper colors need it" : "Not written yet; Wallpaper colors need it", "", true)
+            else add(repaired ? optional : attention, "󰉦", "Wallpaper palette",
                 SystemTools.matugenRepairState === "working" ? "Rewiring Matugen…"
-                    : SystemTools.matugenRepairState === "done" ? "Rewired — colors follow your next wallpaper change"
+                    : SystemTools.matugenRepairState === "done" ? "Rewired. Run your wallpaper or Matugen command."
                     : SystemTools.matugenRepairState === "failed" ? "Could not rewire; run scripts/install.sh"
+                    : MatugenTheme.loadState === "invalid" ? "Palette has missing or invalid colors"
+                    : MatugenTheme.paletteStale ? "Palette removed; showing the last colors"
                     : "Matugen has not written one yet",
                 SystemTools.matugenRepairState === "working" ? "" : "Repair",
                 false, SystemTools.matugenRepairState === "working" ? "" : "matugen",

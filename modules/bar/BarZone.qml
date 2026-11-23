@@ -76,7 +76,7 @@ Row {
     // never read the fitted widths here: this feeds the budget that fits them
     readonly property var widthMetrics: {
         void zone.visibleKeys
-        let fixed = 0, flexible = 0
+        let fixed = 0, flexible = 0, pendingWidth = 0
         for (let i = 0; i < widgetRepeater.count; i++) {
             const slot = widgetRepeater.itemAt(i)
             if (!slot || (slot.flexible ? slot.flexibleWidth <= 0 : !slot.show)) continue
@@ -84,7 +84,20 @@ Row {
             flexible += slot.flexibleWidth
             pendingWidth += slot.pendingWidth
         }
-        return { fixed: fixed, flexible: flexible }
+        return { fixed: fixed, flexible: flexible, pendingWidth: pendingWidth }
+    }
+    // what the system monitor's width budget leaves out, apart from widthMetrics: that one also adds up the monitor's
+    // own width, which follows the budget, so reading it there looped on every resize while the bar mapped
+    readonly property var budgetMetrics: {
+        void zone.visibleKeys
+        let fixed = 0, occupied = false
+        for (let i = 0; i < widgetRepeater.count; i++) {
+            const slot = widgetRepeater.itemAt(i)
+            if (!slot || (slot.flexible ? slot.flexibleWidth <= 0 : !slot.show)) continue
+            occupied = true
+            fixed += slot.key === "system" ? slot.dividerWidth : slot.fixedWidth
+        }
+        return { fixedWithoutMonitor: fixed, occupied: occupied }
     }
 
     function _queueVisibilitySync(): void {

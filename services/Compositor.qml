@@ -66,6 +66,10 @@ Singleton {
 
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
+    signal screenshotTaken(string path)
+    signal configReloaded()
+    // this shell answers Hyprland's silere:menu and silere:tray, so a bind can reach it without a process
+    readonly property bool globalShortcuts: !!(_be && _be.globalShortcuts)
 
     // hyprland fires a start per shared frame (20 ms apart at most, measured) but also a 250 ms start/stop burst per screenshot
     readonly property int castArmMs: 1500
@@ -170,5 +174,7 @@ Singleton {
         function onOverviewRaw(open) { root.overviewRaw(open) }
         function onScreencast(started) { root._castApply(started ? "start" : "stop") }
         function onSharingState(active) { root.screenSharing = active }
+        function onScreenshotTaken(path) { root.screenshotTaken(path) }
+        function onConfigReloaded() { root.configReloaded() }
     }
 }

@@ -23,6 +23,7 @@ Rectangle {
 
     function _press(parentY: real): void {
         if (!root._canInteract) return
+        if (typeof root.list.releaseScrollHold === "function") root.list.releaseScrollHold()
         root.list.cancelFlick()
         root._grabRatio = Math.max(0, Math.min(1, (parentY - root.y) / root.height))
         root._pointerY = parentY

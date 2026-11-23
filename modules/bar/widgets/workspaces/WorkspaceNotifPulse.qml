@@ -28,12 +28,15 @@ Item {
     }
 
     onBarActiveChanged: if (!barActive) root._settle()
+    // sized off the row, so a taller bar or a larger UI scale keeps the rings round the dot: 24, 14 and 7 in a 24 px row.
+    // Not the width: a cell closing under a pulse would shrink them with it
+    readonly property real _side: root.height
 
     Rectangle {
         anchors.centerIn: parent
-        width: 24
-        height: 24
-        radius: 12
+        width: Math.round(root._side)
+        height: width
+        radius: width / 2
         antialiasing: true
         color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.10
@@ -42,9 +45,9 @@ Item {
 
     Rectangle {
         anchors.centerIn: parent
-        width: 14
-        height: 14
-        radius: 7
+        width: Math.round(root._side * 7 / 12)
+        height: width
+        radius: width / 2
         antialiasing: true
         color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.22
@@ -53,9 +56,9 @@ Item {
 
     Rectangle {
         anchors.centerIn: parent
-        width: 7
-        height: 7
-        radius: 3.5
+        width: Math.round(root._side * 7 / 24)
+        height: width
+        radius: width / 2
         antialiasing: true
         color: root.critical ? Theme.barError : Theme.barAccentMark
         opacity: root.pulse * 0.50

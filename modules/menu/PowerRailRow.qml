@@ -51,7 +51,7 @@ Rectangle {
             ? Theme.withAlpha(root._ink, root.interactive ? (root._hot ? 0.90 : 0.72) : 0.86)
             : root.dangerous
                 ? Theme.withAlpha(Theme.error, root._hot ? 0.86 : 0.60)
-                : Theme.withAlpha(Theme.subtext, root._hot ? 0.78 : 0.56)
+                : root._hot ? Theme.menuTextDetail : Theme.menuTextQuiet
 
     width: parent ? parent.width : implicitWidth
     height: Metrics.rowHeightFor(30)
@@ -197,7 +197,7 @@ Rectangle {
         text: root.value
         elide: Text.ElideRight
         horizontalAlignment: Text.AlignRight
-        color: Theme.withAlpha(Theme.menuTextMuted, root._hot ? 0.84 : 0.66)
+        color: root._hot ? Theme.menuTextMuted : Theme.menuTextDetail
         font.pixelSize: Settings.fontCaption
         font.weight: Font.Medium
         ColorFade on color {}

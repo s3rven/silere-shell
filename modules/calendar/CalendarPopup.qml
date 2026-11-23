@@ -316,14 +316,20 @@ FittedPopupWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             spacing: 1
                             ShellText {
+                                id: _todayDayLabel
+                                width: parent.width
+                                elide: Text.ElideRight
                                 text: card.todayWeekday
                                 color: _todayH.hovered ? Theme.text : Theme.withAlpha(Theme.text, 0.9)
                                 font.pixelSize: Settings.fontSize + 1; font.weight: Font.DemiBold
                                 ColorFade on color {}
                             }
                             ShellText {
+                                id: _todayCaptionLabel
+                                width: parent.width
+                                elide: Text.ElideRight
                                 text: card.todayCaption
-                                color: Theme.withAlpha(Theme.subtext, 0.78)
+                                color: Theme.menuTextDetail
                                 font.pixelSize: Settings.fontCaption
                             }
                         }
@@ -406,7 +412,7 @@ FittedPopupWindow {
                             visible: width > 0
                             elide: Text.ElideRight
                             text: Qt.formatDateTime(new Date(card.dispYear, card.dispMonth, 1), "yyyy")
-                            color: Theme.withAlpha(Theme.subtext, 0.78)
+                            color: Theme.menuTextDetail
                             font.pixelSize: Settings.fontSize + 1
                         }
                     }
@@ -435,7 +441,7 @@ FittedPopupWindow {
                     ShellText {
                         anchors.centerIn: parent
                         text: "Wk"
-                        color: Theme.withAlpha(Theme.subtext, 0.78)
+                        color: Theme.menuTextDetail
                         font.pixelSize: Settings.fontMicro
                         font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                     }
@@ -455,8 +461,8 @@ FittedPopupWindow {
                             width: parent.width - 4
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
-                            text: CalendarState.weekdayLabelFor(dayHdr.weekday, Qt.locale())
-                            color: Theme.withAlpha(Theme.subtext, dayHdr.weekend ? 0.78 : 0.92)
+                            text: CalendarState.weekdayLabelFor(dayHdr.weekday, card._locale)
+                            color: dayHdr.weekend ? Theme.menuTextDetail : Theme.subtext
                             font.pixelSize: Settings.fontMicro
                             font.weight: Font.Medium; font.capitalization: Font.AllUppercase
                         }
@@ -487,7 +493,7 @@ FittedPopupWindow {
                                 anchors.centerIn: parent
                                 text: card._weekForRow(_weekRow.index)
                                 color: _weekRow.index === Math.floor(card._todayCell / 7)
-                                    ? Theme.accentInk : Theme.withAlpha(Theme.subtext, 0.78)
+                                    ? Theme.accentInk : Theme.menuTextDetail
                                 font.pixelSize: Settings.fontTiny
                                 font.weight: Font.Medium
                             }
@@ -563,8 +569,8 @@ FittedPopupWindow {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum
                                     color: _dayCell.today ? Theme.background
-                                         : _dayCell.cur   ? (_dayCell.weekend ? Theme.withAlpha(Theme.subtext, 0.86) : Theme.withAlpha(Theme.text, 0.9))
-                                         :                  Theme.withAlpha(Theme.subtext, 0.64)
+                                         : _dayCell.cur   ? (_dayCell.weekend ? Theme.menuTextDetail : Theme.withAlpha(Theme.text, 0.9))
+                                         :                  Theme.menuTextQuiet
                                     font.pixelSize: Settings.fontSize
                                     font.weight: _dayCell.today ? Font.DemiBold : Font.Normal
                                 }
@@ -581,9 +587,12 @@ FittedPopupWindow {
                 readonly property bool shown: ShellSettings.weatherEnabled
                     && (Weather.hasData || Weather.failed)
                 readonly property bool retry: _weather.shown && Weather.failed && !Weather.loading
+                // the next hours under today's reading; shown checks the setting first, so nothing here creates the service
+                readonly property bool forecast: _weather.shown && Weather.hasData && Weather.upcomingHours.length > 0
+                readonly property int lineH: Metrics.rowHeightFor(38)
                 visible: _weather.shown
                 width: parent.width
-                height: _weather.shown ? Metrics.rowHeightFor(38) : 0
+                height: _weather.shown ? _weather.lineH + (_weather.forecast ? Metrics.rowHeightFor(40) : 0) : 0
 
                 Accessible.role: _weather.retry ? Accessible.Button : Accessible.StaticText
                 Accessible.name: !_weather.shown ? ""
@@ -591,6 +600,8 @@ FittedPopupWindow {
                         + Weather.unit + ", " + Weather.condition + ", high " + Weather.high
                         + ", low " + Weather.low + (Weather.failed
                             ? ". Previous reading. " + (Weather.loading ? "Updating" : Weather.failure + ". Retry") : "")
+                        + (_weather.forecast ? ". Later, " + Weather.upcomingHours.map(h => Weather.hourLabel(h.hour, ShellSettings.clock12h)
+                            + " " + h.temp + Weather.unit + " " + Weather.conditionFor(h.code)).join(", ") : "")
                     : Weather.loading ? "Updating weather"
                     : "Weather unavailable, " + Weather.failure + ". Retry"
                 Accessible.focusable: _weather.retry && CalendarState.open
@@ -610,7 +621,7 @@ FittedPopupWindow {
                     id: _weatherBody
                     y: 4
                     width: parent.width
-                    height: parent.height - 4
+                    height: _weather.lineH - 4
                     active: ShellSettings.weatherEnabled
                     sourceComponent: Item {
                         ShellText {
@@ -619,7 +630,7 @@ FittedPopupWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: Weather.hasData && Weather.glyph.length > 0 ? Weather.glyph : "󰖐"
                             color: Weather.hasData ? Theme.withAlpha(Theme.text, 0.86)
-                                : Theme.withAlpha(Theme.subtext, 0.64)
+                                : Theme.menuTextQuiet
                             font.pixelSize: Settings.fontSize + 5
                         }
 
@@ -642,7 +653,7 @@ FittedPopupWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: Weather.hasData
                             text: "H " + Weather.high + "°  L " + Weather.low + "°"
-                            color: Theme.withAlpha(Theme.subtext, 0.86)
+                            color: Theme.menuTextDetail
                             font.pixelSize: Settings.fontCaption
                         }
 
@@ -659,10 +670,52 @@ FittedPopupWindow {
                                 : Weather.failure
                             color: _weatherH.hovered ? Theme.withAlpha(Theme.text, 0.92)
                                 : Weather.failed && !Weather.loading ? Theme.warning
-                                : Theme.withAlpha(Theme.subtext, 0.86)
+                                : Theme.menuTextDetail
                             font.pixelSize: Settings.fontCaption
                             elide: Text.ElideRight
                             ColorFade on color {}
+                        }
+                    }
+                }
+
+                Loader {
+                    y: _weather.lineH
+                    width: parent.width
+                    height: parent.height - y
+                    active: _weather.forecast
+                    sourceComponent: Row {
+                        Repeater {
+                            // a count, so a refresh with the same slots rebinds text instead of rebuilding columns
+                            model: Weather.upcomingHours.length
+                            delegate: Column {
+                                id: _slot
+                                required property int index
+                                readonly property var hour: Weather.upcomingHours[_slot.index] ?? null
+                                width: Math.floor(_weather.width / Math.max(1, Weather.upcomingHours.length))
+                                spacing: 2
+                                ShellText {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: _slot.hour ? Weather.hourLabel(_slot.hour.hour, ShellSettings.clock12h) : ""
+                                    color: Theme.menuTextDetail
+                                    font.pixelSize: Settings.fontCaption
+                                }
+                                Row {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    spacing: 5
+                                    ShellText {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: _slot.hour ? Weather.glyphFor(_slot.hour.code, _slot.hour.isDay) : ""
+                                        color: Theme.withAlpha(Theme.text, 0.86)
+                                        font.pixelSize: Settings.fontSize + 1
+                                    }
+                                    ShellText {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: _slot.hour ? _slot.hour.temp + "°" : ""
+                                        color: Theme.text
+                                        font.pixelSize: Settings.fontSize
+                                    }
+                                }
+                            }
                         }
                     }
                 }

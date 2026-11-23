@@ -14,7 +14,11 @@ Singleton {
     property var surfaceScreen: null
     property var list: []
     readonly property bool dnd: ShellSettings.dnd
+    // held back and not yet seen; only opening History clears it. A fullscreen game covers the bar for the whole silence,
+    // so a count that ended with the silence was never seen at all
     property alias missedCount: _persist.missedCount
+    // what the bell and Home claim: a missed one that History's retention has since let go is not there to see
+    readonly property int missedShown: Math.min(root.missedCount, root.historyCount)
     // these maps are restored from persisted JSON. Keep their prototype empty so a malformed key cannot change object behaviour between reloads
     property var _seen:  Object.create(null)
     property var _times: Object.create(null)
@@ -816,7 +820,6 @@ Singleton {
     }
     readonly property bool effectiveDnd: dnd || _quietActive
     readonly property bool silencingActive: effectiveDnd || fullscreenSilenced || screenShareSilenced
-    onSilencingActiveChanged: { if (!silencingActive && missedCount !== 0) missedCount = 0 }
     function markSeen(id: int): void {
         root._ensurePersistentState()
         const key = String(id)

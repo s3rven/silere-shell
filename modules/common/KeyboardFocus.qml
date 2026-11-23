@@ -31,7 +31,38 @@ Item {
         && root.control.enabled && root.control.visible
 
     Binding { target: root.control; property: "activeFocusOnTab"; value: root.canInteract; delayed: true }
+    property Item _holder: null
+    // the control held the keyboard focus itself. A ListView marks its current row focused for whenever the view
+    // takes the focus, with no key ever pressed: read as owned, that row closing with its list pulled the focus onto
+    // the list, and the next close handed it to the row's chevron, which drew its ring under the mouse. A property,
+    // not a Connections: this sits on every control
+    property bool _owned: false
+    readonly property bool _focused: root.control ? root.control.activeFocus : false
+    // moved on by hand, the focus is no longer this control's; hidden or disabled under it, it is until it parks
+    on_FocusedChanged: {
+        if (root._focused) root._owned = true
+        else if (root.control && root.control.visible && root.control.enabled) root._owned = false
+    }
     onCanInteractChanged: {
+        const control = root.control
+        if (!control) return
+        if (root.canInteract) {
+            if (root._holder && root._holder.activeFocus) control.forceActiveFocus(Qt.OtherFocusReason)
+            root._holder = null
+            root._owned = control.activeFocus
+            return
+        }
+        if (!control.activeFocus && !root._owned) return
+        root._owned = false
+        const window = control.Window.window
+        // the window root runs no key handler: park on the nearest shown ancestor, whether busy, hidden or disabled
+        if (!window || (!control.activeFocus && window.activeFocusItem !== window.contentItem)) return
+        for (let p = control.parent; p && p !== window.contentItem; p = p.parent) {
+            if (!p.visible || !p.enabled) continue
+            root._holder = p
+            p.forceActiveFocus(Qt.OtherFocusReason)
+            return
+        }
         // clear focus before removing the tab stop, which Qt refuses while it owns focus
         if (control.activeFocus) control.focus = false
     }

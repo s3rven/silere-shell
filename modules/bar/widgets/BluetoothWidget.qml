@@ -32,7 +32,7 @@ Pill {
     readonly property int _battery: root._linked && Bluetooth.connectedCount === 1 ? Bluetooth.connectedBattery : -1
     // a device about to run out warns on the glyph, at the mark its desktop alert uses
     function lowCharge(battery: int): bool {
-        return battery >= 0 && battery < SystemAlerts.btLowPct
+        return battery >= 0 && battery <= SystemAlerts.btLowPct
     }
     readonly property bool _batteryLow: root.lowCharge(root._battery)
     glyphColor: root._batteryLow ? Theme.barWarning : root._linked ? Theme.barText : Theme.barSubtext

@@ -444,9 +444,7 @@ Item {
                             text: "󰅂"
                             rotation: _grp.expanded ? 90 : 0
                             transformOrigin: Item.Center
-                            color: Theme.withAlpha(Theme.subtext,
-                                _headerHover.hovered ? 0.90
-                                : _grp.expanded ? 0.80 : 0.74)
+                            color: _headerHover.hovered ? Theme.subtext : Theme.menuTextDetail
                             font.pixelSize: Settings.fontCaption
 
                             Disclosure on rotation {}

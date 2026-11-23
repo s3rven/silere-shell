@@ -1007,7 +1007,7 @@ Scope {
             "recovering the same low battery reading does not send another warning")
 
         ShellSettings.osdBatteryWarn = false
-        Bluetooth._devices = [headset(30)]
+        Bluetooth._devices = [headset(SystemAlerts.btRearmPct)]
         input.wait(30)
         root.check(SystemAlerts._btWarned.AA !== true,
             "a charging device rearms its warning even while battery alerts are disabled")

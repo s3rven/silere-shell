@@ -60,7 +60,7 @@ Item {
         anchors.right: parent.right; anchors.rightMargin: 14
         y: 12
         text: NightLight.phaseLabel
-        color: Theme.withAlpha(Theme.subtext, 0.85)
+        color: Theme.menuTextDetail
         font.pixelSize: Settings.fontLabel
     }
 

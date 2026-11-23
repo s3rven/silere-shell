@@ -64,7 +64,7 @@ Item {
         anchors.top: _day.bottom
         anchors.topMargin: 2
         text: root.dateText
-        color: Theme.withAlpha(Theme.subtext, 0.78)
+        color: Theme.menuTextDetail
         font.pixelSize: Settings.fontLabel
         font.weight: Font.Medium
         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -79,7 +79,7 @@ Item {
             : _date.y + Math.round((_date.height - height) / 2)
         visible: root.uptimeText.length > 0
         text: root.uptimeText
-        color: Theme.withAlpha(Theme.subtext, 0.82)
+        color: Theme.menuTextDetail
         font.pixelSize: Settings.fontLabel
         font.weight: Font.Medium
         elide: Text.ElideRight

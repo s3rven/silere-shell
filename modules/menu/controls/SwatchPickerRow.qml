@@ -8,6 +8,10 @@ Item {
 
     property string glyph: ""
     property string label: ""
+    property string searchKey: ""
+    property real topRadius: 0
+    property real bottomRadius: 0
+    property real cardInset: 1
     property alias options: _sr.options
     property alias colors: _sr.colors
     property alias activeIndex: _sr.activeIndex

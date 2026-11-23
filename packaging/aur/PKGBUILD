@@ -63,7 +63,7 @@ package() {
     local dest="$pkgdir/usr/share/$_pkgname"
     install -dm755 "$dest"
     cp -a --no-preserve=ownership \
-        shell.qml release.json config modules services "$dest/"
+        shell.qml release.json config modules services hyprland "$dest/"
     printf '%s\n' "$pkgver" > "$dest/package-version"
 
     # only the scripts the shell itself runs; tests, probes and linters are

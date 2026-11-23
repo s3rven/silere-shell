@@ -12,6 +12,7 @@ import Quickshell.Services.UPower as Up
 import "config"
 import "config/PixelGeometry.js" as PixelGeometry
 import "services/TimeZonePlace.js" as TimeZonePlace
+import "services/KeybindList.js" as KeybindList
 import "services"
 import "modules/bar"
 import "modules/common"
@@ -492,6 +493,7 @@ ShellRoot {
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
+    Component { id: customWidgetFactory; CustomWidget { screen: null } }
     Component { id: mediaWidgetFactory; MediaWidget { screen: null; height: 36 } }
     Component { id: volumePillFactory; Volume {} }
     Component { id: microphonePillFactory; MicWidget {} }
@@ -2409,16 +2411,16 @@ ShellRoot {
         root._check(bt !== null && bt.restText(false, 64) === "64%" && bt.restText(false, 0) === "0%"
                 && bt.restText(true, 64) === "" && bt.restText(false, -1) === "",
             "with values shown at rest, Bluetooth reads one device's charge beside its glyph, and nothing on a hover-only bar or without a reading")
-        root._check(bt !== null && bt.lowCharge(SystemAlerts.btLowPct - 1) && !bt.lowCharge(SystemAlerts.btLowPct)
+        root._check(bt !== null && bt.lowCharge(SystemAlerts.btLowPct) && !bt.lowCharge(SystemAlerts.btLowPct + 1)
                 && !bt.lowCharge(-1),
-            "a Bluetooth device's glyph warns below the charge its low-battery alert fires at")
+            "a Bluetooth device's glyph warns from the charge its low-battery alert fires at")
         if (bt) bt.destroy()
         btComponent.destroy()
         const volComponent = Qt.createComponent("modules/bar/widgets/Volume.qml")
         const vol = volComponent.status === Component.Ready ? volComponent.createObject(barFixtureHost) : null
-        root._check(vol !== null && vol.outputLow(SystemAlerts.btLowPct - 1) && !vol.outputLow(SystemAlerts.btLowPct)
+        root._check(vol !== null && vol.outputLow(SystemAlerts.btLowPct) && !vol.outputLow(SystemAlerts.btLowPct + 1)
                 && !vol.outputLow(-1),
-            "the volume glyph warns below the same mark when its output is a Bluetooth device")
+            "the volume glyph warns from the same mark when its output is a Bluetooth device")
         if (vol) vol.destroy()
         volComponent.destroy()
         const audioWidgets = ["Volume", "MicWidget"].map(name =>
@@ -3248,6 +3250,110 @@ ShellRoot {
         SysInfo.memAvailKb = was.avail
     }
 
+    function _checkSystemRings(): void {
+        const was = {
+            show: ShellSettings.barShowSystem, cpu: ShellSettings.systemShowCpu, mem: ShellSettings.systemShowMemory,
+            temp: ShellSettings.systemShowTemp, rings: ShellSettings.systemRings, hoverValues: ShellSettings.valuesOnHover,
+            ready: SysInfo.cpuReady, pct: SysInfo.cpuPct, high: SysInfo.cpuHigh, busy: SysInfo._cpuBusySamples,
+            total: SysInfo.memTotalKb, avail: SysInfo.memAvailKb
+        }
+        // off, so SysInfo stays inactive and keeps the readings written here
+        ShellSettings.barShowSystem = false
+        ShellSettings.systemShowCpu = true
+        ShellSettings.systemShowMemory = true
+        ShellSettings.systemShowTemp = false
+        ShellSettings.valuesOnHover = false
+        ShellSettings.systemRings = false
+        SysInfo.cpuReady = true
+        SysInfo.cpuPct = 0.14
+        SysInfo.cpuHigh = false
+        SysInfo._cpuBusySamples = 0
+        SysInfo.memTotalKb = 32 * 1048576
+        SysInfo.memAvailKb = 32 * 1048576 * 0.68
+        const w = systemWidgetFactory.createObject(barFixtureHost)
+        root._check(w.glyphRing === -1 && w.segments.length === 1 && w.segments[0].ring === -1,
+            "the system monitor draws no rings unless its style asks for them")
+        ShellSettings.systemRings = true
+        root._check(Math.abs(w.glyphRing - 0.14) < 1e-9 && Math.abs(w.segments[0].ring - 0.32) < 1e-9
+                && w.text === "14%" && w.segments[0].text === "32%"
+                && Qt.colorEqual(w.glyphRingColor, Theme.barAccentMark),
+            "rings fill to each reading beside its number, in the bar's accent")
+        ShellSettings.valuesOnHover = true
+        root._check(w.text === "" && w.segments.length === 1 && w.segments[0].text === ""
+                && w.segments[0].reserve === "" && w.segments[0].ring > 0.3,
+            "with values on hover every reading keeps its ring on the bar, and no hidden number holds room")
+        ShellSettings.valuesOnHover = false
+        SysInfo.memAvailKb = 32 * 1048576 * 0.03
+        root._check(Qt.colorEqual(w.segments[0].ringColor, Theme.barError)
+                && Qt.colorEqual(w.glyphRingColor, Theme.barAccentMark),
+            "nearly full memory turns its own ring red and leaves the CPU's in the accent")
+        SysInfo.cpuReady = false
+        root._check(w.glyphRing === 0 && w.text === "—" && Qt.colorEqual(w.glyphColor, Theme.barSubtext)
+                && w.accessibleName.includes("CPU usage unavailable"),
+            "an unsampled CPU has a muted glyph and an unavailable reading")
+        const tempWas = [CpuTemp.temp, CpuTemp.reading, CpuTemp._probeComplete]
+        CpuTemp._probeComplete = false
+        CpuTemp.temp = 0
+        CpuTemp.reading = 0
+        ShellSettings.systemShowTemp = true
+        const tempWithoutReading = w._parts[2]
+        CpuTemp.reading = 65
+        CpuTemp.temp = 65
+        root._check(tempWithoutReading.detail === "—" && !tempWithoutReading.ready
+                && tempWithoutReading.spoken === "CPU temperature unavailable"
+                && w._parts[2].detail === "65°C" && w._parts[2].spoken === "CPU temperature 65 degrees Celsius",
+            "the temperature unit appears only with a reading, which screen readers hear in degrees Celsius")
+        ShellSettings.barShowSystem = true
+        w.hoverActive = true
+        const wideMemory = w.segments[0].text
+        const reserved = 2 * w.horizontalPadding + 3 * (w.ringSize + w._gap)
+            + 2 * (w._gap + Math.round(w._gap / 2))
+        w.layoutWidthBudget = reserved + 12 * Settings.fontSize
+        root._check(wideMemory.includes("of 32 GB") && w.segments[0].text === "97%"
+                && w.Accessible.name.includes(wideMemory) && w.rowWidth + 2 * w.horizontalPadding <= w.layoutWidthBudget,
+            "a narrow system monitor uses short readings within its budget and keeps full memory detail for accessibility")
+        w.layoutWidthBudget = reserved - 2 * w._gap + w._readoutWidth("00%")
+        root._check(w.text === "—" && w.segments.every(part => part.text === "" && part.ring >= 0),
+            "a crowded system monitor keeps a complete reading and the other rings when only one number fits")
+        w.layoutWidthBudget = -1
+        root._check(w.segments[0].text === wideMemory,
+            "returning space restores the system monitor's hover details")
+        ShellSettings.barShowSystem = false
+        CpuTemp.temp = tempWas[0]
+        CpuTemp.reading = tempWas[1]
+        CpuTemp._probeComplete = tempWas[2]
+        root._check(w.ringSize === Metrics.iconCellFor(w.glyphPixelSize) + 2 && w.pillH - w.ringSize >= 6
+                && w._ringGlyphSize === w.glyphPixelSize - 2,
+            "a ring keeps to the icon's cell, clear of the hover capsule, round a glyph one size down")
+        w.destroy()
+        const ring = ringGaugeFactory.createObject(barFixtureHost, { width: 20, height: 20, value: 0.144 })
+        const whole = Math.abs(ring._shown - 0.14) < 1e-9
+        ring.value = 1.7
+        const full = ring._shown === 1
+        ring.value = -0.4
+        root._check(whole && full && ring._shown === 0 && ring._radius > 8 && ring._radius < 10,
+            "a ring moves in whole percents, stays between empty and full, and fits inside its box")
+        ring.destroy()
+        const entry = ShellSettings.schemaFor("systemRings")
+        root._check(entry && entry.t === "bool" && entry.sec === "indicators"
+                && ShellSettings._sectionGates.indicators.some(g => g.master === "barShowSystem"
+                    && g.hides.indexOf("systemRings") !== -1)
+                && ["ring", "circle", "gauge"].every(q => MenuState.searchSettings(q).some(row => row.section === "indicators")),
+            "the monitor's style is a setting under the monitor, found by ring, circle or gauge")
+        ShellSettings.valuesOnHover = was.hoverValues
+        ShellSettings.systemRings = was.rings
+        ShellSettings.barShowSystem = was.show
+        ShellSettings.systemShowCpu = was.cpu
+        ShellSettings.systemShowMemory = was.mem
+        ShellSettings.systemShowTemp = was.temp
+        SysInfo.cpuReady = was.ready
+        SysInfo.cpuPct = was.pct
+        SysInfo.cpuHigh = was.high
+        SysInfo._cpuBusySamples = was.busy
+        SysInfo.memTotalKb = was.total
+        SysInfo.memAvailKb = was.avail
+    }
+
     // an asynchronous Loader parents the page before its build finishes: a page drawn opaque then showed its half-built rows
     // a card widened while open was placed against the old width: its bounds were a binding on targetWidth that had
     // not caught up when onTargetWidthChanged placed it, so a tray menu near the screen's end sat on the edge
@@ -3463,6 +3569,41 @@ ShellRoot {
                 && url.indexOf("longitude=23.73") > 0 && url.indexOf("temperature_unit=fahrenheit") > 0
                 && Weather.forecastUrl(1, 2, false).indexOf("temperature_unit") < 0,
             "requests send rounded coordinates over https")
+        root._check(Weather.forecastUrl(1, 2, false).indexOf("&hourly=temperature_2m,weather_code,is_day&forecast_hours=13") > 0,
+            "the calendar's later-today forecast arrives in the same request as today's reading")
+        const hourly = n => ({ hourly: {
+            time: Array.from({ length: n }, (_, i) => "2026-11-21T" + String((18 + i) % 24).padStart(2, "0") + ":00"),
+            temperature_2m: Array.from({ length: n }, (_, i) => 4.4 - i * 0.5),
+            weather_code: Array.from({ length: n }, (_, i) => i < 6 ? 3 : 61),
+            is_day: Array.from({ length: n }, () => 0) } })
+        const slots = Weather.parseHours(hourly(13), 3, 4)
+        root._check(slots.length === 4 && slots[0].hour === 21 && slots[1].hour === 0 && slots[3].hour === 6
+                && slots[0].temp === 3 && slots[0].code === 3 && slots[1].code === 61 && slots[0].isDay === false,
+            "the forecast takes four slots three hours apart, counted from the current hour")
+        const holed = hourly(13)
+        holed.hourly.weather_code[6] = 100
+        root._check(Weather.parseHours(hourly(10), 3, 4).length === 0 && Weather.parseHours(holed, 3, 4).length === 0
+                && Weather.parseHours({ hourly: { time: "x" } }, 3, 4).length === 0 && Weather.parseHours(null, 3, 4).length === 0,
+            "a short or malformed hourly answer shows no forecast rather than one with a hole")
+        // a failed refresh keeps the last reading, so the strip keeps only the hours still ahead
+        const pad2 = n => String(n).padStart(2, "0")
+        const stamp = d => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) + "T" + pad2(d.getHours()) + ":00"
+        const evening = new Date(2026, 10, 21, 18, 0).getTime()
+        const dated = { hourly: {
+            time: Array.from({ length: 13 }, (_, i) => stamp(new Date(evening + i * 3600000))),
+            temperature_2m: Array.from({ length: 13 }, () => 2), weather_code: Array.from({ length: 13 }, () => 3),
+            is_day: Array.from({ length: 13 }, () => 0) } }
+        const ahead = Weather.parseHours(dated, 3, 4)
+        root._check(ahead.length === 4 && ahead[1].hour === 0 && ahead[1].at === new Date(2026, 10, 22, 0, 0).getTime()
+                && Weather.upcoming(ahead, new Date(2026, 10, 21, 20, 59).getTime()).length === 4
+                && Weather.upcoming(ahead, new Date(2026, 10, 22, 1, 30).getTime()).map(h => h.hour).join(",") === "3,6"
+                && Weather.upcoming(ahead, new Date(2026, 10, 22, 7, 0).getTime()).length === 0
+                && Weather.upcoming(null, 0).length === 0,
+            "forecast hours that have passed drop off a kept reading, and none left hides the strip")
+        root._check(Weather.hourLabel(21, false) === "21:00" && Weather.hourLabel(9, false) === "09:00"
+                && Weather.hourLabel(0, true) === "12 AM" && Weather.hourLabel(12, true) === "12 PM"
+                && Weather.hourLabel(21, true) === "9 PM",
+            "forecast hours follow the clock's 12- or 24-hour format")
 
         const fetched = new Date(2026, 10, 1, 12, 0).getTime()
         const key = Weather._key(fetched)
@@ -4364,6 +4505,8 @@ ShellRoot {
         root._checksPowerModeAndPresentation()
         root._checksKeyboardNavigationAndAlerts()
         root._checksNightLightAndSensors()
+        root._checksCustomCommand()
+        root._checksKeybindList()
         root._checksBatteryAndHooks()
         root._checksDispatchAndNotificationOwner()
         root._checksAccentBalanceAndAnchors()
@@ -4766,7 +4909,7 @@ ShellRoot {
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
-                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,clock",
+                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,custom,clock",
             "the widget catalog derives the shipped default layout")
     }
 
@@ -5142,6 +5285,21 @@ ShellRoot {
         root._check(!pulseLoop.running && pulseTarget.value === 1,
             "a live pulse settles instead of restarting as a zero-duration infinite loop")
         pulseLoop.destroy()
+        // an alert that settles mid-swing: a dim pulse (1 -> 0.4) caught at 0.6
+        const easingPulse = pulseLoopFactory.createObject(root, {
+            target: pulseTarget, targetProperty: "value", active: true, duration: 400, peak: 0.4, floor: 1, restValue: 1
+        })
+        pulseTarget.value = 0.6
+        easingPulse.active = false
+        root._check(easingPulse !== null && !easingPulse.running && pulseTarget.value === 0.6
+                && easingPulse._settle.running && easingPulse._settle.to === 1
+                && easingPulse._settle.duration === Math.round(400 * Math.min(1, Math.abs(0.6 - 1) / Math.abs(0.4 - 1))),
+            "a pulse stopped mid-swing eases back to rest at its own pace instead of jumping there")
+        easingPulse.active = true
+        root._check(easingPulse.running && !easingPulse._settle.running,
+            "a pulse that starts again takes over from its easing back to rest")
+        easingPulse.destroy()
+        pulseTarget.value = 1
 
         // under a fullscreen window nothing draws a frame, and a job left in flight there stops every Timer
         ShellSettings.reduceMotion = false
@@ -5675,6 +5833,14 @@ ShellRoot {
         const statusClock = clockFactory.createObject(root)
         const statusGlyph = glyph => root._findTrayNode(statusClock, item => item.text === glyph && item.expanded !== undefined)
         const statusDndWas = ShellSettings.dnd, statusMissedWas = Notifications.missedCount
+        // the bell claims no more than History holds, so the held-back ones are in it, as they would be
+        const seedMissed = () => [9101, 9102].forEach(id =>
+            Notifications._prependHistory({ id: id, appName: "probe", summary: "held " + id, time: Date.now() }))
+        const unseedMissed = () => {
+            for (let i = Notifications.historyModel.count - 1; i >= 0; i--)
+                if ([9101, 9102].indexOf(Notifications.historyModel.get(i).id) >= 0) Notifications.removeFromHistory(i)
+        }
+        seedMissed()
         ShellSettings.dnd = false
         Notifications.presentationMode = true
         Notifications.missedCount = 2
@@ -5687,8 +5853,21 @@ ShellRoot {
             "presentation mode already keeps the screen awake, so the clock shows no second cup")
         Idle.keepAwake = false
         Notifications.presentationMode = false
-        root._check(Notifications.missedCount === 0 && !statusGlyph("󰂛 ").expanded,
-            "ending the silence clears the held-back count and folds the bell")
+        const unseenBell = statusGlyph("󱅫 ")
+        root._check(Notifications.missedCount === 2 && statusGlyph("󰂛 ") === null && unseenBell !== null
+                && unseenBell.expanded && Qt.colorEqual(unseenBell.color, Theme.barAccentMark)
+                && statusClock.accessibleName.indexOf(", 2 missed notifications") >= 0,
+            "after the silence the held-back count stays, on a badged bell rather than Do Not Disturb's, until History opens")
+        // History's retention letting one go takes it off the count, and the last one takes the bell
+        unseedMissed()
+        Notifications._prependHistory({ id: 9101, appName: "probe", summary: "held 9101", time: Date.now() })
+        const oneLeft = Notifications.missedShown === 1 && statusClock.accessibleName.indexOf(", 1 missed notification") >= 0
+        unseedMissed()
+        root._check(oneLeft && Notifications.missedCount === 2 && Notifications.missedShown === 0 && !unseenBell.expanded,
+            "the bell counts only missed notifications History still holds")
+        Notifications.missedCount = 0
+        root._check(unseenBell !== null && !unseenBell.expanded && statusClock.accessibleName.indexOf("missed") < 0,
+            "with nothing missed and nothing held back the bell folds")
         ShellSettings.dnd = statusDndWas
         Notifications.missedCount = statusMissedWas
         statusClock.destroy()
@@ -5702,6 +5881,7 @@ ShellRoot {
             ShellSettings.barOpacity = 0.58
             ShellSettings.highContrast = false
             Notifications.presentationMode = true
+            seedMissed()
             Notifications.missedCount = 2
             const markClock = clockFactory.createObject(root)
             const bell = root._findTrayNode(markClock, item => item.text === "󰂛 " && item.expanded !== undefined)
@@ -5720,6 +5900,7 @@ ShellRoot {
             activeCell.destroy()
             Notifications.presentationMode = false
             Notifications.missedCount = statusMissedWas
+            unseedMissed()
             for (let i = keys.length - 1; i >= 0; i--) ShellSettings[keys[i]] = saved[i]
         }
 
@@ -11955,6 +12136,13 @@ ShellRoot {
             SystemAlerts.btAlertStep(btStep.warned, [], 20, 25).warned, bt(18), 20, 25).alerts.length === 1
         root._check(btFirst && btOnce && btHeld && btRearmed && btReconnect,
             "a bluetooth device warns once when low, and again only after charging or reconnecting")
+        // a headset reporting in 10% steps: 30, 20, then back to 30 and 20 as the reading flips near the mark
+        const coarseStep = (warned, pct) => SystemAlerts.btAlertStep(warned, bt(pct), SystemAlerts.btLowPct, SystemAlerts.btRearmPct)
+        let coarse = coarseStep(coarseStep({}, 30).warned, 20)
+        const coarseWarned = coarse.alerts.length === 1
+        coarse = coarseStep(coarseStep(coarse.warned, 30).warned, 20)
+        root._check(coarseWarned && coarse.alerts.length === 0,
+            "a headset that reports in 10% steps warns once at 20%, even when its reading flips back to 30")
         const missingBattery = SystemAlerts.btAlertStep({ AA: true }, bt(-1), 20, 25)
         root._check(missingBattery.warned.AA === true && missingBattery.alerts.length === 0
                 && SystemAlerts.btAlertStep(missingBattery.warned, bt(18), 20, 25).alerts.length === 0,
@@ -11996,6 +12184,14 @@ ShellRoot {
             "night light restores the manual temperature when auto is turned off")
         ShellSettings.nightLightTemp = tempWas
         ShellSettings.nightLightAuto = autoWas
+        const dusk = [6, 4, 0, -3, -6, -10].map(elev => NightLight.autoTemp(elev, 3900, 100))
+        root._check(dusk[0] === 6500 && dusk[4] === 3900 && dusk[5] === 3900 && dusk[2] === 5200
+                && dusk.every((t, i) => i === 0 || t <= dusk[i - 1]),
+            "following the sun, dusk eases from white down to the picked temperature, not a fixed 3000 K")
+        const coarse = [5, 2, -1, -5].map(elev => NightLight.autoTemp(elev, 3900, 500))
+        root._check(coarse.every(t => (t - 3900) % 500 === 0) && NightLight.autoTemp(-7, 3900, 500) === 3900
+                && NightLight.autoTemp(-7, 9000, 500) === 6500 && NightLight.autoTemp(-7, 200, 100) === 1000,
+            "a tool that restarts per step takes 500 K steps that still land on the picked night, kept within 1000-6500 K")
 
         const nightOnWas = ShellSettings.nightLightOn
         const nightProviderWas = ShellSettings.nightLightProvider
@@ -14034,16 +14230,102 @@ ShellRoot {
             case 13:
                 root._check(bar.textFitScale === 1 && s.zones[2].widthMetrics.flexible === 180,
                     "a title with a zero-width slot reappears when space returns")
+                bar.width = 1
+                bar.fitWidth = 1
+                break
+            case 14:
+                root._check(bar.effectiveCompact, "the crowded bar is compact before a hover")
+                s.zones[2].pointerInside = true
+                s.zones[2].orderKeys = ["clock"]
+                bar.width = 900
+                bar.fitWidth = 900
+                break
+            case 15:
+                root._check(bar.effectiveCompact && bar._compactRemeasurePending,
+                    "a widget disappearing from a compact bar defers remeasurement during a hover")
+                s.zones[2].pointerInside = false
+                break
+            case 16:
+                if (bar.effectiveCompact && (s.leaveWaits || 0) < 5) {
+                    s.leaveWaits = (s.leaveWaits || 0) + 1
+                    s.step--
+                    restart()
+                    return
+                }
+                root._check(!bar.effectiveCompact && !bar._compactRemeasurePending,
+                    "the bar remeasures its expanded layout after the pointer leaves")
+                const closingSlot = s.zones[2].children.find(item => item.key === "clock")
+                const closingWidget = root._findTrayNode(closingSlot, item => item.collapsed !== undefined)
+                if (closingWidget) {
+                    closingWidget.show = false
+                    closingWidget.implicitWidth = 7
+                }
+                root._check(closingWidget !== null && closingSlot?.visible,
+                    "a widget whose content has faded keeps its slot while its width closes")
+                if (closingWidget) closingWidget.implicitWidth = 0
+                root._check(closingSlot !== undefined && !closingSlot.visible,
+                    "the bar drops the closing slot once its width reaches zero")
                 s.pill.destroy()
                 bar.destroy()
                 for (const key of Object.keys(s.settings)) ShellSettings[key] = s.settings[key]
                 for (const key of Object.keys(s.osd)) OsdBarState[key] = s.osd[key]
                 OsdBarState._clearEntries()
                 root._barLayoutProbe = null
-                root._startTrayProbe()
+                root._startBarBudgetProbe()
                 return
             }
             restart()
+        }
+    }
+
+    // a bar window starts at a placeholder width before the compositor sizes it: the system monitor's budget must not
+    // read the monitor's own width on the way up, or every resize logs a binding loop (the suite fails on those)
+    property var _barBudgetProbe: null
+    function _startBarBudgetProbe(): void {
+        const settings = { barShowSystem: ShellSettings.barShowSystem, systemShowCpu: ShellSettings.systemShowCpu,
+            valuesOnHover: ShellSettings.valuesOnHover }
+        ShellSettings.barShowSystem = true
+        ShellSettings.systemShowCpu = true
+        // readings shown at rest: only then does the monitor's resting width follow the budget
+        ShellSettings.valuesOnHover = false
+        const component = Qt.createComponent("modules/bar/BarContent.qml")
+        const bar = component.createObject(root, {
+            screen: Quickshell.screens[0] ?? null, width: 100, fitWidth: 100, height: 36
+        })
+        component.destroy()
+        root._check(bar !== null, "a bar starting at a placeholder width builds")
+        if (!bar) {
+            for (const key of Object.keys(settings)) ShellSettings[key] = settings[key]
+            root._startTrayProbe()
+            return
+        }
+        const zones = bar.children.filter(item => item.orderKeys !== undefined)
+        zones[0].orderKeys = []
+        zones[1].orderKeys = []
+        zones[2].orderKeys = ["system", "clock"]
+        root._barBudgetProbe = { step: 0, bar: bar, zones: zones, settings: settings }
+        _barBudgetSettle.start()
+    }
+    Timer {
+        id: _barBudgetSettle
+        interval: 150
+        onTriggered: {
+            const s = root._barBudgetProbe
+            const bar = s.bar
+            if (s.step++ === 0) {
+                bar.width = 1500
+                bar.fitWidth = 1500
+                restart()
+                return
+            }
+            const slot = s.zones[2].children.find(item => item.key === "system")
+            root._check(slot?.show === true && bar.systemWidthBudget > 0
+                    && bar.systemWidthBudget <= bar.maximumWidth - s.zones[2].budgetMetrics.fixedWithoutMonitor,
+                "the system monitor's budget follows a bar widening from its placeholder width")
+            bar.destroy()
+            for (const key of Object.keys(s.settings)) ShellSettings[key] = s.settings[key]
+            root._barBudgetProbe = null
+            root._startTrayProbe()
         }
     }
 
@@ -15240,8 +15522,8 @@ ShellRoot {
                         && input.activeFocus && close.visible && search.results.length === 0,
                     "clearing the query keeps search expanded and ready for another query")
                 f.input.keyClick(Qt.Key_Escape)
-                root._check(!search.searching && !search.expanded && !search.dismissInline(),
-                    "Escape collapses settings search once before allowing the popup to close")
+                root._check(!search.searching && !search.expanded && !search.dismissInline() && toggle.activeFocus,
+                    "Escape collapses settings search and restores focus to the search button")
                 search.query = "calendarWeekStart"
                 search.focusSearch()
                 root._check(search.resultSummary === "1 section · Enter to open",
@@ -15280,8 +15562,17 @@ ShellRoot {
                     "an unmatched settings query gives an explicit empty-state hint")
                 f.input.wait(Motion.fast + 20)
                 if (close) f.input.mouseClick(close)
-                root._check(!search.expanded && search.query.length === 0 && toggle.visible,
-                    "the search close button discards its query and restores the compact icon")
+                // the icon's keyboard ring drew under the mouse when a click handed it the focus
+                root._check(!search.expanded && search.query.length === 0 && toggle.visible && !toggle.activeFocus
+                        && !input.activeFocus,
+                    "clicking the search close button discards its query and draws no focus ring on the icon")
+                search.query = "font"
+                search.focusSearch()
+                f.input.wait(Motion.fast + 20)
+                close.forceActiveFocus(Qt.TabFocusReason)
+                f.input.keyClick(Qt.Key_Return)
+                root._check(!search.expanded && search.query.length === 0 && toggle.visible && toggle.activeFocus,
+                    "the search close button pressed from the keyboard returns focus to the compact icon")
                 search.query = "font"
                 search.shown = false
                 search.choose("interface")
@@ -15512,6 +15803,22 @@ ShellRoot {
     function _startAnchorTeardown(): void {
         root._savedLoadedForTeardown = ShellSettings._loaded
         ShellSettings._loaded = true
+        {
+            // the workspaces' fallback is for opens no widget holds: as the menu opened it took over the network
+            // icon's anchor and sent the card to the workspaces at the other end of the bar
+            const holder = root._liveAnchorHolder()
+            const screen = Quickshell.screens[0] ?? null
+            MenuState.openAt(300, screen, probeAnchor)
+            if (holder) holder._syncMenuAnchor()
+            const keptWidget = MenuState.anchorX === 300
+            MenuState.close()
+            MenuState.openUnanchored()
+            if (holder) holder._syncMenuAnchor()
+            const followed = holder !== null && MenuState.anchorX === holder.menuAnchorX
+            MenuState.close()
+            root._check(holder !== null && holder._anchorFallbackBar && keptWidget && followed,
+                "a menu a widget opened keeps that widget's x; one opened without a widget follows the workspaces")
+        }
         MenuState.toggleAt(7, Quickshell.screens[0] ?? null, null)
         MenuState._setAnchor(root._liveAnchorHolder())
         root._check(MenuState.open && MenuState.anchorSource !== null,

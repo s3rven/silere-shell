@@ -15,6 +15,7 @@ QtObject {
     function arm(opening: bool): void {
         if (!root.item) return
         const view = root._viewport()
+        if (view && view.moving) return
         if (view && view.scrollHold !== undefined) {
             const other = view.scrollHold
             if (!opening && other && other !== root && other.leads) return
@@ -23,6 +24,13 @@ QtObject {
         root._opening = opening
         root._y = root.item.mapToItem(null, 0, 0).y
         root._release.restart()
+    }
+
+    function release(): void {
+        root._y = NaN
+        root._release.stop()
+        const view = root._viewport()
+        if (view && view.scrollHold === root) view.scrollHold = null
     }
 
     function _viewport(): var {
@@ -50,6 +58,6 @@ QtObject {
     }
     readonly property Timer _release: Timer {
         interval: Motion.medium + 120
-        onTriggered: root._y = NaN
+        onTriggered: root.release()
     }
 }

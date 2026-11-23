@@ -22,11 +22,7 @@ FittedPopupWindow {
     }
     Connections {
         target: QuickActionsState
-        function onOpenChanged() {
-            if (!QuickActionsState.open) return
-            card.forceActiveFocus()
-            if (QuickActionsState.keyboardEntry) Qt.callLater(() => card.focusRow(false))
-        }
+        function onOpenChanged() { if (QuickActionsState.open) card.takeFocus() }
     }
 
     component QuickActionRow: Item {
@@ -41,9 +37,10 @@ FittedPopupWindow {
         property bool   error: false
         property bool   warning: false
         property bool   checkable: true
-        readonly property bool _canActivate: _row.visible && _row.enabled
+        readonly property bool _canActivate: card.open && _row.visible && _row.enabled
         readonly property bool _pressed: _rowTap.pressed
-        readonly property int _mainHeight: Metrics.rowHeightFor(38)
+        readonly property int _mainHeight: Math.max(Metrics.rowHeightFor(38),
+            Metrics.snap4Up(_label.implicitHeight + 12))
         readonly property color _statusColor: error ? Theme.error
             : warning ? Theme.warning : Theme.accent
         readonly property color _statusInk: Theme.inkFor(_statusColor)
@@ -57,7 +54,7 @@ FittedPopupWindow {
         width: parent ? parent.width : 0
         height: _mainHeight + (_row.detailText.length > 0 ? _detail.implicitHeight + 8 : 0)
         // a blocked row stays readable so its explanation shows
-        opacity: _canActivate || error || warning ? 1.0 : Theme.disabledOpacity
+        opacity: enabled || error || warning ? 1.0 : Theme.disabledOpacity
         MotionBehavior on opacity { NumberAnimation { duration: Motion.medium } }
 
         Accessible.role: _row.checkable ? Accessible.CheckBox : Accessible.Button
@@ -67,6 +64,7 @@ FittedPopupWindow {
         Accessible.checkable: _row.checkable
         Accessible.checked: _row.checkable && _row.active
         Accessible.onPressAction: _row._activate()
+        Accessible.onToggleAction: if (_row.checkable) _row._activate()
         KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
         HoverHandler {
@@ -102,6 +100,7 @@ FittedPopupWindow {
         }
 
         ShellText {
+            id: _label
             anchors.left: _glyph.right
             anchors.leftMargin: 8
             anchors.right: _state.left
@@ -110,7 +109,7 @@ FittedPopupWindow {
             text: _row.label
             color: Theme.text
             font.pixelSize: Settings.fontSize
-            elide: Text.ElideRight
+            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
         }
 
         Rectangle {
@@ -141,11 +140,11 @@ FittedPopupWindow {
             ShellText {
                 id: _stateLabel
                 anchors.centerIn: parent
-                width: Math.min(implicitWidth, _state.width - 12)
+                width: Math.min(implicitWidth, Math.max(0, _state.width - 12))
                 text: _row.stateText
                 color: _row.error || _row.warning ? _row._statusColor
                     : _row.highlighted ? Theme.mix(Theme.accentInk, Theme.text, 0.18)
-                    : Theme.withAlpha(Theme.subtext, 0.82)
+                    : Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
                 font.weight: Font.Medium
                 elide: Text.ElideRight

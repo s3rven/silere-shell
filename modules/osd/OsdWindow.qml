@@ -19,8 +19,10 @@ PanelWindow {
     WlrLayershell.namespace: "silere-osd"
 
     implicitHeight: Math.max(150, Math.ceil((stack.implicitHeight + 24) / 64) * 64)
-    // the widest pill at its bump peak plus shadow, not the screen: the compositor recomposites the whole surface on every animated frame; a multiple of 8 keeps the centred pill on the 4px grid
-    implicitWidth: 576
+    // cap the surface for both the output and the cost of recompositing it on every animated frame
+    implicitWidth: Math.max(1, Math.min(576, 8 * Math.floor((osd.targetScreen?.width ?? 576) / 8)))
+    // leave room for the shadow; a multiple of eight centres the pill on the four-pixel grid
+    readonly property int _pillLimit: Math.max(1, 8 * Math.floor((implicitWidth - 32) / 8))
 
     readonly property bool _bottom: Metrics.barAtBottom
     readonly property real _edgeY: Metrics.popupClearanceOn(osd.targetScreen, 2)
@@ -39,6 +41,14 @@ PanelWindow {
     property var _blurShapes: []
 
     visible: osd._active && OsdBarState.activeCount > 0
+    // loaded for a key press, the window draws only once the compositor has configured it; a pill that rose before
+    // that first frame showed already 70% faded in. Shown again after a hide, it waits once more
+    property bool presented: false
+    onVisibleChanged: if (!visible) osd.presented = false
+    Connections {
+        target: osd.presented ? null : stack.Window.window
+        function onFrameSwapped() { osd.presented = true }
+    }
 
     Column {
         id: stack
@@ -127,7 +137,8 @@ PanelWindow {
                     height: pillWrap.height
                 }
 
-                property bool _ready: false
+                property bool _built: false
+                readonly property bool _ready: _built && osd.presented
                 property real _op: 0
                 property real _slide: _hiddenSlide
                 property real _bump: 1.0
@@ -143,8 +154,10 @@ PanelWindow {
                 height: 0
                 visible: osd._active && (_ready || _op > 0.001 || height > 0.5)
                 z: serial
+                Accessible.role: Accessible.StaticText
+                Accessible.name: card.label
 
-                Component.onCompleted: _ready = true
+                Component.onCompleted: _built = true
 
                 TextMetrics {
                     id: _labelMetrics

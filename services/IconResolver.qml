@@ -53,15 +53,45 @@ Singleton {
     function trayIconSource(raw): string {
         const value = String(raw ?? "").trim()
         if (value.length === 0 || value.length > root.maxSourceChars) return ""
-        if (root._imageScheme.test(value))
-            return root._isSafeImageProvider(value) || root._isSafeIconProvider(value)
-                ? value : ""
+        if (root._imageScheme.test(value)) {
+            if (root._isSafeImageProvider(value)) return value
+            if (!root._isSafeIconProvider(value)) return ""
+            // a theme name the theme lacks loads Quickshell's magenta and black "missing" squares, not an error, so the
+            // app's own icon or its initial never took over. One the app ships in its own folder (?path=) is looked up there
+            const bare = /^image:(?:\/\/)?icon\/([^?]+)$/i.exec(value)
+            return bare && Quickshell.iconPath(bare[1], true).length === 0 ? "" : value
+        }
         return root.iconSource(value)
     }
 
     function trayAppIconSource(raw, identity): string {
         const source = root.trayIconSource(raw)
         return source.length > 0 ? source : (root.appMeta(identity)?.icon ?? "")
+    }
+
+    // the app behind a tray item, by its desktop entry. Electron names its item <app>_status_icon_<n>, or chrome_... for
+    // any app, where only the title names it. Null without an entry: a theme icon guessed from a bare id could be anyone's
+    function trayAppNames(id, title): var {
+        const cleaned = SafeText.boundedText(id, root.maxIdentityChars).trim()
+            .replace(/[_-](status[_-]?icon|tray(icon)?|indicator)([_-]?\d+)?$/i, "")
+        const named = SafeText.boundedText(title, root.maxIdentityChars).trim()
+        const tries = /^(chrome|chromium|electron)$/i.test(cleaned) ? [named] : [cleaned, named]
+        return tries.filter((name, i) => name.length > 0 && tries.indexOf(name) === i)
+    }
+    function trayAppMeta(id, title): var {
+        const tries = root.trayAppNames(id, title)
+        for (let i = 0; i < tries.length; i++) {
+            const name = tries[i]
+            if (!root.appEntry(name)) continue
+            const meta = root.appMeta(name)
+            if (meta && meta.icon.length > 0) return meta
+        }
+        return null
+    }
+    // as the setting has it: the icon the app sends, or the one its windows show on the workspaces
+    function trayItemIconSource(raw, id, title): string {
+        const meta = ShellSettings.trayAppIcons ? root.trayAppMeta(id, title) : null
+        return meta ? meta.icon : root.trayAppIconSource(raw, id)
     }
 
     // QIcon's own factor: the largest screen ratio, which Wayland reports as the whole output scale (2 for a 1.25 screen)

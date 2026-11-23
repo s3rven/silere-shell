@@ -57,6 +57,8 @@ singleton SystemTools   1.0 SystemTools.qml
 singleton TrayMenuState 1.0 TrayMenuState.qml
 singleton Updates       1.0 Updates.qml
 singleton Weather       1.0 Weather.qml
+singleton CustomCommand 1.0 CustomCommand.qml
+singleton NotificationKeys 1.0 NotificationKeys.qml
 singleton XdgPaths      1.0 XdgPaths.qml
 
 StableObjectList        1.0 StableObjectList.qml

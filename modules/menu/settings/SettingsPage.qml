@@ -256,7 +256,7 @@ PageShell {
         workspaces: _secWorkspaces, media: _secMedia, indicators: _secIndicators,
         widgets: _secWidgets,
         popups: _secPopups, history: _secHistory, osd: _secOsd, warnings: _secWarnings,
-        interface: _secInterface, devices: _secDevices, updates: _secUpdates
+        interface: _secInterface, devices: _secDevices, updates: _secUpdates, keybinds: _secKeybinds
     })
 
     readonly property var _sectionMeta: {
@@ -625,6 +625,11 @@ PageShell {
         Component {
             id: _secDevices
             SettingsDevicesSection {}
+        }
+
+        Component {
+            id: _secKeybinds
+            SettingsKeybindsSection {}
         }
 
         Component {

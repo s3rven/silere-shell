@@ -400,7 +400,7 @@ PageShell {
                         text: _muteButton.muted ? "󰪑" : "󰂜"
                         color: _muteButton.muted ? Theme.accentInk
                             : _muteHover.hovered ? Theme.withAlpha(Theme.text, 0.88)
-                            : Theme.withAlpha(Theme.subtext, 0.72)
+                            : Theme.menuTextDetail
                         font.pixelSize: Settings.fontSize
                         ColorFade on color {}
                     }
@@ -423,8 +423,10 @@ PageShell {
                 glyph: "󰆴"
                 label: root.searching ? "Clear matches"
                     : root.filter.length > 0 ? "Clear app" : "Clear all"
-                armedLabel: "Clear " + root.rowCount + "?"
+                property int _clearCount: 0
+                armedLabel: "Clear " + _clearCount + "?"
                 busy:  root._clearing || root._swapping
+                onArmedChanged: if (armed) _clearCount = root.rowCount
                 onConfirmed: root.clearAll()
             }
         }
@@ -669,9 +671,10 @@ PageShell {
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                     text: root.searching ? "Try different search terms"
                         : root.filter.length > 0 ? "No notifications from this app"
+                        : Notifications.activeCount === 1 ? "The one on screen moves here when it closes"
+                        : Notifications.activeCount > 1 ? "The " + Notifications.activeCount + " on screen move here when they close"
                         : "New notifications will appear here"
-                    color: Theme.withAlpha(Theme.subtext,
-                        ShellSettings.highContrast ? 0.90 : 0.76)
+                    color: Theme.menuTextDetail
                     font.pixelSize: Settings.fontCaption
                 }
 
@@ -1041,8 +1044,9 @@ PageShell {
                                         anchors.alignWhenCentered: false
                                         visible: _recentAppIcon.status !== Image.Ready
                                         text: SafeText.initial(_appIconSlot._fallbackSource, "N")
-                                        color: Theme.withAlpha(Theme.subtext, 0.70)
-                                        font.pixelSize: Settings.fontMicro
+                                        color: Theme.menuTextDetail
+                                        // held at its 100% size: the tile stays 16 px, as the icon does
+                                        font.pixelSize: Math.min(Settings.fontMicro, Settings.fontSizeBase - 3)
                                         font.weight: Font.DemiBold
                                     }
 
@@ -1069,8 +1073,8 @@ PageShell {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: Math.max(0, parent.width - _appIconSlot.width
                                         - parent.spacing - _entry._rightGutter)
-                                    text: _filtered.identityOf(_entry.modelData.appName)
-                                    color: _entry._critical ? Theme.error : Theme.withAlpha(Theme.subtext, 0.84)
+                                    text: Notifications.appLabel(_filtered.identityOf(_entry.modelData.appName))
+                                    color: _entry._critical ? Theme.error : Theme.menuTextDetail
                                     font.pixelSize: Settings.fontCaption
                                     font.weight: Font.Medium
                                     elide: Text.ElideRight
@@ -1130,7 +1134,7 @@ PageShell {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: { void root._timeTick; return root.formatTime(_entry.modelData.time) }
-                                color: Theme.withAlpha(Theme.subtext, 0.78)
+                                color: Theme.menuTextDetail
                                 font.pixelSize: Settings.fontMicro
                                 font.features: ({ "case": 1 })
                                 opacity: _entryHover.hovered || _card.activeFocus || _removeButton.activeFocus ? 0 : 1
@@ -1181,7 +1185,7 @@ PageShell {
                                 ShellText {
                                     anchors.centerIn: parent
                                     text: "󰅖"
-                                    color: _removeHover.hovered ? Theme.error : Theme.withAlpha(Theme.subtext, 0.56)
+                                    color: _removeHover.hovered ? Theme.error : Theme.menuTextQuiet
                                     font.pixelSize: Settings.fontCaption
                                 }
                             }
@@ -1196,8 +1200,7 @@ PageShell {
                             anchors.verticalCenter: _entry._chevronInline ? _rightSlot.verticalCenter : undefined
                             visible: _entry._expanded || _entry._expandable
                             text: "󰅀"
-                            color: Theme.withAlpha(Theme.subtext,
-                                _entryHover.hovered ? 0.90 : 0.70)
+                            color: _entryHover.hovered ? Theme.subtext : Theme.menuTextDetail
                             font.pixelSize: Settings.fontMicro
                             rotation: _entry._expanded ? 180 : 0
                             transformOrigin: Item.Center

@@ -48,6 +48,8 @@ Singleton {
     property bool   updatesWidget:       false
     property bool   updatesIncludeAur:   false
     property bool   trayWidget:          false
+    // the tray draws each app with the icon its windows have on the workspaces, not the one the app sends
+    property bool   trayAppIcons:        false
     // uri-encoded ids, so a comma inside an id cannot split it
     property string trayHidden:          ""
     property bool   valuesOnHover:       true
@@ -60,6 +62,11 @@ Singleton {
     property bool   barShowBluetooth:   false
     property bool   barShowClock:        true
     property bool   barShowKeyboard:     false
+    // a script's output on the bar, as waybar's custom modules: off and empty until set
+    property bool   barShowCustom:       false
+    property string customCommand:       ""
+    property string customClickCommand:  ""
+    property int    customInterval:      30
     property bool   barShowSystem:       false
     property bool   systemShowCpu:       true
     property bool   systemShowMemory:    true
@@ -163,6 +170,7 @@ Singleton {
         microphone:  { glyph: "󰍬", label: "Microphone",      group: "status",      zone: "right",  setting: "barShowMic" },
         brightness:  { glyph: "󰃟", label: "Brightness",      group: "status",      zone: "right",  setting: "barShowBrightness" },
         battery:     { glyph: "󰂄", label: "Battery",         group: "status",      zone: "right",  setting: "barShowBattery" },
+        custom:      { glyph: "󰆍", label: "Command",         group: "custom",      zone: "right",  setting: "barShowCustom" },
         media:       { glyph: "󰝚", label: "Media",           group: "media",       zone: "left",   setting: "barShowMedia" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",       zone: "right",  setting: "barShowClock" }
     })
@@ -401,6 +409,11 @@ Singleton {
         { k: "systemShowCpu",       t: "bool", sec: "indicators", l: "CPU usage" },
         { k: "systemShowMemory",    t: "bool", sec: "indicators", l: "Memory in use" },
         { k: "systemShowTemp",      t: "bool", sec: "indicators", l: "CPU temperature" },
+        { k: "systemRings",         t: "bool", sec: "indicators", l: "Style" },
+        { k: "barShowCustom",       t: "bool", sec: "widgets,indicators", l: "Command" },
+        { k: "customCommand",       t: "re",   re: /^[^\u0000-\u001F\u007F]{0,256}$/, sec: "indicators", l: "Command to run" },
+        { k: "customClickCommand",  t: "re",   re: /^[^\u0000-\u001F\u007F]{0,256}$/, sec: "indicators", l: "On click" },
+        { k: "customInterval",      t: "int",  min: 5, max: 3600, sec: "indicators", l: "Every" },
         { k: "barShowShellUpdate",  t: "bool", sec: "widgets" },
         { k: "barShowVolume",       t: "bool", sec: "widgets" },
         { k: "barShowMic",          t: "bool", sec: "widgets" },
@@ -491,7 +504,9 @@ Singleton {
         { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces", l: "Workspaces per page" },
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces", l: "Numbers" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces", l: "Scroll to switch" },
-        { k: "wsShowAppIcons",      t: "bool", sec: "workspaces", l: "App icons" },
+        { k: "wsShowAppIcons",      t: "bool", sec: "workspaces", l: "Show app icons" },
+        { k: "wsAppIconColor",      t: "enum", vals: ["original", "accent"], sec: "workspaces", l: "App icon color" },
+        { k: "trayAppIcons",        t: "bool", sec: "workspaces", l: "Same icons in the tray" },
         { k: "wsNotifPulse",        t: "bool", sec: "workspaces", l: "Notification pulse" },
         { k: "wsUrgentPulse",       t: "bool", sec: "workspaces", l: "Urgent window pulse" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces", l: "Active marker" }
@@ -718,7 +733,8 @@ Singleton {
         indicators: [
             { master: "showWindowTitle", hides: ["showWindowTitleApp", "showWindowTitleIcon"] },
             { master: "networkTrafficStats", hides: ["networkSpeedInline"] },
-            { master: "barShowSystem", hides: ["systemShowCpu", "systemShowMemory", "systemShowTemp"] }
+            { master: "barShowSystem", hides: ["systemShowCpu", "systemShowMemory", "systemShowTemp", "systemRings"] },
+            { master: "barShowCustom", hides: ["customCommand", "customClickCommand", "customInterval"] }
         ],
         media: [
             { master: "mediaProgress", hides: ["mediaVisualizerPosition",

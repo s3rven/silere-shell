@@ -72,12 +72,18 @@ Singleton {
         return Math.asin(Math.sin(phi) * Math.sin(decl) +
                          Math.cos(phi) * Math.cos(decl) * Math.cos(h)) * 180 / Math.PI
     }
-    readonly property int suggestedTemp: {
-        const elev = root._elevation
-        if (elev >= 6)  return 6500
-        if (elev <= -6) return 3000
-        // wlsunset restarts on every step, so dusk takes a handful of steps rather than dozens
-        return Math.round((3000 + 3500 * (elev + 6) / 12) / 500) * 500
+    // white by day, the picked temperature by night, eased between across twilight (+6 to -6 degrees): a fixed 3000 K
+    // night ignored the slider, so auto ran warmer than the temperature chosen by hand
+    readonly property int suggestedTemp: root.autoTemp(root._elevation, ShellSettings.nightLightTemp,
+        root.tool === "hyprsunset" ? 100 : 500)
+    // steps counted up from the night end so it lands on the picked value. hyprsunset takes each one live, so 100 K
+    // steps pass unseen; wlsunset restarts on every step, so dusk takes a handful rather than dozens
+    function autoTemp(elev: real, night: int, step: int): int {
+        const low = Math.max(1000, Math.min(6500, Math.round(night)))
+        if (elev >= 6) return 6500
+        if (elev <= -6) return low
+        const raw = (6500 - low) * (elev + 6) / 12
+        return Math.min(6500, low + Math.round(raw / step) * step)
     }
 
     readonly property real _solarNoon: {
@@ -426,7 +432,7 @@ Singleton {
                 code, status, _checkProc.timedOut, _sunsetProc.running)
             if (state < 0) {
                 root._probeFailed = true
-                root.lastError = "could not check for a running " + root.tool
+                root.lastError = "Could not check for a running " + root.tool
                 return
             }
             if (root._probeFailed) {
