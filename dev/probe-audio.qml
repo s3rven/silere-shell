@@ -19,6 +19,7 @@ ShellRoot {
                 + " muted=" + (Audio.muted ? 1 : 0)
                 + " osd=" + (OsdBarState.activeCount > 0 ? OsdBarState.label : "none")
                 + " heard=" + (Audio._heardSink || "none")
+                + " mic=" + Audio.captureCount
         }
     }
 }

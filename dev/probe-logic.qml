@@ -5321,6 +5321,9 @@ ShellRoot {
                 && !cap({ "target.object": "alsa_input.pci-0000_06_00.6.analog-stereo" })
                 && !cap({ "target.object": "bluez_input.0A_1B_2C_3D_4E_5F.0" }),
             "a stream recording a real source still counts as a microphone in use")
+        root._check(Audio.isLevelMeter({ "stream.monitor": "true" }) && Audio.isLevelMeter({ "stream.monitor": true })
+                && !Audio.isLevelMeter({}) && !Audio.isLevelMeter(null) && !Audio.isLevelMeter({ "stream.monitor": "false" }),
+            "a mixer's level meter on a microphone is not an app listening")
     }
 
     // a card's corners and dividers follow what is on screen: a folding section is still there, and a Roundness change reshapes rows that stay put

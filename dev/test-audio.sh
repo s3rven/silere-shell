@@ -213,6 +213,17 @@ expect "the replacement is the live node" 'vol=61 muted=0 osd=.*61%'
 replace_node lab-mic Audio/Source
 expect "a default input replaced under its name stays the input" 'source=lab-mic '
 
+# pavucontrol's level meters reach PipeWire as monitor streams; only a recording is an app listening
+pw-record --target lab-mic -P '{ node.name = lab-meter stream.monitor = true }' "$scratch/meter.wav" > /dev/null 2>&1 &
+meter_pid=$!
+wait_node lab-meter
+stays "a mixer's level meter on the microphone is not an app listening" 'mic=0$'
+pw-record --target lab-mic -P '{ node.name = lab-recorder }' "$scratch/recording.wav" > /dev/null 2>&1 &
+recorder_pid=$!
+expect "a recording app lights the microphone" 'mic=1$'
+_probe_stop "$recorder_pid"; _probe_stop "$meter_pid"
+expect "the microphone goes quiet when the recording stops" 'mic=0$'
+
 expect "the OSD times out" 'osd=none'
 # the spare goes first: losing the default with a spare around is a device change, and rightly named on the OSD
 while read -r gone; do timeout 4 pw-cli destroy "$gone" > /dev/null 2>&1; sleep 0.2; done < <(node_ids lab-b; node_ids lab-a)

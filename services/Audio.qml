@@ -299,6 +299,11 @@ Singleton {
         const target = String(p["target.object"] || p["node.target"] || "")
         return target.endsWith(".monitor")
     }
+    // a mixer's level meter (pavucontrol's peak detect, through pipewire-pulse) reads peaks without waking the source
+    function isLevelMeter(props): bool {
+        const flag = (props || ({}))["stream.monitor"]
+        return flag === true || String(flag).toLowerCase() === "true"
+    }
 
     // tracking is what fills in `properties`, so the tracked set is chosen on node type
     // alone; filtering it on a property here is a binding loop through PwObjectTracker
@@ -316,7 +321,7 @@ Singleton {
         for (let i = 0; i < streams.length; i++) {
             const n = streams[i]
             const props = n ? n.properties : null
-            if (root.isAppStream(props) && !root.capturesOutput(props)) out.push(n)
+            if (root.isAppStream(props) && !root.capturesOutput(props) && !root.isLevelMeter(props)) out.push(n)
         }
         return out
     }

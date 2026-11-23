@@ -167,6 +167,7 @@ settings file carries its own `__version` and migrates separately.
 - The Center and Underline visualizers keep showing track progress with the media widget off the bar.
 - The audio visualizer comes back after PipeWire restarts during playback.
 - The power mode remembered for the charger or the battery is applied when the shell starts, not only when the charger is plugged in or out.
+- An open pavucontrol no longer shows the microphone as in use: its level meters are not an app listening.
 - Now Playing no longer keeps the last track's cover beside a track whose cover can't be read.
 - When the control you are on with the keyboard turns off or goes busy, as Check in Settings › System › Overview does while it runs, the keys keep working on that panel and the focus comes back to it after. A Wi-Fi network, Bluetooth device or VPN you press Enter on keeps the focus while it connects, and the Bluetooth picker keeps it on its device while others appear or re-sort.
 - A screen reader names the power action waiting for its second press, as in "Press again to reboot".
