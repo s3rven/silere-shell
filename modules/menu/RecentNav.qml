@@ -13,8 +13,11 @@ Item {
     readonly property int _rowH:    Metrics.rowHeightFor(28)
     readonly property int _rowGap:   1
     readonly property bool compact: width < 132
+    property bool overlay: false
+    readonly property bool _acceptsInput: root.enabled && root.visible && MenuState.recentActive
 
     signal filterPicked()
+    signal dismissRequested()
 
     implicitHeight: root._navTop + _rowColumn.implicitHeight + 10
 
@@ -28,6 +31,9 @@ Item {
     }
 
     function _syncNames(apps): void {
+        const want = MenuState.recentFilter
+        if (want.length > 0 && (apps.length <= 1 || !apps.some(app => app.appName === want)))
+            MenuState.setRecentFilter("")
         // one app or none closes the drawer: the rows it held stay for its fade instead of emptying under it
         if (apps.length <= 1 && root._names.length > 1) return
         const names = [""]
@@ -58,6 +64,7 @@ Item {
     on_NamesChanged: root._queueReveal()
 
     function _activate(name: string): void {
+        if (!root._acceptsInput) return
         MenuState.setRecentFilter(name)
         root.filterPicked()
     }
@@ -71,6 +78,12 @@ Item {
         if (!MenuState.recentActive) return
         const top = root._rowY(Math.max(0, root._activeIndex))
         _nav.reveal(top, top + root._rowH)
+    }
+
+    function focusCurrentFilter(): void {
+        const row = _appRows.itemAt(Math.max(0, root._activeIndex))
+        if (row) row.forceActiveFocus(Qt.TabFocusReason)
+        root._revealActive()
     }
 
     // the outer panel keeps resizing the viewport for the whole open, so height notifications arrive every frame; reveal once they stop
@@ -94,6 +107,8 @@ Item {
         id: _nav
         anchors.fill: parent
         title: "Apps"
+        closeLabel: root.overlay ? "Close app filters" : ""
+        onCloseRequested: root.dismissRequested()
         contentHeight: root.implicitHeight
         onViewportResized: if (MenuState.recentActive) root._queueReveal()
 
@@ -114,6 +129,7 @@ Item {
             spacing: root._rowGap
 
             Repeater {
+                id: _appRows
                 // the rail follows recency, so an arrival reorders it. A plain array model rebuilds
                 // every row for that, flashing icons back to initials and dropping keyboard focus
                 model: ScriptModel { values: root._names }
@@ -152,10 +168,11 @@ Item {
                     Accessible.name: _row.label + ", " + _row.count
                         + (_row.count === 1 ? " notification" : " notifications")
                         + (_rowMuted.visible ? ", muted" : "")
-                    Accessible.focusable: true
+                    Accessible.focusable: root._acceptsInput
                     Accessible.selected: _row.active
                     Accessible.onPressAction: root._activate(_row.modelData)
                     KeyboardFocus { listNavigation: true; onActivated: root._activate(_row.modelData) }
+                    FocusScroll { enabled: root.overlay }
 
                     HoverHandler {
                         id: _rowHover

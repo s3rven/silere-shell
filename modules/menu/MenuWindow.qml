@@ -17,7 +17,8 @@ FittedPopupWindow {
     popupCard: panel
     onDismissed: MenuState.close()
     onEscapePressed: {
-        if (panel.powerOpen) {
+        if (panel.dismissNav()) {
+        } else if (panel.powerOpen) {
             panel.powerOpen = false
         } else if (panel.activeTab === 0 && homeLoader.item && homeLoader.item.dismissInline()) {
         } else if (panel.activeTab === 1 && settingsLoader.item && settingsLoader.item.dismissInline()) {
@@ -74,13 +75,15 @@ FittedPopupWindow {
         readonly property bool _settingsNavVisible:
             activeTab === 1 && !powerOpen && (!_compactSettingsNav || _settingsNavOverlay)
         // one app cannot be filtered against anything, so the drawer stays out of its way
-        readonly property bool _recentNavVisible:
-            activeTab === 2 && !powerOpen && Notifications.historyApps.length > 1
+        readonly property bool _recentHasAppFilters: activeTab === 2 && Notifications.historyApps.length > 1
+        readonly property bool _recentNavDocked:
+            activeTab === 2 && !powerOpen && _recentHasAppFilters && !_compactRecentNav
+        readonly property bool _recentNavVisible: _recentNavDocked || _recentNavOverlay
         readonly property bool _railExpanded:
-            _settingsNavVisible || _recentNavVisible || powerOpen
+            (_settingsNavVisible && !_compactSettingsNav) || _recentNavDocked || powerOpen
         readonly property int _targetPanelW: activeTab === 1 ? _settingsW
             : powerOpen ? _powerW
-            : activeTab === 2 ? (_recentNavVisible ? _recentW : _recentBaseW)
+            : activeTab === 2 ? (_recentNavDocked ? _recentW : _recentBaseW)
             : _compactW
         // x is clamped once, against the widest page, so switching tabs never moves the card
         readonly property int _widestW: Math.max(_settingsW, _recentW)
@@ -94,10 +97,11 @@ FittedPopupWindow {
         readonly property int railCollapsedW: 44
         readonly property int _navMinW: 112
         readonly property int _navMaxW: 160 + _typeGain
-        readonly property int navW: {
-            const available = panelW - railCollapsedW
+        readonly property int navW: panel._navWidthFor(panelW, powerOpen)
+        function _navWidthFor(width: int, forPower: bool): int {
+            const available = width - railCollapsedW
             // the power panel is the home pane plus a nav column, so a share of it undercuts the column above 100% type
-            const desired = Math.max(_navMinW, powerOpen ? _navMaxW : Metrics.snap4(panelW * 0.28))
+            const desired = Math.max(_navMinW, forPower ? _navMaxW : Metrics.snap4(width * 0.28))
             const detailSafe = Math.max(_navMinW, available - 224)
             const sidebarFit = Math.max(0, available - 96)
             return Math.max(0, Math.min(_navMaxW, desired, detailSafe, sidebarFit))
@@ -129,6 +133,24 @@ FittedPopupWindow {
         readonly property real innerW: Math.max(1, contentW - contentPad * 2)
         readonly property real pageLayoutW: Math.max(1, panelW
             - (_railExpanded ? railExpandedW : railCollapsedW) - _targetContentPad * 2)
+        // below the narrow layout-fit width, give the controls the sidebar's space and put sections in a drawer
+        readonly property bool _compactSettingsNav: activeTab === 1
+            && panelW - railExpandedW - _targetContentPad * 2 < 332
+        // compute the docked width with filters present, so the first arrival from another app cannot change modes
+        readonly property int _recentDockedW: Math.min(_recentW, _availablePanelW)
+        readonly property bool _compactRecentNav: activeTab === 2 && _recentDockedW - railCollapsedW
+            - panel._navWidthFor(_recentDockedW, false) - (_recentDockedW >= 460 ? 40 : 24) < 332
+        readonly property bool _canOpenNav: _compactSettingsNav || (_compactRecentNav && _recentHasAppFilters)
+        property bool _navOpen: false
+        readonly property bool _navOverlay: _canOpenNav && _navOpen && open && !powerOpen
+        readonly property bool _settingsNavOverlay: _navOverlay && _compactSettingsNav
+        readonly property bool _recentNavOverlay: _navOverlay && _compactRecentNav
+        readonly property int _navOverlayW: Math.max(0, Math.min(_navMaxW, panelW - railCollapsedW))
+        on_CanOpenNavChanged: if (!_canOpenNav && _navOpen) {
+            _navOpen = false
+            if (_compactRecentNav) Qt.callLater(panel._focusNavButton)
+        }
+        onPowerOpenChanged: if (powerOpen) _navOpen = false
         // reveal when nearly all of the incoming layout fits. Width and rail can keep settling behind it without clipping the first visible frame
         readonly property bool pageViewportReady: innerW >= pageLayoutW - 12
         readonly property int idealMinH: activeTab === 2 ? 440 : 360
@@ -259,10 +281,31 @@ FittedPopupWindow {
         function switchTab(idx: int): void {
             const tab = Math.max(0, Math.min(MenuState.mediaTab, idx))
             const sameTab = tab === activeTab
+            if (sameTab && panel.dismissNav()) return
             if (powerOpen) powerOpen = false
             if (tab !== activeTab) panel._beginTabHeightHold()
             MenuState.selectTab(tab)
             if (sameTab) contentFlick.scrollToTop()
+        }
+
+        function openNav(): void {
+            if (!panel.open || panel.powerOpen || !panel._canOpenNav) return
+            if (panel._compactSettingsNav) MenuState.closeSettingsSelect()
+            contentFlick.cancelFlick()
+            panel._navOpen = true
+        }
+
+        function dismissNav(): bool {
+            if (!panel._navOverlay) return false
+            panel._navOpen = false
+            Qt.callLater(panel._focusNavButton)
+            return true
+        }
+
+        function _focusNavButton(): void {
+            if (!panel.open || panel._navOverlay || panel.powerOpen) return
+            if (panel._compactSettingsNav) settingsLoader.item?.focusSectionsButton()
+            if (panel._compactRecentNav) recentLoader.item?.focusAppsButton()
         }
 
         function _beginTabHeightHold(): void {
@@ -314,6 +357,7 @@ FittedPopupWindow {
                 rail.holdDrawerLayouts()
             }
             function onActiveTabChanged() {
+                panel._navOpen = false
                 contentFlick.scrollToTop()
                 if (panel.activeTab !== 0) panel._loadedDeferred = true
                 panel._syncPageRetention()
@@ -324,6 +368,7 @@ FittedPopupWindow {
                 if (MenuState.settingsActive) panel._armOuterHeightMotion()
             }
             function onOpenChanged() {
+                panel._navOpen = false
                 if (MenuState.open) {
                     _closedUnload.stop()
                     panel._syncPageRetention()
@@ -496,6 +541,19 @@ FittedPopupWindow {
             onScrollToTopRequested: contentFlick.scrollToTop()
         }
 
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.withAlpha(Theme.background, 0.56)
+            z: 5
+            opacity: panel._navOverlay ? 1 : 0
+            visible: opacity > 0.001
+            MotionBehavior on opacity { NumberAnimation { duration: Motion.fast } }
+            TapHandler {
+                enabled: panel._navOverlay
+                onTapped: panel.dismissNav()
+            }
+        }
+
         Item {
             id: contentPane
             // no MotionBehavior here: x tracks panel.railW, which is already animated at the source —
@@ -503,6 +561,7 @@ FittedPopupWindow {
             x: panel.railW
             y: 0
             width: panel.contentW
+            enabled: !panel._navOverlay
             clip: true
 
             Rectangle {
@@ -552,6 +611,21 @@ FittedPopupWindow {
                 // settings pins its header over the top of the viewport, so a revealed row has to land below it
                 readonly property real revealTopInset: panel.activeTab === 1 && settingsLoader.item
                     ? panel.pageTopInset + (settingsLoader.item.pinnedHeight ?? 0) : 0
+                // delayed reveals belong to the page that requested them
+                readonly property string _settingsRevealSection: MenuState.settingsActive && !panel.powerOpen
+                    ? MenuState.settingsSection : ""
+                readonly property bool _homeRevealActive: MenuState.homeActive && !panel.powerOpen
+
+                on_SettingsRevealSectionChanged: {
+                    _toggleReveal.stop()
+                    _toggleReveal.row = null
+                    _selectReveal.stop()
+                }
+                on_HomeRevealActiveChanged: if (!_homeRevealActive) {
+                    _homeReveal.stop()
+                    _homeReveal.control = null
+                    _homeReveal.choices = null
+                }
 
                 function clampToContent(): void {
                     const maxY = Math.max(0, contentHeight - height)
@@ -590,14 +664,14 @@ FittedPopupWindow {
                     return null
                 }
 
-                Timer {
+                readonly property Timer _toggleRevealTimer: Timer {
                     id: _toggleReveal
                     property Item row: null
                     interval: Motion.medium + 24
                     onTriggered: {
                         const flipped = row
                         row = null
-                        if (flipped && panel.open && panel.activeTab === 1)
+                        if (flipped && flipped.enabled && flipped.visible && contentFlick._settingsRevealSection)
                             contentFlick.revealControl(flipped, contentFlick.sectionAfter(flipped))
                     }
                 }
@@ -605,7 +679,7 @@ FittedPopupWindow {
                 Timer {
                     id: _selectReveal
                     interval: Motion.medium + 24
-                    onTriggered: if (panel.open && panel.activeTab === 1)
+                    onTriggered: if (contentFlick._settingsRevealSection)
                         contentFlick.revealControl(MenuState._settingsSelectOwner, null)
                 }
 
@@ -619,25 +693,19 @@ FittedPopupWindow {
                         const extra = choices
                         control = null
                         choices = null
-                        if (panel.open && panel.activeTab === 0) contentFlick.revealControl(row, extra)
+                        if (contentFlick._homeRevealActive) contentFlick.revealControl(row, extra)
                     }
                 }
 
                 Connections {
                     target: MenuState
-                    function onHomeActiveChanged() {
-                        if (MenuState.homeActive) return
-                        _homeReveal.stop()
-                        _homeReveal.control = null
-                        _homeReveal.choices = null
-                    }
                     function onSettingsRevealRequested(row) {
-                        if (!panel.open || panel.activeTab !== 1) return
+                        if (!contentFlick._settingsRevealSection) return
                         _toggleReveal.row = row
                         _toggleReveal.restart()
                     }
                     function onSettingsSelectClaimed() {
-                        if (panel.open && panel.activeTab === 1) {
+                        if (contentFlick._settingsRevealSection) {
                             panel._armOuterHeightMotion()
                             _selectReveal.restart()
                         }
@@ -653,7 +721,7 @@ FittedPopupWindow {
                 onContentHeightChanged: clampToContent()
                 onHeightChanged: {
                     clampToContent()
-                    if (MenuState.settingsSelectOpen && panel.activeTab === 1)
+                    if (MenuState.settingsSelectOpen && contentFlick._settingsRevealSection)
                         _selectReveal.restart()
                 }
 
@@ -838,6 +906,7 @@ FittedPopupWindow {
                             target: settingsLoader.item
                             function onContentReadyChanged() { panel._scheduleTabHeightRelease() }
                             function onSectionSwapped() { contentFlick.scrollToTop() }
+                            function onSectionsRequested() { panel.openNav() }
                         }
                     }
 
@@ -856,9 +925,11 @@ FittedPopupWindow {
                         viewportReady: panel.pageViewportReady
                         viewportHeight: panel.recentViewportH
                         thumbOutset: Math.round(panel.contentPad)
+                        compactNavigation: panel._compactRecentNav
                         Connections {
                             target: recentLoader.item
                             function onContentReadyChanged() { panel._scheduleTabHeightRelease() }
+                            function onAppsRequested() { panel.openNav() }
                         }
                     }
 

@@ -82,6 +82,7 @@ under **Feedback › Notifications**. A reply field appears when the sender supp
 |---|---|
 | Type in Search, or press Ctrl+F | Find an app, title or message |
 | Click an app in the sidebar | Show only that app, until the menu closes |
+| Open **Apps** beside search on a narrow display | Choose an app filter without resizing the message list |
 | Click an entry | Read it in full |
 | Right-click an entry, or press Delete | Remove it |
 | Middle-click an entry | Jump to the sending app |

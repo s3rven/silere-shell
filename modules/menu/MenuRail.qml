@@ -16,8 +16,12 @@ Item {
     signal scrollToTopRequested()
 
     // a drawer names the tabs itself, unless the panel is too narrow to show it
-    readonly property bool labelsShown: !rail.menu._railExpanded || rail.menu.navW < rail.menu._navMinW
+    readonly property bool labelsShown: !rail.menu._navOverlay
+        && (!rail.menu._railExpanded || rail.menu.navW < rail.menu._navMinW)
     readonly property real settingsNavHeight: _settingsDrawer.item?.implicitHeight ?? 0
+    readonly property real _overlayOpacity: rail.menu._compactSettingsNav ? _settingsDrawer.opacity
+        : rail.menu._compactRecentNav ? _recentDrawer.opacity : 0
+    readonly property bool _overlayDrawn: rail.menu._navOverlay || rail._overlayOpacity > 0.001
 
     function holdDrawerLayouts(): void {
         _settingsDrawer.holdLayout()
@@ -29,7 +33,7 @@ Item {
         _recentWarmDelay.stop()
     }
 
-    width: rail.menu.railW
+    width: rail._overlayDrawn ? rail.menu.railCollapsedW + rail.menu._navOverlayW : rail.menu.railW
     height: rail.menu.height
 
     Item {

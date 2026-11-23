@@ -645,6 +645,8 @@ Item {
         root._checkHoldsPlace()
         root._checkReplyFocus()
         root._checkPopupOpacity()
+        root._checkResponsiveSettings()
+        root._checkResponsiveHistory()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }
 

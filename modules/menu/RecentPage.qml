@@ -34,6 +34,14 @@ PageShell {
     readonly property bool hasHistory: Notifications.historyCount > 0
     property alias searchText: _searchInput.text
     readonly property bool searching: searchText.trim().length > 0
+    readonly property bool _showAppsButton: (root._pageLoader?.compactNavigation ?? false)
+        && Notifications.historyApps.length > 1
+    signal appsRequested()
+
+    function focusAppsButton(): void {
+        if (_appsButton.visible && _appsButton.enabled) _appsButton.forceActiveFocus(Qt.TabFocusReason)
+        else if (_searchBox.visible && _searchBox.enabled) _searchInput.forceActiveFocus(Qt.TabFocusReason)
+    }
 
     onHasHistoryChanged: if (!hasHistory) root.searchText = ""
 
@@ -92,8 +100,8 @@ PageShell {
         interval: 0
         onTriggered: {
             if (!root.active || !root.enabled || !root.visible || !MenuState.open) return
-            if (root.rowCount > 0) root._focusRow(Math.min(index, root.rowCount - 1))
-            else if (root.hasHistory) _searchInput.forceActiveFocus(Qt.TabFocusReason)
+            if (root.rowCount > 0 && root._focusRow(Math.min(index, root.rowCount - 1))) return
+            if (root.hasHistory) _searchInput.forceActiveFocus(Qt.TabFocusReason)
         }
     }
 
@@ -119,6 +127,8 @@ PageShell {
         filter: root._appliedFilter
         query: root.searchText
         active: root.active && MenuState.open
+        // asking again keeps the confirmation tied to the rows it was shown for
+        onReconciled: if (_clearButton.armed) _clearButton.disarm()
     }
 
     property bool _clearing: false
@@ -508,7 +518,7 @@ PageShell {
 
         Rectangle {
             id: _searchBox
-            width: parent.width
+            width: Math.max(1, parent.width - (root._showAppsButton ? _appsButton.width + 8 : 0))
             anchors.top: _silenceNote.bottom
             anchors.topMargin: root.hasHistory ? 8 : 0
             visible: root.hasHistory
@@ -583,6 +593,22 @@ PageShell {
                     root.searchText = ""
                     _searchInput.forceActiveFocus()
                 }
+            }
+        }
+
+        ActionButton {
+            id: _appsButton
+            anchors.right: parent.right
+            anchors.top: _searchBox.top
+            height: _searchBox.height
+            visible: root._showAppsButton
+            glyph: "󰀻"
+            label: parent.width >= 224 ? "Apps" : ""
+            accessibleName: "Filter history by app"
+            onTriggered: {
+                _clearButton.disarm()
+                _historyList.cancelFlick()
+                root.appsRequested()
             }
         }
 

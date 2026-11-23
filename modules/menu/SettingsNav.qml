@@ -212,6 +212,17 @@ Item {
         MenuState.setSettingsSection(section)
     }
 
+    function _pickSection(section: string): void {
+        root._activateSection(section)
+        if (root.overlay) root.dismissRequested()
+    }
+
+    function focusCurrentSection(): void {
+        const group = _groupRepeater.itemAt(root._groupIndexForSection(MenuState.settingsSection))
+        if (group) group.focusSection(MenuState.settingsSection)
+        root._scrollToSelection()
+    }
+
     property int _settleGroup: -1
     property int _pendingRevealGroup: -1
 
@@ -369,6 +380,7 @@ Item {
                         Accessible.selected: _grp.groupActive && !_grp.expanded
                         Accessible.onPressAction: root._toggleGroup(_grp.index)
                         KeyboardFocus { listNavigation: true; onActivated: root._toggleGroup(_grp.index) }
+                        FocusScroll { enabled: root.overlay }
 
                         HoverHandler {
                             id: _headerHover
@@ -510,7 +522,8 @@ Item {
                                     Accessible.selected: _leaf.active
                                     Accessible.onPressAction: root._pickSection(
                                         _leaf.modelData.section)
-                                    KeyboardFocus { listNavigation: true; onActivated: root._activateSection(_leaf.modelData.section) }
+                                    KeyboardFocus { listNavigation: true; onActivated: root._pickSection(_leaf.modelData.section) }
+                                    FocusScroll { enabled: root.overlay }
 
                                     HoverHandler {
                                         id: _leafHover
