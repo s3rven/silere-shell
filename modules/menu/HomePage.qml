@@ -263,23 +263,38 @@ PageShell {
             SettingsCard {
                 dividerIndent: root._rowTextX
 
+                ControlRow {
+                    id: _wiredRow
+                    visible: root._wiredShown
+                    active: true
+                    glyph: Network.connectivityText.length > 0 ? Network.issueGlyph(false, 0) : "󰈀"
+                    title: "Ethernet"
+                    status: Network.connectivityText || Network.connectionName || "Connected"
+                    statusColor: Network.connectivityText.length > 0 ? Theme.warning : "transparent"
+                    passive: Settings.networkSettingsCommand.length === 0
+                    onActivated: {
+                        MenuState.close()
+                        SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+                    }
+                }
+
                 InlinePicker { id: _wifiAbove; mirror: _wifiPicker }
                 ControlRow {
                     id: _wifiRow
                     visible: root._wifiAvailable
-                    readonly property bool _ethActive: Network.connected && Network.deviceType === "ethernet"
+                    readonly property string _issue: Network.isWifi ? Network.connectivityText : ""
                     active: Network.wifiEnabled
                     glyph: Network.wifiEnabled
-                        ? (!Network.isWifi || !Network.connected ? "󰤨"
-                            : Network.connectivityIssue.length > 0 ? Network.issueGlyph(true, Network.signalStrength)
-                            : Network.signalGlyph(Network.signalStrength))
+                        ? (!Network.wifiConnected ? "󰤨"
+                            : _issue.length > 0 ? Network.issueGlyph(true, Network.wifiSignalStrength)
+                            : Network.signalGlyph(Network.wifiSignalStrength))
                         : "󰤭"
                     title: "Wi-Fi"
                     status: Network.wifiHardBlocked ? "Blocked by the hardware switch"
                           : Network.wifiConnecting.length > 0 ? "Connecting to " + SafeText.singleLineText(Network.wifiConnecting, 128)
-                          : Network.wifiError.length > 0 ? "Couldn't connect to " + SafeText.singleLineText(Network.wifiError, 128)
-                          : Network.wifiEnabled && Network.isWifi && Network.connected ? _withIssue(Network.connectionName)
-                          : _ethActive ? _withIssue("Ethernet")
+                          : Network.wifiError.length > 0 ? "Could not connect to " + SafeText.singleLineText(Network.wifiError, 128)
+                          : Network.wifiEnabled && Network.wifiConnected
+                              ? [Network.wifiConnectionName || "Connected", _issue].filter(s => s.length > 0).join(" · ")
                           : Network.wifiEnabled ? "Not connected"
                           : ""
                     statusColor: Network.wifiHardBlocked ? Theme.warning

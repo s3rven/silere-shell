@@ -52,6 +52,21 @@ Singleton {
         root.flash()
     }
 
+    // a compositor that reports its screenshots (niri) also saves them where the watcher looks: one shot, one flash
+    function captured(path: string): void {
+        const now = Date.now()
+        const since = now - root._lastTime
+        if (path.length > 0 && path === root._lastFile && since >= 0 && since < 1500) return
+        if (path.length > 0) {
+            root._lastFile = path
+            root._lastTime = now
+        }
+        root.flash()
+    }
+    Connections {
+        target: Compositor
+        function onScreenshotTaken(path) { root.captured(path) }
+    }
     // no screenshot directory exists, so the watcher retired and the glow cannot fire
     readonly property bool watcherRetired: _watcher.gaveUp
 

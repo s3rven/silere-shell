@@ -18,7 +18,7 @@ Column {
         || ShellSettings.underlineNetGlow
         || (Battery.available && ShellSettings.underlineBattGlow)
         || (!CpuTemp.sensorMissing && ShellSettings.underlineTempGlow)
-        || (SystemTools.hasInotifywait && !Screenshot.watcherRetired
+        || (((SystemTools.hasInotifywait && !Screenshot.watcherRetired) || Compositor.isNiri)
             && ShellSettings.underlineScreenshotGlow)
 
     function _setEnabled(enabled) {
@@ -129,15 +129,13 @@ Column {
                         }
                         ToggleRow {
                             glyph: "󰄀"; label: "Screenshots"
-                            enabled: SystemTools.hasInotifywait
                             key: "underlineScreenshotGlow"
+                            // niri reports its own screenshots; elsewhere a folder watcher sees them land
+                            available: !SystemTools.ready || SystemTools.hasInotifywait || Compositor.isNiri
+                            dependsNote: "No inotify-tools"
                         }
                         HintText {
-                            visible: !SystemTools.hasInotifywait
-                            text: "Screenshot feedback needs inotify-tools."
-                        }
-                        HintText {
-                            visible: SystemTools.hasInotifywait && Screenshot.watcherRetired
+                            visible: SystemTools.hasInotifywait && Screenshot.watcherRetired && !Compositor.isNiri
                             text: "Create a screenshot folder, then recheck tools under Maintenance."
                         }
                         HintText {

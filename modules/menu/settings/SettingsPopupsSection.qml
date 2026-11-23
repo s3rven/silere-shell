@@ -3,8 +3,11 @@ import "../../../services"
 import "../controls"
 
 Column {
+    id: root
     width: parent ? parent.width : 0
     spacing: 0
+
+    readonly property int _chipW: Math.max(_position.naturalChipWidth, _maxShown.naturalChipWidth)
 
     SectionLabel { label: "POPUPS"; first: true }
     SettingsCard {
@@ -35,7 +38,9 @@ Column {
                 step: 1000
             }
             ChoiceChipRow {
+                id: _position
                 key: "notifPosition"
+                chipWidthFloor: root._chipW
                 glyph: "󰍹"; label: "Position"
                 model: [
                     { value: "top-left",   label: "Left"   },
@@ -44,7 +49,9 @@ Column {
                 ]
             }
             ChoiceChipRow {
+                id: _maxShown
                 key: "notifMaxVisible"
+                chipWidthFloor: root._chipW
                 glyph: "󰽘"; label: "Max shown"
                 model: [
                     { value: 3, label: "3"   },

@@ -4,13 +4,18 @@ import "../../../services"
 import "../controls"
 
 Column {
+    id: root
     width: parent ? parent.width : 0
     spacing: 0
+
+    readonly property int _chipW: Math.max(_position.naturalChipWidth, _height.naturalChipWidth)
 
     SectionLabel { label: "BAR"; first: true }
     SettingsCard {
         ChoiceChipRow {
+            id: _position
             key: "barPosition"
+            chipWidthFloor: root._chipW
             glyph: "󰍹"; label: "Position"
             model: [
                 { value: "top",    label: "Top"    },
@@ -18,7 +23,9 @@ Column {
             ]
         }
         ChoiceChipRow {
+            id: _height
             key: "barHeight"
+            chipWidthFloor: root._chipW
             glyph: "󰲏"; label: "Height"
             model: [
                 { value: 28, label: "Compact" },

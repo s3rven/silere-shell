@@ -36,6 +36,7 @@ function workspacesWithActivated(src, id, focused) {
     return { workspaces: ws, output: output }
 }
 
+// a workspace or a window row, by id: both carry is_urgent
 function workspacesWithUrgency(src, id, urgent) {
     for (let i = 0; i < src.length; i++) {
         if (!src[i] || src[i].id !== id) continue
