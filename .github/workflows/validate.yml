@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: Install compositor test dependencies
         run: |
-          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen libnotify dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux python-dbus python-gobject pipewire wireplumber
+          pacman -Syu --noconfirm gdb git quickshell kwin libkscreen libnotify dbus mesa libglvnd niri hyprland fontconfig ttf-jetbrains-mono-nerd util-linux python-dbus python-gobject pipewire pipewire-audio wireplumber
           # a file capability cannot be exec'd without privileges, and this container has none to give
           setcap -r "$(command -v kwin_wayland)"
           useradd --create-home silere-test

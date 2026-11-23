@@ -5,7 +5,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/dev/probe-lib.sh"
-for tool in qs pipewire wireplumber wpctl pw-cli dbus-run-session setsid; do
+for tool in qs pipewire wireplumber wpctl pw-cli pw-record dbus-run-session setsid; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         if [ "${SILERE_REQUIRE_TOOLS:-0}" = 1 ]; then
             printf 'FAIL: the audio test needs %s\n' "$tool" >&2
