@@ -9,19 +9,50 @@ Column {
     property bool open: false
     width: parent ? parent.width : 0
     onOpenChanged: Vpn.requestList(root, root.open)
-    Component.onCompleted: Vpn.requestList(root, root.open)
+    Component.onCompleted: {
+        root._syncProfiles()
+        Vpn.requestList(root, root.open)
+    }
     Component.onDestruction: Vpn.requestList(root, false)
 
+    // active profiles sort first; move the existing rows by uuid to keep keyboard focus
+    function _syncProfiles(): void {
+        const profiles = Vpn.profiles
+        for (let i = 0; i < profiles.length; i++) {
+            const profile = profiles[i]
+            let from = i
+            while (from < _rows.count && _rows.get(from).uuid !== profile.uuid) from++
+            const roles = { uuid: profile.uuid, profileName: profile.name, connected: profile.active }
+            if (from === _rows.count) _rows.insert(i, roles)
+            else {
+                if (from !== i) _rows.move(from, i, 1)
+                _rows.set(i, roles)
+            }
+        }
+        if (_rows.count > profiles.length) _rows.remove(profiles.length, _rows.count - profiles.length)
+    }
+
+    ListModel { id: _rows }
+
+    Connections {
+        target: Vpn
+        function onProfilesChanged() { root._syncProfiles() }
+    }
+
     Repeater {
-        model: Vpn.profiles
+        model: _rows
         InlineOptionRow {
-            required property var modelData
+            required property string uuid
+            required property string profileName
+            required property bool connected
+
             glyph: "󰦝"
-            label: modelData.name
-            selected: modelData.active
-            status: Vpn.pendingUuid === modelData.uuid ? "Working…" : modelData.active ? "Disconnect" : "Connect"
+            label: profileName
+            selected: connected
+            status: Vpn.pendingUuid === uuid ? "Working…" : connected ? "Disconnect" : "Connect"
             busy: Vpn.pendingUuid.length > 0
-            onTriggered: Vpn.toggle(modelData.uuid)
+            onYChanged: if (activeFocus) Qt.callLater(revealFocusAfterMove)
+            onTriggered: Vpn.toggle(uuid)
         }
     }
     HintText {

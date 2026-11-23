@@ -24,11 +24,12 @@ Item {
         return false
     }
 
-    function reveal(): void {
+    function reveal(onlyAtRest = false): void {
         if (!root.enabled || !root.control || !root.control.activeFocus
                 || !root.control.enabled || !root.control.visible || !root.revealTarget) return
         for (let viewport = root.revealTarget.parent; viewport; viewport = viewport.parent) {
-            if (viewport.contentY === undefined || !viewport.contentItem || viewport.height <= 0) continue
+            if (viewport.contentY === undefined || !viewport.contentItem || viewport.height <= 0
+                    || (onlyAtRest && viewport.moving)) continue
             if (root._pinnedWithin(viewport)) continue
             viewport.cancelFlick()
             const p = root.revealTarget.mapToItem(viewport.contentItem, 0, root.revealY)

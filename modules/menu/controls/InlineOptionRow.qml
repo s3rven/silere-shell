@@ -52,7 +52,13 @@ Item {
     readonly property color _attention: root.failed ? Theme.error : Theme.warning
 
     function trigger(): void {
-        if (root._canActivate) root.triggered()
+        if (!root._canActivate) return
+        root._keepFocus = root.activeFocus
+        root.triggered()
+    }
+
+    function revealFocusAfterMove(): void {
+        _keyboard.reveal(true)
     }
 
     width: parent ? parent.width : 0
@@ -71,7 +77,7 @@ Item {
     Accessible.checked: root.accessiblePrefix.length > 0 && root.selected
     Accessible.selected: root.selected
     Accessible.onPressAction: root.trigger()
-    KeyboardFocus { interactive: root._canActivate; listNavigation: true; onActivated: root.trigger() }
+    KeyboardFocus { id: _keyboard; interactive: root._focusable; listNavigation: true; onActivated: root.trigger() }
     Accessible.onToggleAction: if (root.accessiblePrefix.length > 0 && !root.selected)
         root.trigger()
 

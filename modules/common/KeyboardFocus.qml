@@ -156,8 +156,8 @@ Item {
         target: root.control ? root.control.Keys : null
         function onPressed(event) { root.handleKey(event) }
     }
-    function reveal(): void {
-        _focusScroll.reveal()
+    function reveal(onlyAtRest = false): void {
+        _focusScroll.reveal(onlyAtRest)
     }
 
     // built only for the control holding the focus: a Shape on every control of a panel was a
