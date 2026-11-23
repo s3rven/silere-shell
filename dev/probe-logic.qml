@@ -10533,17 +10533,13 @@ ShellRoot {
         root._check(niriActive["HDMI-A-1"] === 1,
             "activating a niri workspace leaves the other output's active workspace alone")
 
-        const niriCrossMove = niri.moveWorkspaceCommand(2, "HDMI-A-1", 90, "DP-1")
-        root._check(niriCrossMove[0] === "sh"
-                && niriCrossMove.join(" ").includes("move-window-to-monitor")
-                && niriCrossMove.join(" ").includes("--window-id")
-                && niriCrossMove[niriCrossMove.length - 2] === "HDMI-A-1"
-                && niriCrossMove[niriCrossMove.length - 1] === "2",
-            "a cross-output niri move resolves the workspace on the clicked monitor")
-        const niriLocalMove = niri.moveWorkspaceCommand(2, "DP-1", 90, "DP-1")
-        root._check(niriLocalMove[0] === "niri"
-                && niriLocalMove.indexOf("--window-id") >= 0,
-            "a same-output niri move addresses the original window directly")
+        root._check(niri._workspaceRef(1, "DP-1")?.Id === 10
+                && niri._workspaceRef(1, "HDMI-A-1")?.Id === 20,
+            "niri resolves identical workspace numbers to distinct IPC ids on each monitor")
+        root._check(niri._workspaceRef(1, "")?.Id === 10
+                && niri._workspaceRef(2, "HDMI-A-1") === null
+                && niri._workspaceRef(1, "DP-2") === null,
+            "niri defaults to the focused monitor and ignores workspaces absent from the selected monitor")
 
         niri._onLine(JSON.stringify({ WorkspaceUrgencyChanged: { id: 20, urgent: true } }))
         const niriUrgent = niri.workspaces
@@ -10558,6 +10554,38 @@ ShellRoot {
             { id: 90, workspace_id: 11, app_id: "probe.app", title: "t", pid: 1 },
             { id: 91, workspace_id: 20, app_id: "probe.app", title: "u", pid: 1 }
         ]}}))
+        niri._onLine(JSON.stringify({ WindowUrgencyChanged: { id: 91, urgent: true } }))
+        const urgentAfterEvent = niri.urgentRefs.join()
+        niri._onLine(JSON.stringify({ WindowOpenedOrChanged: { window:
+            { id: 90, workspace_id: 11, app_id: "probe.app", title: "t", pid: 1, is_urgent: true } } }))
+        const urgentAfterChange = niri.urgentRefs.slice().sort().join()
+        niri._onLine(JSON.stringify({ WindowUrgencyChanged: { id: 91, urgent: false } }))
+        root._check(urgentAfterEvent === "91" && urgentAfterChange === "90,91" && niri.urgentRefs.join() === "90",
+            "a niri window turning urgent, by its own event or a changed window, is the one a notification click follows")
+        const niriShots = []
+        const onNiriShot = path => niriShots.push(path)
+        niri.screenshotTaken.connect(onNiriShot)
+        niri._onLine(JSON.stringify({ ScreenshotCaptured: { path: "/home/u/Pictures/Screenshots/a.png" } }))
+        niri._onLine(JSON.stringify({ ScreenshotCaptured: { path: null } }))
+        niri.screenshotTaken.disconnect(onNiriShot)
+        const shotWas = [Screenshot._lastFile, Screenshot._lastTime, Screenshot._lastFlashTime]
+        let shotFlashes = 0
+        const onShotFlash = () => shotFlashes++
+        Screenshot.flashed.connect(onShotFlash)
+        Screenshot._lastFlashTime = 0
+        Screenshot.captured("/home/u/Pictures/Screenshots/b.png")
+        Screenshot._lastFlashTime = 0
+        Screenshot._maybeFlash("/home/u/Pictures/Screenshots/b.png")
+        Screenshot._lastFlashTime = 0
+        Screenshot._maybeFlash("/home/u/Pictures/Screenshots/c.png")
+        Screenshot._lastFlashTime = 0
+        Screenshot.captured("/home/u/Pictures/Screenshots/c.png")
+        Screenshot._lastFlashTime = 0
+        Screenshot.captured("")
+        Screenshot.flashed.disconnect(onShotFlash)
+        Screenshot._lastFile = shotWas[0]; Screenshot._lastTime = shotWas[1]; Screenshot._lastFlashTime = shotWas[2]
+        root._check(niriShots.join("|") === "/home/u/Pictures/Screenshots/a.png|" && shotFlashes === 3,
+            "a niri screenshot flashes once even when the folder watcher sees it too, and a clipboard-only one flashes")
         niri._onLine(JSON.stringify({ WindowClosed: { id: 90 } }))
         const niriClosed = niri.workspaces
         let closedEmpty = false

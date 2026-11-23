@@ -41,14 +41,13 @@ QtObject {
         return screen.name
     }
 
-    function focusWorkspace(wsId, output): void {
-        // focus-workspace takes a per-output index, so the monitor switch must land first - chain both in one process
-        if (output.length > 0 && output !== root.focusedMonitor)
-            Quickshell.execDetached(["sh", "-c",
-                "niri msg action focus-monitor \"$1\" && niri msg action focus-workspace \"$2\"",
-                "sh", output, String(wsId)])
-        else
-            root._action(["focus-workspace", String(wsId)])
+    // the bar shows per-output indexes. niri's JSON socket can address the workspace
+    // by id in one action, even if focus moves or the index changes before it runs
+    function _workspaceRef(wsId, output): var {
+        const target = output || root.focusedMonitor
+        if (!target) return null
+        const workspace = root._wsRaw.find(w => w && w.idx === wsId && w.output === target)
+        return workspace ? { Id: workspace.id } : null
     }
 
     function moveWorkspaceCommand(wsId, output, windowId, windowOutput): var {
