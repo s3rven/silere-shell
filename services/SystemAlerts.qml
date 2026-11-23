@@ -7,7 +7,10 @@ Singleton {
     id: root
 
     // public so the shell root can force-instantiate: Quickshell lazy-loads singletons and nothing else reads SystemAlerts, so its watchers never arm otherwise
-    readonly property bool armed: SystemTools.hasNotifySend
+    readonly property bool armed: root.canAlert
+    // the alerts reach Silere's own server over D-Bus: notify-send when it is installed, else busctl, which systemd ships.
+    // Without either, a minimal install never saw its welcome, a panel that failed to load or a cancelled sleep
+    readonly property bool canAlert: SystemTools.hasNotifySend || SystemTools.hasBusctl
 
     property bool _battCritSent: false
 
@@ -17,7 +20,7 @@ Singleton {
         return canSend && popupsOn && (bypass || !silenced)
     }
     readonly property bool criticalPopsUp: root.criticalPopupFor(
-        SystemTools.ready && SystemTools.hasNotifySend && Quickshell.env("SILERE_SANDBOX") !== "1",
+        SystemTools.ready && root.canAlert && Quickshell.env("SILERE_SANDBOX") !== "1",
         ShellSettings.notifPopupEnabled && !Notifications.screenShareSilenced,
         ShellSettings.notifCriticalBypass, Notifications.silencingActive)
     property bool _cpuCritSent:  false
