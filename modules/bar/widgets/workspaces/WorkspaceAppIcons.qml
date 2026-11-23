@@ -1,10 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Effects
 import Quickshell
 import "../../../../config"
-import "../../../../services"
 import "../../../common"
 
 Row {
@@ -17,7 +15,6 @@ Row {
 
     spacing: Metrics.workspaceContentGap
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
-    readonly property bool _accent: ShellSettings.wsAppIconColor === "accent"
     // already eased by the urgent pulse; a second animation here only lags it
     opacity: pulseOpacity
 
@@ -39,29 +36,19 @@ Row {
                 side: root.iconSize
                 source: appIcon.app?.icon ?? ""
                 asynchronous: true
-                layer.enabled: root._accent && status === Image.Ready
-                    && GraphicsInfo.api !== GraphicsInfo.Software
-                layer.effect: MultiEffect {
-                    colorization: 1
-                    colorizationColor: Theme.barAccentMark
-                    // the tint keeps only luminance: -0.5 left Discord, Spotify and Code one pale blob, and any steeper than
-                    // this drops a near-black plate (OBS, Steam's own icon) into a dark bar. Measured over Papirus, Breeze and hicolor
-                    contrast: -0.2
-                    brightness: 0.25
-                }
             }
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: Theme.withAlpha(root._accent ? Theme.barAccentMark : Theme.barSubtext, 0.12)
+                color: Theme.withAlpha(Theme.barSubtext, 0.12)
                 visible: _iconSrc.status !== Image.Ready
 
                 ShellText {
                     anchors.centerIn: parent
                     anchors.alignWhenCentered: false
                     text: appIcon.app?.fallback || "?"
-                    color: root._accent ? Theme.barAccent : Theme.barSubtext
+                    color: Theme.barSubtext
                     font.pixelSize: Math.max(9, Math.round(root.iconSize * 0.68))
                 }
             }

@@ -327,7 +327,6 @@ Singleton {
     property bool   wsShowNumbers:       false
     property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
-    property string wsAppIconColor:      "original"
     property bool   wsNotifPulse:        false
     property bool   wsUrgentPulse:       true
     property string wsActiveMarker:      "dot"
@@ -494,7 +493,6 @@ Singleton {
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces", l: "Numbers" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces", l: "Scroll to switch" },
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces", l: "Show app icons" },
-        { k: "wsAppIconColor",      t: "enum", vals: ["original", "accent"], sec: "workspaces", l: "App icon color" },
         { k: "wsNotifPulse",        t: "bool", sec: "workspaces", l: "Notification pulse" },
         { k: "wsUrgentPulse",       t: "bool", sec: "workspaces", l: "Urgent window pulse" },
         { k: "wsActiveMarker",      t: "enum", vals: ["gem", "dot", "bar"], sec: "workspaces", l: "Active marker" }
@@ -704,9 +702,6 @@ Singleton {
         separators: [
             { master: "barCompact", negate: true, hides: ["barAutoCompact"] },
             { master: "dotStyle", off: "none", hides: ["barSeparatorMode"] }
-        ],
-        workspaces: [
-            { master: "wsShowAppIcons", hides: ["wsAppIconColor"] }
         ],
         theme: [
             // the Base row edits baseTone under Neutral and matugenDepth under Wallpaper

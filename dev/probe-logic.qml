@@ -2988,7 +2988,7 @@ ShellRoot {
 
     function _checkWorkspaceIndicators(): void {
         const keys = ["reduceMotion", "wsShowNumbers", "wsShowAppIcons", "wsUrgentPulse",
-            "valuesOnHover", "uiScale", "barIconSize", "wsAppIconColor", "wsActiveMarker"]
+            "valuesOnHover", "uiScale", "barIconSize", "wsActiveMarker"]
         const saved = keys.map(key => ShellSettings[key])
         ShellSettings.reduceMotion = true
         ShellSettings.wsShowNumbers = false
@@ -3009,9 +3009,6 @@ ShellRoot {
         cell.occupied = true
         root._check(dot && dot.color.a > 0 && dot.width > emptyWidth,
             "an occupied workspace has a larger filled indicator")
-        root._check(ShellSettings._dotHidden("workspaces", "wsAppIconColor")
-                && ShellSettings._defaults.wsAppIconColor === "original",
-            "workspace icon color defaults to Original and is hidden when app icons are off")
         ShellSettings.wsShowAppIcons = true
         cell.apps = [{ icon: "", fallback: "F", name: "Firefox", count: 1 }]
         cell.hiddenAppCount = 2
@@ -3029,12 +3026,6 @@ ShellRoot {
             "hidden workspace apps have a readable overflow count")
         const findIcon = () => root._findTrayNode(cell, item => item.objectName === "workspace-app-icon")
         const icon = findIcon()
-        const initial = root._findTrayNode(cell, item => item.text === "F" && item.color !== undefined)
-        root._check(ShellSettings.setValue("wsAppIconColor", "accent")
-                && !ShellSettings.setValue("wsAppIconColor", "invalid")
-                && !ShellSettings._dotHidden("workspaces", "wsAppIconColor")
-                && initial?.color.toString() === Theme.barAccent.toString(),
-            "workspace icon color validates the choice and applies the accent to missing-icon initials")
         cell.apps = [{ icon: "", fallback: "F", name: "Firefox", count: 2 }]
         root._check(icon && icon === findIcon(),
             "a second window of the same app keeps the workspace icon delegate")
@@ -7508,9 +7499,8 @@ ShellRoot {
                 && migrationSince17.value.mediaPauseOnDisconnect === false,
             "the schema moved past 1.7's, so a rollback to 1.7 keeps the headphone pause setting")
         const migrationSince18 = SettingsMigrations.migrate({ wsShowAppIcons: true }, 4, ShellSettings._settingsVersion)
-        root._check(migrationSince18.value.__version >= 5 && migrationSince18.value.wsShowAppIcons === true
-                && migrationSince18.value.wsAppIconColor === undefined,
-            "the schema upgrade preserves workspace settings and lets existing installs use the Original icon default")
+        root._check(migrationSince18.value.__version >= 5 && migrationSince18.value.wsShowAppIcons === true,
+            "the schema upgrade preserves workspace settings")
         const migrationHeld = SettingsMigrations.migrate({ barHeight: 40 }, 1, 1)
         root._check(migrationHeld.applied.length === 0
                 && migrationHeld.version === 1
@@ -8698,9 +8688,7 @@ ShellRoot {
         root._check(labelHit("keep after restart", "history")?.key === "notifHistoryPersistent"
                 && labelHit("shell shadows", "theme")?.key === "barShadow"
                 && labelHit("network speed", "indicators")?.key === "networkTrafficStats"
-                && labelHit("switch animation", "workspaces")?.key === "workspaceShift"
-                && labelHit("app icon color", "workspaces")?.key === "wsAppIconColor"
-                && labelHit("workspace icon tint", "workspaces")?.key === "wsAppIconColor",
+                && labelHit("switch animation", "workspaces")?.key === "workspaceShift",
             "settings search finds a row by the label it shows, not only by its configuration name")
         root._check(labelHit("track package updates", "updates")?.key === "updatesWidget"
                 && labelHit("track package updates", "widgets")?.key === "updatesWidget"

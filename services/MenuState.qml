@@ -184,7 +184,6 @@ AnchoredPopupState {
         barHeight: "compact tall",
         barSpacing: "tight wide",
         wsActiveMarker: "gem dot line",
-        wsAppIconColor: "accent original tint workspace",
         dotStyle: "bullet ring slash",
         barSeparatorMode: "groups every",
         notifMaxVisible: "stack",

@@ -37,17 +37,6 @@ Column {
             key: "wsShowAppIcons"
             description: "Line shows icons on the active workspace"
         }
-        CollapsibleSection {
-            expanded: ShellSettings.wsShowAppIcons
-            ChoiceChipRow {
-                glyph: "󰏘"; label: "App icon color"
-                key: "wsAppIconColor"
-                model: [
-                    { value: "original", label: "Original" },
-                    { value: "accent", label: "Accent" }
-                ]
-            }
-        }
     }
 
     SectionLabel { label: "BEHAVIOR" }

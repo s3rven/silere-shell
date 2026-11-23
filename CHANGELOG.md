@@ -20,7 +20,6 @@ settings file carries its own `__version` and migrates separately.
 - Keybinds can dismiss the newest notification, dismiss them all or act on the newest, as with dunstctl and makoctl: `silere ipc notifications dismiss`, `dismissAll` and `invoke`.
 - Settings › System › Keybinds lists Hyprland's shortcuts with what each does, in your config's order, and filters them as you type. Binds without a description are named from what they run, and Silere's own actions can be copied as a line for your config, on keys still free.
 - On Hyprland, the installer offers Silere's window motion (default no): windows, workspaces and focus move at the shell's pace, with two Hyprland 0.57 animation faults worked around. Anything your config sets after its line still wins.
-- Workspace app icons can follow the theme accent in Settings › Widgets › Workspaces.
 - The system monitor can draw each reading as a ring around its icon, under Style in Settings › Widgets › Indicators.
 - On Hyprland, a submap you enter shows its name after the workspaces, also when the shell starts inside one; click it to leave.
 - On Hyprland, the installer offers to turn off the compositor's fade for Silere's popups, which animate themselves, unless your config already sets one; uninstalling removes it.
@@ -123,7 +122,7 @@ settings file carries its own `__version` and migrates separately.
 - A notification icon, app icon or media cover that names one of the shell's own in-memory images shows nothing instead of another app's picture.
 - When a panel fails to load because the shell's files changed while it ran, clicking the alert reloads Silere instead of asking for `silere restart` in a terminal.
 - The CPU temperature shows on ARM laptops and boards whose sensors are named per core, such as Snapdragon X, ThinkPad X13s and MediaTek Chromebooks.
-- Searching Settings for colour finds App icon color as well as the Theme page, and a typo keeps its first letter, so nighlight finds Night light, not Hover highlight.
+- Searching Settings for colour finds the Theme page, and a typo keeps its first letter, so nighlight finds Night light, not Hover highlight.
 - Escape and the close button return keyboard focus to the Settings search button.
 - A pending scroll to a row in Settings or on Home is dropped when you change page or open the power options.
 - Scrolling the menu while a picker opens above its row no longer pulls the page back to that row.
