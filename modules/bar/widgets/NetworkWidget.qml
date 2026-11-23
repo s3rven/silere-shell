@@ -43,13 +43,11 @@ Pill {
     }
     // _detailText is empty until hover and carries link glyphs and a 2s traffic rate
     readonly property string _accessibleDetail: {
-        if (!root.canRead) return "backend unavailable"
         if (!Network.connected) return "disconnected"
 
-        const parts = []
+        const parts = [Network.connectivityText]
         if (Network.hasVpn) parts.push(root._vpnText)
         if (root._showPhysicalLink || !Network.hasVpn) parts.push(root._physicalWithSignal)
-        parts.push(Network.connectivityText)
         return root._join(parts)
     }
     readonly property string _detailText: {

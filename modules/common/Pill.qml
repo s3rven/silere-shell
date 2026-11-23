@@ -93,20 +93,19 @@ Item {
     // a reading inside the row (the system monitor's, between its glyphs) changes width on hover. Its box glides
     // with the pill's own edge, so the readings after it hold still: laid out at once, they were shoved past the edge
     // and slid back on every hover, and jumped back and slid out again on leaving
-    readonly property bool _glideReadings: root.segments.length > 0
+    readonly property bool _glideReadings: root._shownSegments.length > 0
+    readonly property int _gap: Metrics.pillGapFor(root.compact)
     // the row's width once its readings land, so the pill heads there from the first frame. Summed from the boxes'
     // own targets, each holding the gap before it: the Row measures only at its next polish,
     // and its width plus what the boxes still had to cover mixed two frames, so the pill's glide chased a target
     // that jumped twice a frame, parked a pixel wide and stepped back once the readings settled
-    readonly property real _finalRowW: {
-        if (!root._glideReadings) return 0
-        const parts = [_glyphBox.implicitWidth, _textBox._hasShownText ? _textBox._targetW : 0]
-        for (let i = 0; i < _segments.count; i++) parts.push(_segments.itemAt(i)?._finalW ?? 0)
-        const shown = parts.filter(w => w > 0)
-        return shown.reduce((sum, w) => sum + w, 0) + Math.max(0, shown.length - 1) * row.spacing
+    readonly property real rowWidth: {
+        let sum = _glyphBox.implicitWidth + _textBox._spanW
+        const count = Math.min(root.segments.length, _segments.count)
+        for (let i = 0; i < count; i++) sum += _segments.itemAt(i)?._finalW ?? 0
+        // whole px: a fractional text width puts the pill and every widget after it off-pixel
+        return Math.ceil(sum)
     }
-    // whole px: a fractional text width puts the pill and every widget after it off-pixel
-    readonly property real rowWidth: Math.ceil(root._glideReadings ? root._finalRowW : row.implicitWidth)
     implicitWidth: _widthGlide.value
     SmoothGlide {
         id: _widthGlide
@@ -120,6 +119,7 @@ Item {
         onRunningChanged: if (!running) {
             root._unfolding = false
             root._ghostText = ""
+            if (root._closingFirstSpan >= 0) Qt.callLater(root._finishSegmentConceal)
         }
     }
     // true from a collapse or uncollapse until the width glide that follows it settles
@@ -145,6 +145,23 @@ Item {
     property string _lastText: ""
     // the pill's state before this update's handlers: a hover closing changes expanded and text in one batch
     property bool _expandedBefore: false
+    property var _shownSegments: []
+    property real _closingFirstSpan: -1
+    // when plain style returns to one glyph, keep the existing row in place under the retreating edge
+    onSegmentsChanged: {
+        if (root._ready && root.motionActive && !root.expanded && root._expandedBefore
+                && root.segments.length === 0 && root._shownSegments.length > 0) {
+            root._closingFirstSpan = _textBox.width
+            return
+        }
+        root._closingFirstSpan = -1
+        root._shownSegments = root.segments
+    }
+    function _finishSegmentConceal(): void {
+        if (root._closingFirstSpan < 0) return
+        root._closingFirstSpan = -1
+        root._shownSegments = root.segments
+    }
     function concealsAs(before: string, after: string, wasExpanded: bool): bool {
         return wasExpanded && before.length > after.length && before.indexOf(after) === 0
     }
@@ -152,7 +169,8 @@ Item {
         const before = root._lastText
         root._lastText = root.text
         root._ghostText = ""
-        if (root._ready && root.motionActive && !root.expanded && !root.animateText && root.segments.length === 0
+        if (root._ready && root.motionActive && !root.expanded && !root.animateText
+                && (!root._glideReadings || text.length === 0)
                 && root.concealsAs(before, root.text, root._expandedBefore)) {
             root._ghostText = before
             _ghostExpiry.restart()
@@ -240,6 +258,7 @@ Item {
         _glyphText.scale = 1.0
         _textEl.opacity = 1.0
         _ghostText = ""
+        root._finishSegmentConceal()
         if (root.animateText) _textEl._shown = root.text
     }
 
@@ -376,10 +395,10 @@ Item {
             width: root._glideReadings ? _textGlide.value : _targetW
             height: _textEl.implicitHeight
             implicitWidth: _textEl.implicitWidth
-            clip: width < _targetW - 0.5
+            clip: width < _spanW - 0.5 || _textEl._concealing
             SmoothGlide {
                 id: _textGlide
-                target: _textBox._targetW
+                target: root._closingFirstSpan >= 0 ? root._closingFirstSpan : _textBox._spanW
                 duration: Motion.width
                 gate: root._ready && root.barActive && root._glideReadings
             }
@@ -388,13 +407,15 @@ Item {
                 id: _textEl
                 property string _shown: ""
                 readonly property bool _hasShownText: root.animateText ? _shown.length > 0 : root.hasText
+                readonly property bool _concealing: root._glideReadings && root._ghostText.length > 0
                 // the box uncovers the reading as it glides; a narrower text would elide afresh every frame
-                width: _textBox._targetW
+                x: root._glideReadings ? _textBox._lead : 0
+                width: _concealing ? Math.min(implicitWidth, root.maxTextWidth) : _textBox._targetW
                 anchors.verticalCenter: parent.verticalCenter
                 elide:   Text.ElideRight
-                text:    root.animateText ? _shown : root.text
+                text:    root.animateText ? _shown : _concealing ? root._ghostText : root.text
                 // its start is drawn by the ghost, and two copies blend to a bolder line
-                visible: root._ghostText.length === 0
+                visible: _concealing || root._ghostText.length === 0
                 color:   root._hoverTextColor
                 font.pixelSize: Settings.fontSize
                 font.features: root.reserveText.length > 0 ? ({ "tnum": 1 }) : ({})
@@ -439,11 +460,18 @@ Item {
         // indexed, not modelled: a reading that ticks rebinds its text instead of rebuilding the pair
         Repeater {
             id: _segments
-            model: root.segments.length
+            model: root._shownSegments.length
             Row {
                 id: _segment
                 required property int index
-                readonly property var seg: root.segments[index] ?? ({})
+                readonly property var seg: root._shownSegments[index] ?? ({})
+                readonly property string _requestedText: seg.text ?? ""
+                property string _shownText: _requestedText
+                on_RequestedTextChanged: {
+                    if (_requestedText.length === 0 && _segBox.width > 0.5 && root.motionActive
+                            && !root.expanded && root._expandedBefore) return
+                    _shownText = _requestedText
+                }
                 // held here, so a reading's tick, which hands every segment a new object, writes no colour: Text keeps
                 // 8 bits a channel, a computed colour never reads back equal, and each write restarted the 160 ms fade
                 readonly property color _ink: root._glyphTint(_segment.seg.color ?? root.glyphColor, root._contentHot)
@@ -476,12 +504,13 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: _segGlide.value
                     height: _segText.implicitHeight
-                    clip: width < _targetW - 0.5
+                    clip: width < _spanW - 0.5 || _concealing
                     SmoothGlide {
                         id: _segGlide
                         target: _segBox._spanW
                         duration: Motion.width
                         gate: root._ready && root.barActive
+                        onRunningChanged: if (!running) _segment._shownText = _segment._requestedText
                     }
                     ShellText {
                         id: _segText
@@ -511,7 +540,7 @@ Item {
     // beside the row, not in it, so the pill's width already follows the shorter reading
     ShellText {
         id: _ghostEl
-        visible: root._ghostText.length > 0
+        visible: !root._glideReadings && root._ghostText.length > 0
         x: row.x + (_glyphBox.width > 0 ? _glyphBox.width + row.spacing : 0)
         anchors.verticalCenter: row.verticalCenter
         width: Math.min(implicitWidth, root.maxTextWidth)

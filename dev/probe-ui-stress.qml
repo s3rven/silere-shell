@@ -138,10 +138,17 @@ ShellRoot {
             glyph: "󰍛"
             shrinkDelay: 2400
             property string reading: "5%"
+            property bool hoverOnly: false
+            property bool rings: false
+            readonly property bool readingShown: !hoverOnly || expanded
             // as the CPU reading does, the first text reads the same either way; only the pairs after it grow
-            text: reading
-            segments: [{ glyph: "󰘚", text: expanded ? "8.4 GB of 62 GB" : "13%", reserve: "00%" },
-                { glyph: "󰔏", text: expanded ? "56°C" : "56°", reserve: "00°" }]
+            text: readingShown ? reading : ""
+            glyphRing: rings ? 0.05 : -1
+            segments: !readingShown && !rings ? [] : [
+                { glyph: "󰘚", text: !readingShown ? "" : expanded ? "8.4 GB of 62 GB" : "13%",
+                    reserve: readingShown ? "00%" : "", ring: rings ? 0.13 : -1 },
+                { glyph: "󰔏", text: !readingShown ? "" : expanded ? "56°C" : "56°",
+                    reserve: readingShown ? "00°" : "", ring: rings ? 0.56 : -1 }]
         }
         // a volume another app left off the 5% grid, and the accent hue strip
         SliderTrack {
@@ -174,6 +181,31 @@ ShellRoot {
         root.check(root.grabChanges > before, "dragging the " + label + " handle still moves it")
     }
 
+    function pillShows(item: Item, text: string): bool {
+        if (!item.visible || item.width <= 0.5) return false
+        return item.text === text || item.children.some(child => root.pillShows(child, text))
+    }
+
+    function checkHoverConceal(rings: bool): void {
+        hoverPill.rings = rings
+        input.wait(350)
+        const rest = hoverPill.width
+        const name = rings ? "ring" : "plain"
+        hoverPill.hoverActive = true
+        input.wait(350)
+        const expandedWidth = hoverPill.width
+        const values = ["5%", "8.4 GB of 62 GB", "56°C"]
+        const shows = expected => root.pillShows(hoverPill, expected)
+        root.check(expandedWidth > rest && values.every(shows), "the " + name + " pill reveals all readings")
+
+        hoverPill.hoverActive = false
+        root.check(hoverPill.width === expandedWidth && values.every(shows),
+            "the " + name + " pill keeps its readings during the first frame of its close")
+        input.wait(350)
+        root.check(Math.abs(hoverPill.width - rest) < 1 && !values.some(shows),
+            "the " + name + " pill settles at its original width and clears the departing readings")
+    }
+
     function checkHoverRelease(): void {
         input.wait(300)
         const rest = hoverPill.rowWidth
@@ -203,6 +235,9 @@ ShellRoot {
         root.check(hoverPill._minW <= hoverPill.rowWidth,
             "a smaller interface scale settles every pill at once, with no old width held after its readings")
         ShellSettings.uiScale = scaleWas
+        hoverPill.hoverOnly = true
+        root.checkHoverConceal(false)
+        root.checkHoverConceal(true)
         input.wait(100)
         root.checkHandleGrab(grabSlider, grabSlider._thumbCenter, "slider")
         root.checkHandleGrab(grabHue, grabHue._thumbCenter, "hue")
