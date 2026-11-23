@@ -55,9 +55,9 @@ Column {
             delegate: ToggleRow {
                 required property string modelData
                 glyph: "󰪑"
-                label: modelData
+                label: Notifications.appLabel(modelData)
                 checked: true
-                Accessible.name: "Mute popups from " + modelData
+                Accessible.name: "Mute popups from " + label
                 onToggled: nextChecked => ShellSettings.setNotifAppMuted(modelData, nextChecked)
             }
         }

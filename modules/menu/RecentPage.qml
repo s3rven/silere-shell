@@ -306,7 +306,7 @@ PageShell {
                     (root.filter.length > 0 ? _muteButton.x - 10
                         : _clearButton.revealed ? _clearButton.x - 10 : _header.width)
                     - (root.rowCount > 0 ? _countChip.width + 9 : 0)))
-                text: root.filter.length > 0 ? root.filter : "Notifications"
+                text: root.filter.length > 0 ? Notifications.appLabel(root.filter) : "Notifications"
                 color: Theme.text
                 font.pixelSize: Settings.fontSize + 4
                 font.weight: Font.DemiBold
@@ -367,7 +367,7 @@ PageShell {
                 }
 
                 Accessible.role: Accessible.CheckBox
-                Accessible.name: "Mute popups from " + root.filter
+                Accessible.name: "Mute popups from " + Notifications.appLabel(root.filter)
                 Accessible.description: "Notifications still reach history"
                 Accessible.checkable: true
                 Accessible.checked: _muteButton.muted
@@ -1000,6 +1000,14 @@ PageShell {
 
                                     readonly property string _fallbackSource: String(
                                         _entry.modelData.appName || _entry.modelData.summary || "N").trim()
+
+                                    // the popup card's initial tile, its radius kept in proportion: a bare dim letter reads as a missing glyph
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        visible: _recentAppIcon.status !== Image.Ready
+                                        radius: Math.round(Theme.radiusField * 2 / 3)
+                                        color: Theme.withAlpha(Theme.subtext, 0.12)
+                                    }
 
                                     ShellText {
                                         anchors.centerIn: parent

@@ -47,7 +47,7 @@ Item {
         return root._appsByName[name] ?? null
     }
     function _labelFor(name: string): string {
-        return name.length === 0 ? "All" : name
+        return name.length === 0 ? "All" : Notifications.appLabel(name)
     }
     function _countFor(name: string): int {
         if (name.length === 0) return Notifications.historyCount
@@ -55,16 +55,7 @@ Item {
         return app ? app.count : 0
     }
 
-    // an app whose last notification was cleared takes the filter down with it
-    on_NamesChanged: {
-        root._queueReveal()
-        const want = MenuState.recentFilter
-        if (want.length === 0) return
-        const names = root._names
-        for (let i = 0; i < names.length; i++)
-            if (names[i] === want) return
-        MenuState.setRecentFilter("")
-    }
+    on_NamesChanged: root._queueReveal()
 
     function _activate(name: string): void {
         MenuState.setRecentFilter(name)
@@ -196,7 +187,7 @@ Item {
                                 : Theme.withAlpha(Theme.subtext,
                                     _rowHover.hovered ? 0.92 : 0.76)
                             font.pixelSize: _row.isAll
-                                ? Settings.fontLabel : Settings.fontMicro
+                                ? Settings.fontLabel : Math.min(Settings.fontMicro, Settings.fontSizeBase - 3)
                             font.weight: _row.isAll ? Font.Normal : Font.DemiBold
                             ColorFade on color {}
                         }
@@ -212,12 +203,12 @@ Item {
                             readonly property string _primary: {
                                 void Notifications.entriesTick
                                 return _row.isAll ? "" : Notifications.appIconSource(
-                                    _row.appIcon, _row.desktopEntry, _row.label)
+                                    _row.appIcon, _row.desktopEntry, _row.modelData)
                             }
                             readonly property string _fallback: {
                                 void Notifications.entriesTick
                                 return _row.isAll ? "" : Notifications.entryIconSource(
-                                    _row.desktopEntry, _row.label)
+                                    _row.desktopEntry, _row.modelData)
                             }
                             on_PrimaryChanged: _fellBack = false
                             source: _fellBack ? _fallback : _primary

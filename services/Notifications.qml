@@ -156,6 +156,19 @@ Singleton {
         return SafeText.singleLineText(value, root._maxIdentityChars)
     }
 
+    // display only: Electron apps send their package name ("discord"), the launcher shows "Discord";
+    // only the case may change, so the rail, filter, search and mutes still key on the name sent
+    function caseOnlyLabel(sent: string, entryName: string): string {
+        return sent === sent.toLowerCase() && entryName.toLowerCase() === sent ? entryName : sent
+    }
+    function appLabel(name): string {
+        void root.entriesTick
+        const sent = root.identityText(name).trim()
+        if (sent.length === 0 || sent !== sent.toLowerCase()) return sent
+        const entry = DesktopEntries.heuristicLookup(sent)
+        return root.caseOnlyLabel(sent, entry ? root.identityText(entry.name).trim() : "")
+    }
+
     // roles are fixed by the first insert, so every entry (incl. one revived from JSON) needs the full shape
     function _normalizeEntry(e, storedText): var {
         if (!e || typeof e !== "object") return null

@@ -1123,12 +1123,12 @@ test_shared_launcher() (
         '#!/bin/sh' \
         'for arg do [ "$arg" = "${SILERE_STUB_REJECT-}" ] && exit 109; done' \
         ': > "$SILERE_LAUNCH_CAPTURE"' \
-        'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\npipewire=%s\nshortcuts=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" "${QS_PIPEWIRE_IMMEDIATE_RECONNECT-}" "${SILERE_GLOBAL_SHORTCUTS-}" >> "$SILERE_LAUNCH_CAPTURE"' \
+        'printf "malloc=%s\nimages=%s\negl=%s\nlocale=%s\numask=%s\nwatch=%s\npipewire=%s\nshortcuts=%s\nlogrules=%s\n" "${MALLOC_CONF-}" "${QSG_TRANSIENT_IMAGES-}" "${__EGL_VENDOR_LIBRARY_FILENAMES-}" "${LC_ALL-<unset>}" "$(umask)" "${SILERE_WATCH_FILES-}" "${QS_PIPEWIRE_IMMEDIATE_RECONNECT-}" "${SILERE_GLOBAL_SHORTCUTS-}" "${QT_LOGGING_RULES-<unset>}" >> "$SILERE_LAUNCH_CAPTURE"' \
         'for arg do printf "arg=%s\n" "$arg" >> "$SILERE_LAUNCH_CAPTURE"; done' \
         > "$stub_dir/qs"
     chmod +x "$stub_dir/qs"
 
-    env -u MALLOC_CONF -u QSG_TRANSIENT_IMAGES -u LC_ALL -u SILERE_WATCH_FILES \
+    env -u MALLOC_CONF -u QSG_TRANSIENT_IMAGES -u LC_ALL -u SILERE_WATCH_FILES -u QT_LOGGING_RULES \
         PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES=/chosen/vendor.json \
         bash "$ROOT/scripts/silere" run --verbose
@@ -1151,6 +1151,9 @@ test_shared_launcher() (
     # only the shell silere run starts may claim silere:menu; a second claimant crashes whichever registers last
     grep -qFx 'shortcuts=1' "$capture" \
         || fail "shared launcher did not mark its shell as the owner of the Hyprland global shortcuts"
+    # the property warnings of players and tray apps the shell cannot act on buried everything else in silere log
+    grep -qE '^logrules=(.*;)?quickshell\.dbus\.properties\.warning=false(;|$)' "$capture" \
+        || fail "shared launcher did not quiet Quickshell's remote property warnings"
     expected_args=$'arg=--no-duplicate\narg=--no-detailed-logs\narg=-p\narg='"$ROOT"$'/shell.qml\narg=--verbose'
     assert_eq "$expected_args" "$(grep '^arg=' "$capture")" "shared launcher argv"
     # a quickshell without the hidden flag must still start
@@ -1161,7 +1164,7 @@ test_shared_launcher() (
     assert_eq "644" "$(stat -c '%a' "$capture")" "shared launcher state umask"
 
     capture="$TMP/launcher-overrides.out"
-    MALLOC_CONF='' SILERE_WATCH_FILES=1 QSG_TRANSIENT_IMAGES=1 \
+    MALLOC_CONF='' SILERE_WATCH_FILES=1 QSG_TRANSIENT_IMAGES=1 QT_LOGGING_RULES='' \
         LC_ALL=C PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$capture" \
         __EGL_VENDOR_LIBRARY_FILENAMES='' \
         bash "$ROOT/scripts/silere" run
@@ -1169,6 +1172,8 @@ test_shared_launcher() (
         || fail "shared launcher inherited QSG_TRANSIENT_IMAGES from a legacy service"
     grep -qFx 'malloc=' "$capture" \
         || fail "shared launcher did not preserve an empty allocator override"
+    grep -qFx 'logrules=' "$capture" \
+        || fail "shared launcher replaced the user's own empty logging rules"
     local custom_capture="$TMP/launcher-custom-malloc.out"
     MALLOC_CONF='narenas:4,background_thread:true' PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$custom_capture" \
         bash "$ROOT/scripts/silere" run

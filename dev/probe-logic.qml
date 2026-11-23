@@ -7340,6 +7340,14 @@ ShellRoot {
                 && JSON.stringify(Notifications.historyEvictions(["", "Unknown", "X"], 2)) === "[1]"
                 && Notifications.historyEvictions(["A", "B"], 5).length === 0,
             "a full history evicts the oldest row of the app holding the most rows")
+        root._check(Notifications.caseOnlyLabel("discord", "Discord") === "Discord"
+                && Notifications.caseOnlyLabel("kitty", "kitty") === "kitty"
+                && Notifications.caseOnlyLabel("spotify", "Spotify (Launcher)") === "spotify"
+                && Notifications.caseOnlyLabel("Firefox", "FIREFOX") === "Firefox"
+                && Notifications.caseOnlyLabel("discord", "") === "discord"
+                && Notifications.appLabel("") === "" && Notifications.appLabel("Studio Notes") === "Studio Notes"
+                && Notifications.appLabel("silere-no-such-app") === "silere-no-such-app",
+            "a lowercase app name takes its desktop entry's spelling, never another name")
         ShellSettings.notifHistoryLimit = 5
         Notifications._prependHistory({ id: 9801, appName: "Shot", summary: "saved", time: 1 })
         Notifications._prependHistory({ id: 9802, appName: "Mail", summary: "done", time: 2 })

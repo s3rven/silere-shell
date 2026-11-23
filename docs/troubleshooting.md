@@ -15,6 +15,8 @@ systemd user unit. It changes nothing.
 `silere log --follow` prints the running shell's log as it grows. Use `silere restart`
 to restart it, or `silere stop` followed by `silere run` to watch a fresh start in
 your terminal. Stop Silere before launching another `qs -p` instance.
+`silere run` leaves out the warnings Quickshell logs when a media player or tray app fails to
+answer a property read; `QT_LOGGING_RULES=` (empty) before `silere run` brings them back.
 
 | Problem | Start here |
 |---|---|

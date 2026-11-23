@@ -118,6 +118,10 @@ run_shell() {
     # A value the user set, even an empty one, wins. Apps start through the compositor, so only the shell's
     # own helpers inherit it, and an app the shell starts itself when the compositor refuses the launch
     export MALLOC_CONF="${MALLOC_CONF-narenas:1,background_thread:true,dirty_decay_ms:1000,muzzy_decay_ms:0}"
+    # Quickshell logs two warnings for each property a media player or tray app fails to answer (playerctld with no
+    # player, a closing browser tab), and Qt one each time a text field closes: 183 of 187 lines in 95 minutes here,
+    # none Silere can act on, so silere log showed nothing else. Rules of your own, even an empty value, win
+    export QT_LOGGING_RULES="${QT_LOGGING_RULES-quickshell.dbus.properties.warning=false;qt.qpa.wayland.textinput.warning=false}"
     # Hyprland crashes whichever client registers a taken global shortcut last, so only this shell claims
     # silere:menu and silere:tray; previews, smoke starts and probes run qs directly and claim nothing
     export SILERE_GLOBAL_SHORTCUTS=1
