@@ -61,7 +61,8 @@ _notify() {
 # surface the reason. Only user-initiated work is worth a critical popup.
 _quiet_fail() {
     case "$REQUESTED_MODE" in
-        ""|--apply) _record_update_error "$1" || true ;;
+        # --scheduled is the timer's check: the same check, so its failure is the shell's to show
+        ""|--scheduled|--apply) _record_update_error "$1" || true ;;
     esac
     echo "silere-update: $1" >&2
     exit 1

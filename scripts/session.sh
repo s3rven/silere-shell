@@ -46,6 +46,15 @@ locked_state() {
     timeout 2 loginctl show-session "$session_id" -p LockedHint --value 2>/dev/null
 }
 
+# Hyprland's own word on its session lock: hyprlock never sets LockedHint, nor does hypridle locking through it, so on
+# Hyprland the hint alone waited out every lock and cancelled the sleep. Elsewhere this is no and the hint decides
+hyprland_locked() {
+    local reply
+    [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null 2>&1 || return 1
+    reply="$(timeout 2 hyprctl -j locked 2>/dev/null)" || return 1
+    [[ "$reply" =~ \"locked\":[[:space:]]*true ]]
+}
+
 case "${1:-status}" in
     status)
         locked="$(locked_state)" || exit 1
@@ -55,6 +64,7 @@ case "${1:-status}" in
     wait-locked)
         for ((attempt=0; attempt<100; attempt++)); do
             [ "$(locked_state || true)" != yes ] || exit 0
+            ! hyprland_locked || exit 0
             sleep 0.1
         done
         echo 'The session did not confirm a secure lock; sleep was cancelled.' >&2

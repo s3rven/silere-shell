@@ -47,6 +47,11 @@ cat > "$scratch/bin/sleep" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
+cat > "$scratch/bin/hyprctl" <<'EOF'
+#!/usr/bin/env bash
+[ "$*" = '-j locked' ] || exit 2
+printf '{\n    "locked": %s\n}\n' "$([ "${SILERE_TEST_HYPR_LOCKED:-0}" = 1 ] && echo true || echo false)"
+EOF
 chmod +x "$scratch/bin/"*
 
 checks=0
@@ -56,6 +61,14 @@ SILERE_TEST_LOCK_MODE=delayed bash "$ROOT/scripts/session.sh" wait-locked
 check test "$(cat "$SILERE_TEST_COUNT")" -ge 3
 if SILERE_TEST_LOCK_MODE=no bash "$ROOT/scripts/session.sh" wait-locked 2>/dev/null; then exit 1; fi
 checks=$((checks+1))
+# hyprlock never sets the hint: on Hyprland its own lock state confirms, and only there
+check env SILERE_TEST_LOCK_MODE=no SILERE_TEST_HYPR_LOCKED=1 HYPRLAND_INSTANCE_SIGNATURE=fixture \
+    bash "$ROOT/scripts/session.sh" wait-locked
+if env SILERE_TEST_LOCK_MODE=no SILERE_TEST_HYPR_LOCKED=0 HYPRLAND_INSTANCE_SIGNATURE=fixture \
+        bash "$ROOT/scripts/session.sh" wait-locked 2>/dev/null; then exit 1; fi
+if env SILERE_TEST_LOCK_MODE=no SILERE_TEST_HYPR_LOCKED=1 HYPRLAND_INSTANCE_SIGNATURE= \
+        bash "$ROOT/scripts/session.sh" wait-locked 2>/dev/null; then exit 1; fi
+checks=$((checks+2))
 if SILERE_TEST_LOCK_MODE=error bash "$ROOT/scripts/session.sh" status; then exit 1; fi
 checks=$((checks+1))
 

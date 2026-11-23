@@ -169,6 +169,10 @@ Another daemon already owns `org.freedesktop.Notifications`. Silere names it in 
 few seconds after start and under Settings › System › Overview, and `silere doctor`
 reports it too. Stop that daemon and run `silere restart`.
 
+If it is back after the next login, D-Bus started it: mako, dunst and swaync start themselves
+when an app sends a notification before Silere is up. `silere doctor` names any that can, and
+`systemctl --user mask mako.service` (or `dunst.service`, `swaync.service`) keeps one off.
+
 ### Icons or text use the wrong font
 
 Install a Nerd Font such as `ttf-jetbrains-mono-nerd`, then refresh the font cache with

@@ -1691,6 +1691,25 @@ ShellRoot {
             const rows = root._findTrayNode(picker, item => typeof item.positionViewAtIndex === "function")
             root._check(rows !== null && rows.count === 1,
                 "a closed Wi-Fi picker keeps its rows drawn: Home unloads it once its fold ends, not before")
+            // an enterprise network the shell can't collect credentials for: a dead row only where no editor can set it up
+            const toolsWas = SystemTools._tools
+            const enterprise = Object.assign({}, row, { ssid: "__silere_eap_probe__", psk: false, profileOnly: true })
+            const eapRow = () => {
+                if (rows) rows.forceLayout()
+                const at = root._findTrayNode(picker, item => item.index === 0 && item.modelData?.ssid === enterprise.ssid)
+                return root._findTrayNode(at, item => typeof item._activate === "function")
+            }
+            picker.open = true
+            picker._networks = [enterprise]
+            SystemTools._tools = Object.assign({}, toolsWas, { "nm-connection-editor": false, nmtui: false })
+            let eap = eapRow()
+            root._check(eap !== null && eap.status === "Not supported" && !eap.interactive,
+                "an unknown enterprise network reads Not supported with no network editor to set it up")
+            SystemTools._tools = Object.assign({}, toolsWas, { "nm-connection-editor": true })
+            eap = eapRow()
+            root._check(eap !== null && eap.status === "Set up" && eap.interactive,
+                "an unknown enterprise network offers the network editor that can set it up")
+            SystemTools._tools = toolsWas
             picker.destroy()
         }
         component.destroy()
@@ -3573,6 +3592,83 @@ ShellRoot {
         InputState._layoutCodes = codesWas
     }
 
+    function _checkClockSettings(): void {
+        const savedClock = ShellSettings.barShowClock
+        const savedWeather = ShellSettings.weatherEnabled
+        const savedBarWeather = ShellSettings.clockShowWeather
+        const savedUnits = ShellSettings.weatherUnit
+        const savedDate = ShellSettings.clockShowDate
+        const savedSchedule = ShellSettings.dndSchedule
+        const savedDndUntil = ShellSettings.dndUntil
+        const savedAwakeUntil = Idle.keepAwakeUntil
+        const savedTab = MenuState.activeTab
+        const savedSection = MenuState.settingsSection
+        const savedOpen = MenuState.open
+
+        ShellSettings.barShowClock = false
+        ShellSettings.dndSchedule = false
+        ShellSettings.dndUntil = 0
+        Idle.keepAwakeUntil = 0
+        MenuState.selectTab(MenuState.settingsTab)
+        MenuState.setSettingsSection("clock")
+        MenuState.open = true
+        root._check(DateTime._clockNeeded, "the Clock settings page keeps its preview ticking with the bar clock hidden")
+        MenuState.setSettingsSection("theme")
+        root._check(!DateTime._clockNeeded, "leaving Clock settings releases its clock tick")
+        // ISO weeks at the year's edges: a Thursday decides which year a week belongs to (checked against Python's
+        // isocalendar for every day 2000-2040 in seven time zones, DST and Samoa's skipped day included)
+        root._check([[2020, 11, 31, 53], [2021, 0, 3, 53], [2021, 0, 4, 1], [2024, 11, 30, 1], [2026, 11, 31, 53],
+                     [2027, 0, 1, 53], [2027, 0, 4, 1], [2015, 11, 31, 53], [2016, 0, 1, 53], [2018, 11, 31, 1]]
+                .every(c => DateTime.isoWeek(new Date(c[0], c[1], c[2])) === c[3]),
+            "week numbers follow ISO 8601 across year ends, week 53 included")
+
+        ShellSettings.clockShowWeather = false
+        ShellSettings.weatherEnabled = true
+        ShellSettings.weatherUnit = "f"
+        ShellSettings.clockShowDate = true
+        const component = Qt.createComponent("modules/menu/settings/SettingsClockSection.qml")
+        const page = component.createObject(barFixtureHost, { width: 340 })
+        root._check(page !== null, "Clock settings build with weather visible")
+        if (page) {
+            const auto = root._findTrayNode(page, item => item.optionLabel === "Auto")
+            if (auto) auto.Accessible.pressAction()
+            root._check(auto && auto.Accessible.checked && ShellSettings.weatherUnit === "auto",
+                "the visible Units control can return a manual weather override to Auto")
+
+            const format = root._findTrayNode(page, item => item.searchKey === "clock12h")
+            const style = root._findTrayNode(page, item => item.searchKey === "compactDate")
+            const first = new Date(2026, 0, 4, 23, 59)
+            const next = new Date(2026, 0, 5, 0, 0)
+            DateTime._update(first)
+            const timeChip = root._findTrayNode(format, item => item.modelData?.value === "24h")
+            const dateChip = root._findTrayNode(style, item => item.modelData?.value === "normal")
+            DateTime._update(next)
+            root._check(timeChip && timeChip.optionLabel === Qt.formatDateTime(next, "HH:mm")
+                    && timeChip === root._findTrayNode(format, item => item.modelData?.value === "24h")
+                    && dateChip && dateChip.optionLabel === Qt.formatDateTime(next, "ddd MMM dd")
+                    && dateChip === root._findTrayNode(style, item => item.modelData?.value === "normal"),
+                "time and date previews update across midnight without replacing their controls")
+            const sample = DateTime.minuteSample.getTime()
+            DateTime._update(new Date(next.getTime() + 30000))
+            root._check(DateTime.minuteSample.getTime() === sample,
+                "a seconds tick does not refresh the format previews")
+            page.destroy()
+        }
+        component.destroy()
+        DateTime._update()
+        ShellSettings.weatherEnabled = savedWeather
+        ShellSettings.weatherUnit = savedUnits
+        ShellSettings.clockShowDate = savedDate
+        ShellSettings.clockShowWeather = savedBarWeather
+        ShellSettings.barShowClock = savedClock
+        ShellSettings.dndSchedule = savedSchedule
+        ShellSettings.dndUntil = savedDndUntil
+        Idle.keepAwakeUntil = savedAwakeUntil
+        MenuState.setSettingsSection(savedSection)
+        MenuState.selectTab(savedTab)
+        MenuState.open = savedOpen
+    }
+
     function _checkWeather(): void {
         const codes = [0, 1, 2, 3, 45, 48, 51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
             71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 97, 99]
@@ -4404,6 +4500,39 @@ ShellRoot {
                     && diagnostics._optionalIssues.some(issue => issue.n === "Screen lock")
                     && !diagnostics._optionalIssues.some(issue => issue.n === "Night light"),
                 "automatic providers keep missing add-ons optional and use installed alternatives")
+            const lockToolsWas = SystemTools._tools
+            SystemTools._tools = Object.assign({}, lockToolsWas, { loginctl: true })
+            const loginctlOnly = Settings.autoLockProvider === "loginctl"
+                && diagnostics._optionalIssues.some(issue => issue.n === "Screen lock")
+            SystemTools._tools = Object.assign({}, lockToolsWas, { loginctl: true, hyprlock: true, swaylock: true })
+            root._check(loginctlOnly && !diagnostics._optionalIssues.some(issue => issue.n === "Screen lock"),
+                "loginctl alone counts as no screen locker, and an installed locker clears it")
+            SystemTools._tools = lockToolsWas
+            // a missing wallpaper palette is a fault only where colours read it
+            const toolsWas = SystemTools._tools
+            const loadWas = MatugenTheme._loadState
+            const repairWas = SystemTools.matugenRepairState
+            const neutralWas = ShellSettings.neutralTheme
+            const autoWas = ShellSettings.neutralAccentAuto
+            SystemTools._tools = Object.assign({}, toolsWas, { matugen: true })
+            SystemTools.matugenRepairState = ""
+            MatugenTheme._loadState = "missing"
+            const palette = list => list.some(issue => issue.n === "Wallpaper palette")
+            ShellSettings.neutralTheme = true
+            ShellSettings.neutralAccentAuto = false
+            const neutralQuiet = !palette(diagnostics._attentionIssues) && palette(diagnostics._optionalIssues)
+            ShellSettings.neutralAccentAuto = true
+            const accentNeeds = palette(diagnostics._attentionIssues) && !palette(diagnostics._optionalIssues)
+            ShellSettings.neutralAccentAuto = false
+            ShellSettings.neutralTheme = false
+            const wallpaperNeeds = palette(diagnostics._attentionIssues)
+            ShellSettings.neutralTheme = neutralWas
+            ShellSettings.neutralAccentAuto = autoWas
+            MatugenTheme._loadState = loadWas
+            SystemTools.matugenRepairState = repairWas
+            SystemTools._tools = toolsWas
+            root._check(neutralQuiet && accentNeeds && wallpaperNeeds,
+                "a missing wallpaper palette needs attention only with Wallpaper colours or a wallpaper accent")
             const disclosure = root._findTrayNode(diagnostics, item =>
                 item.title === "Optional features" && typeof item._activate === "function")
             root._check(disclosure !== null && !diagnostics._optionalExpanded,
@@ -8608,6 +8737,23 @@ ShellRoot {
                 && alert.indexOf("--") === alert.length - 3 && alert[alert.length - 2] === "-x battery low"
                 && SystemAlerts.alertCommand("a", "b", "critical", "", 0).indexOf("--icon=dialog-information") > 0,
             "Silere's own alerts carry one app name and an icon, and a dash-named device still reaches the summary")
+        const reloadAlert = SystemAlerts.alertCommand("A Silere panel could not load", "body", "critical", "dialog-error", 10000, "reload")
+        root._check(reloadAlert.indexOf("--hint=string:x-silere-click:reload") > 0
+                && reloadAlert.indexOf("--") === reloadAlert.length - 3
+                && SystemAlerts.isReloadAlert({ appName: "Silere Shell", hints: { "x-silere-click": "reload" } })
+                && !SystemAlerts.isReloadAlert({ appName: "Other", hints: { "x-silere-click": "reload" } })
+                && !SystemAlerts.isReloadAlert({ appName: "Silere Shell", hints: {} })
+                && !SystemAlerts.isReloadAlert({ appName: "Silere Shell" }) && !SystemAlerts.isReloadAlert(null),
+            "a panel that failed to load sends an alert a click reloads the shell from, and only Silere's own alert does that")
+        const busAlert = SystemAlerts.busAlertCommand("-x battery low", "10%", "critical", "", 10000, "reload")
+        const busPlain = SystemAlerts.busAlertCommand("a", "b", "low", "battery-caution", 0)
+        root._check(busAlert.slice(0, 10).join(" ") === "busctl --user --timeout=5 call -- org.freedesktop.Notifications "
+                    + "/org/freedesktop/Notifications org.freedesktop.Notifications Notify susssasa{sv}i"
+                && busAlert.slice(10, 15).join("|") === "Silere Shell|0|dialog-information|-x battery low|10%"
+                && busAlert.slice(15).join(" ") === "0 2 urgency y 2 x-silere-click s reload 10000"
+                && busPlain.slice(12).join(" ") === "battery-caution a b 0 1 urgency y 0 0"
+                && SystemAlerts.busAlertCommand("a", "b", "normal", "", 5000).slice(-5).join(" ") === "1 urgency y 1 5000",
+            "without notify-send, an alert goes to the notification server over busctl with its urgency, click and timeout")
         root._check(IconResolver.senderImageSource("image://icon//usr/share/pixmaps/app.png")
                     === "file:///usr/share/pixmaps/app.png"
                 && IconResolver.senderImageSource("IMAGE://Icon//home/user/app.png") === ""
@@ -9677,6 +9823,8 @@ ShellRoot {
             const keyboardErrorWas = KeyboardBrightness._readError
             const backlightWas = Brightness.ready
             const externalWas = DisplayBrightness.displays
+            const externalEnabledWas = ShellSettings.ddcBrightnessEnabled
+            const toolsWas = SystemTools._tools
             Brightness.ready = false
             DisplayBrightness.displays = []
             KeyboardBrightness._readError = ""
@@ -9701,15 +9849,19 @@ ShellRoot {
                     && keyboardHint !== null && keyboardHint.visible,
                 "a keyboard light that cannot be read keeps Home's display group and shows its error there")
             KeyboardBrightness._readError = keyboardErrorWas
+            ShellSettings.ddcBrightnessEnabled = externalEnabledWas
+            SystemTools._tools = toolsWas
             DisplayBrightness.displays = externalWas
             Brightness.ready = backlightWas
-            // a wired desktop with no Bluetooth and no saved VPN: the VPN row waits for a profile, so the card has no row
+            // a wired desktop still has connectivity status before any VPN profile or radio appears
             const vpnWas = { profiles: Vpn.profiles, list: Vpn._listError, action: Vpn._actionError }
             home._wifiAvailable = false
             home._btAvailable = false
             Vpn.profiles = []
             Vpn._listError = ""
             Vpn._actionError = ""
+            const wiredOnlyShown = home._connShown && home._wiredShown
+            home._wiredShown = false
             const cardHasRow = Network.hasVpn || home._signInShown
             const emptyHidden = home._connShown === cardHasRow && home._vpnShown === Network.hasVpn
             Vpn.profiles = [{ uuid: "probe-uuid", name: "Probe VPN", active: false }]
@@ -9717,8 +9869,8 @@ ShellRoot {
             Vpn.profiles = vpnWas.profiles
             Vpn._listError = vpnWas.list
             Vpn._actionError = vpnWas.action
-            root._check(emptyHidden && savedShown,
-                "Home's Connectivity card shows only while one of its rows does: a VPN list that could be read is not a row")
+            root._check(wiredOnlyShown && emptyHidden && savedShown,
+                "Home keeps Connectivity for Ethernet alone and hides it when there are no links, radios or VPNs")
             home._wifiAvailable = true
             home._togglePicker("wifi")
             home._wifiAvailable = false
@@ -12375,6 +12527,201 @@ ShellRoot {
         root._check(DateTime._lastMinute === Qt.formatDateTime(new Date(), "yyyyMMddHHmm")
                 && !DateTime._resync,
             "a stale clock catches up to the wall clock on a wake-time event")
+    }
+
+    function _checksKeybindList(): void {
+        root._check(KeybindList.chord(64, "Q") === "Super + Q" && KeybindList.chord(69, "q") === "Super + Ctrl + Shift + Q"
+                && KeybindList.chord(8, "mouse:272") === "Alt + Left click" && KeybindList.chord(0, "mouse_down") === "Scroll down"
+                && KeybindList.chord(0, "XF86AudioRaiseVolume") === "Audio Raise Volume"
+                && KeybindList.chord(1, "XF86MonBrightnessUp") === "Shift + Mon Brightness Up"
+                && KeybindList.chord(0, "code:10") === "Key 10",
+            "a keybind's keys read as people say them: modifiers in order, mouse buttons and media keys by name")
+        const binds = JSON.stringify([
+            { modmask: 64, key: "Q", has_description: true, description: "terminal", dispatcher: "HL.Dispatcher(exec_cmd)", arg: "57", submap: "" },
+            { modmask: 64, key: "E", has_description: false, description: "", dispatcher: "function: 0x5600", arg: "58", submap: "" },
+            { modmask: 0, key: "escape", has_description: false, description: "", dispatcher: "submap", arg: "reset", submap: "resize" },
+            { modmask: 0, key: "", catch_all: true, has_description: false, dispatcher: "submap", arg: "reset", submap: "resize" }
+        ])
+        const rows = KeybindList.parse(binds, 500)
+        root._check(rows !== null && rows.length === 3 && rows[0].action === "terminal" && rows[0].keys === "Super + Q"
+                && rows[0].own && rows[1].action === "" && !rows[1].exact
+                && rows[2].action === "Leave resize" && rows[2].submap === "resize",
+            "keybinds keep the config's order and its descriptions; a Lua function says nothing, a hyprlang submap reset leaves it")
+        root._check(KeybindList.parse("not json", 500) === null && KeybindList.parse("{}", 500) === null
+                && KeybindList.parse(binds, 1).length === 1,
+            "unreadable keybind output reads as a failure, and the list is bounded")
+        root._check(KeybindList.filter(rows, "TERM").length === 1 && KeybindList.filter(rows, "super q").length === 1
+                && KeybindList.filter(rows, "resize").length === 1 && KeybindList.filter(rows, "  ").length === 3
+                && KeybindList.filter(rows, "volume").length === 0,
+            "the keybind filter matches every word against what a bind does, its keys and its submap")
+
+        // Hyprland 0.57's own config: Lua binds with no description, which hyprctl names by dispatcher alone
+        const lua = (mods, key, verb, extra) => Object.assign({ modmask: mods, key: key, has_description: false, description: "",
+            dispatcher: verb.indexOf("function") === 0 ? verb : "HL.Dispatcher(" + verb + ")", arg: "6", submap: "" }, extra || {})
+        const stock = KeybindList.parse(JSON.stringify([
+            lua(64, "Q", "exec_cmd"), lua(64, "C", "close"), lua(64, "left", "focus"), lua(64, "1", "focus"), lua(65, "0", "move"),
+            lua(64, "L", "focus"), lua(64, "mouse_down", "focus"), lua(64, "S", "move"), lua(0, "XF86AudioRaiseVolume", "exec_cmd"),
+            lua(64, "XF86AudioMute", "exec_cmd"), lua(0, "XF86AudioNext", "function: 0x55"), lua(64, "J", "layout"),
+            lua(64, "slash", "global"), lua(64, "mouse:272", "drag", { mouse: true })
+        ]), 500)
+        const said = stock.map(r => (r.exact ? "" : "~") + r.action)
+        root._check(JSON.stringify(said) === JSON.stringify(["~Run a command", "Close window", "Focus left", "Go to workspace 1",
+                "Move window to workspace 10", "Focus right", "Switch workspace", "~Move window", "Volume up", "~Run a command",
+                "Next track", "~Layout message", "~Global shortcut", "Drag window"]) && stock.every(r => r.lua && !r.own),
+            "a Lua bind without a description reads from its dispatcher and key: digits are workspaces, arrows and h j k l "
+                + "directions, a media key what it says unless a modifier is held; a category alone is marked as one")
+
+        // an older Hyprland's hyprlang config names the dispatcher and its argument
+        const conf = (mods, key, dispatcher, arg, extra) => Object.assign({ modmask: mods, key: key, has_description: false,
+            description: "", dispatcher: dispatcher, arg: arg, submap: "" }, extra || {})
+        const old = KeybindList.parse(JSON.stringify([
+            conf(64, "Q", "exec", "uwsm app -- kitty --single-instance"), conf(64, "C", "killactive", ""),
+            conf(64, "mouse_down", "workspace", "e+1"), conf(72, "S", "movetoworkspacesilent", "special:magic"),
+            conf(64, "left", "movefocus", "l"), conf(64, "mouse:272", "movewindow", "", { mouse: true }),
+            conf(64, "slash", "global", "silere:menu"), conf(64, "N", "exec", "qs -c silere ipc call quickActions dnd"),
+            conf(64, "M", "exec", "silere ipc menu tab 2"), conf(64, "B", "exec", "qs -c other ipc call menu toggle"),
+            conf(64, "F", "fullscreen", "1"), conf(64, "Z", "frobnicate", "hard"),
+            conf(0, "XF86AudioRaiseVolume", "exec", "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"),
+            conf(64, "D", "exec", "kitty", { has_description: true, description: "  Open   or close the calendar " })
+        ]), 500)
+        root._check(JSON.stringify(old.map(r => r.action)) === JSON.stringify(["Run kitty --single-instance", "Close window",
+                "Go to the next workspace", "Send window to special workspace magic", "Focus left", "Drag window",
+                "Open or close the Silere menu", "Turn Do Not Disturb on or off", "Open the menu on Notifications",
+                "Run qs -c other ipc call menu toggle", "Maximize", "frobnicate hard", "Volume up", "Open or close the calendar"])
+                && old.every(r => !r.lua) && old[6].silere === "menu toggle" && old[7].silere === "quickActions dnd"
+                && old[9].silere === "" && old[13].silere === "calendar toggle" && old[13].own,
+            "a hyprlang bind reads from its dispatcher and argument, past a launcher wrapper; a Silere call or global in "
+                + "Silere's words, another shell's call as written, and a description carrying Silere's words counts as its call")
+
+        // Silere's calls worth a key: bound ones say where, the rest offer the first free keys as a line for that config
+        const offer = (list, isLua, globals, launcher) => KeybindList.suggest(list, isLua, globals, launcher)
+        const fresh = offer(stock, true, true)
+        const byCall = (list, call) => list.find(s => s.call === call)
+        root._check(fresh.length === 6 && byCall(fresh, "menu toggle").bound === "Super + slash"
+                && byCall(fresh, "quickActions toggle").bound === "" && byCall(fresh, "quickActions toggle").free
+                && byCall(fresh, "quickActions toggle").line
+                    === 'hl.bind("SUPER + A", hl.dsp.exec_cmd("silere quick"), { description = "Open or close quick actions" })'
+                && byCall(fresh, "tray toggle").line
+                    === 'hl.bind("SUPER + SHIFT + slash", hl.dsp.global("silere:tray"), { description = "Open the first tray app\'s menu" })',
+            "a Lua config is offered Lua lines on free keys; a Lua global on the keys the docs suggest counts as that shortcut")
+        const busy = offer(KeybindList.parse(JSON.stringify([conf(64, "A", "exec", "x"), conf(72, "A", "exec", "x"),
+            conf(65, "a", "exec", "x"), conf(72, "C", "exec", "x", { submap: "resize" })]), 500), false, false)
+        root._check(!byCall(busy, "quickActions toggle").free && byCall(busy, "quickActions toggle").keys === "Super + A"
+                && byCall(busy, "calendar toggle").free && byCall(busy, "calendar toggle").keys === "Super + Alt + C"
+                && byCall(busy, "calendar toggle").line === "bindd = SUPER ALT, C, Open or close the calendar, exec, silere calendar"
+                && byCall(busy, "tray toggle").line === "bindd = SUPER SHIFT, slash, Open the first tray app's menu, exec, silere tray"
+                && byCall(old, "menu toggle") === undefined && byCall(offer(old, false, true), "menu toggle").bound === "Super + slash"
+                && byCall(offer(old, false, true), "calendar toggle").bound === "Super + D",
+            "keys taken in the main keymap are skipped (a submap's are not), all taken is said, hyprlang gets bindd lines, "
+                + "and a shell that does not own the global shortcuts is reached through the launcher's short words")
+
+        // the launcher's short words read back as the call it makes, and every short form the page offers names its own call
+        const readsAs = c => KeybindList.silereCall(c)
+        root._check(readsAs("silere menu") === "menu toggle" && readsAs("silere menu home") === "menu tab 0"
+                && readsAs("silere menu Now-Playing") === "menu tab 3" && readsAs("silere menu clock") === "menu settings clock"
+                && readsAs("silere menu settings notifications") === "menu settings notifications"
+                && readsAs("silere menu notifications") === "menu tab 2" && readsAs("silere quick close") === "quickActions close"
+                && readsAs("silere quick-actions") === "quickActions toggle" && readsAs("silere tray x") === ""
+                && readsAs("silere toggle Night-Light") === "quickActions nightLight"
+                && readsAs("silere toggle reduceMotion") === "settings toggle reduceMotion" && readsAs("silere toggle") === ""
+                && readsAs("silere volume 40%") === "audio setVolume 40" && readsAs("silere mic MUTE") === "audio toggleMicMute"
+                && readsAs("silere volume -5") === "" && readsAs("silere dismiss all") === "notifications dismissAll"
+                && readsAs("~/.local/bin/silere volume up; notify-send x") === "audio volumeUp"
+                && readsAs("silere-shell menu") === "" && readsAs("silere menus") === "" && readsAs("silere run") === "",
+            "a bind running the launcher's short words reads as the call they make, and only words the launcher takes")
+        root._check(Object.keys(KeybindList.shortForms).every(call =>
+                    readsAs("silere " + KeybindList.shortForms[call]) === call && KeybindList.silereCalls[call] !== undefined),
+            "each short form the Keybinds page offers is read back as its own call, and one the page names")
+        // without `silere` on PATH a line names this copy's launcher, quoted for the shell and escaped for Lua
+        const odd = KeybindList.launcherWord("/home/a b/it's/scripts/silere")
+        const pathed = offer(stock, true, false, KeybindList.launcherWord("/opt/silere-shell/scripts/silere"))
+        const quoted = offer(stock, false, false, odd)
+        root._check(KeybindList.launcherWord("") === "silere" && odd === "'/home/a b/it'\\''s/scripts/silere'"
+                && byCall(pathed, "quickActions toggle").line
+                    === 'hl.bind("SUPER + A", hl.dsp.exec_cmd("/opt/silere-shell/scripts/silere quick"), { description = "Open or close quick actions" })'
+                && byCall(quoted, "calendar toggle").line.endsWith("exec, " + odd + " calendar")
+                && readsAs(odd + " toggle dnd") === "quickActions dnd" && readsAs("'/x y/silere' ipc menu toggle") === "menu toggle"
+                && offer(stock, true, false, '"/a\\b"/silere').find(s => s.call === "calendar toggle").line.indexOf('exec_cmd("\\"/a\\\\b\\"/silere calendar")') > 0,
+            "a line names the launcher by its quoted path when it is not on PATH, and still reads back as Silere's")
+    }
+
+    function _checksCustomCommand(): void {
+        const plain = CustomCommand.parseOutput("  CPU 3%\nload 0.5\nwarning\n")
+        root._check(plain !== null && plain.text === "CPU 3%" && plain.tooltip === "load 0.5" && plain.level === 1,
+            "a command's plain output reads as waybar's: text, then tooltip, then class")
+        const json = CustomCommand.parseOutput('{"text":"<span color=\'#f00\'>12°</span>","tooltip":"Rain later\\nWind 3 m/s","class":["x","critical"]}')
+        root._check(json !== null && json.text === "12°" && json.tooltip === "Rain later · Wind 3 m/s" && json.level === 2,
+            "waybar's JSON output works unchanged, its markup dropped and its tooltip on one line")
+        root._check(CustomCommand.parseOutput('{"text":"a"}\n{"text":"b","class":"warning"}')?.text === "b"
+                && CustomCommand.parseOutput('{"text": 42}')?.text === "42"
+                && CustomCommand.parseOutput("a\u0007b")?.text === "a b"
+                && CustomCommand.parseOutput("x".repeat(200))?.text.length <= 81,
+            "a stream of JSON lines shows its last, numbers read as text, and controls and length are bounded")
+        root._check(["", "   \n  ", "{not json", '{"text":""}', '{"tooltip":"only"}'].every(o => CustomCommand.parseOutput(o) === null),
+            "empty or unreadable output hides the widget instead of showing junk")
+        root._check(JSON.stringify(CustomCommand.expandHome(["~/bin/status", "-j"], "/home/u")) === '["/home/u/bin/status","-j"]'
+                && CustomCommand.expandHome(["~other/x"], "/home/u")[0] === "~other/x"
+                && CustomCommand.expandHome(["status"], "/home/u")[0] === "status"
+                && CustomCommand.expandHome(["~/x"], "")[0] === "~/x",
+            "a command written with ~/ finds the home directory without a shell")
+        root._check(JSON.stringify(CustomCommand.expandHome(["$HOME/.config/waybar/x.sh", "${HOME}/a", "~", "$HOMEDIR/b",
+                    "a$HOME/c", "--path=~/d"], "/home/u"))
+                === '["/home/u/.config/waybar/x.sh","/home/u/a","/home/u","$HOMEDIR/b","a$HOME/c","--path=~/d"]'
+                && JSON.stringify(CustomCommand.expandHome(["python3", "$HOME/x.py"], "/home/u")) === '["python3","/home/u/x.py"]',
+            "a waybar exec line's $HOME, ${HOME} and ~ lead to the home directory in any word, as sh expands them")
+        const showWas = ShellSettings.barShowCustom, commandWas = ShellSettings.customCommand
+        const widget = customWidgetFactory.createObject(root)
+        ShellSettings.barShowCustom = false
+        ShellSettings.customCommand = "true"
+        const hiddenOff = widget !== null && !widget.show
+        ShellSettings.barShowCustom = true
+        ShellSettings.customCommand = ""
+        const hiddenEmpty = !widget.show
+        ShellSettings.customCommand = "true"
+        // a test copy never runs the user's command, so the reading is handed over here
+        root._check(hiddenOff && hiddenEmpty && !CustomCommand.wanted && !widget.show,
+            "the command widget stays hidden until it is on with a command, and a test copy runs nothing")
+        CustomCommand.text = "12°"
+        CustomCommand.tooltip = "Rain later"
+        CustomCommand.level = 2
+        root._check(widget.show && widget.text === "12°" && Qt.colorEqual(widget.textColor, Theme.barError)
+                && widget.accessibleName === "12°, Rain later",
+            "a reading shows on the bar in its class's colour and speaks its tooltip")
+        CustomCommand._clear("")
+        root._check(!widget.show, "a cleared reading hides the widget")
+        // a continuous script's line is a reading of its own, and an empty one hides the widget as waybar's does
+        CustomCommand._show(CustomCommand.parseOutput('{"text": "n7", "class": "warning"}'))
+        const followShown = widget.show && widget.text === "n7" && CustomCommand.level === 1
+        CustomCommand._show(CustomCommand.parseOutput(""))
+        const followHidden = !widget.show && CustomCommand.lastError === ""
+        // switched off or replaced, a line the script printed before the stop reached it is not a reading
+        CustomCommand._read("late")
+        root._check(followShown && followHidden && CustomCommand.text === "" && CustomCommand._lines.length === 0,
+            "each line of a continuous script shows as it comes, an empty one hides, and a line after a stop is dropped")
+        const keysWas = NotificationKeys.surface
+        NotificationKeys.surface = null
+        const noWindow = NotificationKeys.run("dismiss")
+        const keyCalls = []
+        NotificationKeys.surface = {
+            keyDismissNewest: () => { keyCalls.push("dismiss"); return true },
+            keyInvokeNewest: () => { keyCalls.push("invoke"); return true },
+            keyDismissAll: () => { keyCalls.push("all"); return false }
+        }
+        const keyReplies = [NotificationKeys.run("dismiss"), NotificationKeys.run("invoke"), NotificationKeys.run("dismissAll")]
+        NotificationKeys.surface = keysWas
+        const keyStatus = JSON.parse(NotificationKeys.statusText())
+        root._check(noWindow === "no notification on screen" && keyReplies.join(",") === "ok,ok,no notification on screen"
+                && keyCalls.join(",") === "dismiss,invoke,all" && typeof keyStatus.shown === "number"
+                && typeof keyStatus.dnd === "boolean" && NotificationKeys.armed,
+            "notification keybinds reach the popup window's verbs and say so when no popup is on screen")
+        const status = JSON.parse(CustomCommand.statusText())
+        root._check(status.on === false && status.text === "" && status.level === "normal" && status.error === ""
+                && status.continuous === false
+                && CustomCommand.armed === true && CustomCommand.refreshReply() === "a test copy runs no command",
+            "the command widget's IPC status reports its reading, and refresh says why nothing ran")
+        widget.destroy()
+        ShellSettings.customCommand = commandWas
+        ShellSettings.barShowCustom = showWas
     }
 
     function _checksNightLightAndSensors(): void {

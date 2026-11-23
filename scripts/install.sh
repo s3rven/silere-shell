@@ -871,7 +871,8 @@ _install_file() {
         _ok "already current"
         return 2
     elif [ -r "$dst" ]; then
-        _skip "already at $dst"
+        # not a skip: the question that follows decides
+        _info "$dst differs from this version's copy"
         _ask "Overwrite?" || return 2
         _backup "$dst"
         if _dry; then _would "overwrite $dst"; return 0; fi
@@ -1084,9 +1085,9 @@ _optdep brightnessctl "brightness control + popup"
 _optdep inotifywait   "screenshot flash + Hyprland restart recovery"
 _optdep nmcli         "VPN indicator + saved VPN controls"
 _optdep blueman-manager "PIN and passkey pairing"
-_optdep nm-connection-editor "advanced Wi-Fi + VPN settings"
-_optdep nmtui         "terminal network settings"
-_optdep xdg-terminal-exec "terminal tool hand-off"
+# the shell takes either, nmtui in a terminal
+_optdep_any "network settings" "advanced Wi-Fi + VPN settings" nm-connection-editor nmtui
+_optdep_any "terminal" "terminal tools such as nmtui" xdg-terminal-exec kitty foot ghostty alacritty wezterm konsole
 _optdep ddcutil       "optional external monitor brightness"
 _optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any "updates" "update count" checkupdates apt dnf zypper xbps-install
@@ -1103,7 +1104,7 @@ _optdep pw-dump       "headset modes"
 _optdep curl          "web cover art + installer downloads"
 _optdep xdg-open      "network sign-in page"
 _optdep_any "power actions" "suspend / reboot / shutdown" systemctl loginctl
-_optdep notify-send   "critical battery, CPU and update alerts"
+_optdep notify-send   "update alerts (the shell's own alerts also go through busctl)"
 _optdep timeout       "bounded update checks"
 _optdep ssh-keygen    "signed shell updates"
 if [ "$_optdeps_missing" -eq 0 ]; then
@@ -1630,7 +1631,7 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
         _warn "add this before its return:"
         _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
     elif _dry; then
-        _would "append to $LUA_EXEC_FILE: hl.exec_cmd($LAUNCH_CMD_LUA)"
+        _would "append to $LUA_EXEC_FILE: hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_CMD_LUA) end)"
     else
         receipt_autostart="$LUA_EXEC_FILE"
         if _ask "Add autostart to $(_tilde "$LUA_EXEC_FILE")?"; then
@@ -1643,7 +1644,8 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
                 _warn "  hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
             fi
         else
-            _skip "skipped — add manually: hl.exec_cmd($LAUNCH_SHOWN_LUA)"
+            # a bare exec_cmd at the top runs again on every config reload; hyprland.start runs it once, as written above
+            _skip "skipped — add manually: hl.on(\"hyprland.start\", function() hl.exec_cmd($LAUNCH_SHOWN_LUA) end)"
         fi
     fi
 

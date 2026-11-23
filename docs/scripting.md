@@ -133,6 +133,24 @@ and percentages outside 0–100 return `error:` replies and exit 1.
 During a headset mode change, mutations return `error: audio device is changing`;
 they are not queued onto a temporary fallback device.
 
+## Command widget
+
+The bar's Command widget (**Settings › Widgets › Indicators › Command**) runs its script on a timer. A script that
+knows its state just changed can ask for a reading now, as a waybar signal would.
+
+It runs the program without a shell. A word starting with `~`, `$HOME` or `${HOME}` still starts in your home folder,
+so a waybar `exec` line such as `$HOME/.config/waybar/scripts/vpn.sh` works as written. For pipes or other variables,
+run it through a shell: `sh -c 'playerctl metadata title | cut -c1-30'`.
+
+```bash
+silere ipc custom refresh
+```
+
+| call | does |
+|---|---|
+| `refresh` | runs the command now, or queues one more run if a one-shot command is still running. A followed script updates itself. Replies `ok` when accepted. |
+| `status` | prints JSON with `on`, `text`, `tooltip`, `level` (`normal`, `warning` or `critical`), `error`, and `continuous` (a script being followed) |
+
 ## Diagnostic reports
 
 `silere doctor --json` prints a versioned report with `runtime`, `availability`,

@@ -305,6 +305,34 @@ if [ -n "$early_exit_hits" ]; then
 else
   ok "early exit" "no variable is piped into grep -q under pipefail"
 fi
+# a function of the script's own writes each printf on its own, so head or grep -q can close between two of them
+early_exit_hits=""
+for f in "${script_files[@]}"; do
+  grep -Eq '^[[:space:]]*set [^#]*pipefail' "$f" || continue
+  early_exit_hits="$early_exit_hits$(awk '
+    NR == FNR {
+      if ($0 ~ /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*\(\)[[:space:]]*\{/) {
+        name = $0; sub(/^[[:space:]]*/, "", name); sub(/\(.*/, "", name); fns[name] = 1
+      }
+      next
+    }
+    { line = cont ? buf " " $0 : $0 }
+    /\\$/ { buf = substr(line, 1, length(line) - 1); cont = 1; next }
+    { cont = 0 }
+    line !~ /[|][|][[:space:]]*true[[:space:]]*\)?"?[[:space:]]*$/ \
+        && line ~ /\|[[:space:]]*(head([[:space:]]|$)|grep[[:space:]]+-[A-Za-z]*q)/ {
+      for (n in fns)
+        if (line ~ ("(^[[:space:]]*|[$][(][[:space:]]*)" n "([[:space:]][^|]*)?\\|[[:space:]]*(head([[:space:]]|$)|grep[[:space:]]+-[A-Za-z]*q)")) {
+          printf " %s:%d", FILENAME, FNR; break
+        }
+    }
+  ' "$f" "$f" </dev/null)"
+done
+if [ -n "$early_exit_hits" ]; then
+  fail "a function of the script's own piped into head or grep -q can die of SIGPIPE under pipefail; take the line by expansion:$early_exit_hits"
+else
+  ok "early exit" "no function of a script's own is piped into head or grep -q under pipefail"
+fi
 
 section "locale-stable parsers"
 for f in dev/check.sh scripts/doctor.sh scripts/install.sh scripts/update.sh scripts/uninstall.sh; do

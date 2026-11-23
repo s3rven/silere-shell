@@ -81,3 +81,28 @@ _silere_other_bars() {
     done < <(env -u LC_ALL "$qs_bin" list --all 2>/dev/null)
     return 0
 }
+
+# a notification daemon D-Bus starts on its own (mako, dunst, swaync ship such a file) takes the name whenever an app
+# notifies before Silere is up, at any later login. One "program<TAB>systemd unit" line each; the unit may be empty.
+# Plasma's file only waits for the name, and Silere's own never comes from a D-Bus file
+_silere_notification_autostarters() {
+    local data_home dir file cmd unit name seen=" "
+    local -a dirs=() data_dirs=()
+    data_home="$(_silere_xdg_home "${XDG_DATA_HOME:-}" .local/share 2>/dev/null)" && dirs+=("$data_home")
+    IFS=: read -r -a data_dirs <<<"${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    dirs+=("${data_dirs[@]}")
+    for dir in "${dirs[@]}"; do
+        [ -n "$dir" ] || continue
+        for file in "$dir"/dbus-1/services/*.service; do
+            [ -r "$file" ] || continue
+            grep -qx 'Name=org.freedesktop.Notifications' "$file" 2>/dev/null || continue
+            cmd="$(awk 'sub(/^Exec=/, "") { print; exit }' "$file" 2>/dev/null)"
+            unit="$(awk 'sub(/^SystemdService=/, "") { print; exit }' "$file" 2>/dev/null)"
+            case "$cmd" in ""|*plasma_waitforname*|*quickshell*|*silere*) continue ;; esac
+            name="${cmd%% *}"; name="${name##*/}"
+            case "$seen" in *" $name "*) continue ;; esac
+            seen="$seen$name "
+            printf '%s\t%s\n' "$name" "$unit"
+        done
+    done
+}

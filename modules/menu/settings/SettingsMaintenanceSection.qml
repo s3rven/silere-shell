@@ -134,7 +134,9 @@ Column {
             tool("󰕾", "Sound settings", "pwvucontrol")
         if (!SystemTools.hasCava)              tool("󰝚", "Audio visualizer", "cava")
         if (!PowerProfiles.available)          tool("󰾅", "Power profiles", "power-profiles-daemon")
-        if (Settings.lockCommand.length === 0) {
+        // loginctl lock-session locks nothing itself: only an idle daemon can answer it with a locker
+        if (Settings.lockCommand.length === 0
+                || ShellSettings.lockProvider === "auto" && Settings.autoLockProvider === "loginctl") {
             if (ShellSettings.lockProvider === "auto")
                 tool("󰌾", "Screen lock", Compositor.isHyprland ? "hyprlock" : "swaylock")
             else

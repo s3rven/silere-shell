@@ -138,7 +138,7 @@ Column {
                         SelectRow {
                             key: "sysAlertTimeout"
                             glyph: "󰔛"; label: "Dismiss after"
-                            enabled: SystemTools.hasNotifySend
+                            enabled: SystemAlerts.canAlert
                             fallbackLabel: ShellSettings.sysAlertTimeout === 0
                                 ? "Stay" : (ShellSettings.sysAlertTimeout / 1000) + "s"
                             model: [
@@ -149,7 +149,7 @@ Column {
                             ]
                         }
                         HintText {
-                            visible: SystemTools.ready && !SystemTools.hasNotifySend
+                            visible: SystemTools.ready && !SystemAlerts.canAlert
                             text: "Desktop notifications need libnotify."
                         }
                     }

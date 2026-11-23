@@ -20,12 +20,20 @@ Item {
     // held here, not in the delegate: a recycled row would lose it
     property string _passwordDraft: ""
     property bool _passwordVisible: false
+    // an enterprise or WEP network is set up there: the shell has no way to collect those credentials
+    readonly property bool _canSetUp: Settings.networkSettingsCommand.length > 0
     // the model is a held snapshot: any content change in Network.wifiNetworks destroys every delegate, and with it the password field being typed into
     property var _networks: []
     readonly property ArmConfirm _confirm: ArmConfirm {}
     property string _focusSsid: ""
     property int _focusIndex: 0
     property Item _focusOrigin: null
+
+    function _openNetworkSettings(): void {
+        if (!root._canSetUp) return
+        MenuState.close()
+        SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+    }
 
     function _syncNetworks(): void {
         // closing releases the scan and Network publishes no networks at once: the rows stay through the fold after it
@@ -139,10 +147,7 @@ Item {
             label: "Advanced network settings"
             status: Settings.networkSettingsCommand.length > 0 ? "Open" : "Needs network editor"
             interactive: Settings.networkSettingsCommand.length > 0
-            onTriggered: {
-                MenuState.close()
-                SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
-            }
+            onTriggered: root._openNetworkSettings()
         }
 
         ShellText {
@@ -224,7 +229,7 @@ Item {
                         : _entry._failed ? Network.wifiErrorText
                         : _entry._sel ? "Password"
                         : _entry.modelData.known ? "Saved"
-                        : _entry.modelData.profileOnly ? "Not supported"
+                        : _entry.modelData.profileOnly ? (root._canSetUp ? "Set up" : "Not supported")
                         : _entry.modelData.secured ? "Secured"
                         : "Open"
                     selected: _entry.modelData.active
@@ -235,7 +240,7 @@ Item {
                     busy: _entry._connecting
                     interactive: !_entry._connecting
                         && (!_entry.modelData.profileOnly || _entry.modelData.known
-                            || _entry.modelData.active)
+                            || _entry.modelData.active || root._canSetUp)
 
                     function _activate(): void {
                         if (_entry._forgetArmed) root._confirm.clear()
@@ -244,9 +249,10 @@ Item {
                                 Network.disconnectWifi(_entry.modelData.ssid)
                             return
                         }
-                        // an enterprise or WEP network can only join from a stored profile; the shell has no way to collect those credentials
+                        // an enterprise or WEP network can only join from a stored profile
                         if (_entry.modelData.profileOnly) {
                             if (_entry.modelData.known) Network.connectWifi(_entry.modelData.ssid, "")
+                            else root._openNetworkSettings()
                             return
                         }
                         // a known network reconnects from its stored key; once that key is refused, repeating it can only fail again, so take a new one

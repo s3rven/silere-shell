@@ -313,6 +313,15 @@ if command -v busctl >/dev/null 2>&1; then
         warn "notifications" "owned by ${notif_comm:-another process}; stop it to use Silere's notifications"
     fi
 fi
+# stopped for this session, such a daemon still comes back at a later login, before Silere has the name
+while IFS=$'\t' read -r notif_daemon notif_unit; do
+    [ -n "$notif_daemon" ] || continue
+    if [ -n "$notif_unit" ]; then
+        warn "notification daemon" "$notif_daemon can start itself before Silere; keep it off: systemctl --user mask $notif_unit"
+    else
+        warn "notification daemon" "$notif_daemon can start itself before Silere; uninstall it to keep Silere's notifications"
+    fi
+done < <(_silere_notification_autostarters)
 
 section "Audio"
 optional_tool pipewire "audio service"
@@ -327,6 +336,16 @@ fi
 
 section "Optional features"
 optional_tool upower "battery"
+# Quickshell reads networks through NetworkManager only: iwd or systemd-networkd alone leave the widget hidden
+if command -v busctl >/dev/null 2>&1; then
+    if busctl --system --no-pager --timeout=2 get-property org.freedesktop.NetworkManager \
+            /org/freedesktop/NetworkManager org.freedesktop.NetworkManager Version >/dev/null 2>&1; then
+        ok "NetworkManager" "network widget + Wi-Fi controls"
+    else
+        warn "NetworkManager" "not running: network widget + Wi-Fi controls hidden (optional)"
+        optional_missing=$((optional_missing + 1))
+    fi
+fi
 optional_tool brightnessctl "brightness control"
 optional_tool matugen "wallpaper theming"
 if ! command -v powerprofilesctl >/dev/null 2>&1 && command -v busctl >/dev/null 2>&1 \
@@ -340,7 +359,15 @@ fi
 if [ "$compositor" = niri ]; then optional_any "night light" "warm display" wlsunset
 else optional_any "night light" "warm display" hyprsunset wlsunset
 fi
-optional_any "screen lock" "lock action" hyprlock swaylock gtklock loginctl
+# loginctl lock-session locks nothing itself: only an idle daemon such as hypridle can answer it with a locker
+if command -v loginctl >/dev/null 2>&1 && ! command -v hyprlock >/dev/null 2>&1 \
+        && ! command -v swaylock >/dev/null 2>&1 && ! command -v gtklock >/dev/null 2>&1; then
+    warn "screen lock" "lock action relies on an idle daemon answering loginctl lock-session (optional; need one of: hyprlock swaylock gtklock)"
+    optional_missing=$((optional_missing + 1))
+    if [ "$compositor" = niri ]; then _remember_package swaylock; else _remember_package hyprlock; fi
+else
+    optional_any "screen lock" "lock action" hyprlock swaylock gtklock
+fi
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
 # Quickshell 0.3.2 sets bluetooth volume itself; headset modes still need both pipewire tools
 if [ -z "${qs_version:-}" ] || ! _silere_version_at_least "$qs_version" 0.3.2; then
@@ -352,7 +379,7 @@ optional_tool pw-dump "headset modes"
 optional_tool curl "cover art from the web + installer downloads"
 optional_tool xdg-open "network sign-in page"
 optional_tool cava "audio visualizer"
-optional_tool notify-send "desktop alerts"
+optional_tool notify-send "update alerts (the shell's own alerts also go through busctl)"
 optional_tool fc-list "font verification"
 if command -v fc-list >/dev/null 2>&1; then
     # stderr rides along, so a fontconfig failure names itself instead of reading as no font
@@ -368,9 +395,10 @@ fi
 optional_tool inotifywait "screenshot feedback + Hyprland restart recovery"
 optional_tool nmcli "VPN indicator + saved VPN controls"
 optional_tool blueman-manager "PIN and passkey pairing"
-optional_tool nm-connection-editor "advanced Wi-Fi + VPN settings"
-optional_tool nmtui "terminal network settings"
-optional_tool xdg-terminal-exec "terminal tool hand-off"
+# the shell takes either, nmtui in a terminal
+optional_any "network settings" "advanced Wi-Fi + VPN settings" nm-connection-editor nmtui
+# the order Settings.terminalPrefix tries: xdg-terminal-exec honours the user's own choice
+optional_any "terminal" "terminal tools such as nmtui open in it" xdg-terminal-exec kitty foot ghostty alacritty wezterm konsole
 optional_tool ddcutil "optional external monitor brightness"
 optional_tool busctl "notification daemon check"
 optional_any "power actions" "suspend, reboot, shut down" systemctl loginctl

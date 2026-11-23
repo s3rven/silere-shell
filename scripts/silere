@@ -29,7 +29,23 @@ _usage_text() {
     cat <<'EOF'
 Usage: silere <command> [options]
 
-  try                    Preview Silere in a window, changing nothing on this desktop
+Control the running shell
+  menu [page]            Open or close the menu; a page opens it there
+  calendar               Open or close the calendar
+  quick                  Open or close quick actions
+  tray                   Open the first tray app's menu
+  toggle <name>          Flip dnd, wifi, bluetooth, night-light...; alone, lists them
+  volume [up|down|mute]  Change the output volume; alone, print it
+  volume <0-100|next>    Set the output level, or move to the next output
+  mic [...]              The microphone, with the same words as volume
+  dismiss [all]          Dismiss the newest notification popup, or all of them
+  get <setting>          Print a setting
+  set <setting> <value>  Change a setting
+  settings [filter]      List settings and the values each takes; --changed lists yours
+  ipc <target> <fn> ...  Any call the shell answers; alone, it lists them
+
+Run and maintain
+  try                    Preview Silere in a window; your bar and settings stay as they are
   run [--startup]        Start Silere once; --startup waits for the compositor
   run --supervised       Start through the optional user service
   service install        Install the optional service; --dry-run previews it

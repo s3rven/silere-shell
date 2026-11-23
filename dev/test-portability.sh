@@ -2095,6 +2095,14 @@ EOF
     assert_eq "git fetch failed (check network / connectivity)" \
         "$(sed -n '2p' "$cache/update-error")" \
         "failed update check records an actionable reason"
+    # the timer's own check, as the service runs it: the shell has nothing else to show its failure by
+    rm -f "$cache/update-error"
+    if SILERE_TEST_METERED=2 _run --scheduled >/dev/null 2>&1; then
+        fail "scheduled update check unexpectedly succeeded against an unavailable origin"
+    fi
+    assert_eq "git fetch failed (check network / connectivity)" \
+        "$(sed -n '2p' "$cache/update-error" 2>/dev/null)" \
+        "failed scheduled update check records an actionable reason"
 )
 
 test_repair_workflow() (
@@ -2808,7 +2816,7 @@ test_menu_keybind_plan() (
         *) fail "a stock Lua config was not offered the bind: $out" ;;
     esac
     case "$out" in
-        *"append to $dir/hyprland.lua: hl.exec_cmd("*) ;;
+        *"append to $dir/hyprland.lua: hl.on(\"hyprland.start\", function() hl.exec_cmd("*) ;;
         *) fail "a stock Lua config with no execs.lua was not offered autostart: $out" ;;
     esac
     assert_eq "$before" "$(<"$dir/hyprland.lua")" "a dry run leaves a Lua config unchanged"
@@ -3321,6 +3329,26 @@ test_other_bars_are_named() (
     } > "$TMP/bars-qs-list"
     out="$(PATH="$stubs:$PATH" WAYLAND_DISPLAY=wayland-test SILERE_TEST_QS_LIST="$TMP/bars-qs-list" _silere_other_bars)"
     assert_eq "noctalia-shell" "$out" "another Quickshell shell on this display is named by its folder"
+)
+
+test_notification_autostarters_are_named() (
+    local sys="$TMP/notif-sys" home="$TMP/notif-home" out
+    mkdir -p "$sys/dbus-1/services" "$home/.local/share/dbus-1/services"
+    printf '[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/mako\nSystemdService=mako.service\n' \
+        > "$sys/dbus-1/services/fr.emersion.mako.service"
+    printf '[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/plasma_waitforname org.freedesktop.Notifications\n' \
+        > "$sys/dbus-1/services/org.kde.plasma.Notifications.service"
+    printf '[D-BUS Service]\nName=org.freedesktop.secrets\nExec=/usr/bin/gnome-keyring-daemon\n' > "$sys/dbus-1/services/keyring.service"
+    printf '[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/opt/dunst/bin/dunst -conf x\n' \
+        > "$home/.local/share/dbus-1/services/dunst.service"
+    source "$ROOT/scripts/lib/xdg.sh"
+    source "$ROOT/scripts/lib/ui.sh"
+    # the system folder twice, as XDG_DATA_DIRS often lists a prefix more than once
+    out="$(HOME="$home" XDG_DATA_HOME="" XDG_DATA_DIRS="$sys:$sys" _silere_notification_autostarters)"
+    assert_eq $'dunst\t\nmako\tmako.service' "$out" \
+        "notification daemons D-Bus can start are named once each with their unit; Plasma's waiter and other names are not"
+    out="$(HOME="$TMP/notif-none" XDG_DATA_HOME="" XDG_DATA_DIRS="$TMP/notif-none" _silere_notification_autostarters)"
+    assert_eq "" "$out" "no D-Bus file, nothing to say"
 )
 
 test_launcher_uses_real_name() (
@@ -3906,6 +3934,20 @@ STUB
     cli use "$t/other" >/dev/null || fail "use back to the other copy failed"
     [ ! -e "$dropin" ] || fail "switching back to the unit's own checkout kept the drop-in"
     assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use links the other copy back"
+    while IFS=$'\t' read -r comp_src comp_dest; do
+        assert_eq "$comp_src" "$(readlink "$comp_dest")" "use moves the completion to the other copy"
+    done < <(comp_links "$t/other")
+    # a completion of the user's own is never replaced
+    # the first line by expansion: `| head -n 1` closes as the second printf writes, and pipefail stops the suite (141)
+    comp_links="$(comp_links "$ROOT")"; comp_links="${comp_links%%$'\n'*}"
+    if [ -n "$comp_links" ]; then
+        rm -f -- "${comp_links#*$'\t'}"; echo mine > "${comp_links#*$'\t'}"
+        out="$(cli use --dry-run)" || fail "use --dry-run beside a completion of the user's own failed"
+        case "$out" in *"${comp_links#*$'\t'} already exists; left it alone"*) ;;
+            *) fail "use --dry-run did not leave the user's completion alone: $out" ;; esac
+        assert_eq mine "$(cat "${comp_links#*$'\t'}")" "use replaced a completion file of the user's own"
+        rm -f -- "${comp_links#*$'\t'}"; ln -s "${comp_links%%$'\t'*}" "${comp_links#*$'\t'}"
+    fi
     grep -qFx 'other restart' "$t/calls" || fail "use did not hand the restart to the other copy"
 
     mkdir -p "${dropin%/*}"; printf '[Service]\nExecStart=\nExecStart=/x run\n' > "$dropin"
@@ -4499,6 +4541,7 @@ test_layer_rule_detection
 test_motion_block
 test_cpu_sensor_choice
 test_other_bars_are_named
+test_notification_autostarters_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
 test_startup_waits_for_wayland

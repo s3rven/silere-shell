@@ -172,7 +172,8 @@ hides that widget or marks it unavailable.
 |---|---|
 | `pipewire` + `wireplumber` | volume, output picker |
 | `upower` | battery details, the charge limit and supported keyboard lighting; the charge limit and lighting also use `busctl` |
-| `nmcli` | VPN indicator, name and address (network and Wi-Fi use Quickshell directly) |
+| NetworkManager | the network widget and Wi-Fi controls; Quickshell reads networks only through it, so iwd or systemd-networkd alone hide them |
+| `nmcli` | VPN indicator, name and address |
 | `brightnessctl` | brightness |
 | `ddcutil` | external monitor brightness over DDC/CI; enable **External brightness** in Settings › System › Devices |
 | `hyprsunset` / `wlsunset` | night light (`hyprsunset` on Hyprland, `wlsunset` elsewhere) |
@@ -182,16 +183,16 @@ hides that widget or marks it unavailable.
 | `wpctl` | Bluetooth volume on Quickshell 0.3.1 (part of WirePlumber) |
 | `wpctl` + `pw-dump` | Listening / Calls modes on compatible Bluetooth headsets |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
-| `inotifywait` | screenshot feedback on the underline, and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
+| `inotifywait` | screenshot feedback on the underline (niri reports its own screenshots without it), and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
 | `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |
 | `paru` / `yay` | AUR update count on Arch Linux |
-| `hyprlock` / `swaylock` / `gtklock` / `loginctl lock-session` | lock action |
+| `hyprlock` / `swaylock` / `gtklock` | lock action; without one, Lock asks `loginctl lock-session`, which locks only if an idle daemon such as hypridle answers it with a locker |
 | `pwvucontrol` / `pavucontrol` | Sound settings, reached from the volume control |
 | `nm-connection-editor` / `nmtui` | advanced network settings; `nmtui` opens in a terminal |
 | `blueman-manager` + a Bluetooth pairing agent | passkey or PIN pairing; see [Bluetooth troubleshooting](troubleshooting.md#bluetooth-pairing-fails-for-a-passkey-device) |
 | `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
 | `hyprshutdown` | Log out on Hyprland closes your apps before it ends the session |
-| `notify-send` | battery, temperature, and update notifications |
+| `notify-send` / `busctl` | battery, temperature and other alerts from the shell; the updater's notifications need `notify-send` |
 | `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
 | `ssh-keygen` | cryptographic verification of Silere release tags |
 
@@ -207,6 +208,13 @@ template into Matugen's template directory and makes Matugen write
 palette and reloads colours live. This works for both a Git checkout and a read-only
 package under `/usr/share`. Packaged installs print the one-time command that does the
 same thing, `install.sh --repair-matugen`.
+
+In **Settings › Appearance › Theme**, choose **Wallpaper** or use the **Auto** accent
+with Neutral to see the palette status. **Accent role** picks a primary, secondary,
+or tertiary color for both sources. **Reload palette** rereads the file.
+After repairing the template, run your normal wallpaper or Matugen command to
+generate a fresh palette. If the file is invalid, Silere keeps the last working
+colors, or uses the built-in colors until the first valid palette arrives.
 
 ## Cava
 
