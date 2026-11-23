@@ -2950,7 +2950,7 @@ ShellRoot {
             deviceName: name, paired: paired, connected: connected, pairing: pairing })
         root._check(!Bluetooth.listed(dev("", false, false, false))
                 && !Bluetooth.listed(dev("4E-5B-85-24-93-E7", false, false, false))
-                && Bluetooth.listed(dev("JBL GO 2", false, false, false)),
+                && Bluetooth.listed(dev("Desk Speaker", false, false, false)),
             "the Bluetooth picker leaves out an unpaired device known only by its address")
         root._check(Bluetooth.listed(dev("", true, false, false))
                 && Bluetooth.listed(dev("", false, true, false))
@@ -5326,7 +5326,7 @@ ShellRoot {
                 && !cap(null)
                 && !cap({ "stream.capture.sink": false })
                 && !cap({ "target.object": "alsa_input.pci-0000_06_00.6.analog-stereo" })
-                && !cap({ "target.object": "bluez_input.F4_9D_8A_18_02_3B.0" }),
+                && !cap({ "target.object": "bluez_input.0A_1B_2C_3D_4E_5F.0" }),
             "a stream recording a real source still counts as a microphone in use")
     }
 
@@ -10592,14 +10592,14 @@ ShellRoot {
                 && AudioMode.deviceId({ ready: true, properties: { "device.api": "alsa", "device.id": 77 } }) === ""
                 && AudioMode.deviceIdentity({ properties: { "api.bluez5.address": "AA_BB_CC_DD_EE_FF" } }) === "aa:bb:cc:dd:ee:ff",
             "headset modes cover classic and LE Audio while limiting switching to identified Bluetooth devices")
-        root._check(Audio.bluetoothAddress({ name: "bluez_output.F4_9D_8A_18_02_3B.1", properties: {} }) === "f4:9d:8a:18:02:3b"
+        root._check(Audio.bluetoothAddress({ name: "bluez_output.0A_1B_2C_3D_4E_5F.1", properties: {} }) === "0a:1b:2c:3d:4e:5f"
                 && Audio.bluetoothAddress({ name: "alsa_output.pci", properties: { "api.bluez5.address": "junk" } }) === ""
                 && Audio.bluetoothAddress(null) === ""
-                && Bluetooth.batteryForAddress("f4:9d:8a:18:02:3b", [
+                && Bluetooth.batteryForAddress("0a:1b:2c:3d:4e:5f", [
                     { address: "AA:BB:CC:DD:EE:FF", connected: true, batteryAvailable: true, battery: 0.9 },
-                    { address: "F4:9D:8A:18:02:3B", connected: true, batteryAvailable: true, battery: 0.1 }]) === 10
-                && Bluetooth.batteryForAddress("f4:9d:8a:18:02:3b", [
-                    { address: "F4:9D:8A:18:02:3B", connected: false, batteryAvailable: true, battery: 0.1 }]) === -1
+                    { address: "0A:1B:2C:3D:4E:5F", connected: true, batteryAvailable: true, battery: 0.1 }]) === 10
+                && Bluetooth.batteryForAddress("0a:1b:2c:3d:4e:5f", [
+                    { address: "0A:1B:2C:3D:4E:5F", connected: false, batteryAvailable: true, battery: 0.1 }]) === -1
                 && Bluetooth.batteryForAddress("", [{ address: "", connected: true, batteryAvailable: true, battery: 0.5 }]) === -1,
             "an output's charge comes from the connected Bluetooth device its sink names, and from no other")
         const dropped = (wasHeadset, wasName, nextName, nextHeadset, wasListed, switching) =>
