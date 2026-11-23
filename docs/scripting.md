@@ -154,9 +154,13 @@ silere ipc custom refresh
 ## Diagnostic reports
 
 `silere doctor --json` prints a versioned report with `runtime`, `availability`,
-and `devices`. Runtime and tool availability are collected even if the shell is
-stopped. Live device state requires a running compatible shell, `qs`, `timeout`,
-and Python 3; otherwise `devices` is `null`.
+`integration` and `devices`. Runtime, tool availability and integration are collected
+even if the shell is stopped. `integration` holds what to check first when Silere does
+not start, in fixed words: `notifications` (who holds the notification name: `silere`,
+`quickshell`, a known daemon such as `mako`, `other`, `none` or `unknown`), `autostart`
+(`compositor`, `service` or `none`) and `conflicts` (known bars and notification daemons
+running or started by your compositor config). Live device state requires a running
+compatible shell, `qs`, `timeout`, and Python 3; otherwise `devices` is `null`.
 
 `silere ipc diagnostics status` prints the live `devices` snapshot directly.
 Its schema version is 1. The report includes counts, state flags, screen size and

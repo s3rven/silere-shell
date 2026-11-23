@@ -4183,7 +4183,7 @@ test_doctor_json() (
     python_path="$(command -v python3)"
     mkdir -p "$fixture/scripts/lib" "$fixture/bin"
     cp "$ROOT/scripts/doctor.sh" "$ROOT/scripts/doctor-json.sh" "$fixture/scripts/"
-    cp "$ROOT/scripts/lib/qml-modules.sh" "$fixture/scripts/lib/"
+    cp "$ROOT/scripts/lib/qml-modules.sh" "$ROOT/scripts/lib/xdg.sh" "$ROOT/scripts/lib/ui.sh" "$fixture/scripts/lib/"
     printf '{"version":"9.1.2"}\n' > "$fixture/release.json"
     cat > "$fixture/bin/qs" <<'EOF'
 #!/usr/bin/env bash
@@ -4216,6 +4216,25 @@ assert d["devices"]["screens"] == [{"width":1920,"height":1080,"scale":1.25}]
 assert "private-report-value" not in sys.argv[1]
 assert d["availability"]["python3"] is True
 ' "$actual" || fail "doctor report includes identifiers or loses required fields"
+    # a shell that will not start: its autostart, what else the config starts and who holds notifications, as fixed words
+    mkdir -p "$fixture/config/hypr" "$fixture/owner"
+    printf '%s\n' 'exec-once = waybar' 'exec-once = ~/.config/silere-shell/scripts/silere run --startup' \
+        > "$fixture/config/hypr/hyprland.conf"
+    cp "$(command -v sleep)" "$fixture/owner/mako"
+    "$fixture/owner/mako" 30 &
+    local owner_pid=$!
+    printf '#!/bin/sh\ncase "$*" in *GetNameOwner*) echo "s \\":1.5\\"" ;; *ProcessID*) echo "u %s" ;; esac\n' "$owner_pid" \
+        > "$fixture/bin/busctl"
+    chmod +x "$fixture/bin/busctl"
+    actual="$(PATH="$fixture/bin:$PATH" XDG_CONFIG_HOME="$fixture/config" bash "$fixture/scripts/doctor.sh" --json)"
+    kill "$owner_pid" 2>/dev/null; wait "$owner_pid" 2>/dev/null || true
+    rm -f "$fixture/bin/busctl"
+    "$python_path" -c '
+import json, sys
+d = json.loads(sys.argv[1])
+assert d["integration"] == {"notifications": "mako", "autostart": "compositor", "conflicts": ["waybar"]}, d["integration"]
+assert sys.argv[2] not in sys.argv[1]
+' "$actual" "$fixture" || fail "doctor report misses the autostart, competing bars or notification owner, or names a path"
     # BusyBox's timeout: no long options. The bounded probes must still run through it
     mkdir -p "$fixture/busybox"
     printf '#!/bin/sh\ncase "$1" in --*) exit 1 ;; esac\nshift\nexec "$@"\n' > "$fixture/busybox/timeout"

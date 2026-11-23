@@ -6,6 +6,8 @@ export LC_ALL=C
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [ "$#" -eq 0 ] || exit 2
 source "$ROOT/scripts/lib/qml-modules.sh"
+source "$ROOT/scripts/lib/xdg.sh"
+source "$ROOT/scripts/lib/ui.sh"
 
 json_string() {
     local value="$1" ch escaped i
@@ -111,6 +113,31 @@ fi
 distro="$(sed -n 's/^ID=//p' /etc/os-release 2>/dev/null | tr -d "\"'" | head -n 1 || true)"
 [[ "$distro" =~ ^[a-z0-9._-]{1,64}$ ]] || distro=unknown
 
+# what text-mode doctor checks first when the shell will not start, as fixed words: no paths and no names but known ones
+notifications=unknown
+if command -v busctl >/dev/null 2>&1; then
+    _silere_notification_owner
+    if [ -z "$notif_owner" ]; then notifications=none
+    elif [ "$notif_comm" = qs ]; then
+        notifications=quickshell
+        for word in $notif_cmd; do
+            [[ "$word" == */shell.qml ]] && [ -x "${word%/shell.qml}/scripts/silere" ] && notifications=silere
+        done
+    else
+        case "$notif_comm" in
+            mako|dunst|swaync|fnott|xfce4-notifyd|notification-daemon|deadd-notificat*|plasmashell|gnome-shell)
+                notifications="${notif_comm%-notificat*}" ;;
+            *) notifications=other ;;
+        esac
+    fi
+fi
+config_home="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config 2>/dev/null || true)"
+autostart="$(_silere_autostart_entry "$ROOT" "$config_home")"
+case "$autostart" in service) ;; "") autostart=none ;; *) autostart=compositor ;; esac
+# names from a fixed list in both helpers; another Quickshell shell's folder name stays out
+competing="$( { _silere_config_autostarts ${config_home:+"$config_home/hypr" "$config_home/niri"} | cut -f1
+    _silere_other_bars | sed -E '/^(waybar|hyprpanel|ashell|ironbar|yambar|nwg-panel)$/!s/.*/quickshell/'; } | sort -u)"
+
 printf '{"schemaVersion":1,"runtime":{"silere":'
 json_string "${silere_version:-unknown}"
 printf ',"quickshell":'; json_string "${qs_version:-unknown}"
@@ -126,4 +153,12 @@ for tool in qs git pipewire wireplumber upower brightnessctl ddcutil nmcli busct
     if command -v "$tool" >/dev/null 2>&1; then printf ':true'; else printf ':false'; fi
     separator=,
 done
-printf '},"devices":%s}\n' "$live"
+printf '},"integration":{"notifications":'; json_string "$notifications"
+printf ',"autostart":'; json_string "$autostart"
+printf ',"conflicts":['
+separator=""
+while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    printf '%s' "$separator"; json_string "$name"; separator=,
+done <<< "$competing"
+printf ']},"devices":%s}\n' "$live"

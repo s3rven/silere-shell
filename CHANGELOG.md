@@ -33,6 +33,7 @@ settings file carries its own `__version` and migrates separately.
 - On niri, focusing a window and cycling the keyboard layout use the compositor socket directly, avoiding a new process for each action.
 - `silere help` lists the commands that control the shell apart from the ones that run and maintain it, and `silere set` takes `on` and `off` for a true/false setting.
 - `silere use` moves the shell completions to the checkout it switches to, as it does the command.
+- `silere doctor --json` and Overview's diagnostic report say who holds the notification name, whether Silere starts at login, and which known bars or notification daemons run or start beside it, without paths, so a report from a shell that won't start is still useful.
 - On niri, the installer checks its autostart line with `niri validate` before writing it, and leaves a config niri would reject as it was.
 - The installer asks once whether to use the recommended setup, which takes the default answer to each question and shows it, instead of asking up to ten questions one by one. Answering no asks at each step as before.
 - Without Quickshell, the installer prints the command that installs it: pacman on Arch, the COPR on Fedora, or Quickshell's guide elsewhere.

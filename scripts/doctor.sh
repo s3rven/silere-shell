@@ -269,21 +269,7 @@ fi
 
 # another daemon holding the name is the usual reason notifications never appear
 if command -v busctl >/dev/null 2>&1; then
-    notif_owner="" notif_pid="" notif_comm="" notif_cmd=""
-    read -r _ notif_owner < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
-        org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null) || true
-    notif_owner="${notif_owner//\"/}"
-    if [ -n "$notif_owner" ]; then
-        read -r _ notif_pid < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
-            org.freedesktop.DBus GetConnectionUnixProcessID s "$notif_owner" 2>/dev/null) || true
-    fi
-    case "$notif_pid" in ''|*[!0-9]*) notif_pid="" ;; esac
-    if [ -n "$notif_pid" ]; then
-        IFS= read -r notif_comm < "/proc/$notif_pid/comm" 2>/dev/null || true
-        notif_cmd="$(tr '\0' ' ' < "/proc/$notif_pid/cmdline" 2>/dev/null || true)"
-    fi
-    # silere run starts qs under its real name, quickshell, to dodge ananicy's rule for qs
-    case "$notif_comm" in quickshell) notif_comm=qs ;; esac
+    _silere_notification_owner
     if [ -z "$notif_owner" ]; then
         warn "notifications" "no notification daemon is running"
     elif [ "$notif_comm" = qs ] && [[ "$notif_cmd" == *"$ROOT/shell.qml"* || "$notif_cmd" == *"$ROOT "* ]]; then
@@ -452,30 +438,9 @@ if [ "$git_install" -eq 1 ]; then
     fi
 fi
 
-autostart=""
-autostart_re='silere-shell begin|^[[:space:]]*(exec-once[[:space:]]*=|spawn(-sh)?-at-startup|hl\.exec_cmd).*(silere-shell|scripts/silere|silere run)'
-if [ -f "$ROOT/scripts/install.sh" ]; then
-    for active_config in \
-        "$(bash "$ROOT/scripts/install.sh" --hypr-config-path 2>/dev/null || true)" \
-        "$(bash "$ROOT/scripts/install.sh" --niri-config-path 2>/dev/null || true)"
-    do
-        [ -f "$active_config" ] || continue
-        if grep -qE "$autostart_re" "$active_config" 2>/dev/null; then
-            autostart="$active_config"
-            break
-        fi
-    done
-fi
-if [ -n "$config_home" ]; then
-    if [ -z "$autostart" ]; then
-        autostart="$(grep -rliE "$autostart_re" \
-            "$config_home/hypr" "$config_home/niri" 2>/dev/null | head -n 1 || true)"
-    fi
-fi
-if [ -n "$autostart" ]; then ok "autostart" "$autostart"
-elif command -v systemctl >/dev/null 2>&1 \
-        && systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null; then
-    ok "autostart" "silere-shell.service enabled"
+autostart="$(_silere_autostart_entry "$ROOT" "$config_home")"
+if [ "$autostart" = service ]; then ok "autostart" "silere-shell.service enabled"
+elif [ -n "$autostart" ]; then ok "autostart" "$autostart"
 else warn "autostart" "no compositor entry or enabled user service found"
 fi
 

@@ -128,6 +128,57 @@ _silere_config_autostarts() {
     return 0
 }
 
+# who holds org.freedesktop.Notifications, for doctor and its shareable report: sets notif_owner (the bus name, empty
+# when no one holds it), notif_comm and notif_cmd. Needs busctl
+# shellcheck disable=SC2034
+_silere_notification_owner() {
+    local pid=""
+    notif_owner="" notif_comm="" notif_cmd=""
+    read -r _ notif_owner < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+        org.freedesktop.DBus GetNameOwner s org.freedesktop.Notifications 2>/dev/null) || true
+    notif_owner="${notif_owner//\"/}"
+    if [ -n "$notif_owner" ]; then
+        read -r _ pid < <(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus \
+            org.freedesktop.DBus GetConnectionUnixProcessID s "$notif_owner" 2>/dev/null) || true
+    fi
+    case "$pid" in ''|*[!0-9]*) pid="" ;; esac
+    if [ -n "$pid" ]; then
+        IFS= read -r notif_comm < "/proc/$pid/comm" 2>/dev/null || true
+        notif_cmd="$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)"
+    fi
+    # silere run starts qs under its real name, quickshell, to dodge ananicy's rule for qs
+    case "$notif_comm" in quickshell) notif_comm=qs ;; esac
+    return 0
+}
+
+# the compositor config line that starts Silere, else "service" for the enabled user unit, else nothing.
+# $1 = checkout, $2 = XDG config home
+_silere_autostart_entry() {
+    local root="$1" config_home="$2" active_config found=""
+    local autostart_re='silere-shell begin|^[[:space:]]*(exec-once[[:space:]]*=|spawn(-sh)?-at-startup|hl\.exec_cmd).*(silere-shell|scripts/silere|silere run)'
+    if [ -f "$root/scripts/install.sh" ]; then
+        for active_config in \
+            "$(bash "$root/scripts/install.sh" --hypr-config-path 2>/dev/null || true)" \
+            "$(bash "$root/scripts/install.sh" --niri-config-path 2>/dev/null || true)"
+        do
+            [ -f "$active_config" ] || continue
+            if grep -qE "$autostart_re" "$active_config" 2>/dev/null; then
+                found="$active_config"
+                break
+            fi
+        done
+    fi
+    if [ -z "$found" ] && [ -n "$config_home" ]; then
+        found="$(grep -rliE "$autostart_re" "$config_home/hypr" "$config_home/niri" 2>/dev/null | head -n 1 || true)"
+    fi
+    if [ -z "$found" ] && command -v systemctl >/dev/null 2>&1 \
+            && systemctl --user is-enabled --quiet silere-shell.service 2>/dev/null; then
+        found=service
+    fi
+    [ -z "$found" ] || printf '%s\n' "$found"
+    return 0
+}
+
 _silere_notification_autostarters() {
     local data_home dir file cmd unit name seen=" "
     local -a dirs=() data_dirs=()
