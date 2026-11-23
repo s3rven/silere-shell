@@ -75,7 +75,8 @@ curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/in
 
 The installer checks dependencies, installs to `~/.config/silere-shell` by default, and offers
 autostart and a `silere` command. It asks before editing your compositor config and backs up what it
-changes. Stop your current bar and notification daemon before starting Silere with `silere run`.
+changes. Stop your current bar and notification daemon before starting Silere with `silere run`;
+the installer names the lines in your config that start them at login.
 See the [installation guide](docs/install.md) for first start, custom paths and crash recovery.
 
 ## Getting around
