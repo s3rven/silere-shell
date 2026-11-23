@@ -338,8 +338,9 @@ Item {
             anchors.centerIn: parent
             anchors.alignWhenCentered: false
             transform: [Translate { x: root._shakeX }, PixelSnap { item: _dot; dpr: root._dpr }]
+            // beside 14 px app icons the small empty ring read as a speck, so there it takes the dot's size
             width: Metrics.devicePx(Math.max(4, root.rowHeight
-                * (root.urgent ? 0.29 : root.active || root.occupied ? 0.24 : 0.16)), root._dpr)
+                * (root.urgent ? 0.29 : root.active || root.occupied || ShellSettings.wsShowAppIcons ? 0.24 : 0.16)), root._dpr)
             height: width
             radius: width / 2
             antialiasing: true

@@ -27,6 +27,7 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- With workspace app icons on, an empty workspace's ring is as large as a window dot, so it no longer reads as a speck beside the icons.
 - Scrolling the bar's brightness widget steps the selected backlight and all enabled external DDC/CI displays together, each on the same 5% steps. The widget also works on systems with only external displays, with its icon following the display's level.
 - On niri, focusing a window and cycling the keyboard layout use the compositor socket directly, avoiding a new process for each action.
 - `silere help` lists the commands that control the shell apart from the ones that run and maintain it, and `silere set` takes `on` and `off` for a true/false setting.
