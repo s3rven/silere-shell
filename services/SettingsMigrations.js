@@ -44,7 +44,8 @@ const registry = [
     { from: 0, to: 1, apply: _v0ToV1 },
     { from: 1, to: 2, apply: _v1ToV2 },
     { from: 2, to: 3, apply: _v2ToV3 },
-    { from: 3, to: 4, apply: _v3ToV4 }
+    { from: 3, to: 4, apply: _v3ToV4 },
+    { from: 4, to: 5, apply: _v4ToV5 }
 ]
 
 function migrate(input, fromVersion, targetVersion) {

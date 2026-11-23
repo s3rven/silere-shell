@@ -70,6 +70,8 @@ QtObject {
         const map = Object.create(null)
         const totals = Object.create(null)
         if (!ShellSettings.wsShowAppIcons) {
+            // desktop entries can change while the icon lookup listener is detached
+            if (root._appMetaCacheSize > 0) root._clearAppMetaCache()
             root.workspaceApps = map
             root.workspaceAppCounts = totals
             return
@@ -111,7 +113,7 @@ QtObject {
                     fallback: meta.fallback, count: app.count }
             })
         }
-        // a fresh array rebuilds that workspace's icon delegates, which reload and blink; keep every one that did not change
+        // keep bindings for unaffected workspaces quiet
         const ids = Object.keys(map)
         let changed = ids.length !== Object.keys(previous).length
         for (let i = 0; i < ids.length; i++) {

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import "../../../../config"
+import "../../../../services"
 import "../../../common"
 
 Row {
@@ -13,35 +14,37 @@ Row {
     required property real pulseOpacity
     property int overflowCount: 0
 
-    spacing: 4
+    spacing: Metrics.workspaceContentGap
     readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+    readonly property bool _accent: ShellSettings.wsAppIconColor === "accent"
     // already eased by the urgent pulse; a second animation here only lags it
     opacity: pulseOpacity
 
     Repeater {
-        model: root.apps
+        // keep the image alive when only a window count changes
+        model: root.apps.length
 
         delegate: Item {
             id: appIcon
-            required property var modelData
+            required property int index
+            readonly property var app: root.apps[appIcon.index]
             width: root.iconSize
             height: root.iconSize
 
-            // in the app's own colours, like the tray: a muted icon only reads as a disabled one
             ShellIcon {
                 id: _iconSrc
+                objectName: "workspace-app-icon"
                 anchors.centerIn: parent
                 side: root.iconSize
-                source: appIcon.modelData.icon
+                source: appIcon.app?.icon ?? ""
                 asynchronous: true
             }
 
             Rectangle {
                 anchors.fill: parent
                 radius: width / 2
-                color: Theme.withAlpha(Theme.barSubtext, 0.12)
-                visible: _iconSrc.status === Image.Error
-                    || appIcon.modelData.icon.length === 0
+                color: Theme.withAlpha(root._accent ? Theme.barAccentMark : Theme.barSubtext, 0.12)
+                visible: _iconSrc.status !== Image.Ready
 
                 ShellText {
                     anchors.centerIn: parent
@@ -53,7 +56,7 @@ Row {
 
             Rectangle {
                 id: _countBadge
-                visible: appIcon.modelData.count > 1
+                visible: (appIcon.app?.count ?? 0) > 1
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.rightMargin: -1

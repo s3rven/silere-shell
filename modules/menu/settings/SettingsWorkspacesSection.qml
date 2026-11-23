@@ -9,7 +9,7 @@ Column {
     SectionLabel { label: "APPEARANCE"; first: true }
     SettingsCard {
         SliderRow {
-            glyph: "󰕰"; label: "Workspaces shown"
+            glyph: "󰕰"; label: "Workspaces per page"
             key: "wsMinVisible"
             displayValue: ShellSettings.wsMinVisible
         }
@@ -28,8 +28,12 @@ Column {
             glyph: "󰎠"; label: "Numbers"
             key: "wsShowNumbers"
         }
+    }
+
+    SectionLabel { label: "APP ICONS" }
+    SettingsCard {
         ToggleRow {
-            glyph: "󰀻"; label: "App icons"
+            glyph: "󰀻"; label: "Show app icons"
             key: "wsShowAppIcons"
         }
     }

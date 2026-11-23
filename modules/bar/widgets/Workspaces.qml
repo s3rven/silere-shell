@@ -21,7 +21,8 @@ Item {
     readonly property int minVisible: ShellSettings.wsMinVisible
     readonly property int btnH:       Metrics.barRowHeight
     readonly property int btnW:       btnH + 2
-    readonly property int _iconSz: Math.min(root.btnH - 4,
+    readonly property int _iconSz: Math.min(root.btnH
+        - (root.markerCovers ? 4 : Metrics.workspaceLineInset + 3),
         Math.round(ShellSettings.barIconSize * ShellSettings.uiScale) + 2)
     readonly property int gap:        3
     // updated imperatively because mapToItem() does not expose ancestor geometry dependencies to the QML binding engine
@@ -74,12 +75,19 @@ Item {
         : Math.ceil(2 * Math.round(btnH / 4) * Math.SQRT2)
     readonly property int _dotTrim: Math.max(0, Math.min(Math.floor((btnW - 6) / 2),
         Math.floor((btnW - _markerInk) / 2) + 2) - Metrics.pillPadFor(compact))
-    TextMetrics { id: _digitM; font.family: Settings.font; font.pixelSize: Settings.fontLabel; text: "0" }
+    FontMetrics { id: _numberMetrics; font.family: Settings.font; font.pixelSize: Settings.fontLabel }
+    function _numberInkWidth(wsId: int): real {
+        // advanceWidth() does not register a binding dependency on the font
+        void _numberMetrics.font
+        return _numberMetrics.advanceWidth(String(wsId)) * 1.12
+    }
     function _edgeTrim(wsId: int): int {
         if (wsId < 0 || _btnW(wsId) !== btnW) return 0
-        if (!ShellSettings.wsShowNumbers) return _dotTrim
-        const ink = String(wsId).length * _digitM.advanceWidth
-        return Math.max(0, Math.min(_dotTrim, Math.floor((btnW - ink) / 2) - Metrics.pillPadFor(compact)))
+        if (!_contentVisible(wsId)) return _dotTrim
+        if (ShellSettings.wsShowAppIcons && root.appsFor(wsId).length > 0) return 0
+        if (!ShellSettings.wsShowNumbers && !ShellSettings.valuesOnHover) return _dotTrim
+        return Math.max(0, Math.min(_dotTrim,
+            Math.floor((btnW - _numberInkWidth(wsId)) / 2) - Metrics.pillPadFor(compact)))
     }
     property real _leadTrim: _displayIds.length > 0 ? _edgeTrim(_displayIds[0]) : 0
     property real _tailTrim: _displayIds.length > 0 && urgentOffPage <= 0
@@ -226,20 +234,19 @@ Item {
 
     function _btnW(wsId: int): int {
         if (wsId < 0) return 0
-        const canShowContent = !(wsId === root._displayActiveId && root.markerCovers)
-        const numberWidth = canShowContent && (ShellSettings.wsShowNumbers || ShellSettings.valuesOnHover)
-            ? Math.ceil(String(wsId).length * _digitM.advanceWidth * 1.12) + 10 : 0
-        let width = Math.max(btnW, numberWidth)
-        if (ShellSettings.wsShowAppIcons && !(wsId === root._displayActiveId && root.markerCovers)) {
-            const apps = root.appsFor(wsId)
-            if (apps && apps.length > 0) {
-                const count = root.compact ? 1 : apps.length
-                const overflow = root.hiddenAppsFor(wsId)
-                width = Math.max(width, count * _iconSz + (count - 1) * 4 + 10
-                    + (overflow > 0 ? Metrics.workspaceOverflowWidthFor(overflow, _iconSz) + 4 : 0))
-            }
-        }
-        return width
+        if (!root._contentVisible(wsId)) return btnW
+        const numberWidth = ShellSettings.wsShowNumbers || ShellSettings.valuesOnHover
+            ? Math.ceil(root._numberInkWidth(wsId)) : 0
+        const count = ShellSettings.wsShowAppIcons ? root.appsFor(wsId).length : 0
+        if (count === 0) return Math.max(btnW, numberWidth + 10)
+        const shown = root.compact ? 1 : count
+        const overflow = root.hiddenAppsFor(wsId)
+        const gap = Metrics.workspaceContentGap
+        const iconsWidth = shown * _iconSz + (shown - 1) * gap
+            + (overflow > 0 ? Metrics.workspaceOverflowWidthFor(overflow, _iconSz) + gap : 0)
+        const contentWidth = ShellSettings.wsShowNumbers
+            ? numberWidth + gap + iconsWidth : Math.max(numberWidth, iconsWidth)
+        return Math.max(btnW, contentWidth + 10)
     }
     // untrimmed: the trim eases, and feeding it into the marker's target restarts the slide every frame; the marker takes it as an offset instead
     function _cellCenterX(wsId: int): real {

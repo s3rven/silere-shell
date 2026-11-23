@@ -325,6 +325,7 @@ Singleton {
     property bool   wsShowNumbers:       false
     property bool   wsScrollSwitch:      false
     property bool   wsShowAppIcons:      false
+    property string wsAppIconColor:      "original"
     property bool   wsNotifPulse:        false
     property bool   wsUrgentPulse:       true
     property string wsActiveMarker:      "dot"
@@ -340,7 +341,7 @@ Singleton {
     readonly property bool firstRun: _firstRun
     readonly property string settingsError: ConfigStore.error.length > 0
         ? ConfigStore.error : _writeError.length > 0 ? _writeError : _readError
-    readonly property int _settingsVersion: 4
+    readonly property int _settingsVersion: 5
     property var _defaults: ({})
     property real _loadedVersion: _settingsVersion
     property var _futureSettings: ({})
@@ -359,7 +360,7 @@ Singleton {
         { k: "neutralTheme",        t: "bool", sec: "theme", l: "Source" },
         { k: "neutralAccentAuto",   t: "bool", sec: "theme" },
         { k: "neutralAccent",       t: "re",   re: /^#[0-9a-fA-F]{6}$/, sec: "theme" },
-        { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"], sec: "theme" },
+        { k: "matugenAccentRole",   t: "enum", vals: ["primary", "secondary", "tertiary"], sec: "theme", l: "Accent role" },
         { k: "matugenAccentBalance", t: "bool", sec: "theme", l: "Balance accent" },
         { k: "matugenDepth",        t: "enum", vals: ["none", "deep", "deeper"], sec: "theme" },
         { k: "baseTone",            t: "enum", vals: ["black", "charcoal", "graphite"], sec: "theme" },
@@ -486,7 +487,7 @@ Singleton {
         { k: "nightLightOn",        t: "bool", sec: "-" },
         { k: "dnd",                 t: "bool", sec: "-" },
         { k: "dndUntil",            t: "real", min: 0, max: 9e15, sec: "-" },
-        { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces", l: "Workspaces shown" },
+        { k: "wsMinVisible",        t: "int",  min: 1,    max: 10, sec: "workspaces", l: "Workspaces per page" },
         { k: "wsShowNumbers",       t: "bool", sec: "workspaces", l: "Numbers" },
         { k: "wsScrollSwitch",      t: "bool", sec: "workspaces", l: "Scroll to switch" },
         { k: "wsShowAppIcons",      t: "bool", sec: "workspaces", l: "App icons" },
@@ -696,12 +697,15 @@ Singleton {
             { master: "barCompact", negate: true, hides: ["barAutoCompact"] },
             { master: "dotStyle", off: "none", hides: ["barSeparatorMode"] }
         ],
+        workspaces: [
+            { master: "wsShowAppIcons", hides: ["wsAppIconColor"] }
+        ],
         theme: [
             // the Base row edits baseTone under Neutral and matugenDepth under Wallpaper
             { master: "neutralTheme", hides: ["neutralAccent", "neutralAccentAuto", "baseTone"] },
-            { master: "neutralTheme", negate: true, hides: ["matugenAccentRole", "matugenDepth"] },
-            // a picked accent has nothing to balance; wallpaper or auto accent shows the row
-            { any: [{ master: "neutralTheme", negate: true }, { master: "neutralAccentAuto" }], hides: ["matugenAccentBalance"] },
+            { master: "neutralTheme", negate: true, hides: ["matugenDepth"] },
+            // the wallpaper and auto accent share the palette's role and brightness choices
+            { any: [{ master: "neutralTheme", negate: true }, { master: "neutralAccentAuto" }], hides: ["matugenAccentRole", "matugenAccentBalance"] },
             { master: "barShadow", hides: ["barShadowStrength"] },
             // an opaque bar has no glass for these to act on
             { master: "barOpacity", off: 1, hides: ["surfaceBlur", "popupMatchBarOpacity"] }

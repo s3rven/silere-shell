@@ -47,6 +47,7 @@ Item {
     readonly property bool _blanked: active && markerCovers
     readonly property bool _iconCell: ShellSettings.wsShowAppIcons && apps.length > 0
     readonly property bool _showIcons: _iconCell && !_blanked
+    readonly property bool _inlineNumber: ShellSettings.wsShowNumbers && root._iconCell
 
     width:  present ? cellWidth : 0
     height: rowHeight
@@ -249,7 +250,7 @@ Item {
         onTriggered: root._notifPulseLoaded = false
     }
     readonly property bool _hoverReveal: ShellSettings.valuesOnHover && hovered
-        && !_blanked && (_showIcons || !ShellSettings.wsShowNumbers)
+        && !_blanked && !ShellSettings.wsShowNumbers
     property real _revealAmt: _hoverReveal ? 1 : 0
     MotionBehavior on _revealAmt {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
     property real _dotAlpha: urgent || active ? 1.0 : occupied ? 0.9 : 0.55
@@ -307,12 +308,14 @@ Item {
         opacity: (1 - root._markerPassCover) * root._presence
 
         ShellText {
-            anchors.centerIn: parent
+            id: _number
+            objectName: "workspace-number"
+            readonly property real hoverWidth: Math.ceil(implicitWidth * 1.12)
+            x: (parent.width - width - (root._inlineNumber ? _icons.width + Metrics.workspaceContentGap : 0)) / 2
+            anchors.verticalCenter: parent.verticalCenter
             transform: Translate { x: root._shakeX }
             text:    root._paintedWsId
-            opacity: (root._showIcons
-                    ? root._revealAmt
-                    : Math.max(ShellSettings.wsShowNumbers ? 1 : 0, root._revealAmt))
+            opacity: (ShellSettings.wsShowNumbers ? 1 : root._revealAmt)
                 * root._numberShown * root._pulseOpacity
             scale:   root._blanked ? 0.6 : _tap.pressed ? 0.9 : (root._hoverFx ? 1.12 : 1)
             color:   root.urgent
@@ -359,10 +362,15 @@ Item {
         }
 
         Loader {
-            anchors.centerIn: parent
+            id: _icons
+            x: root._inlineNumber ? _number.x + (_number.width + _number.hoverWidth) / 2 + Metrics.workspaceContentGap
+                : (parent.width - width) / 2
+            // one pixel for the repeat-window badge and one clear of the line
+            y: Math.min((parent.height - height) / 2,
+                parent.height - height - (root.markerCovers ? 0 : Metrics.workspaceLineInset + 2))
             transform: Translate { x: root._shakeX }
             opacity: (1 - root._revealAmt) * root._dotFade
-            active: root._iconCell && (!root._blanked || root._dotFade > 0.01)
+            active: root._showIcons || (root._iconCell && root._dotFade > 0.01)
             sourceComponent: Component {
                 WorkspaceAppIcons {
                     apps: root.compact ? root.apps.slice(0, 1) : root.apps

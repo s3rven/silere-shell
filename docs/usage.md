@@ -231,7 +231,7 @@ silere reset --undo             # put back what the last reset replaced
 
 A settings file that won't parse is saved, not discarded. Hooks, the Matugen palette, autostart
 and the service are left alone. To reset by hand, stop Silere, back up `settings.json`, replace
-its contents with `{ "__version": 4 }` and start Silere again.
+its contents with `{ "__version": 5 }` and start Silere again.
 
 [The scripting guide](scripting.md) lists IPC calls, setting names and hooks.
 

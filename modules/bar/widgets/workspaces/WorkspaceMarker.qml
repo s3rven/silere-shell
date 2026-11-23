@@ -67,7 +67,7 @@ Item {
     width:  _bar ? root._widthGlide.value : markerWidth
     height: _bar ? Metrics.devicePx(3, root._dpr) : _sprite
     // keep the line two pixels clear of the cell edge so its halo is not clipped by the bar
-    y: _bar ? rowHeight - 5 : (rowHeight - height) / 2
+    y: _bar ? rowHeight - Metrics.workspaceLineInset : (rowHeight - height) / 2
     opacity: shown ? (_bar ? 0.98 : 0.92) : 0
     visible: opacity > 0.01
 

@@ -120,6 +120,9 @@ Singleton {
 
     // fixed icon cell: Nerd glyph ink spans 0.64-1.08x the px size, so a natural-width slot shoves the row on every glyph swap
     function iconCellFor(pixelSize: int): int { return Math.ceil(pixelSize * 1.1) }
+
+    readonly property int workspaceContentGap: 4
+    readonly property int workspaceLineInset: 5
     function workspaceOverflowWidthFor(count: int, iconSize: int): int {
         return count > 0 ? Math.max(iconSize, Settings.fontCaption * 2) : 0
     }
