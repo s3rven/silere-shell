@@ -920,6 +920,14 @@ else
   fail "shell.qml must default QSG_USE_SIMPLE_ANIMATION_DRIVER=1 so popups do not fall back to the 16 ms multi-window timer"
 fi
 
+section "gl driver threads"
+if grep -qF '//@ pragma DefaultEnv mesa_glthread_app_profile = 0' shell.qml && grep -qF '//@ pragma DefaultEnv MESA_DEBUG = silent' shell.qml \
+    && grep -qF '//@ pragma DefaultEnv GALLIUM_THREAD = 0' shell.qml && ! grep -qE '^//@ pragma DefaultEnv mesa_glthread = ' shell.qml; then
+  ok "gl threads" "Mesa's GL and driver threads are off by an overrideable default"
+else
+  fail "shell.qml must default mesa_glthread_app_profile=0, MESA_DEBUG=silent and GALLIUM_THREAD=0: Mesa's helper threads cost the shell's small frames more than they save, and mesa_glthread=false prints a journal notice for every window"
+fi
+
 section "arm-then-confirm guards"
 # TapHandler fires once per tap, so the second half of a double-click confirms the
 # action the first half armed. Every destructive row must reject that second tap.

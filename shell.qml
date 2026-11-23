@@ -5,6 +5,12 @@
 // Qt's text defaults to RGB subpixel edges, which a fractional scale resamples onto the wrong subpixels:
 // measured at 125%, a third of the workspace numerals' ink came out orange or blue, and none in grey
 //@ pragma DefaultEnv QSG_DISTANCEFIELD_ANTIALIASING = gray
+// mesa's gl and driver threads cost the shell's small frames more than they save: a menu open and close took a quarter less cpu with both off.
+// The app-profile switch turns glthread off like mesa_glthread=false, which instead prints a notice to the journal for every window it opens;
+// MESA_DEBUG=silent quiets the driconf notice the profile switch prints, and a mesa_glthread or MESA_DEBUG value set for the service still wins
+//@ pragma DefaultEnv mesa_glthread_app_profile = 0
+//@ pragma DefaultEnv MESA_DEBUG = silent
+//@ pragma DefaultEnv GALLIUM_THREAD = 0
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell

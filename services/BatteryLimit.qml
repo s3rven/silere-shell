@@ -85,6 +85,18 @@ Singleton {
     function _publish(row): void {
         if (!row) return
         root.devices = root.devices.map(d => d.nativePath === row.nativePath ? row : d)
+        root._followStops(root.devices)
+    }
+
+    // a stop learned from an earlier hold would keep timing the next charge to it
+    function stopAfter(rows, heldAt: int): int {
+        const on = rows.filter(d => d.on)
+        if (rows.length === 0) return heldAt
+        if (on.length === 0) return 0
+        return on.every(d => d.stopsAt > 0) ? Math.max(...on.map(d => d.stopsAt)) : heldAt
+    }
+    function _followStops(rows): void {
+        Battery._heldAt = root.stopAfter(rows, Battery._heldAt)
     }
 
     on_WantedChanged: if (root._wanted && !root._listed) root.rescan()

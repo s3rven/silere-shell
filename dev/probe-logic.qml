@@ -12267,6 +12267,69 @@ ShellRoot {
         Hooks._present = hookPresentWas
         Battery._notificationState = battStateWas
 
+        const ratesWas = Battery._rates
+        const meanRateWas = Battery._meanRate
+        root._check(Battery.steadyTime(3600, 30, 20) === 5400 && Battery.steadyTime(3600, 0, 20) === 3600
+                && Battery.steadyTime(0, 30, 20) === 0,
+            "a burst of load no longer cuts the battery estimate: the time shown divides by the five-minute mean draw")
+        Battery._rates = []
+        Battery._noteRate(20, 1000)
+        Battery._noteRate(60, 241000)
+        Battery._noteRate(61, 242000)
+        Battery._noteRate(62, 243000)
+        root._check(Math.abs(Battery._meanRate - (240 * 20 + 60 + 61) / 242) < 1e-9,
+            "brief power changes count for their duration in the battery estimate")
+        Battery._noteRate(62, 361000)
+        root._check(Math.abs(Battery._meanRate - (180 * 20 + 60 + 61 + 118 * 62) / 300) < 1e-9,
+            "a battery interval that straddles the five-minute cutoff contributes only its in-window part")
+        Battery._noteRate(62, 543000)
+        root._check(Battery._meanRate === 62 && Battery._rates.length === 1,
+            "the older power readings expire even when the newest value stays constant")
+        Battery._noteRate(30, 100000)
+        root._check(Battery._meanRate === 30 && Battery._rates.length === 1,
+            "a backwards clock jump restarts the battery's rate window")
+        Battery._noteRate(0, 101000)
+        root._check(Battery._meanRate === 0 && Battery._rates.length === 0,
+            "an unknown power rate clears the estimate's history")
+        Battery._rates = ratesWas
+        Battery._meanRate = meanRateWas
+        // measured 11-19: 14% -> 80% took 56 min where UPower said 77 to full
+        root._check(Math.round(Battery.timeToStop(77 * 60, 14, 80) / 60) === 59
+                && Battery.timeToStop(600, 80, 80) === 0 && Battery.timeToStop(600, 85, 80) === 600
+                && Battery.timeToStop(600, 50, 0) === 600,
+            "a charge held short of full is timed to the level it stops at, and to full once past it")
+        // the pure step: Battery's own _passedStop also clears a learned stop while this machine charges past it
+        const probeLimit = (on, stopsAt) => ({ path: "/org/freedesktop/UPower/devices/battery_PROBE",
+            nativePath: "PROBE", on: on, stopsAt: stopsAt })
+        root._check(BatteryLimit.stopAfter([probeLimit(true, 0)], 80) === 80
+                && BatteryLimit.stopAfter([probeLimit(false, 0)], 80) === 0,
+            "a charge limit switched off forgets the stop it last held at, so the next charge is timed to full")
+        root._check(BatteryLimit.stopAfter([probeLimit(true, 60)], 80) === 60
+                && BatteryLimit.stopAfter([probeLimit(true, 60), probeLimit(true, 0)], 80) === 80
+                && BatteryLimit.stopAfter([], 80) === 80,
+            "a charge limit whose stop the kernel names times the charge to that stop, not to a higher one held before")
+        const heldAtWas = Battery._heldAt
+        const limitDevicesWas = BatteryLimit.devices
+        BatteryLimit.devices = [probeLimit(true, 60)]
+        Battery._heldAt = 80
+        BatteryLimit._publish(probeLimit(false, 0))
+        root._check(Battery._heldAt === 0 && BatteryLimit.devices.length === 1 && !BatteryLimit.devices[0].on,
+            "publishing a limit row replaces it and applies its stop to the battery's timing")
+        // 100 is never passed, whatever this machine's battery is doing
+        Battery._heldAt = 100
+        Battery._forgetPassedStop()
+        root._check(Battery._heldAt === 100,
+            "a deferred check keeps a learned stop the battery has not charged past")
+        Battery._heldAt = heldAtWas
+        BatteryLimit.devices = limitDevicesWas
+
+        Battery._rates = [[1000, 20], [2000, 30]]
+        const agingTwo = Battery._rateAge.running
+        Battery._rates = [[1000, 20]]
+        root._check(agingTwo && !Battery._rateAge.running,
+            "steady power keeps ageing the battery's older readings, and stops once one reading is left")
+        Battery._rates = ratesWas
+
         const updateCountWas = Updates.count
         Updates.count = 5
         Hooks._runTimes = []

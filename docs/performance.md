@@ -124,6 +124,19 @@ animations to a roughly 16 ms timer when the bar and a popup are visible as sepa
 windows, making a high-refresh display look like 60 Hz. Launch with
 `QSG_USE_SIMPLE_ANIMATION_DRIVER=0` to compare or work around a driver-specific issue.
 
+## GL driver threads
+
+Mesa gives each OpenGL context two helper threads by default: glthread, and on most Gallium drivers a
+driver thread. They pay off for games that issue thousands of draw calls a frame. Silere's frames are
+small, and passing each one through two more threads cost more than it saved, so the shell turns both
+off for itself with `mesa_glthread_app_profile=0` and `GALLIUM_THREAD=0`. The first does what
+`mesa_glthread=false` does without a notice in the journal for every window, and `MESA_DEBUG=silent`
+quiets the one Mesa prints for the switch itself. In the nested lab, a menu open and
+close took 24 to 31% less CPU, the menu's first frame came about a fifth sooner, the shell held 3 to
+5 MB less memory, and each window runs two threads fewer; the visualizer costs a few percent less.
+Other drivers ignore these variables, apps you open through the compositor don't inherit them, and a
+value you set for the service wins.
+
 ## Visualizer and Cava
 
 The visualizer is the main optional CPU cost, and only while it is on screen and music plays.

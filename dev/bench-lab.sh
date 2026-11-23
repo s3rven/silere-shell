@@ -7,6 +7,8 @@
 #   dev/bench-lab.sh soak     [--arm NAME=DIR]     [--hours 6] [--idle]  memory over a long session
 #   dev/bench-lab.sh visualizer [--arm NAME=DIR ...] [--n 2] [--window 20] [--rows 'LABEL|LABEL']  each visualizer setting's CPU, music playing
 # Also: --settings FILE copies a settings.json in, --out FILE keeps the raw results. Run one at a time on a quiet machine
+# --arm-env NAME=KEY=VALUE and --arm-setting NAME=KEY=JSON give one arm its own environment or settings value; a NAME
+# not given to --arm measures this checkout, so `--arm-env threaded=mesa_glthread=true` compares it with and without
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 for tool in quickshell qs kwin_wayland Hyprland pipewire wireplumber wpctl pw-cli dbus-run-session setsid python3; do

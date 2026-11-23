@@ -91,7 +91,8 @@ Singleton {
     readonly property StableObjectList _detailDevices: StableObjectList {
         source: root._powerDevices(UPower.devices ? UPower.devices.values : [])
     }
-    readonly property var details: root.detailsFor(root._detailDevices.values)
+    readonly property var detailDevices: root._detailDevices.values
+    readonly property var details: root.detailsFor(root.detailDevices)
     // what the details panel draws: one battery repeats nothing of the reading above it, so it needs a measurement of its own
     function detailsShown(list): bool {
         return list.length > 1 || list.some(d => d.health.length > 0 || d.energy.length > 0 || d.power.length > 0)
@@ -108,40 +109,108 @@ Singleton {
 
     function detailsFor(devices): var {
         const list = root._powerDevices(devices)
-        return list.map(device => {
-            const ups = device.type === UPowerDeviceType.Ups
-            const base = ups ? "UPS" : "Battery"
-            const name = SafeText.singleLineText(device.model || "", 96)
-            const state = device.state
-            const charging = state === UPowerDeviceState.Charging
-            const discharging = state === UPowerDeviceState.Discharging
-            const charge = root._measurement(device.percentage)
-                ? root.normalizedPercent(device.percentage) : -1
-            // health is UPower's Capacity in 0-100; only charge is scaled to 0-1
-            const health = device.healthSupported && root._measurement(device.healthPercentage)
-                && device.healthPercentage > 0 ? Math.min(100, device.healthPercentage) : -1
-            const energy = root._measurement(device.energy) && root._measurement(device.energyCapacity)
-                && device.energyCapacity > 0
-                ? root.measurementText(device.energy) + " / " + root.measurementText(device.energyCapacity) + " Wh" : ""
-            // UPower's EnergyRate is negative while charging by its spec; some backends report it that way
-            const rate = charging && typeof device.changeRate === "number" ? Math.abs(device.changeRate) : device.changeRate
-            const power = (charging || discharging) && root._measurement(rate) && rate > 0
-                ? root.measurementText(rate) + " W" : ""
-            // numbered within their own kind: a laptop beside a UPS is "Battery" and "UPS", not 1 and 2
-            const kind = list.filter(d => d.type === device.type)
-            return { name: kind.length === 1 ? base : base + " " + (kind.indexOf(device) + 1), model: name,
-                // the kernel's name for it, which ties the row to its charge limit
-                nativePath: String(device.nativePath || ""),
-                charge: charge >= 0 ? Math.round(charge) + "%" : "",
-                state: state === UPowerDeviceState.PendingCharge ? "not charging"
-                    : root.statusFor(true, state, discharging, state === UPowerDeviceState.FullyCharged),
-                health: health >= 0 ? Math.round(health) + "%" : "", energy: energy,
-                power: power, powerLabel: charging ? "Charging power" : "Power use" }
-        })
+        return list.map(device => root.detailFor(device, list))
     }
 
-    readonly property real   timeToEmpty: upowerReady ? UPower.displayDevice.timeToEmpty : 0
-    readonly property real   timeToFull:  upowerReady ? UPower.displayDevice.timeToFull  : 0
+    function detailFor(device, list): var {
+        device = device ?? ({})
+        const ups = device.type === UPowerDeviceType.Ups
+        const base = ups ? "UPS" : "Battery"
+        const name = SafeText.singleLineText(device.model || "", 96)
+        const state = device.state ?? UPowerDeviceState.Unknown
+        const charging = state === UPowerDeviceState.Charging
+        const discharging = state === UPowerDeviceState.Discharging
+        const charge = root._measurement(device.percentage)
+            ? root.normalizedPercent(device.percentage) : -1
+        // health is UPower's Capacity in 0-100; only charge is scaled to 0-1
+        const health = device.healthSupported && root._measurement(device.healthPercentage)
+            && device.healthPercentage > 0 ? Math.min(100, device.healthPercentage) : -1
+        const energy = root._measurement(device.energy) && root._measurement(device.energyCapacity)
+            && device.energyCapacity > 0
+            ? root.measurementText(device.energy) + " / " + root.measurementText(device.energyCapacity) + " Wh" : ""
+        // UPower's EnergyRate is negative while charging by its spec; some backends report it that way
+        const rate = charging && typeof device.changeRate === "number" ? Math.abs(device.changeRate) : device.changeRate
+        const power = (charging || discharging) && root._measurement(rate) && rate > 0
+            ? root.measurementText(rate) + " W" : ""
+        // numbered within their own kind: a laptop beside a UPS is "Battery" and "UPS", not 1 and 2
+        const kind = list.filter(d => d && d.type === device.type)
+        return { name: kind.length <= 1 ? base : base + " " + (kind.indexOf(device) + 1), model: name,
+            // the kernel's name for it, which ties the row to its charge limit
+            nativePath: String(device.nativePath || ""),
+            charge: charge >= 0 ? Math.round(charge) + "%" : "",
+            state: state === UPowerDeviceState.PendingCharge ? "not charging"
+                : root.statusFor(true, state, discharging, state === UPowerDeviceState.FullyCharged),
+            health: health >= 0 ? Math.round(health) + "%" : "", energy: energy,
+            power: power, powerLabel: charging ? "Charging power" : "Power use" }
+    }
+
+    // rescale UPower's estimate by time spent at each draw, since the rate signal only fires on changes
+    readonly property real _rateNow: upowerReady ? Math.abs(Number(UPower.displayDevice.changeRate) || 0) : 0
+    property var _rates: []
+    property real _meanRate: 0
+    on_RateNowChanged: Qt.callLater(root._sampleRate)
+    onStateChanged: {
+        root._rates = []
+        root._meanRate = 0
+        Qt.callLater(root._sampleRate)
+    }
+    function _sampleRate(): void {
+        const active = root.available && (root.charging || root.state === UPowerDeviceState.Discharging)
+        root._noteRate(active ? root._rateNow : 0, Date.now())
+    }
+    function _noteRate(watts: real, now: real): void {
+        if (!isFinite(watts) || watts <= 0) {
+            root._rates = []
+            root._meanRate = 0
+            return
+        }
+        const last = root._rates[root._rates.length - 1]
+        // a backwards clock jump starts a fresh window
+        const cutoff = now - 300000
+        let first = 0
+        while (first + 1 < root._rates.length && root._rates[first + 1][0] <= cutoff) first++
+        const samples = last && last[0] <= now ? root._rates.slice(first) : []
+        if (last && last[0] === now) samples[samples.length - 1] = [now, watts]
+        else if (samples.length === 0 || last[1] !== watts) samples.push([now, watts])
+        const duration = now - Math.max(cutoff, samples[0][0])
+        let weighted = 0
+        for (let i = 0; i < samples.length; i++) {
+            const end = i + 1 < samples.length ? samples[i + 1][0] : now
+            weighted += samples[i][1] * (end - Math.max(cutoff, samples[i][0]))
+        }
+        root._rates = samples
+        root._meanRate = duration > 0 ? weighted / duration : watts
+    }
+    // steady power can send no new rate signal for minutes while an older interval ages out
+    readonly property Timer _rateAge: Timer {
+        interval: 30000
+        repeat: true
+        running: root._rates.length > 1 && !Idle.isIdle
+        onTriggered: root._sampleRate()
+    }
+    function steadyTime(seconds: real, rateNow: real, meanRate: real): real {
+        return seconds > 0 && rateNow > 0 && meanRate > 0 ? seconds * rateNow / meanRate : seconds
+    }
+    readonly property real   timeToEmpty: upowerReady
+        ? root.steadyTime(UPower.displayDevice.timeToEmpty, root._rateNow, root._meanRate) : 0
+    readonly property real   timeToFull:  upowerReady ? root.timeToStop(
+        root.steadyTime(UPower.displayDevice.timeToFull, root._rateNow, root._meanRate), root.pct, root.chargeStop) : 0
+
+    // UPower counts to 100% under a charge limit too, and Lenovo's names no stop: the level the battery was last held at is it
+    property int _heldAt: 0
+    // some firmware reports a full battery on AC as held too: that is no limit
+    onHeldChanged: if (root.held && root.pct < 99) root._heldAt = Math.max(root._heldAt, Math.round(root.pct))
+    // charging on past it: the limit was switched off, or that hold had another cause
+    readonly property bool _passedStop: root.charging && root._heldAt > 0 && root.pct > root._heldAt + 1
+    // later, and only if still past: clearing _heldAt inside this handler re-enters the binding it reads (a binding loop)
+    on_PassedStopChanged: if (root._passedStop) Qt.callLater(root._forgetPassedStop)
+    function _forgetPassedStop(): void {
+        if (root._passedStop) root._heldAt = 0
+    }
+    readonly property int chargeStop: root.charging && root._heldAt >= root.pct ? root._heldAt : 0
+    function timeToStop(seconds: real, level: real, stop: int): real {
+        return stop > 0 && stop >= level && level < 100 ? seconds * (stop - level) / (100 - level) : seconds
+    }
     readonly property string timeLabel: {
         if (!available) return ""
         if (charging) return root.timeText(timeToFull, true)
