@@ -13130,6 +13130,13 @@ ShellRoot {
                 && ShellSettings.barSpacing === 12,
             "a mixed-case IPC write resolves and reports its clamped value")
         ShellSettings.barSpacing = ipcSpacingWas
+        const ipcMotionWas = ShellSettings.reduceMotion
+        root._check(ShellSettings._ipcSet("reduceMotion", "On") === "true" && ShellSettings.reduceMotion === true
+                && ShellSettings._ipcSet("reduceMotion", "no") === "false" && ShellSettings.reduceMotion === false
+                && ShellSettings._ipcSet("reduceMotion", "maybe").indexOf("error: 'maybe' is not valid") === 0
+                && ShellSettings._ipcSet("barSpacing", "on").indexOf("error:") === 0,
+            "an IPC write takes on/off and yes/no for a true|false setting, and only for one")
+        ShellSettings.reduceMotion = ipcMotionWas
 
         const ipcLeftWas = ShellSettings.barWidgetOrderLeft
         const ipcCenterWas = ShellSettings.barWidgetOrderCenter

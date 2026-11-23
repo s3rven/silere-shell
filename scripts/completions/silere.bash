@@ -1,13 +1,39 @@
 # shellcheck shell=bash
 
-# ipc targets, functions and settings come from the running shell, so they match its version
+# ipc targets, functions and settings come from the running shell, so they match its version; Settings pages are
+# MenuState's ids, which ci-lint holds this list to
+_silere_pages=(clock devices history indicators interface keybinds media osd popups separators surface theme underline
+    updates warnings widgets workspaces)
+
 _silere() {
     local cur="${COMP_WORDS[COMP_CWORD]}" words=() line target current=""
     COMPREPLY=()
     if [ "$COMP_CWORD" -eq 1 ]; then
-        words=(try reset run stop restart use status log doctor ipc link update repair service version uninstall help)
+        words=(try reset run stop restart use status log doctor ipc link update repair service version uninstall help
+            menu calendar quick tray toggle volume mic dismiss get set settings)
     else
         case "${COMP_WORDS[1]}" in
+            menu)
+                if [ "$COMP_CWORD" -eq 2 ]; then words=(home settings notifications playing close "${_silere_pages[@]}")
+                elif [ "$COMP_CWORD" -eq 3 ] && [ "${COMP_WORDS[2]}" = settings ]; then words=("${_silere_pages[@]}")
+                fi ;;
+            calendar|quick|tray) [ "$COMP_CWORD" -eq 2 ] && words=(close) ;;
+            volume|mic) [ "$COMP_CWORD" -eq 2 ] && words=(up down mute next) ;;
+            dismiss) [ "$COMP_CWORD" -eq 2 ] && words=(all) ;;
+            settings) [ "$COMP_CWORD" -eq 2 ] && words=(--changed "${_silere_pages[@]}") ;;
+            toggle|get|set)
+                [ "$COMP_CWORD" -eq 2 ] && [ "${COMP_WORDS[1]}" = toggle ] \
+                    && words=(dnd wifi bluetooth airplane night-light keep-awake presentation power-mode)
+                if [ "$COMP_CWORD" -eq 2 ] || { [ "$COMP_CWORD" -eq 3 ] && [ "${COMP_WORDS[1]}" = set ]; }; then
+                    while IFS= read -r line; do
+                        if [ "$COMP_CWORD" -eq 3 ]; then
+                            [ "${line%%=*}" = "${COMP_WORDS[2]}" ] && [[ "$line" =~ \ \ \[([^/][^]]*[|][^]]*)\]$ ]] \
+                                && IFS='|' read -r -a words <<< "${BASH_REMATCH[1]}"
+                        elif [ "${COMP_WORDS[1]}" != toggle ] || [[ "$line" == *"  [true|false]" ]]; then
+                            words+=("${line%%=*}")
+                        fi
+                    done < <(command silere ipc settings list '' 2>/dev/null)
+                fi ;;
             run) [ "$COMP_CWORD" -eq 2 ] && words=(--startup --supervised) ;;
             use)
                 words=(--dry-run)

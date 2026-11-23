@@ -20,7 +20,7 @@ usage() {
     local b="" r=""
     ! _silere_color_fd 1 || { b=$'\033[1m'; r=$'\033[0m'; }
     _usage_text | awk -v b="$b" -v r="$r" '
-        /^Usage:/ { print b $0 r; next }
+        /^[A-Z]/ { print b $0 r; next }
         /^  [^ ]/ { printf "  %s%s%s%s\n", b, substr($0, 3, 23), r, substr($0, 26); next }
         { print }'
 }
@@ -42,7 +42,6 @@ Usage: silere <command> [options]
   status                 Show installation and updater state
   log [--follow]         Print the running shell's log
   doctor [--json]        Run read-only installation diagnostics
-  ipc <target> <fn> ...  Call the running shell over IPC; alone, it lists the calls
   link                   Put silere on PATH, in ~/.local/bin, with shell completions
   update                 Check for a signed Silere release
   update --apply         Install the confirmed signed release
@@ -63,6 +62,45 @@ EOF
 die() {
     printf '%ssilere:%s %s\n' "$ERED" "$ER" "$*" >&2
     exit 1
+}
+
+# a crashed compositor leaves its socket file behind, so the pid that owns it decides: Hyprland's lock file, niri's name
+compositor_live() {
+    local socket="$1" pid=""
+    [ -S "$socket" ] || return 1
+    case "$socket" in
+        */.socket.sock) { read -r pid < "${socket%/*}/hyprland.lock"; } 2>/dev/null || pid="" ;;
+        *.sock) pid="${socket%.sock}"; pid="${pid##*.}" ;;
+    esac
+    [[ ! "$pid" =~ ^[0-9]+$ ]] || [ -e "/proc/$pid" ]
+}
+
+# A terminal that outlived its login, such as a tmux server kept across a logout, still names the old compositor; a
+# shell started from it maps on the new display under the same socket name but never hears the compositor, so the
+# workspaces freeze. The systemd user environment follows each login, so its names win when ours are dead
+adopt_live_session() {
+    local runtime="${XDG_RUNTIME_DIR:-}" line his="" niri="" names=()
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        [ -n "$runtime" ] && ! compositor_live "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" || return 0
+    elif [ -n "${NIRI_SOCKET:-}" ]; then
+        ! compositor_live "$NIRI_SOCKET" || return 0
+    else
+        return 0
+    fi
+    while IFS= read -r line; do
+        case "$line" in
+            HYPRLAND_INSTANCE_SIGNATURE=*) his="${line#*=}" ;;
+            NIRI_SOCKET=*) niri="${line#*=}" ;;
+        esac
+        case "$line" in
+            HYPRLAND_INSTANCE_SIGNATURE=*|NIRI_SOCKET=*|WAYLAND_DISPLAY=*|DISPLAY=*|XDG_SESSION_ID=*) names+=("$line") ;;
+        esac
+    done < <(timeout 2 systemctl --user show-environment 2>/dev/null)
+    if { [ -n "$his" ] && [ -n "$runtime" ] && compositor_live "$runtime/hypr/$his/.socket.sock"; } \
+            || { [ -z "$his" ] && [ -n "$niri" ] && compositor_live "$niri"; }; then
+        unset HYPRLAND_INSTANCE_SIGNATURE NIRI_SOCKET
+        export "${names[@]}"
+    fi
 }
 
 run_shell() {
@@ -137,6 +175,43 @@ run_shell() {
     fi
     export SILERE_LAUNCH_REVISION="$launch_revision"
     exec "$shell_bin" --no-duplicate "${detail[@]}" -p "$ROOT/shell.qml" "$@"
+}
+
+# Qt aborts in createEventDispatcher when the socket is not there yet, which at compositor boot the autostart could
+# outrun. Hyprland and niri create it before they run autostart, so this rarely waits; sleep without fractions waits once
+wait_for_wayland() {
+    local display="${WAYLAND_DISPLAY:-wayland-0}" socket i
+    case "$display" in
+        /*) socket="$display" ;;
+        *) socket="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/$display" ;;
+    esac
+    for ((i = 0; i < 20; i++)); do
+        [ -S "$socket" ] && return 0
+        sleep 0.05 2>/dev/null || { sleep 1; return 0; }
+    done
+}
+
+# asking a Quickshell build whether it takes a flag starts the whole binary, ~65 ms of every start, so the answer is
+# kept per binary (path, size, mtime) and asked again only after an upgrade
+qs_takes_flag() { # $1 = binary, $2 = flag
+    local bin="$1" flag="$2" cache_home cache key answer=0
+    cache_home="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache 2>/dev/null)" || cache_home=""
+    cache="${cache_home:+$cache_home/silere-shell/qs-flags}"
+    key="$(stat -L -c '%n %s %Y' -- "$bin" 2>/dev/null)" || key=""
+    if [ -n "$cache" ] && [ -n "$key" ] && [ -r "$cache" ]; then
+        answer="$(head -n 1 -- "$cache" 2>/dev/null)" || answer=""
+        case "$answer" in
+            "$key $flag 1") return 0 ;;
+            "$key $flag 0") return 1 ;;
+        esac
+    fi
+    answer=0
+    "$bin" "$flag" --version >/dev/null 2>&1 && answer=1
+    if [ -n "$cache" ] && [ -n "$key" ] && (umask 077 && mkdir -p -- "${cache%/*}") 2>/dev/null; then
+        printf '%s %s %s\n' "$key" "$flag" "$answer" > "$cache.$$" 2>/dev/null && mv -f -- "$cache.$$" "$cache" 2>/dev/null \
+            || rm -f -- "$cache.$$" 2>/dev/null
+    fi
+    [ "$answer" = 1 ]
 }
 
 # Silere is the notification daemon, so nothing else on the desktop can say it failed to start.
@@ -343,6 +418,7 @@ use_checkout() {
     fi
 
     current="$(readlink -f -- "$link_path" 2>/dev/null || true)"
+    local path_ours=1
     if [ "$current" = "$target/scripts/silere" ]; then
         printf 'silere on PATH: already %s\n' "$target"
     elif { [ -L "$link_path" ] && [ "${current%/scripts/silere}" != "$current" ] \
@@ -356,7 +432,12 @@ use_checkout() {
             printf 'silere on PATH: %s\n' "$target"
         fi
     else
+        path_ours=0
         printf '%snote:%s %s is not a link to a Silere checkout; left it alone\n' "$YELLOW" "$R" "$link_path"
+    fi
+    # completions follow the command, as the installer links them beside it
+    if [ "$path_ours" -eq 1 ]; then
+        if [ "$dry" -eq 1 ]; then link_completions "$target" --dry-run; else link_completions "$target"; fi
     fi
 
     if [ "$unit_known" -eq 1 ] && [ "$unit_root" != "$target" ]; then
@@ -407,19 +488,30 @@ use_checkout() {
     exec bash "$target/scripts/silere" restart
 }
 
-link_completions() {
-    local src dest
+# a link to another Silere checkout's completion, even one since deleted, follows a switch to this one; anything
+# else at that path is the user's
+link_completions() { # [checkout] [--dry-run]
+    local root="${1:-$ROOT}" dry="${2:-}" src dest
     while IFS=$'\t' read -r src dest; do
+        [ -f "$src" ] || continue
         if [ -L "$dest" ] && [ "$(readlink -f -- "$dest" 2>/dev/null || true)" = "$src" ]; then
             continue
+        elif [ -L "$dest" ] && case "$(readlink -- "$dest")" in
+                */scripts/completions/silere.fish|*/scripts/completions/silere.bash) true ;; *) false ;; esac; then
+            if [ -n "$dry" ]; then printf 'completions: would relink %s -> %s\n' "$dest" "$src"
+            elif ln -sfn -- "$src" "$dest"; then printf 'relinked %s\n' "$dest"
+            else printf '%snote:%s could not relink %s\n' "$EYELLOW" "$ER" "$dest" >&2
+            fi
         elif [ -e "$dest" ] || [ -L "$dest" ]; then
             printf '%snote:%s %s already exists; left it alone\n' "$YELLOW" "$R" "$dest"
+        elif [ -n "$dry" ]; then
+            printf 'completions: would link %s -> %s\n' "$dest" "$src"
         elif (umask 077 && mkdir -p -- "${dest%/*}") && ln -s -- "$src" "$dest"; then
             printf 'linked %s\n' "$dest"
         else
             printf '%snote:%s could not link %s\n' "$EYELLOW" "$ER" "$dest" >&2
         fi
-    done < <(_silere_completion_links "$ROOT")
+    done < <(_silere_completion_links "$root")
 }
 
 package_manager() {
@@ -646,22 +738,48 @@ case "$command_name" in
             printf '%s\n' "$calls"
             exit 0
         fi
-        # a refused call still exits 0 with its reason on stdout: the shell's own "error:" line, or
-        # Quickshell's for a target, function or argument it cannot match; scripts need a failure
-        rc=0; out="$(ipc_shell call "$@")" || rc=$?
-        # Quickshell's own refusals name neither the target nor where to look
-        case "$out" in
-            "Target not found.") die "no IPC target named $1; silere ipc lists them" ;;
-            "Function not found.") die "$1 has no call named $2; silere ipc $1 lists them" ;;
-            "Too few arguments provided"*|"Too many arguments provided"*|"Unable to parse argument"*)
-                die "${out%%$'\n'*}; silere ipc $1 shows what $2 takes" ;;
-            error:*) [ "$rc" -ne 0 ] || rc=1 ;;
+        ipc_call "$@"
+        ;;
+    menu)
+        menu_command "$@"
+        ;;
+    calendar|quick|quick-actions|tray)
+        target="$command_name"
+        [ "$target" = calendar ] || [ "$target" = tray ] || target=quickActions
+        case "$#:${1:-}" in
+            0:) ipc_call "$target" toggle ;;
+            1:close) ipc_call "$target" close ;;
+            *) bad_usage "$command_name [close]" ;;
         esac
-        if [ "$rc" -ne 0 ]; then
-            [ -z "$out" ] || printf '%s\n' "$out" >&2
-            exit "$rc"
-        fi
-        [ -z "$out" ] || printf '%s\n' "$out"
+        ;;
+    volume|mic)
+        audio_command "$command_name" "$@"
+        ;;
+    toggle)
+        toggle_command "$@"
+        ;;
+    dismiss)
+        case "$#:${1:-}" in
+            0:) ipc_call notifications dismiss ;;
+            1:all) ipc_call notifications dismissAll ;;
+            *) bad_usage "dismiss [all]" ;;
+        esac
+        ;;
+    get)
+        [ "$#" -eq 1 ] || bad_usage "get <setting>"
+        ipc_call settings get "$1"
+        ;;
+    set)
+        [ "$#" -eq 2 ] || bad_usage "set <setting> <value>"
+        ipc_call settings set "$1" "$2"
+        ;;
+    settings)
+        [ "$#" -le 1 ] || bad_usage "settings [filter|--changed]"
+        case "${1:-}" in
+            --changed) ipc_call settings modified ;;
+            -*) bad_usage "settings [filter|--changed]" ;;
+            *) ipc_call settings list "${1:-}" ;;
+        esac
         ;;
     update)
         mode="$(sed -n 's/^mode=//p' <<<"$(version_info 2>/dev/null)")"

@@ -5,7 +5,12 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/silere-portability-test.XXXXXX")"
-trap 'rm -rf "$TMP"' EXIT
+# a test that set -e stops prints nothing of its own, and ci-lint then shows a bare failure; this names the test
+current_test=""
+trap 'case "$BASH_COMMAND" in test_*) current_test="${BASH_COMMAND%% *}" ;; esac' DEBUG
+trap 'rc=$?; rm -rf "$TMP"; [ "$rc" -eq 0 ] || printf "FAIL: the suite stopped (status %s) in %s\n" "$rc" "${current_test:-its setup}" >&2' EXIT
+# the launcher keeps what it learns about the qs binary in the cache; a stub's answer must never reach the real one
+export XDG_CACHE_HOME="$TMP/xdg-cache"
 
 # No test may reach the live session's notification daemon or service manager.
 # Individual stubs provide fixture state; defaults keep unhandled calls isolated.
@@ -3414,16 +3419,27 @@ test_fish_completion_scope() (
             -c 'source $argv[1]; complete -C $argv[2]' "$ROOT/scripts/completions/silere.fish" "$1" | cut -f1
     }
     top="$(fish_complete 'silere ' | sort | paste -sd ' ')"
-    bash_top="$(sed -n 's/^ *words=(\(try .*\))$/\1/p' "$ROOT/scripts/completions/silere.bash" | tr ' ' '\n' | sort | paste -sd ' ')"
+    bash_top="$(sed -n '/^ *words=(try /,/)$/p' "$ROOT/scripts/completions/silere.bash" | sed 's/words=//' | tr -d '()' \
+        | tr -s ' ' '\n' | grep . | sort | paste -sd ' ')"
     assert_eq "$bash_top" "$top" "fish and bash complete the same commands"
     # service lists status, ipc asks the running shell and use lists directories
     for command in $top; do
         case "$command" in service|ipc|use) continue ;; esac
         offered="$(fish_complete "silere $command ")"
         for word in $top; do
+            # the menu's Settings tab is a word of its own
+            [ "$command $word" != "menu settings" ] || continue
             ! grep -qx -- "$word" <<<"$offered" || fail "fish offers silere $command $word"
         done
     done
+    # the short verbs complete their own words, by position, so a word that is also a command adds nothing
+    grep -qx playing <<<"$(fish_complete 'silere menu ')" || fail "fish does not offer the menu's tabs"
+    grep -qx theme <<<"$(fish_complete 'silere menu settings ')" || fail "fish does not offer Settings pages"
+    ! grep -qx -- --changed <<<"$(fish_complete 'silere menu settings ')" || fail "fish offers silere settings' flag to menu"
+    [ -z "$(fish_complete 'silere menu home ')" ] || fail "fish offers words after silere menu home"
+    grep -qx night-light <<<"$(fish_complete 'silere toggle ')" || fail "fish does not offer the quick actions to toggle"
+    grep -qx next <<<"$(fish_complete 'silere mic ')" || fail "fish does not offer the microphone's words"
+    [ -z "$(fish_complete 'silere volume up ')" ] || fail "fish offers words after silere volume up"
     # service takes one of its words, and only install takes --dry-run, once
     ! grep -qxE 'install|status|remove' <<<"$(fish_complete 'silere service install ')" \
         || fail "fish offers another service word after silere service install"
@@ -3688,9 +3704,10 @@ test_cli_status_readings() (
 )
 
 test_cli_use_switches_checkout() (
-    local t="$TMP/use" out dropin
-    mkdir -p "$t/stubs" "$t/other/scripts" "$t/home/.local/bin" "$t/config"
+    local t="$TMP/use" out dropin comp_links
+    mkdir -p "$t/stubs" "$t/other/scripts/completions" "$t/home/.local/bin" "$t/config"
     : > "$t/other/shell.qml"
+    : > "$t/other/scripts/completions/silere.fish"; : > "$t/other/scripts/completions/silere.bash"
     printf '#!/bin/sh\necho "other $*" >> "%s/calls"\n' "$t" > "$t/other/scripts/silere"
     chmod +x "$t/other/scripts/silere"
     ln -s "$t/other/scripts/silere" "$t/home/.local/bin/silere"
@@ -3727,7 +3744,7 @@ STUB
     # the fake HOME hides any safe.directory that lets a container trust this checkout,
     # and without it git cannot read the repository and the checkout looks packaged
     cli() {
-        env -u LC_ALL -u XDG_CONFIG_HOME HOME="$t/home" XDG_CONFIG_HOME="$t/config" PATH="$t/stubs:$PATH" \
+        env -u LC_ALL -u XDG_CONFIG_HOME HOME="$t/home" XDG_CONFIG_HOME="$t/config" XDG_DATA_HOME="$t/data" PATH="$t/stubs:$PATH" \
             GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
             WAYLAND_DISPLAY="${SILERE_TEST_USE_WAYLAND-wayland-test}" bash "$ROOT/scripts/silere" "$@"
     }
@@ -3741,14 +3758,22 @@ STUB
     case "$out" in *"already running from $t/other"*) ;; *) fail "run beside another copy said: $out" ;; esac
     ! grep -q '^launch\|restart' "$t/calls" || fail "a second shell was started beside another copy: $(cat "$t/calls")"
 
+    # each completion this machine's shells read, as "source<TAB>link" for a checkout
+    comp_links() { (XDG_DATA_HOME="$t/data"; source "$ROOT/scripts/lib/xdg.sh"; source "$ROOT/scripts/lib/completions.sh"
+        _silere_completion_links "$1"); }
     out="$(cli use --dry-run)" || fail "use --dry-run failed"
     case "$out" in *"would start $ROOT"*) ;; *) fail "use --dry-run said: $out" ;; esac
+    [ -z "$(comp_links "$ROOT")" ] || case "$out" in *"completions: would link"*) ;; *) fail "use --dry-run named no completions: $out" ;; esac
+    [ ! -e "$t/data" ] || fail "use --dry-run linked completions"
     [ ! -e "$dropin" ] || fail "use --dry-run wrote the drop-in"
     assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use --dry-run left the link"
 
     : > "$t/calls"
     out="$(cli use)" || fail "use failed: $out"
     assert_eq "$ROOT/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" "use links this checkout"
+    while IFS=$'\t' read -r comp_src comp_dest; do
+        assert_eq "$comp_src" "$(readlink "$comp_dest")" "use links this checkout's completion"
+    done < <(comp_links "$ROOT")
     grep -qFx "ExecStart=\"$ROOT/scripts/silere\" run" "$dropin" || fail "drop-in does not start this checkout"
     grep -qFx "ConditionPathExists=$ROOT/shell.qml" "$dropin" || fail "drop-in kept the old condition"
     grep -qFx 'systemctl --user daemon-reload' "$t/calls" || fail "use did not reload the units"
@@ -4361,6 +4386,7 @@ test_fish_completion_scope
 test_bash_service_completion
 test_cli_restart_and_log
 test_cli_ipc_resolution
+test_cli_short_verbs
 test_cli_status_readings
 test_cli_use_switches_checkout
 test_pooled_motion_scope

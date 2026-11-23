@@ -13,7 +13,7 @@
 | Wi-Fi or Bluetooth list | Click its bar widget (reveals the power switch while the radio is off) |
 
 Clicking outside a popup closes it. The installer offers **Super + /** for the menu on Hyprland
-and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`; on Hyprland,
+and prints the line to add on niri. Any keybind can run `silere menu`; on Hyprland,
 [`global, silere:menu`](scripting.md#keybinds-on-hyprland) answers faster.
 
 ## The bar
@@ -61,7 +61,10 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 Focus on a notification expands it and pauses its timeout, and every timeout waits while a panel is open. In **Settings › Widgets › Show & order**,
 Tab to a widget's ⋮ grip and press Up or Down to move it.
 
-The bar never takes the keyboard, so tray menus open from a keybind: `silere ipc tray toggle`
+On narrow displays, **Sections** in the Settings header opens the category list over the page.
+Pick a section to return to the controls, or press Escape to close the list where you are.
+
+The bar never takes the keyboard, so tray menus open from a keybind: `silere tray`
 opens the first app's menu. Right or Enter opens a submenu, Left or Escape leaves it, and Left
 and Right on the top level move between apps.
 

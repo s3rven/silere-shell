@@ -1385,7 +1385,7 @@ elif [ -L "$CLI_LINK" ] \
 elif [ -e "$CLI_LINK" ] || [ -L "$CLI_LINK" ]; then
     _warn "$CLI_LINK already exists and is not owned by this Silere install"
     _skip "left it untouched; run $CLI_TARGET directly"
-elif _ask "Install the silere command (run, status, doctor, ipc, update)?"; then
+elif _ask "Install the silere command (menu, toggle, volume, status, update and more)?"; then
     if _dry; then
         _would "create $CLI_LINK → $CLI_TARGET"
         cli_planned=true

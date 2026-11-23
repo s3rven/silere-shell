@@ -1662,8 +1662,9 @@ optdep_tools="$(grep -E '^_optdep(_any)? ' scripts/install.sh \
 unlisted_tools=""
 while read -r _tool; do
     [ -z "$_tool" ] && continue
-    # matugen is a named dependency, hyprctl ships with the required compositor
-    case "$_tool" in matugen|hyprctl) continue ;; esac
+    # matugen is a named dependency, hyprctl ships with the required compositor, and silere is this shell's own
+    # command, which the installer offers on its own
+    case "$_tool" in matugen|hyprctl|silere) continue ;; esac
     printf '%s\n' "$optdep_tools" | grep -qxF -- "$_tool" \
         || unlisted_tools="$unlisted_tools $_tool"
 done < <(grep -oE '_tools\.[a-z0-9]+|_tools\["[a-z0-9-]+"\]' services/SystemTools.qml \
@@ -1849,11 +1850,10 @@ section "theme palette coverage"
 theme_tmpl="assets/matugen-theme.json"
 theme_loader="config/MatugenPalette.qml"
 if [ -f "$theme_tmpl" ] && [ -f "$theme_loader" ]; then
-    # Palette roles the shell actually reads. usingFallback and paletteStale describe
-    # load state, not colours, so they have no template key to cover.
+    # Palette roles have a template key. Load state and reload controls do not.
     used=$(grep -rhoE 'MatugenTheme\.[a-zA-Z_][a-zA-Z0-9_]*' --include='*.qml' --exclude-dir='.?*' . \
            | sed 's/^MatugenTheme\.//' \
-           | grep -vE '^(_|qml$|usingFallback$|paletteStale$)' | sort -u)
+           | grep -vE '^(_|(qml|usingFallback|paletteStale|loadState|palettePath|reload)$)' | sort -u)
     theme_gap=0
     for f in "$theme_tmpl" "$theme_loader"; do
         declared=$(grep -oE '^[[:space:]]+[a-zA-Z]+:[[:space:]]+"?#[0-9a-fA-F{]' "$f" \
@@ -2494,6 +2494,33 @@ elif [ -n "$unmarked_ipc" ]; then
   fail "these services hold an IPC target but declare no armed marker:$unmarked_ipc"
 else
   ok "arming" "every armed service and IPC target is read at startup"
+fi
+
+# the Keybinds page names a bind by the `silere ipc` call it runs, and offers some to bind: each must be one the shell
+# answers, or a renamed call would read as a Silere action that does nothing
+missing_calls=""
+while read -r target fn; do
+  [ -n "$target" ] || continue
+  holder="$(grep -lE "target: \"$target\"" services/*.qml shell.qml 2>/dev/null | head -1)"
+  if [ -z "$holder" ] || ! grep -qE "function $fn\(" "$holder"; then missing_calls="$missing_calls $target.$fn"; fi
+done < <(sed -n '/^var silereCalls = {/,/^}/p' services/KeybindList.js | grep -oE '^ +"[A-Za-z]+ [A-Za-z]+"' | tr -d '"')
+if [ -n "$missing_calls" ]; then
+  fail "the Keybinds page names IPC calls the shell does not answer:$missing_calls"
+else
+  ok "keybind calls" "every Silere call the Keybinds page names is one the shell answers"
+fi
+
+# `silere menu <page>` completes Settings pages from a list in each completion; a page added or renamed in MenuState
+# would complete to a word that opens Theme instead
+nav_ids="$(grep -oE 'section: "[^"]+"' services/MenuState.qml | sed -E 's/.*"([^"]+)"/\1/' | sort -u | paste -sd ' ')"
+bash_pages="$(sed -n '/^_silere_pages=(/,/)$/p' scripts/completions/silere.bash | sed 's/^_silere_pages=//' | tr -d '()' \
+  | tr -s ' ' '\n' | sed '/^$/d' | sort | paste -sd ' ')"
+fish_pages="$(sed -n '/^set -l pages /,/[^\\]$/p' scripts/completions/silere.fish | sed 's/^set -l pages //' | tr -d '\\' \
+  | tr -s ' ' '\n' | sed '/^$/d' | sort | paste -sd ' ')"
+if [ -z "$nav_ids" ] || [ "$bash_pages" != "$nav_ids" ] || [ "$fish_pages" != "$nav_ids" ]; then
+  fail "the completions' Settings pages differ from MenuState's ($nav_ids): bash '$bash_pages', fish '$fish_pages'"
+else
+  ok "completion pages" "both completions offer MenuState's Settings pages"
 fi
 
 section "keyboard interaction"

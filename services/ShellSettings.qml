@@ -582,8 +582,14 @@ Singleton {
 
     function _ipcSet(key: string, value): string {
         const k = root._ipcKey(key)
-        if (!root.schemaFor(k)) return "error: unknown setting '" + key + "'; try `list`"
-        if (!root.setValue(k, value))
+        const s = root.schemaFor(k)
+        if (!s) return "error: unknown setting '" + key + "'; try `list`"
+        // a terminal says on and off as often as true and false; the file and the pages stay strict
+        const word = String(value).trim().toLowerCase()
+        const v = s.t !== "bool" ? value
+            : (word === "on" || word === "yes" || word === "true") ? "true"
+            : (word === "off" || word === "no" || word === "false") ? "false" : value
+        if (!root.setValue(k, v))
             return "error: '" + value + "' is not valid for " + k
                 + "; expected " + root.constraintOf(k)
         // normalize widget-order writes after all three zones are readable

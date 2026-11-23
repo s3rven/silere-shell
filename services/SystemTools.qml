@@ -64,6 +64,8 @@ Singleton {
     readonly property bool hasPwvucontrol:   _tools.pwvucontrol ?? false
     readonly property bool hasPavucontrol:   _tools.pavucontrol ?? false
     readonly property bool hasWpctl:         _tools.wpctl ?? false
+    // the Keybinds page offers lines that run it; without it on PATH they name this copy's own launcher
+    readonly property bool hasSilere:        _tools.silere ?? false
     readonly property bool hasPwDump:        _tools["pw-dump"] ?? false
     readonly property bool hasCurl:          _tools.curl ?? false
     readonly property bool hasXdgOpen:       _tools["xdg-open"] ?? false
@@ -209,7 +211,7 @@ Singleton {
             ">/dev/null 2>&1 && echo @powerprofiles; " +
             "for t in brightnessctl inotifywait nmcli cava matugen hyprsunset wlsunset hyprlock swaylock gtklock systemctl loginctl hyprctl pgrep notify-send " +
             "busctl checkupdates paru yay timeout apt dnf zypper xbps-install powerprofilesctl fc-list pwvucontrol pavucontrol wpctl pw-dump curl xdg-open " +
-            "blueman-manager nm-connection-editor nmtui xdg-terminal-exec ddcutil " +
+            "blueman-manager nm-connection-editor nmtui xdg-terminal-exec ddcutil silere " +
             "missioncenter resources gnome-system-monitor plasma-systemmonitor btop htop " +
             "kitty foot alacritty wezterm ghostty konsole; do " +
             "  command -v \"$t\" >/dev/null 2>&1 && echo \"$t\"; " +

@@ -135,8 +135,8 @@ running. To switch, run the target copy's command:
 /path/to/other-copy/scripts/silere use
 ```
 
-This updates the command link, points an existing service at that copy through a
-drop-in, and restarts the shell. Compositor startup lines keep their own paths;
+This updates the command link and its shell completions, points an existing service at that copy
+through a drop-in, and restarts the shell. Compositor startup lines keep their own paths;
 follow the command's reminder to update yours. `silere use /path/to/copy` switches back.
 Tab completes checkout directories in bash and fish, including paths containing spaces.
 Before applying a switch, Silere checks the runtime, session and service override.
@@ -222,10 +222,10 @@ checkout if you skipped creating the link.
 | Show the installed version | `silere version` |
 | Check, install or undo an update | [Update commands](updates.md) |
 | Preview, apply or undo a repair | `silere repair`, `silere repair --apply`, `silere repair --undo` |
-| Call a function from a keybind or script | `silere ipc <target> <function> [args]` — [scripting guide](scripting.md) |
+| Control the shell from a keybind or script | `silere menu`, `silere toggle dnd`, `silere volume up`, `silere set <key> <value>` — [scripting guide](scripting.md) |
 | Remove installer integrations | `silere uninstall` |
 
-`silere` alone lists its commands, and `silere ipc` alone lists the calls the running
+`silere` alone lists its commands, and `silere ipc` alone lists every call the running
 shell answers. `silere --version` also prints the installed version. The link adds fish
 and bash completions, down to setting names and their values.
 

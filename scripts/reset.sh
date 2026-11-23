@@ -80,10 +80,21 @@ _leftovers() {
     return 0
 }
 
-# the lock stays: another update run may hold it, and removing it would let two run at once
+_has_history_to_clear() {
+    [ "$WITH_HISTORY" = 1 ] || return 1
+    local path
+    for path in "$HISTORY" "$LEGACY_HISTORY" "$SAVED_DIR/notifications.json"; do
+        if [ -f "$path" ] || [ -L "$path" ]; then return 0; fi
+    done
+    return 1
+}
+
+# the lock stays: another update run may hold it, and removing it would let two run at once. qs-flags is the
+# launcher's note about the Quickshell binary, rewritten at every start, so counting it made a reset never find
+# nothing to do; it follows the binary on its own
 _caches() {
     [ -d "$CACHE_DIR" ] || return 0
-    find "$CACHE_DIR" -mindepth 1 -maxdepth 1 ! -name update.lock -printf '%f\n' 2>/dev/null | sort
+    find "$CACHE_DIR" -mindepth 1 -maxdepth 1 ! -name update.lock ! -name qs-flags -printf '%f\n' 2>/dev/null | sort
 }
 
 _is_checkout() {
