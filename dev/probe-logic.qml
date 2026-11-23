@@ -4332,6 +4332,20 @@ ShellRoot {
             ? diagnosticsComponent.createObject(root, { width: 360 }) : null
         root._check(diagnostics !== null, "diagnostics builds for behavioral checks")
         if (diagnostics) {
+            const alertWarningWas = ShellSettings.osdBatteryWarn
+            const alertToolsWas = SystemTools._tools
+            const reportsAlerts = issues => issues.some(issue => issue.n === "System alerts")
+            const notifySendWorks = !reportsAlerts(diagnostics._attentionIssues)
+                && !reportsAlerts(diagnostics._optionalIssues)
+            SystemTools._tools = ({ busctl: true })
+            const busctlWorks = !reportsAlerts(diagnostics._attentionIssues)
+                && !reportsAlerts(diagnostics._optionalIssues)
+            SystemTools._tools = ({})
+            ShellSettings.osdBatteryWarn = true
+            root._check(notifySendWorks && busctlWorks && reportsAlerts(diagnostics._attentionIssues),
+                "diagnostics accepts either alert transport and warns when neither can deliver")
+            ShellSettings.osdBatteryWarn = alertWarningWas
+            SystemTools._tools = alertToolsWas
             const deviceRows = diagnostics._deviceChecks
             root._check(deviceRows.some(row => row.id === "audio") && deviceRows.some(row => row.id === "microphone"),
                 "diagnostics describes output and microphone readiness without requiring real audio devices")
@@ -9414,20 +9428,29 @@ ShellRoot {
             artRun.destroy()
         })
         artRun.running = true
-        // a stand-in notify-send records each alert: a command failing at once alerts, one failing after 6 s does not
-        const quickFail = SystemTools.launchArgv(["false"], "Probe failed")
-        const lateFail = SystemTools.launchArgv(["sh", "-c", "sleep 6; exit 1"], "Probe failed")
+        // capture both transports' arguments and count alerts before and after a long-running command fails
+        const alertTitle = "-Probe's tool failed"
+        const launchToolsWas = SystemTools._tools
+        SystemTools._tools = Object.assign({}, launchToolsWas, { "notify-send": true })
+        const fastFailure = SystemTools.launchArgv(["false"], alertTitle)
+        const lateFailure = SystemTools.launchArgv(["sh", "-c", "sleep 6; exit 1"], alertTitle)
+        SystemTools._tools = Object.assign({}, launchToolsWas, { "notify-send": false, busctl: true })
+        const busFailure = SystemTools.launchArgv(["false"], alertTitle)
+        SystemTools._tools = launchToolsWas
+        const captureAlert = "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$SILERE_PROBE_ALERTS\"\n"
         const launchRun = processFactory.createObject(root, { command: ["bash", "-c",
             "d=$(mktemp -d) || exit 1; trap 'rm -rf \"$d\"' EXIT; "
-            + "printf '#!/bin/sh\\necho alert >> \"%s/alerts\"\\n' \"$d\" > \"$d/notify-send\"; chmod +x \"$d/notify-send\"; "
-            + "export PATH=\"$d:$PATH\"; "
-            + "\"$1\" -c \"$2\" bash false; quick=$(cat \"$d/alerts\" 2>/dev/null | wc -l); "
-            + "\"$1\" -c \"$2\" bash sh -c 'sleep 6; exit 1'; late=$(cat \"$d/alerts\" 2>/dev/null | wc -l); "
-            + "[ \"$quick\" = 1 ] && [ \"$late\" = 1 ]",
-            "check", quickFail[0], quickFail[2]] })
+            + "printf '%s' \"$1\" > \"$d/notify-send\"; cp \"$d/notify-send\" \"$d/busctl\"; chmod +x \"$d/notify-send\" \"$d/busctl\"; "
+            + "export PATH=\"$d:$PATH\" SILERE_PROBE_ALERTS=\"$d/alerts\"; "
+            + "bash -c \"$2\" bash false; "
+            + "grep -Fxq -- -- \"$d/alerts\" && grep -Fxq -- \"$4\" \"$d/alerts\" || exit 1; "
+            + "bash -c \"$2\" bash sh -c 'sleep 6; exit 1'; [ \"$(grep -Fxc -- \"$4\" \"$d/alerts\")\" = 1 ] || exit 1; "
+            + "SILERE_PROBE_ALERTS=\"$d/bus-alerts\" bash -c \"$3\" bash false; "
+            + "grep -Fxq -- \"$4\" \"$d/bus-alerts\" && grep -Fxq -- -1 \"$d/bus-alerts\"",
+            "check", captureAlert, fastFailure[2], busFailure[2], alertTitle] })
         launchRun.exited.connect(function(code) {
-            root._check(code === 0 && quickFail[2] === lateFail[2] && lateFail.slice(4).join(" ") === "sh -c sleep 6; exit 1",
-                "a power or settings command that fails at once alerts; one that ran a while and exits nonzero does not")
+            root._check(code === 0 && fastFailure[2] === lateFailure[2] && lateFailure.slice(4).join(" ") === "sh -c sleep 6; exit 1",
+                "launch failures preserve the title over either alert transport and stay silent after a normal long-running command closes")
             root._launchFailDone = true
             launchRun.destroy()
         })

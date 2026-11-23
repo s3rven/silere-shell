@@ -2047,16 +2047,9 @@ else
 fi
 
 section "capability reporting coverage"
-# a capability gating a *send* path leaves its settings page visible and settable, so the
-# health card is the only surface that can report the feature is inert without it
-missing_caps=""
-for cap in $(grep -oE 'SystemTools\.has[A-Za-z]+' services/SystemAlerts.qml | sort -u); do
-  flag="${cap#SystemTools.}"
-  grep -qF "$flag" modules/menu/settings/SettingsMaintenanceSection.qml \
-    || missing_caps="$missing_caps $flag"
-done
-if [ -n "$missing_caps" ]; then
-  fail "health card must report capabilities that gate alert delivery:$missing_caps"
+# diagnostics must use the same availability as the delivery service
+if ! grep -qF 'SystemAlerts.canAlert' modules/menu/settings/SettingsMaintenanceSection.qml; then
+  fail "health card must report the alert service's availability"
 else
   ok "health" "alert-delivery capabilities are reported when missing"
 fi

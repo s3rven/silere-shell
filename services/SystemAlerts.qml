@@ -33,10 +33,32 @@ Singleton {
         return argv.concat(["--", summary, body])
     }
 
-    function _send(summary: string, body: string, urgency: string, icon: string): bool {
-        if (!SystemTools.ready || !SystemTools.hasNotifySend
-                || Quickshell.env("SILERE_SANDBOX") === "1") return false
-        Quickshell.execDetached(root.alertCommand(summary, body, urgency, icon, ShellSettings.sysAlertTimeout))
+    // the same alert as notify-send sends it: Notify(app, replaces, icon, summary, body, actions, hints, timeout), with
+    // urgency as a byte and the click as a string hint. Options end before the arguments, as a summary can begin with -
+    function busAlertCommand(summary: string, body: string, urgency: string, icon: string, timeout: int, click = ""): var {
+        const level = urgency === "critical" ? "2" : urgency === "low" ? "0" : "1"
+        const hints = ["urgency", "y", level]
+        if (click.length > 0) hints.push("x-silere-click", "s", click)
+        return ["busctl", "--user", "--timeout=5", "call", "--", "org.freedesktop.Notifications",
+            "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "Notify", "susssasa{sv}i",
+            "Silere Shell", "0", icon || "dialog-information", summary, body, "0", String(hints.length / 3)]
+            .concat(hints, [String(timeout)])
+    }
+
+    function notificationCommand(summary: string, body: string, urgency: string, icon: string, timeout: int, click = ""): var {
+        return SystemTools.hasNotifySend ? root.alertCommand(summary, body, urgency, icon, timeout, click)
+            : root.busAlertCommand(summary, body, urgency, icon, timeout, click)
+    }
+
+    // a hint, not an action: an action keeps notify-send waiting as long as a critical alert stays up. A faked one only reloads the shell
+    function isReloadAlert(notification): bool {
+        return !!notification && notification.appName === "Silere Shell"
+            && String(notification.hints?.["x-silere-click"] ?? "") === "reload"
+    }
+
+    function _send(summary: string, body: string, urgency: string, icon: string, click = ""): bool {
+        if (!SystemTools.ready || !root.canAlert || Quickshell.env("SILERE_SANDBOX") === "1") return false
+        Quickshell.execDetached(root.notificationCommand(summary, body, urgency, icon, ShellSettings.sysAlertTimeout, click))
         return true
     }
 

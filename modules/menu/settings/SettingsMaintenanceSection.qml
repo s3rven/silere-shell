@@ -146,15 +146,15 @@ Column {
         if (!SystemTools.hasCheckupdates && !SystemTools.hasParu && !SystemTools.hasYay
                 && SystemTools.packageFamily === "pacman")
             tool("󰚰", "Update checks", "pacman-contrib")
-        // the warnings page stays visible and settable without notify-send, so this one is inert rather than hidden
-        if (!SystemTools.hasNotifySend) {
+        // the warnings page stays settable even when the delivery service has no transport
+        if (!SystemAlerts.canAlert) {
             const target = ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn
                 ? attention : optional
             add(target, "󰂚", "System alerts",
                 target === attention
                     ? "Warnings cannot be delivered"
                     : "Not installed",
-                "libnotify", true, "",
+                "notify-send / busctl", true, "",
                 target === attention ? Theme.warning : "transparent")
         }
         return { attention: attention, optional: optional }
