@@ -274,8 +274,11 @@ AnchoredPopupState {
 
     // a word nothing starts with becomes the closest indexed word: one slip (a swap counts as one), two from 8 letters
     function _correctedTerm(term: string): string {
-        if (term.length < 4 || root._searchVocabulary.some(w => w.startsWith(term))) return term
-        const most = term.length >= 8 ? 2 : 1
+        const length = term.length
+        if (length < 4 || root._searchVocabulary.some(w => w.startsWith(term))) return term
+        const most = length >= 8 ? 2 : 1
+        // longer terms can match a prefix at a nearby length, as in "colour" and "color" from "colors"
+        const reach = length >= 5 ? most : 0
         let best = term, bestCost = most + 1
         for (const word of root._searchVocabulary) {
             // a slip in the first letter and the second at once is rare, and skipping those keeps a keystroke cheap
@@ -292,7 +295,7 @@ AnchoredPopupState {
         let prev2 = [], prev = Array.from({ length: b.length + 1 }, (_, j) => j)
         for (let i = 1; i <= a.length; i++) {
             const row = [i]
-            for (let j = 1; j <= b.length; j++) {
+            for (let j = 1; j <= last; j++) {
                 row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
                 if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1])
                     row[j] = Math.min(row[j], prev2[j - 2] + 1)
