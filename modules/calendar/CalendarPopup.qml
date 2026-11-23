@@ -4,6 +4,7 @@ import QtQuick
 import "../../config"
 import "../../services"
 import "../common"
+import "../menu/controls"
 
 FittedPopupWindow {
     id: win
@@ -256,6 +257,24 @@ FittedPopupWindow {
                 const n = Scroll.processControlWheel(e, "calendar")
                 if (n !== 0) card._step(-n)
             }
+        }
+
+        ShellFlickable {
+            id: _viewport
+            y: card.pad
+            width: card.width
+            height: Math.max(0, card.height - card.pad * 2)
+            contentWidth: width
+            contentHeight: _col.implicitHeight
+            followFocusOnLayout: true
+            interactive: card.open && card._needsScroll
+        }
+
+        MenuScrollThumb {
+            list: _viewport
+            shown: card.open && card._needsScroll
+            rightInset: 5
+            trackInset: 4
         }
 
         Column {

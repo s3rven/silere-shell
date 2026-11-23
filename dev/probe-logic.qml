@@ -212,10 +212,12 @@ ShellRoot {
             property alias scroller: scroller
             property alias button: above
             property alias editor: editor.item
+            property alias editorOffset: editor.y
             property alias input: input
             ShellFlickable {
                 id: scroller
                 anchors.fill: parent
+                followFocusOnLayout: true
                 contentWidth: width
                 contentHeight: editor.y + editor.height + 24
                 ActionButton { id: above; label: "Before editor" }
@@ -12181,6 +12183,23 @@ ShellRoot {
         focusScroll.input.keyClick(Qt.Key_X)
         root._check(focusScroll.editor.draft === "fuzzel x" && ShellSettings.lockCommandCustom === "fuzzel",
             "revealing a native field keeps ordinary typing and spaces in the unsaved draft")
+        const fieldInView = () => {
+            const bounds = commandField.parent.mapToItem(focusScroll.scroller, 0, 0,
+                commandField.parent.width, commandField.parent.height)
+            return commandField.activeFocus && bounds.y >= -0.5
+                && bounds.y + bounds.height <= focusScroll.scroller.height + 0.5
+        }
+        focusScroll.height = 100
+        focusScroll.input.wait(40)
+        root._check(fieldInView(), "shrinking a popup keeps its focused control on screen")
+        focusScroll.editorOffset += 80
+        focusScroll.input.wait(40)
+        root._check(fieldInView(), "content growing above the focused control keeps it on screen")
+        focusScroll.scroller.flick(0, 1200)
+        focusScroll.height = 110
+        focusScroll.input.wait(30)
+        root._check(focusScroll.scroller.flicking, "layout changes during a flick leave scrolling in the user's hands")
+        focusScroll.scroller.cancelFlick()
         focusScroll.scroller.contentY = 0
         focusScroll.scroller.flick(0, -1000)
         focusScroll.input.keyClick(Qt.Key_Tab)

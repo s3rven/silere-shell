@@ -10,6 +10,14 @@ Item {
     property real revealHeight: root.revealTarget ? root.revealTarget.height : 0
     visible: false
 
+    readonly property Flickable _layoutViewport: {
+        if (!root.enabled || !root.control?.activeFocus) return null
+        for (let viewport = root.revealTarget?.parent; viewport; viewport = viewport.parent) {
+            if (viewport.followFocusOnLayout === true) return viewport
+        }
+        return null
+    }
+
     function _pinnedWithin(viewport): bool {
         for (let it = root.revealTarget; it && it !== viewport; it = it.parent)
             if (it.pinnedToViewport === true) return true
@@ -39,5 +47,18 @@ Item {
         target: root.control
         function onActiveFocusChanged() { if (root.control.activeFocus) Qt.callLater(root.reveal) }
     }
-    onRevealHeightChanged: if (root.control && root.control.activeFocus) Qt.callLater(root.reveal)
+    onRevealHeightChanged: {
+        if (root.control?.activeFocus)
+            Qt.callLater(root._layoutViewport ? root._revealAfterLayout : root.reveal)
+    }
+
+    // a viewport can shrink or its rows can move without a focus change; an active flick keeps control of scrolling
+    function _revealAfterLayout(): void {
+        if (root._layoutViewport && !root._layoutViewport.moving) root.reveal()
+    }
+    Connections {
+        target: root._layoutViewport
+        function onHeightChanged() { Qt.callLater(root._revealAfterLayout) }
+        function onContentHeightChanged() { Qt.callLater(root._revealAfterLayout) }
+    }
 }

@@ -5,6 +5,7 @@ import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
+import "../menu/controls"
 
 FittedPopupWindow {
     id: win
@@ -197,37 +198,66 @@ FittedPopupWindow {
         // Do Not Disturb beside its longest states, Sharing screen and a 12-hour Until time
         readonly property int contentW: Math.max(260,
             Metrics.snap4(260 * Settings.fontSize / 12))
-        width: contentW + pad * 2
-        height: _heightGlide.value
+        readonly property int _heightLimit: Math.max(1,
+            Metrics.snap4Down(winH - Metrics.snap4Up(_edgeY) - 8))
+        width: Math.max(1, Math.min(contentW + pad * 2, Metrics.snap4Down(winW - 2 * _minX)))
+        height: Math.min(_heightGlide.value, _heightLimit)
         SmoothGlide {
             id: _heightGlide
-            target: Metrics.snap4Up(_rows.implicitHeight + card.pad * 2)
+            target: Math.min(card._heightLimit, Metrics.snap4Up(_rows.implicitHeight + card.pad * 2))
             gate: card.geometryMotionReady
             duration: Motion.normal
         }
 
-        Component.onCompleted: if (QuickActionsState.open) {
+        Component.onCompleted: if (open) takeFocus()
+        function takeFocus(): void {
+            _viewport.scrollToTop()
             card.forceActiveFocus()
-            if (QuickActionsState.keyboardEntry) Qt.callLater(() => card.focusRow(false))
+            if (QuickActionsState.keyboardEntry) Qt.callLater(card.focusRow, false)
         }
 
         // the card holds the focus as it opens, so the arrows have to reach the rows from here or they do nothing until Tab
         function focusRow(last: bool): void {
             if (!QuickActionsState.open) return
-            const rows = _rows.children.filter(r => r.visible && r.enabled && r.activeFocusOnTab)
+            const rows = _rows.children.filter(r => r._canActivate === true)
             const row = last ? rows[rows.length - 1] : rows[0]
             if (row) row.forceActiveFocus(Qt.TabFocusReason)
         }
         Keys.onPressed: (e) => {
+            if (e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
             if (e.key !== Qt.Key_Down && e.key !== Qt.Key_Up) return
             e.accepted = true
             card.focusRow(e.key === Qt.Key_Up)
         }
+        // a control that turns itself off under the focus leaves it on the window root, where no keys are handled
+        Connections {
+            target: card.Window.window
+            enabled: card.open
+            function onActiveFocusItemChanged() { if (card.Window.activeFocusItem === card.Window.contentItem) card.forceActiveFocus() }
+        }
+
+        ShellFlickable {
+            id: _viewport
+            x: card.pad; y: card.pad
+            width: Math.max(0, card.width - card.pad * 2)
+            height: Math.max(0, card.height - card.pad * 2)
+            contentWidth: width
+            contentHeight: _rows.implicitHeight
+            followFocusOnLayout: true
+            interactive: card.open && contentHeight > height
+        }
+
+        MenuScrollThumb {
+            list: _viewport
+            shown: card.open
+            rightInset: -2
+            trackInset: 4
+        }
 
         Column {
             id: _rows
-            x: card.pad; y: card.pad
-            width: card.contentW
+            parent: _viewport.contentItem
+            width: _viewport.width
             spacing: 1
 
             QuickActionRow {

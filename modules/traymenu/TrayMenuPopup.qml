@@ -502,6 +502,7 @@ FittedPopupWindow {
                     height: Math.max(0, _flyout.height - _flyout.pad * 2)
                     contentWidth: width
                     contentHeight: _subCol.implicitHeight
+                    followFocusOnLayout: true
                     // against the height it is headed for: a growing submenu is not a scrolling one
                     interactive: contentHeight > _flyHeight.target - _flyout.pad * 2
 
@@ -599,6 +600,7 @@ FittedPopupWindow {
             height: Math.max(0, card.height - card.pad * 2)
             contentWidth: width
             contentHeight: _col.implicitHeight
+            followFocusOnLayout: true
             interactive: contentHeight > _heightGlide.target - card.pad * 2
 
             Column {
