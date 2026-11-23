@@ -323,6 +323,11 @@ Item {
         ShellSettings.uiScale = ShellSettings.schemaFor("uiScale").max
         root._check(tray.menuWidth > baseWidth && hideRow && hideRow.height > baseHeight,
             "tray menus and their click targets grow with interface scaling")
+        const trayWindow = tray.popupCard.win
+        tray.popupCard.win = { screen: null, width: 320, height: 640 }
+        root._check(tray.fitWidth([{ naturalWidth: 900 }]) + 2 * tray.popupCard.pad + 2 * tray.popupCard._minX <= 320,
+            "a long tray entry at the largest scale keeps the menu inside a narrow output")
+        tray.popupCard.win = trayWindow
         ShellSettings.uiScale = 1
 
         let triggered = 0

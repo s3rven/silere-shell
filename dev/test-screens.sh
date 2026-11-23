@@ -26,6 +26,7 @@ if [ "${1:-}" = --inner ]; then
     trap '_probe_stop "$qs_pid"; _probe_stop "$kwin"' EXIT
     for _ in $(seq 1 100); do [ -S "$XDG_RUNTIME_DIR/silere-screens" ] && break; sleep 0.1; done
     if [ ! -S "$XDG_RUNTIME_DIR/silere-screens" ]; then
+        [ "${SILERE_REQUIRE_TOOLS:-0}" = 1 ] && { echo "FAIL: nested KWin did not start: $(tail -n 1 "$TMP/kwin.log")" >&2; exit 1; }
         echo "SKIP: nested KWin did not start: $(tail -n 1 "$TMP/kwin.log")" >&2
         exit 0
     fi

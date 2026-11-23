@@ -387,13 +387,12 @@ _reset_preserving_user_files() {
 # it. 9>&- is what closes that: a fetch nothing can signal any more still cannot
 # hold the lock. --kill-after covers one that sits on SIGTERM.
 _git_fetch() {
-    if _silere_timeout_kill_after_ok; then
-        GIT_TERMINAL_PROMPT=0 timeout --kill-after=5 90 git fetch --quiet "$@" 9>&-
-    elif command -v timeout >/dev/null 2>&1; then
-        GIT_TERMINAL_PROMPT=0 timeout 90 git fetch --quiet "$@" 9>&-
-    else
-        GIT_TERMINAL_PROMPT=0 git fetch --quiet "$@" 9>&-
+    local bound=()
+    if _silere_timeout_kill_after_ok; then bound=(timeout --kill-after=5 90)
+    elif command -v timeout >/dev/null 2>&1; then bound=(timeout 90)
     fi
+    # the remote writes to our stderr, which the shell collects whole: only git's last words get through
+    GIT_TERMINAL_PROMPT=0 "${bound[@]}" git fetch --quiet "$@" 9>&- 2>&1 >/dev/null | tail -c 2048 >&2 9>&-
 }
 
 _fetch_main() {
@@ -835,7 +834,7 @@ case "${1:-}" in
         ;;
     # read-only, so it runs outside the update lock like --version does
     --recent)
-        git -C "$ROOT" log -10 --oneline --no-decorate HEAD 2>/dev/null || true
+        git -C "$ROOT" log -10 --format='%h %<(200,trunc)%s' HEAD 2>/dev/null || true
         exit 0
         ;;
     --timer-status)

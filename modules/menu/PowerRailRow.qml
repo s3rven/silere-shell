@@ -66,7 +66,7 @@ Rectangle {
         : root._hot ? Theme.withAlpha(Theme.text, 0.045) : "transparent"
 
     Accessible.role: root.interactive ? Accessible.Button : Accessible.StaticText
-    Accessible.name: root.armed ? root.confirmLabel : root.label
+    Accessible.name: root.armed ? root.confirmLabel + " to " + root.label.toLowerCase() : root.label
     Accessible.description: root.value
     Accessible.focusable: root._canActivate
     Accessible.onPressAction: root.activate()

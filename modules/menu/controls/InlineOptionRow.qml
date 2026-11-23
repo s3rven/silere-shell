@@ -41,6 +41,13 @@ Item {
     Component.onDestruction: _settle.stop()
     readonly property bool _hot: _hover.hovered || _tap.pressed
     readonly property bool _canActivate: root.enabled && root.visible && root.interactive && !root.busy
+    // a row pressed with the focus on it keeps that focus until it leaves: busy and interactive: !busy flip one after the other
+    property bool _keepFocus: false
+    readonly property bool _focusable: root.enabled && root.visible && (root._keepFocus || (root.interactive && !root.busy))
+    Connections {
+        target: root
+        function onActiveFocusChanged() { if (!root.activeFocus) root._keepFocus = false }
+    }
     readonly property bool  _attentive: root.warning || root.failed
     readonly property color _attention: root.failed ? Theme.error : Theme.warning
 
@@ -59,7 +66,7 @@ Item {
     Accessible.name: root.accessiblePrefix.length > 0
         ? root.accessiblePrefix + ": " + root.label : root.label
     Accessible.description: root.status
-    Accessible.focusable: root._canActivate
+    Accessible.focusable: root._focusable
     Accessible.checkable: root.accessiblePrefix.length > 0
     Accessible.checked: root.accessiblePrefix.length > 0 && root.selected
     Accessible.selected: root.selected

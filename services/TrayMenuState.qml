@@ -71,11 +71,16 @@ AnchoredPopupState {
         environment: ({ "LC_ALL": "C" })
         command: ["sh", "-c",
             'command -v busctl >/dev/null 2>&1 || exit 0; w=org.kde.StatusNotifierWatcher; '
-            + 'reg=$(busctl --user get-property $w /StatusNotifierWatcher $w RegisteredStatusNotifierItems 2>/dev/null '
-            + '| tr " " "\\n" | tr -d "\\042" | sed "s|/.*||") || exit 0; '
+            + 'reg=$(busctl --user get-property $w /StatusNotifierWatcher $w RegisteredStatusNotifierItems 2>/dev/null) || exit 0; '
+            + 'reg=$(printf "%s\\n" "$reg" | tr " " "\\n" | tr -d "\\042" | sed "s|/.*||"); '
             + 'busctl --user list --no-legend --acquired 2>/dev/null | while read -r name rest; do '
-            + 'case $name in org.kde.StatusNotifierItem-*) ;; *) continue ;; esac; '
+            // the spec's own prefix and KDE's: Electron apps take the first
+            + 'case $name in org.kde.StatusNotifierItem-*|org.freedesktop.StatusNotifierItem-*) ;; *) continue ;; esac; '
             + 'printf "%s\\n" "$reg" | grep -qxF "$name" && continue; '
+            // an item can register under its unique name while owning a well-known one: the same icon, not an orphan
+            + 'owner=$(busctl --user call org.freedesktop.DBus /org/freedesktop/DBus org.freedesktop.DBus GetNameOwner s "$name" '
+            + '2>/dev/null | cut -d" " -f2 | tr -d "\\042"); '
+            + '[ -n "$owner" ] && printf "%s\\n" "$reg" | grep -qxF "$owner" && continue; '
             + 'busctl --user call $w /StatusNotifierWatcher $w RegisterStatusNotifierItem s "$name" >/dev/null 2>&1; '
             + 'done']
     }

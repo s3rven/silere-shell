@@ -81,13 +81,32 @@ PanelWindow {
                 // what the type gained over UI scale 1.0: a frame fixed in px kept its 1.0 size while the glyph and the level grew inside it
                 readonly property real _typeGain: Math.max(1, Settings.fontSize / Math.max(1, Settings.fontSizeBase))
                 readonly property int glyphW: Math.max(20, Metrics.iconCellFor(Settings.fontSize + 4))
-                readonly property int trackW: Metrics.snap4(136 * _typeGain)
+                readonly property int _preferredTrackW: Metrics.snap4(136 * _typeGain)
+                // the wider readout in both states: a slot that followed mute recentred the glyph and track on every press
+                readonly property real _levelW: Math.max(_valueMetrics.advanceWidth, _mutedMetrics.advanceWidth)
+                readonly property int _minimumLabelW: Math.ceil(_levelW) + 2
+                readonly property int _labelW: Metrics.snap4Up(Math.max(_minimumLabelW, _levelPrefix.length > 0
+                    ? Math.ceil(_prefixMetrics.advanceWidth + _levelW) + 2 : Math.ceil(_labelMetrics.advanceWidth) + 2))
                 readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, Metrics.barHeight) : Metrics.rowHeightFor(36)
-                // the glyph, the track and the 10 px gaps before the label, plus 20 px each side
-                readonly property int chromeW: glyphW + (hasBar ? trackW + 20 : 10) + 40
-                // a multiple of 8 so centring on the screen leaves the left edge on the 4px grid
-                readonly property int pillW: 2 * Metrics.snap4(
-                    Math.max(Math.round(268 * _typeGain), Math.min(520, chromeW + Math.ceil(_labelMetrics.advanceWidth) + 2)) / 2)
+                readonly property int _preferredChromeW: glyphW + (hasBar ? _preferredTrackW + 20 : 10) + 40
+                readonly property int pillW: Math.min(osd._pillLimit, 2 * Metrics.snap4(
+                    Math.max(Math.round(268 * _typeGain), Math.min(520, _preferredChromeW + _labelW)) / 2))
+                readonly property int _sideSpace: Math.min(40, Math.floor(pillW / 5))
+                readonly property int _levelRoom: Math.max(0, pillW - _sideSpace - glyphW - 20)
+                // give the readout most of the remaining room when its full device label cannot fit
+                readonly property int _labelShare: Math.max(_minimumLabelW, Math.floor(_levelRoom * 0.6))
+                readonly property int trackW: hasBar ? Math.min(_preferredTrackW,
+                    Math.max(0, Metrics.snap4Down(_levelRoom - Math.min(_labelW, _labelShare)))) : 0
+                readonly property int chromeW: glyphW + (trackW > 0 ? trackW + 20 : 10) + _sideSpace
+                readonly property int _labelFit: Math.min(_labelW, Math.max(0, pillW - chromeW))
+                readonly property string _levelPrefix: hasBar ? OsdBarState.levelPrefix(label) : ""
+                readonly property string _levelSuffix: _levelPrefix.length > 0 ? label.slice(_levelPrefix.length) : ""
+                // shorten the device name while retaining the whole level or mute state
+                readonly property string _displayLabel: {
+                    if (_levelSuffix.length === 0 || _labelFit >= _labelMetrics.advanceWidth + 2) return label
+                    const prefix = _contextMetrics.elidedText
+                    return prefix.length > 0 && prefix !== "…" ? prefix + _suffixMetrics.text : _levelSuffix
+                }
                 readonly property real pillRadius: ShellSettings.osdMatchBar
                     ? Math.min(ShellSettings.barRadius, pillH / 2)
                     : Math.min(Theme.surfaceRadius, pillH / 2)
@@ -132,6 +151,33 @@ PanelWindow {
                     font.family:    Settings.font
                     font.pixelSize: Settings.fontSize
                     text: card.label
+                }
+                TextMetrics {
+                    id: _valueMetrics
+                    font: _labelMetrics.font
+                    text: "100%"
+                }
+                TextMetrics {
+                    id: _mutedMetrics
+                    font: _labelMetrics.font
+                    text: "Muted"
+                }
+                TextMetrics {
+                    id: _suffixMetrics
+                    font: _labelMetrics.font
+                    text: card._levelSuffix.length > 0 ? " · " + card._levelSuffix : ""
+                }
+                TextMetrics {
+                    id: _prefixMetrics
+                    font: _labelMetrics.font
+                    text: card._levelPrefix
+                }
+                TextMetrics {
+                    id: _contextMetrics
+                    font: _labelMetrics.font
+                    text: card._levelPrefix.slice(0, -3)
+                    elide: Text.ElideRight
+                    elideWidth: Math.max(0, card._labelFit - _suffixMetrics.advanceWidth - 2)
                 }
 
                 Connections {

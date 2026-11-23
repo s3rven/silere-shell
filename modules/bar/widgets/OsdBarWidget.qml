@@ -15,7 +15,8 @@ Item {
     readonly property int _iconWidth: Settings.iconSize + 6
     readonly property real _labelWidth: Math.min(Math.round(240 * ShellSettings.uiScale),
         OsdBarState.hasBar
-            ? Math.ceil(Math.max(_maxLabel.advanceWidth, _maxValue.advanceWidth, _contextLabel.advanceWidth)) + 2
+            ? Metrics.snap4Up(Math.ceil(_levelPrefix.length > 0 ? _prefixLabel.advanceWidth + _levelWidth
+                : Math.max(_levelWidth, _contextLabel.advanceWidth)) + 2)
             : Math.max(Math.ceil(_alertLabel.advanceWidth) + 2, _alertWidth))
     readonly property real _availableWidth: Math.max(0,
         width - _iconWidth - (OsdBarState.hasBar ? 16 : 8))

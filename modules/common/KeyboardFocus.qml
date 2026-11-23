@@ -30,7 +30,7 @@ Item {
     Binding { target: root.control; property: "activeFocusOnTab"; value: root.canInteract; delayed: true }
     onCanInteractChanged: {
         // clear focus before removing the tab stop, which Qt refuses while it owns focus
-        if (!root.canInteract && root.control && root.control.activeFocus) root.control.focus = false
+        if (control.activeFocus) control.focus = false
     }
     function handleKey(event): void {
         if (!root.canInteract || !root.control.activeFocus

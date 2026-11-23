@@ -237,6 +237,7 @@ Item {
         property bool _settingsReady: false
         Component.onCompleted: {
             _lastNetConnected = Network.available && Network.connected
+            _lastNetWifi = Network.isWifi
             Qt.callLater(() => {
                 if (!_lineEffect) return
                 _lineEffect._settingsReady = true
@@ -272,6 +273,7 @@ Item {
             function onUnderlineNetGlowChanged() {
                 // changes while this source is disabled must not replay on re-enable
                 _lineEffect._lastNetConnected = Network.available && Network.connected
+                _lineEffect._lastNetWifi = Network.isWifi
                 if (!ShellSettings.underlineNetGlow) {
                     _previewTimer.stop()
                     _netGlowAnim.stop()
@@ -315,12 +317,14 @@ Item {
                 _lineEffect._playScreenshot()
         }
 
-        function _updateNetGlow(available: bool, connected: bool): void {
+        function dropIntended(lastWifi: bool, wifiOn: bool): bool { return lastWifi && !wifiOn }
+
+        function _updateNetGlow(available: bool, connected: bool, wifiOn: bool): void {
             const currentConnected = available && connected
             const disconnected = available && !connected
 
             if (_lastNetConnected && disconnected && ShellSettings.underlineNetGlow
-                    && _lineEffect._canRunEventMotion()) {
+                    && !_lineEffect.dropIntended(_lastNetWifi, wifiOn) && _lineEffect._canRunEventMotion()) {
                 _netGlowAnim.stop()
                 _netLossFlash.play(_lineEffect._gatherDuration())
             } else if (currentConnected || !available) {
@@ -335,12 +339,22 @@ Item {
             }
 
             _lastNetConnected = currentConnected
+            if (currentConnected) _lastNetWifi = Network.isWifi
         }
 
         Connections {
             target: _lineEffect._networkGlowEnabled ? Network : null
-            function onConnectedChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected) }
-            function onAvailableChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected) }
+            function onConnectedChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected, Network.wifiEnabled) }
+            function onAvailableChanged() { _lineEffect._updateNetGlow(Network.available, Network.connected, Network.wifiEnabled) }
+            // a handoff between Wi-Fi and Ethernet keeps the link up, so connectedChanged never sees it
+            function onIsWifiChanged() { if (Network.connected) _lineEffect._lastNetWifi = Network.isWifi }
+            // the radio's state can land just after the link drops: take back the alarm that disconnect raised
+            function onWifiEnabledChanged() {
+                if (_lineEffect.dropIntended(_lineEffect._lastNetWifi, Network.wifiEnabled) && !Network.connected) {
+                    _netGlowAnim.stop()
+                    _netLossFlash.reset()
+                }
+            }
         }
 
         NumberAnimation {

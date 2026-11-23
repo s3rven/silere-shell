@@ -10,18 +10,28 @@ Column {
     width: parent ? parent.width : 0
     spacing: 0
 
-    readonly property string _paletteNote: !SystemTools.ready ? ""
-        : !SystemTools.hasMatugen
-            ? MatugenTheme.usingFallback
-                ? "Needs matugen. Showing the built-in colors."
-                : "matugen is missing, so colors no longer follow the wallpaper."
-            : MatugenTheme.usingFallback
-                ? "No palette from matugen yet. Set a wallpaper to make one."
-                : MatugenTheme.paletteStale
-                    ? "The palette file is unreadable. Showing the last colors."
-                    : Theme.accentColorless
-                        ? "This palette has no accent color."
-                        : ""
+    readonly property bool _usesPalette: !ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto
+    readonly property string _paletteNote: {
+        switch (MatugenTheme.loadState) {
+        case "invalid":
+            return "The palette has missing or invalid colors. " + root._paletteFallback
+        case "unreadable":
+            return "The palette file could not be read. " + root._paletteFallback
+        case "missing":
+            if (SystemTools.ready && !SystemTools.hasMatugen)
+                return "Install Matugen to generate wallpaper colors. " + root._paletteFallback
+            if (MatugenTheme.paletteStale) return "The palette file is missing. " + root._paletteFallback
+            return "Matugen has not written a palette yet. " + root._paletteFallback
+        case "ready":
+            if (SystemTools.ready && !SystemTools.hasMatugen)
+                return "Using a saved palette. Install Matugen to generate new colors."
+            return Theme.accentColorless ? "This palette has no accent color." : ""
+        default:
+            return ""
+        }
+    }
+    readonly property string _paletteFallback: MatugenTheme.paletteStale
+        ? "Showing the last colors." : "Showing the built-in colors."
 
     // the blur row names what stops it, read fresh each visit since a compositor config can change underneath
     Component.onCompleted: Compositor.checkBlur()
@@ -66,7 +76,7 @@ Column {
                     return "#" + root._hex2(c.r) + root._hex2(c.g) + root._hex2(c.b)
                 }
                 readonly property color _curColor: ShellSettings.neutralAccentAuto
-                    ? Theme.sourcedAccent(MatugenTheme.accent) : ShellSettings.neutralAccent
+                    ? Theme.wallpaperAccent : ShellSettings.neutralAccent
 
                 // the strips own hue and intensity; the stored hex is only their output.
                 // reading both back out of one 8-bit colour made each axis inherit the
@@ -129,7 +139,7 @@ Column {
                 readonly property int _activeIndex: _customOpen ? _customIndex : _presetIndex
 
                 readonly property var _swColors: _options.map(o => o.auto
-                    ? Theme.sourcedAccent(MatugenTheme.accent)
+                    ? Theme.wallpaperAccent
                     : o.custom ? _accentPicker._curColor : o.color)
                 // dependent bindings settle in stages, so an index can be transiently out of range here even though no steady state produces one
                 function _nameAt(i: int): string {
@@ -316,7 +326,7 @@ Column {
         }
 
         CollapsibleSection {
-            expanded: !ShellSettings.neutralTheme
+            expanded: root._usesPalette
             symmetric: true
 
             SwatchPickerRow {
@@ -335,17 +345,24 @@ Column {
             }
         }
 
-        // auto takes its colour from matugen on the custom side too, so a missing or stale
-        // palette has to be said there as well; inside the wallpaper group it never was
+        InlineOptionRow {
+            visible: root._usesPalette && MatugenTheme.palettePath.length > 0
+            glyph: "󰑓"
+            label: "Reload palette"
+            status: ({
+                loading: "Loading…", missing: "Missing", invalid: "Invalid",
+                unreadable: "Unreadable", ready: "Loaded"
+            })[MatugenTheme.loadState]
+            warning: MatugenTheme.loadState === "invalid" || MatugenTheme.loadState === "unreadable"
+            onTriggered: MatugenTheme.reload()
+        }
         HintText {
-            visible: root._paletteNote.length > 0
-                && (!ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto)
+            visible: root._usesPalette && root._paletteNote.length > 0
             text: root._paletteNote
         }
 
-        // both sources land here: Wallpaper always, Custom whenever Auto is taking matugen's accent
         CollapsibleSection {
-            expanded: !ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto
+            expanded: root._usesPalette
             symmetric: true
 
             ToggleRow {

@@ -135,7 +135,7 @@ Item {
     // the desktop entry names the app: an id's last segment can be a word like "desktop"
     function _appName(app: string): string {
         if (!ShellSettings.showWindowTitleApp || app.length === 0) return root._clean(app)
-        const entry = DesktopEntries.heuristicLookup(app)
+        const entry = IconResolver.appEntry(app)
         // "Spotify (Launcher)": a packaging note, not part of the app's name
         const name = entry ? SafeText.singleLineText(entry.name || "", 64)
             .replace(/\s*\([^()]*\)$/, "") : ""
@@ -170,22 +170,31 @@ Item {
         const appKey = root._labelKey(app)
         if (raw.length === 0 || appKey.length === 0) return raw
 
-        // "document — App" is the common shape; the app half is already drawn
+        // "document — App" is the common shape, "App | document" the other; the app half is already drawn
         const separators = [" — ", " – ", " - ", " | ", " · "]
         let cut = -1
         let separatorLength = 0
+        let first = -1
+        let firstLength = 0
         for (let i = 0; i < separators.length; i++) {
             const at = raw.lastIndexOf(separators[i])
             if (at > cut) {
                 cut = at
                 separatorLength = separators[i].length
             }
+            const lead = raw.indexOf(separators[i])
+            if (lead > 0 && (first < 0 || lead < first)) {
+                first = lead
+                firstLength = separators[i].length
+            }
         }
         if (cut <= 0) return raw
 
-        const suffix = raw.slice(cut + separatorLength)
-        if (!root._looksLikeAppLabel(suffix, app)) return raw
-        const useful = raw.slice(0, cut).trim()
+        // "Obsidian v1.8.10": the version is not part of the name
+        const suffix = raw.slice(cut + separatorLength).replace(/\s+v?\d+(\.\d+)+$/i, "")
+        const useful = root._looksLikeAppLabel(suffix, app) ? raw.slice(0, cut).trim()
+            : root._looksLikeAppLabel(raw.slice(0, first), app) ? raw.slice(first + firstLength).trim()
+            : ""
         return useful.length > 0 ? useful : raw
     }
 

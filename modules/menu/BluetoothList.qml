@@ -34,11 +34,30 @@ Item {
         if (!Bluetooth.available || !Bluetooth.enabled) root._confirm.clear()
     }
 
+    // a held copy: replacing the model moves keyboard focus to the first row, the connected device a second Enter disconnects
+    property var _shown: []
+    function _show(devices): void {
+        const window = root.Window.window
+        let row = window ? window.activeFocusItem : null
+        while (row && row !== root && !(row.modelData && row.ListView.view === _list)) row = row.parent
+        const address = row && row !== root ? row.modelData.address : ""
+        const index = address.length > 0 ? row.index : -1
+        root._shown = devices
+        if (address.length === 0) return
+        const found = devices.findIndex(d => d && d.address === address)
+        _list.currentIndex = found >= 0 ? found : Math.min(index, devices.length - 1)
+        _list.positionViewAtIndex(_list.currentIndex, ListView.Contain)
+        if (!_list.currentItem) return
+        // a new delegate: without the old one's hold, a row still connecting takes the focus and then ignores every key
+        _list.currentItem._keepFocus = true
+        _list.currentItem.forceActiveFocus(Qt.TabFocusReason)
+    }
+
     onOpenChanged: {
         _syncScanState()
         if (!open) root._confirm.clear()
     }
-    Component.onCompleted: _syncScanState()
+    Component.onCompleted: { _syncScanState(); root._show(Bluetooth.devices) }
     Component.onDestruction: {
         Bluetooth.requestScan(root, false)
     }
@@ -48,6 +67,7 @@ Item {
         function onAvailableChanged() { root._syncScanState() }
         function onEnabledChanged() { root._syncScanState() }
         function onAdapterChanged() { root._confirm.clear() }
+        function onDevicesChanged() { root._show(Bluetooth.devices) }
     }
     Connections {
         target: Idle
@@ -108,7 +128,7 @@ Item {
             spacing: 0
             // every visible value comes from the device or service; the delegate owns no row state, so off-screen instances are safe to recycle
             reuseItems: true
-            model: Bluetooth.devices
+            model: root._shown
 
             delegate: InlineOptionRow {
                 id: _row

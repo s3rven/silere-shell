@@ -118,6 +118,11 @@ Singleton {
         return (columnWidth - pillWidth) / 2
     }
 
+    function levelPrefix(label: string): string {
+        const at = label.lastIndexOf(" · ")
+        return at >= 0 && /^(Muted|[0-9]+%)$/.test(label.slice(at + 3)) ? label.slice(0, at + 3) : ""
+    }
+
     function _setExpiry(kind: string): void {
         _expiresAt[kind] = Date.now() + root.holdFor(kind, ShellSettings.osdTimeout)
         _expiresAt = _expiresAt
@@ -330,7 +335,7 @@ Singleton {
     function _showMicMute(): void {
         if (!Audio.micReady) return
         root.show("microphone", Audio.micIcon, Audio.micVolume,
-            Audio.micMuted ? "Microphone muted" : "Microphone · " + Audio.micLabel, Audio.micMuted)
+            "Microphone · " + (Audio.micMuted ? "Muted" : Audio.micLabel), Audio.micMuted)
     }
     function _queueVolumeUpdate(): void {
         if (_volumeUpdateQueued) return

@@ -5,9 +5,11 @@
 function clip(text, cap) {
     if (text.length <= cap) return text
     const limit = Math.max(0, cap - 1)
+    // walk only to the cap: one letter with five million marks took 0.6 s
+    const head = text.slice(0, cap + 1)
     let end = 0
-    while (end < text.length) {
-        const next = graphemeEnd(text, end)
+    while (end < head.length) {
+        const next = graphemeEnd(head, end)
         if (next > limit) break
         end = next
     }
@@ -26,6 +28,7 @@ function isGraphemeTail(value) {
         || (value >= 0xFE00 && value <= 0xFE0F)
         || (value >= 0xFE20 && value <= 0xFE2F)
         || (value >= 0x1F3FB && value <= 0x1F3FF)
+        || (value >= 0xE0020 && value <= 0xE007F)
         || (value >= 0xE0100 && value <= 0xE01EF)
         || isIndicMark(value)
 }

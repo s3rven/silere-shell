@@ -895,7 +895,7 @@ Singleton {
         root._dropFromList(ids)
         for (let i = 0; i < stale.length; i++) {
             root._markClosing(stale[i].id, stale[i].notification)
-            stale[i].notification.tracked = false
+            stale[i].notification.expire()
         }
         root._forgetTrimmed(ids)
         return true
@@ -1001,7 +1001,7 @@ Singleton {
         const active = Array.isArray(root.list) ? root.list.slice() : []
         if (active.length === 0) return
 
-        // clear first: changing tracked may synchronously emit closed, and the close handler must not archive the same object a second time
+        // clear first: expiring emits closed synchronously, and the close handler must not archive the same object a second time
         root.list = []
         root.lastCritical = false
         const retiredIds = []
@@ -1011,7 +1011,8 @@ Singleton {
             if (e.notification) {
                 root._archiveNotification(e.notification, e.id,
                     root._times[e.id] ?? e.time ?? Date.now(), false)
-                e.notification.tracked = false
+                // untracking closes as dismissed by the user, which an app can take as read
+                e.notification.expire()
             }
             retiredIds.push(String(e.id))
         }

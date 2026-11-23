@@ -196,10 +196,16 @@ FittedPopupWindow {
         // the date-grid convention: Page Up and Page Down turn the month from wherever focus sits in the card
         function _pageKey(key: int): bool {
             if (key !== Qt.Key_PageUp && key !== Qt.Key_PageDown) return false
-            card._step(key === Qt.Key_PageUp ? -1 : 1)
+            card._step((key === Qt.Key_PageUp ? -1 : 1) * (shift ? 12 : 1))
             return true
         }
-        Keys.onPressed: (e) => { e.accepted = card._pageKey(e.key) }
+        Keys.onPressed: (e) => { e.accepted = card._navigateKey(e.key, e.modifiers) }
+        // a control that turns itself off under the focus leaves it on the window root, where no keys are handled
+        Connections {
+            target: card.Window.window
+            enabled: card.open
+            function onActiveFocusItemChanged() { if (card.Window.activeFocusItem === card.Window.contentItem) card.forceActiveFocus() }
+        }
 
         WheelHandler {
             enabled: CalendarState.open

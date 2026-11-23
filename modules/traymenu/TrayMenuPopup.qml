@@ -24,7 +24,8 @@ FittedPopupWindow {
     readonly property int leadWidth: Settings.fontSize + 4
 
     function fitWidth(rows): int {
-        return TrayMenuState.fitWidth(rows, win.menuWidth, win.menuMaxWidth)
+        return TrayMenuState.fitWidth(rows, win.menuWidth,
+            Math.min(win.menuMaxWidth, Metrics.snap4Down(card.winW - 2 * card._minX) - 2 * card.pad))
     }
 
     property var _activeMenu: null
@@ -573,6 +574,12 @@ FittedPopupWindow {
             function onOpenChanged() { if (TrayMenuState.open) win._takeFocus() }
         }
         Component.onCompleted: if (TrayMenuState.open) win._takeFocus()
+        // a control that turns itself off under the focus leaves it on the window root, where no keys are handled
+        Connections {
+            target: card.Window.window
+            enabled: card.open
+            function onActiveFocusItemChanged() { if (card.Window.activeFocusItem === card.Window.contentItem) card.forceActiveFocus() }
+        }
         Keys.onPressed: (event) => {
             if (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return
             if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {

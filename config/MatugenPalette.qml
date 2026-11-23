@@ -10,15 +10,16 @@ import "../services"
 Singleton {
     id: root
 
-    readonly property string palettePath: XdgPaths.configHome.length > 0
-        ? XdgPaths.configHome + "/matugen/silere-shell.json" : ""
+    readonly property string _directory: XdgPaths.configHome.length > 0
+        ? XdgPaths.configHome + "/matugen" : ""
+    readonly property string palettePath: _directory.length > 0 ? _directory + "/silere-shell.json" : ""
 
     property var _palette: ({})
     property bool _everLoaded: false
+    property string _loadState: "loading"
+    readonly property string loadState: root._loadState
     readonly property bool usingFallback: !root._everLoaded
-    // a later bad write keeps the last good colors, which is right, but then nothing
-    // moves on screen and usingFallback stays false — the shell has to say why
-    property bool paletteStale: false
+    readonly property bool paletteStale: root._everLoaded && root.loadState !== "ready"
     readonly property var _fallback: ({
         background: "#101116",
         surface:    "#1d1f26",
@@ -58,7 +59,7 @@ Singleton {
             const value = parsed[role]
             if (typeof value !== "string" || !/^#[0-9a-fA-F]{6}$/.test(value))
                 return null
-            clean[role] = value
+            clean[role] = value.toLowerCase()
         }
         return clean
     }
@@ -67,26 +68,61 @@ Singleton {
         const parsed = root._parsePalette(raw)
         // keep the last valid palette during an editor save or atomic replace; a malformed external file must never partially recolor the shell
         if (parsed === null) {
-            root.paletteStale = root._everLoaded
+            root._loadState = "invalid"
             return
         }
-        root._palette = parsed
+        if (root._roles.some(role => parsed[role] !== root._palette[role]))
+            root._palette = parsed
         root._everLoaded = true
-        root.paletteStale = false
+        root._loadState = "ready"
     }
 
-    function _markUnreadable(): void {
-        // missing on first launch is the normal bundled fallback. Disappearing after a good load means the colors on screen are now a retained copy
-        root.paletteStale = root._everLoaded
+    function reload(): void {
+        if (root.palettePath.length > 0) _paletteFile.reload()
     }
 
+    readonly property FileView _paletteView: _paletteFile
     FileView {
         id: _paletteFile
         path: root.palettePath
         watchChanges: true
         printErrors: false
         onLoaded: root._load(_paletteFile.text() || "")
-        onFileChanged: reload()
-        onLoadFailed: root._markUnreadable()
+        onFileChanged: _settle.restart()
+        onLoadFailed: error => {
+            root._loadState = error === FileViewError.FileNotFound ? "missing" : "unreadable"
+        }
+    }
+
+    // a file watch cannot see through a missing parent, and a watch on the parent fires for every change in the config home
+    property bool _directoryFound: false
+    onLoadStateChanged: if (root.loadState !== "missing") root._directoryFound = false
+    FileView {
+        id: _directoryWatch
+        path: root.loadState === "missing" ? root._directory : ""
+        watchChanges: path.length > 0 && !root._directoryFound
+        printErrors: false
+        onFileChanged: _directoryWatch.reload()
+        onLoadFailed: error => {
+            // NotAFile means the directory exists. Recheck after installing the watch
+            // in case the palette was written while the watcher was being set up
+            if (path.length === 0 || error !== FileViewError.NotAFile) return
+            root._directoryFound = true
+            _settle.restart()
+        }
+    }
+
+    Connections {
+        target: root.loadState === "missing" ? ConfigStore : null
+        // the shell can create XDG_CONFIG_HOME after the initial watch attempt
+        function onReadyChanged() {
+            if (ConfigStore.ready && root._directory.length > 0) _directoryWatch.reload()
+        }
+    }
+
+    Timer {
+        id: _settle
+        interval: 80
+        onTriggered: root.reload()
     }
 }

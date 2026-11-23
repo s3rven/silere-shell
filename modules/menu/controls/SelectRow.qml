@@ -392,8 +392,7 @@ Item {
         anchors.right: parent.right
 
         // a ListView, not a Repeater: a Repeater loads every installed font even with all but seven rows clipped
-        height: root._open ? Math.min(root._optionCount * root._optionH
-            + (headerItem ? headerItem.height : 2) + (footerItem ? footerItem.height : 2), root._optionsCapH) : 0
+        height: root._open ? Math.min(root._optionCount * root._optionH + 4, root._optionsCapH) : 0
         interactive: contentHeight > height + 1
             && root._open && !_optionsDisclosure.running
         visible: height > 0.5
@@ -416,11 +415,11 @@ Item {
             }
         }
 
+        // 2 px each, hairline included: a hairline is 0.8 px at 1.25 and moved every row below off the grid
         header: Item {
             width: _options.width
-            height: root._above ? 2 : _topDivider.implicitHeight + 1
+            height: 2
             Hairline {
-                id: _topDivider
                 visible: !root._above
                 x: 14
                 width: parent.width - 28
@@ -429,9 +428,8 @@ Item {
         }
         footer: Item {
             width: _options.width
-            height: root._above ? _bottomDivider.implicitHeight + 1 : 2
+            height: 2
             Hairline {
-                id: _bottomDivider
                 visible: root._above
                 anchors.bottom: parent.bottom
                 x: 14

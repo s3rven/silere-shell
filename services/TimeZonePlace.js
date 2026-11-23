@@ -8,7 +8,7 @@ var script =
     "[ -z \"$tz\" ] && tz=\"$(timedatectl show -p Timezone --value 2>/dev/null)\"; " +
     "[ -z \"$tz\" ] && tz=\"$(readlink -f /etc/localtime 2>/dev/null | sed -n 's#.*/zoneinfo/##p')\"; " +
     "[ -z \"$tz\" ] && [ -r /etc/timezone ] && tz=\"$(cat /etc/timezone)\"; " +
-    "[ -z \"$tz\" ] && exit 0; " +
+    "tz=\"${tz#posix/}\"; tz=\"${tz#right/}\"; [ -z \"$tz\" ] && exit 0; " +
     // the zone as named comes first: Europe/Stockholm is a link to Europe/Berlin since tzdata 2022b, and
     // zone.tab still gives it its own city. Only a zone neither table lists, like Asia/Calcutta, follows its link
     "for _ in 1 2 3 4; do " +

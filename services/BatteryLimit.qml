@@ -113,11 +113,11 @@ Singleton {
                 if (complete || found.length > 0) {
                     root.devices = found
                     root._listed = true
+                    root._followStops(found)
                 }
-                if (!complete) {
-                    root.lastError = "The charge limit could not be read. Check UPower."
-                    root.errorNative = ""
-                }
+                // readback refreshes the state without discarding a write failure attached to a battery
+                if (root.errorNative.length === 0)
+                    root.lastError = complete ? "" : "The charge limit could not be read. Check UPower."
             } else if (generation === root._generation) {
                 root._rescanQueued = true
             }

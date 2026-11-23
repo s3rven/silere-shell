@@ -50,10 +50,15 @@ fi
 
 [ "$#" -eq 0 ] || { echo 'Usage: test-tray-keys.sh' >&2; exit 2; }
 _probe_require_qs
+skip() { # $1 = what is missing
+    [ "${SILERE_REQUIRE_TOOLS:-0}" != 1 ] || { printf 'FAIL: the tray keyboard check needs %s\n' "$1" >&2; exit 1; }
+    printf 'SKIP: the tray keyboard check needs %s\n' "$1"
+    exit 0
+}
 for tool in kwin_wayland dbus-run-session python3; do
-    command -v "$tool" >/dev/null 2>&1 || { printf 'SKIP: the tray keyboard check needs %s\n' "$tool"; exit 0; }
+    command -v "$tool" >/dev/null 2>&1 || skip "$tool"
 done
-python3 -I -c 'import dbus, gi' 2>/dev/null || { printf 'SKIP: the tray keyboard check needs python-dbus and PyGObject\n'; exit 0; }
+python3 -I -c 'import dbus, gi' 2>/dev/null || skip "python-dbus and PyGObject"
 # a Wayland socket path is capped at 108 bytes
 scratch="$(mktemp -d /tmp/sk.XXXXXX)"
 inner_pid=""

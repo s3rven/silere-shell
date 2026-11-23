@@ -19,7 +19,7 @@ Item {
     readonly property int _entryH: Math.max(22, Settings.capHeight + 8)
 
     width: parent ? parent.width : 0
-    height: Math.min(_list.contentHeight, root.maxHeight)
+    height: Math.min(Metrics.snap4Up(_list.contentHeight), root.maxHeight)
 
     ShellListView {
         id: _list

@@ -872,14 +872,32 @@ if [ "$_repair_matugen" = "1" ]; then
     TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
 
     [ -r "$TMPL_SRC" ] || _die "template missing at $TMPL_SRC"
-    mkdir -p "${TMPL_DST%/*}" || _die "could not create ${TMPL_DST%/*}"
-    _backup "$TMPL_DST"
-    cp "$TMPL_SRC" "$TMPL_DST" || _die "could not write $TMPL_DST"
-    _ok "template written"
+    managed_matugen=false
+    if [ -f "$MATUGEN_CFG" ] && grep -qF '# silere-shell begin' "$MATUGEN_CFG"; then
+        _silere_marker_pair_valid "$MATUGEN_CFG" '# silere-shell begin' '# silere-shell end' \
+            || _die "silere-shell markers are malformed or ambiguous in $MATUGEN_CFG"
+        managed_matugen=true
+    elif _matugen_table_present "$MATUGEN_CFG"; then
+        _die "an unmanaged [templates.silere-shell] entry exists; edit $MATUGEN_CFG by hand"
+    fi
 
-    if [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; then
-        if grep -qF "input_path  = $MATUGEN_INPUT_TOML" "$MATUGEN_CFG" \
-                && grep -qF "output_path = $MATUGEN_OUTPUT_TOML" "$MATUGEN_CFG"; then
+    if _silere_same_text "$TMPL_SRC" "$TMPL_DST"; then
+        _ok "template already current"
+    else
+        mkdir -p "${TMPL_DST%/*}" || _die "could not create ${TMPL_DST%/*}"
+        _backup "$TMPL_DST"
+        cp "$TMPL_SRC" "$TMPL_DST" || _die "could not write $TMPL_DST"
+        _ok "template written"
+    fi
+
+    if $managed_matugen; then
+        managed_block="$(awk '
+            $0 == "# silere-shell end" { exit }
+            inside { print }
+            $0 == "# silere-shell begin" { inside = 1 }
+        ' "$MATUGEN_CFG")"
+        if grep -qxF "input_path  = $MATUGEN_INPUT_TOML" <<< "$managed_block" \
+                && grep -qxF "output_path = $MATUGEN_OUTPUT_TOML" <<< "$managed_block"; then
             _ok "entry already correct"
         else
             _backup "$MATUGEN_CFG"
@@ -887,8 +905,6 @@ if [ "$_repair_matugen" = "1" ]; then
                 || _die "could not update $MATUGEN_CFG"
             _ok "entry updated"
         fi
-    elif _matugen_table_present "$MATUGEN_CFG"; then
-        _die "an unmanaged [templates.silere-shell] entry exists; edit $MATUGEN_CFG by hand"
     else
         mkdir -p "${MATUGEN_CFG%/*}" || _die "could not create ${MATUGEN_CFG%/*}"
         if [ -f "$MATUGEN_CFG" ]; then
@@ -1510,10 +1526,9 @@ if [ -n "${NIRI_SOCKET:-}" ] || [ "${XDG_CURRENT_DESKTOP:-}" = "niri" ] \
     else
         _ok "found niri config at $(_tilde "$NIRI_CONFIG")"
         if _already_present "$NIRI_CONFIG"; then
+            # the shared launcher in any spelling: silere service install asks for silere run --supervised --startup
             if _owned_block_contains "$NIRI_CONFIG" '// silere-shell begin' \
-                    '// silere-shell end' '/scripts/silere' \
-                    && _owned_block_contains "$NIRI_CONFIG" '// silere-shell begin' \
-                    '// silere-shell end' 'run --startup'; then
+                    '// silere-shell end' ' --startup'; then
                 _ok "already present in $(_tilde "$NIRI_CONFIG")"
             elif _dry; then
                 _would "migrate the Silere block in $NIRI_CONFIG to the shared launcher"
@@ -1567,9 +1582,7 @@ if [[ "$HYPR_CONFIG" == *.lua ]]; then
         receipt_autostart="$LUA_EXEC_FILE"
         LUA_AUTOSTART_BODY="$(printf 'hl.on(\"hyprland.start\", function()\n    hl.exec_cmd(%s)\nend)' "$LAUNCH_CMD_LUA")"
         if _owned_block_contains "$LUA_EXEC_FILE" '-- silere-shell begin' \
-                '-- silere-shell end' '/scripts/silere' \
-                && _owned_block_contains "$LUA_EXEC_FILE" '-- silere-shell begin' \
-                '-- silere-shell end' 'run --startup'; then
+                '-- silere-shell end' ' --startup'; then
             _ok "already present in $(_tilde "$LUA_EXEC_FILE")"
         elif _dry; then
             _would "migrate the Silere block in $LUA_EXEC_FILE to the shared launcher"
@@ -1614,9 +1627,7 @@ elif [[ "$HYPR_CONFIG" == *.conf ]]; then
     fi
     if _already_present "$HYPR_CONFIG"; then
         if _owned_block_contains "$HYPR_CONFIG" '# silere-shell begin' \
-                '# silere-shell end' '/scripts/silere' \
-                && _owned_block_contains "$HYPR_CONFIG" '# silere-shell begin' \
-                '# silere-shell end' 'run --startup'; then
+                '# silere-shell end' ' --startup'; then
             _ok "already present in $(_tilde "$HYPR_CONFIG")"
         elif _dry; then
             _would "migrate the Silere block in $HYPR_CONFIG to the shared launcher"

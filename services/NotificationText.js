@@ -16,7 +16,7 @@ function prose(source) {
         .replace(/&nbsp;/g, " ").replace(/&hellip;/g, "…")
         .replace(/&amp;/g, "&")
         .replace(/(^|[^\w*])\*\*(?=[^*\s])([^*\n]*?[^*\s])\*\*(?![\w*])/g, "$1$2")
-        .replace(/!?\[([^\]\n]+)\]\([^)\s]+\)/g, "$1")
+        .replace(/!?\[([^[\]\n]+)\]\([^)[\s]+\)/g, "$1")
 }
 
 function inlineText(source) {

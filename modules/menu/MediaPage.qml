@@ -222,6 +222,8 @@ PageShell {
                     _cover._curUrl = ""
                     if (root._coverWanted) Media.artFailed(dead)
                     if (_cover._curUrl.length > 0) return
+                    const shown = isA ? _artB : _artA
+                    shown.opacity = 0; shown.source = ""
                     if (root._coverWanted && _cover._retries < 3) { _cover._retries++; _artRetry.restart() }
                     return
                 }

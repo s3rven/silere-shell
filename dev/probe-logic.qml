@@ -37,8 +37,11 @@ ShellRoot {
     property bool _volumeCancelDone: false
     property bool _ignoredUpdatesDone: false
     property bool _helperUpdatesDone: false
+    property bool _updateWidthDone: false
     property bool _launchEnvDone: false
     property bool _zoneLinkDone: false
+    property bool _trayScanDone: false
+    property bool _zonePrefixDone: false
     property bool _localArtDone: false
     property bool _launchFailDone: false
     property real _volumeCancelDeadline: 0
@@ -1657,7 +1660,17 @@ ShellRoot {
         opening._y = NaN
         closing.arm(false)
         root._check(flick.scrollHold === closing, "a released hold no longer leads, so a later close holds its own row")
+        host.input.mouseWheel(flick, 50, 50, 0, -120)
+        host.input.wait(35)
+        const scrolled = flick.contentY
+        flick.cancelFlick()
+        closing.item.y += 90
+        closing._hold()
+        root._check(scrolled > 40 && flick.scrollHold === null && flick.contentY === scrolled,
+            "wheel scrolling releases a picker hold before its next animation frame can pull the page back")
         closing.item.destroy(); opening.item.destroy(); closing.destroy(); opening.destroy(); flick.destroy()
+        host.close()
+        host.destroy()
     }
 
     function _checkPanelFocus(): void {
@@ -2522,6 +2535,8 @@ ShellRoot {
             row.activate()
             root._check(row.armed && actions === 0,
                 "a power action arms without running its command")
+            root._check(row.Accessible.name === "Press again to reboot",
+                "an armed power action still names its action to a screen reader")
             row.activate()
             root._check(row.armed && actions === 0,
                 "a double-click cannot confirm a power action")
@@ -2567,7 +2582,8 @@ ShellRoot {
                 && Notifications.stackTagOf({ hints: {} }) === "" && Notifications.stackTagOf(null) === "",
             "the dunst and canonical stack tag hints name a notification's stack")
         const make = (id, app, tag) => Qt.createQmlObject("import QtQuick; QtObject { property int id: " + id
-            + "; property string appName: \"" + app + "\"; property var hints: ({}); property bool tracked: true }", root)
+            + "; property string appName: \"" + app + "\"; property var hints: ({}); property bool tracked: true"
+            + "; property string reason: \"\"; function expire() { reason = \"expired\"; tracked = false } }", root)
         const same = make(9001, "volscript", ""), plain = make(9002, "volscript", ""), other = make(9003, "elsewhere", "")
         const next = make(9004, "volscript", "")
         same.hints = { "x-canonical-private-synchronous": "volume" }
@@ -2579,6 +2595,8 @@ ShellRoot {
         const kept = Notifications.list.map(e => e.id)
         root._check(replaced && kept.length === 2 && kept[0] === 9002 && kept[1] === 9003 && !same.tracked && plain.tracked && other.tracked,
             "a tagged notification replaces the same app's card with that tag and leaves every other card alone")
+        root._check(same.reason === "expired",
+            "a card its own stack tag replaced closes as expired, not as dismissed by the user")
         Notifications._consumeClosing(9001, same)
         Notifications.list = listWas
         for (const n of [same, plain, other, next]) n.destroy()
@@ -2764,7 +2782,7 @@ ShellRoot {
 
     function _checkWorkspaceIndicators(): void {
         const keys = ["reduceMotion", "wsShowNumbers", "wsShowAppIcons", "wsUrgentPulse",
-            "valuesOnHover", "uiScale", "barIconSize"]
+            "valuesOnHover", "uiScale", "barIconSize", "wsAppIconColor", "wsActiveMarker"]
         const saved = keys.map(key => ShellSettings[key])
         ShellSettings.reduceMotion = true
         ShellSettings.wsShowNumbers = false
@@ -2861,8 +2879,11 @@ ShellRoot {
             root._check(strip._btnW(1000000) >= Math.ceil(measure.advanceWidth * 1.12) + 10,
                 "long workspace numbers fit their cells at " + scale + "x")
             ShellSettings.barIconSize = 20
-            root._check(strip._iconSz <= strip.btnH - 4,
-                "large workspace icons leave room for state indicators at " + scale + "x")
+            ShellSettings.wsActiveMarker = "dot"
+            const coveredRoom = strip._iconSz <= strip.btnH - 4
+            ShellSettings.wsActiveMarker = "bar"
+            root._check(coveredRoom && strip._iconSz <= strip.btnH - (Metrics.workspaceLineInset + 3),
+                "large workspace icons leave room for state indicators and the Line marker at " + scale + "x")
             measure.destroy()
         }
         strip.destroy()
@@ -3612,6 +3633,62 @@ ShellRoot {
         idle.destroy()
         bonded.destroy()
         stranger.destroy()
+
+        const focusComponent = Qt.createComponent("modules/menu/BluetoothList.qml")
+        const keyHost = keyboardFixtureFactory.createObject(root)
+        const focusPicker = focusComponent.createObject(keyHost.contentItem, { width: 320 })
+        const named = (address, connected) => bluetoothDeviceFixture.createObject(root, {
+            address: address, name: address, pairing: false, paired: true, connected: connected, state: -1 })
+        const headset = named("headset", true), mouse = named("mouse", false), speaker = named("speaker", false)
+        keyHost.requestActivate()
+        keyHost.input.wait(80)
+        const focusedDevice = () => {
+            for (let item = keyHost.activeFocusItem; item; item = item.parent) if (item.modelData) return item.modelData.address
+            return ""
+        }
+        const deviceList = root._findTrayNode(focusPicker, item => item.objectName === "bluetooth-devices")
+        const focusOn = index => {
+            deviceList.currentIndex = index
+            deviceList.forceLayout()
+            deviceList.currentItem.forceActiveFocus(Qt.TabFocusReason)
+        }
+        deviceList.visible = true
+        focusPicker._show([headset, mouse])
+        focusOn(1)
+        const focusStart = focusedDevice()
+        focusPicker._show([headset, speaker, mouse])
+        const focusFound = focusedDevice()
+        focusPicker._show([mouse, headset, speaker])
+        const focusMoved = focusedDevice()
+        focusPicker._show([headset, mouse])
+        focusOn(1)
+        focusPicker._show([headset, speaker])
+        root._check(focusStart === "mouse" && focusFound === "mouse" && focusMoved === "mouse"
+                && focusedDevice() === "speaker",
+            "a Bluetooth row keeps keyboard focus as devices appear or re-sort, and a vanished one hands it to the nearest row ("
+                + [focusStart, focusFound, focusMoved, focusedDevice()].join(", ") + ")")
+        focusPicker._show([headset, mouse])
+        focusOn(1)
+        const holdsMouse = () => focusedDevice() === "mouse" && deviceList.currentItem.Accessible.focusable
+        keyHost.input.keyClick(Qt.Key_Return)
+        mouse.state = Bt.BluetoothDeviceState.Connecting
+        const connectingHeld = holdsMouse()
+        focusPicker._show([headset, speaker, mouse])
+        keyHost.input.wait(1)
+        const rebuiltHeld = holdsMouse()
+        mouse.state = -1
+        const settledHeld = holdsMouse()
+        keyHost.input.keyClick(Qt.Key_Up)
+        keyHost.input.wait(20)
+        root._check(connectingHeld && rebuiltHeld && settledHeld && focusedDevice() === "speaker",
+            "a device connecting after Enter keeps a working keyboard focus while another device appears and once it connects ("
+                + [connectingHeld, rebuiltHeld, settledHeld, focusedDevice()].join(", ") + ")")
+        focusPicker.destroy()
+        keyHost.destroy()
+        focusComponent.destroy()
+        headset.destroy()
+        mouse.destroy()
+        speaker.destroy()
     }
 
     function _checkConnectivityConfirmations(): void {
@@ -4213,19 +4290,26 @@ ShellRoot {
                 && MatugenTheme._parsePalette("{\"accent\":\"red\"}") === null,
             "matugen palette accepts only complete six-digit hex role sets")
         const paletteEverWas = MatugenTheme._everLoaded
-        const paletteStaleWas = MatugenTheme.paletteStale
-        MatugenTheme._everLoaded = true
-        MatugenTheme.paletteStale = false
-        MatugenTheme._markUnreadable()
-        root._check(MatugenTheme.paletteStale && !MatugenTheme.usingFallback,
-            "a palette that disappears after loading is reported as retained")
+        const paletteStateWas = MatugenTheme.loadState
+        const paletteWas = MatugenTheme._palette
         MatugenTheme._everLoaded = false
-        MatugenTheme.paletteStale = false
-        MatugenTheme._markUnreadable()
-        root._check(!MatugenTheme.paletteStale && MatugenTheme.usingFallback,
-            "a missing first palette remains the normal bundled fallback")
+        MatugenTheme._load("partial write")
+        root._check(MatugenTheme.loadState === "invalid" && !MatugenTheme.paletteStale
+                && MatugenTheme.usingFallback,
+            "a malformed first palette is reported while bundled colors are applied")
+        MatugenTheme._load(JSON.stringify(palette))
+        const loadedPalette = MatugenTheme._palette
+        MatugenTheme._load(JSON.stringify(Object.assign({}, palette, { accent: "#FFFFFF" })))
+        root._check(MatugenTheme.loadState === "ready" && !MatugenTheme.usingFallback
+                && MatugenTheme._palette === loadedPalette,
+            "rereading equivalent colors keeps the live palette in place")
+        MatugenTheme._load("{}")
+        root._check(MatugenTheme.loadState === "invalid" && MatugenTheme.paletteStale
+                && MatugenTheme._palette === loadedPalette,
+            "an invalid update reports retained colors and preserves the whole last good palette")
+        MatugenTheme._palette = paletteWas
         MatugenTheme._everLoaded = paletteEverWas
-        MatugenTheme.paletteStale = paletteStaleWas
+        MatugenTheme._loadState = paletteStateWas
 
         root._check(XdgPaths.resolveHome("/tmp/config ", "/home/probe", ".config")
                 === "/tmp/config ",
@@ -5524,31 +5608,43 @@ ShellRoot {
                 ShellSettings.underlineNetGlow = true
                 ShellSettings.reduceMotion = false
                 lineEffect._lastNetConnected = true
-                lineEffect._updateNetGlow(true, false)
+                lineEffect._updateNetGlow(true, false, true)
                 root._check(networkFlash.running,
                     "the first disconnect after a connected startup flashes immediately")
                 lineEffect._stopTransient()
+                lineEffect._lastNetConnected = true
+                lineEffect._lastNetWifi = true
+                lineEffect._updateNetGlow(true, false, false)
+                const radioOffQuiet = !networkFlash.running
+                lineEffect._lastNetConnected = true
+                lineEffect._lastNetWifi = false
+                lineEffect._updateNetGlow(true, false, false)
+                root._check(radioOffQuiet && networkFlash.running,
+                    "losing Wi-Fi to its own radio switched off raises no alarm; a lost cable with the radio off does")
+                lineEffect._stopTransient()
                 lineEffect._networkGlow = 0.3
-                lineEffect._updateNetGlow(true, true)
+                lineEffect._updateNetGlow(true, true, true)
                 root._check(networkFade.running,
                     "reconnecting fades a visible network glow")
                 lineEffect._stopTransient()
                 root._check(!networkFlash.running && !networkFade.running
                         && lineEffect._networkGlow === 0,
                     "settling transient glows also stops the reconnect fade")
-                lineEffect._updateNetGlow(true, true)
+                lineEffect._updateNetGlow(true, true, true)
                 root._check(!networkFade.running,
                     "an already dark network glow starts no reconnect animation")
                 ShellSettings.reduceMotion = true
                 lineEffect._networkGlow = 0.3
-                lineEffect._updateNetGlow(true, true)
+                lineEffect._updateNetGlow(true, true, true)
                 root._check(lineEffect._networkGlow === 0 && !networkFade.running,
                     "reduced motion settles a reconnect without animating")
                 ShellSettings.underlineNetGlow = false
                 lineEffect._lastNetConnected = true
+                lineEffect._lastNetWifi = !Network.isWifi
                 ShellSettings.underlineNetGlow = true
-                root._check(lineEffect._lastNetConnected === (Network.available && Network.connected),
-                    "re-enabling network feedback seeds the current connection state")
+                root._check(lineEffect._lastNetConnected === (Network.available && Network.connected)
+                        && lineEffect._lastNetWifi === Network.isWifi,
+                    "re-enabling network feedback seeds the current connection state and link type")
                 ShellSettings.underlineNetGlow = netGlowWas
                 ShellSettings.reduceMotion = netReduceWas
                 networkFlash.spread = 0.19
@@ -5597,7 +5693,7 @@ ShellRoot {
                 notificationFlash.spread = 0.19
                 notificationFlash.bloom = 0.14
                 lineEffect._lastNetConnected = true
-                lineEffect._updateNetGlow(true, false)
+                lineEffect._updateNetGlow(true, false, true)
                 lineEffect._playScreenshot()
                 root._check(notificationFlash.running && networkFlash.running
                         && notificationFlash.spread === 0.19 && notificationFlash.bloom === 0.14,
@@ -6230,6 +6326,37 @@ ShellRoot {
         CpuTemp._detectGeneration = tempGenerationWas
         ShellSettings.osdTempWarn = tempWarningWas
         CpuTemp._started = tempStartedWas
+
+        const sampleWas = { temp: CpuTemp.temp, reading: CpuTemp.reading, recent: CpuTemp._recent,
+            warmed: CpuTemp._warmedUp, hot: CpuTemp.hot, critical: CpuTemp.critical,
+            hotCount: CpuTemp._hotCount, criticalCount: CpuTemp._criticalCount }
+        CpuTemp._warmedUp = false
+        CpuTemp._clearSampleState()
+        for (const t of [71, 59, 82, 74]) CpuTemp._sample(t)
+        root._check(CpuTemp.temp === 74 && Math.round(CpuTemp.reading) === 72 && CpuTemp._recent.length === 3,
+            "a jumpy CPU sensor reads as the mean of its last three samples, while the alert logic keeps the raw one")
+        CpuTemp._clearSampleState()
+        CpuTemp._sample(60)
+        root._check(CpuTemp.reading === 60,
+            "a released temperature starts its mean afresh rather than averaging in a stale read")
+        const hotLineWas = ShellSettings.tempHotThreshold
+        ShellSettings.tempHotThreshold = 80
+        CpuTemp._clearSampleState()
+        CpuTemp._warmedUp = true
+        for (const t of [90, 90, 90]) CpuTemp._sample(t)
+        const hotOnRaw = CpuTemp.hot
+        CpuTemp._sample(70)
+        root._check(hotOnRaw && !CpuTemp.hot && CpuTemp.reading > 75,
+            "a CPU temperature alert ends on the raw reading while the shown mean is still over its line")
+        ShellSettings.tempHotThreshold = hotLineWas
+        CpuTemp.temp = sampleWas.temp
+        CpuTemp.reading = sampleWas.reading
+        CpuTemp._recent = sampleWas.recent
+        CpuTemp._warmedUp = sampleWas.warmed
+        CpuTemp.hot = sampleWas.hot
+        CpuTemp.critical = sampleWas.critical
+        CpuTemp._hotCount = sampleWas.hotCount
+        CpuTemp._criticalCount = sampleWas.criticalCount
     }
 
     function _checksWorkspaceHandoffAndSettingsFile(): void {
@@ -6612,10 +6739,12 @@ ShellRoot {
             && ShellSettings._dotHidden("theme", "matugenAccentRole")
         ShellSettings.neutralAccentAuto = true
         const autoShows = !ShellSettings._dotHidden("theme", "matugenAccentBalance")
+            && !ShellSettings._dotHidden("theme", "matugenAccentRole")
         ShellSettings.neutralTheme = false
         ShellSettings.neutralAccentAuto = false
-        root._check(pickedHides && autoShows && !ShellSettings._dotHidden("theme", "matugenAccentBalance"),
-            "Balance accent counts on the Theme page only where the page shows it: wallpaper or auto accent")
+        root._check(pickedHides && autoShows && !ShellSettings._dotHidden("theme", "matugenAccentBalance")
+                && !ShellSettings._dotHidden("theme", "matugenAccentRole"),
+            "palette accent choices count on the Theme page in Wallpaper and Neutral with Auto")
         ShellSettings.neutralTheme = savedNeutral
         ShellSettings.neutralAccentAuto = savedAccentAuto
 
@@ -6782,6 +6911,22 @@ ShellRoot {
             settingsStore.writePaused = pausedWas
             settingsStore._reloading = reloadingWas
         }
+        const trayWas = ShellSettings.trayWidget
+        const readErrorWas = ShellSettings._readError
+        ShellSettings.trayWidget = false
+        ShellSettings._loaded = false
+        settingsStore.loadFailed(FileViewError.PermissionDenied)
+        const deniedFirst = ShellSettings.firstRun
+        const deniedTray = ShellSettings.trayWidget
+        const deniedWrites = settingsStore.writeAllowed
+        ShellSettings._loaded = false
+        settingsStore.loadFailed(FileViewError.FileNotFound)
+        root._check(!deniedFirst && !deniedTray && !deniedWrites
+                && ShellSettings.firstRun && ShellSettings.trayWidget && settingsStore.writeAllowed,
+            "only a first start with no settings file turns the tray on, and an unreadable one saves nothing")
+        ShellSettings._firstRun = false
+        ShellSettings._readError = readErrorWas
+        ShellSettings.trayWidget = trayWas
         // recover the remaining probe even if the unchanged-file shortcut failed
         ShellSettings._applyText(beforeEdit.slice(0, -1) + "\n}")
         ShellSettings._loaded = savedLoaded
@@ -6839,6 +6984,12 @@ ShellRoot {
         const hostileMs = Date.now() - hostileStarted
         // about 1 ms when linear; the quadratic pattern took 385 ms here
         root._check(hostileMs < 100, "a body of unclosed tags is cleaned in linear time (" + hostileMs + " ms)")
+        const bracketsStarted = Date.now()
+        Notifications.plainText("[".repeat(32768), 16384)
+        Notifications.plainText("[a](x".repeat(6553), 16384)
+        const bracketsMs = Date.now() - bracketsStarted
+        // 12 ms warm and 37 cold when linear, under nice; the quadratic pattern took 725 ms
+        root._check(bracketsMs < 300, "a body of open brackets is cleaned in linear time (" + bracketsMs + " ms)")
         root._check(Notifications.plainText("a\u061C\u200E\u206Ab", 32) === "ab",
             "notification body drops direction marks and deprecated bidi controls")
         root._check(Notifications.plainText("**Done.** Two **files** changed", 64)
@@ -7619,6 +7770,13 @@ ShellRoot {
                 if (unkeyed.indexOf(e.k + "@" + sec) < 0 && !reachable(sec, e.k, 3)) unreachable.push(e.k + "@" + sec)
         root._check(unreachable.length === 0,
             "every labelled setting has a row on each of its pages for search to flash: " + unreachable.join(" "))
+        const flashless = []
+        for (const e of ShellSettings._schema.filter(e => e.l))
+            for (const sec of e.sec.split(","))
+                for (const row of rowsFor(sec, e.k))
+                    if (![row.topRadius, row.bottomRadius, row.cardInset].every(v => isFinite(v))) flashless.push(e.k + "@" + sec)
+        root._check(flashless.length === 0,
+            "every row search can flash carries the corners and inset its flash copies: " + flashless.join(" "))
         root._check(revealPage._keyRow(sectionFor("media"), "mediaWidgetFormat")?.label === "Artist"
                 && revealPage._keyRow(sectionFor("clock"), "clock12h")?.label === "Format",
             "search reveals a row that writes its setting through its own handler")
@@ -7659,12 +7817,15 @@ ShellRoot {
         root._check(sameAs("worksapce", "workspace") && sameAs("brigthness", "brightness")
                 && sameAs("notifcations", "notifications") && sameAs("wrok", "work")
                 && sameAs("visualiser", "visualizer") && sameAs("bluetoth", "bluetooth")
-                && sameAs("nigth ligth", "night light"),
+                && sameAs("nigth ligth", "night light") && sameAs("nighlight", "nightlight"),
             "a mistyped or swapped letter still finds the setting")
         root._check(MenuState.searchSettings("spotify").length === 0 && MenuState.searchSettings("bars").length > 0
                 && MenuState.searchSettings("qzxv").length === 0 && MenuState._correctedTerm("clok") === "clock"
                 && MenuState._correctedTerm("lok") === "lok",
             "typo correction leaves exact matches, short words and unrelated names alone")
+        root._check(sameAs("colour", "color") && sameAs("transparncy", "transparency")
+                && MenuState.searchSettings("such").length === 0,
+            "settings search tolerates a longer prefix with a missing letter and leaves unrelated four-letter terms alone")
         const landsOn = (query, key) => (MenuState.searchSettings(query)[0] ?? {}).key === key
         root._check(landsOn("wave", "mediaVisualizerStyle") && landsOn("balanced", "mediaVisualizerPreset")
                 && landsOn("tall", "barHeight") && landsOn("wide", "barSpacing") && landsOn("warm", "nightLightProvider")
@@ -8366,6 +8527,15 @@ ShellRoot {
                     "Topic — All about Firefox", "Firefox")
                     === "Topic — All about Firefox",
                 "a descriptive suffix ending in an app name is not mistaken for branding")
+            root._check(titleWidget._withoutAppSuffix(
+                    "Daily note - vault - Obsidian v1.8.10", "Obsidian")
+                    === "Daily note - vault",
+                "a version after the app's name is part of its branding")
+            root._check(titleWidget._withoutAppSuffix(
+                    "Discord | #general | Server", "Discord") === "#general | Server"
+                    && titleWidget._withoutAppSuffix(
+                    "Firefox tips | Blog", "Firefox") === "Firefox tips | Blog",
+                "a title led by the app's own name drops it, one merely starting with it does not")
             titleWidget._shownVisible = true
             titleWidget._shownShowApp = true
             titleWidget._shownApp = "Firefox"
@@ -8527,6 +8697,13 @@ ShellRoot {
             mediaWidget.destroy()
         }
         mediaComponent.destroy()
+        ShellSettings.barShowMedia = false
+        const splitIdle = !Media.positionVisible
+        Media.registerVisualizer(true)
+        const splitLive = Media.positionVisible
+        Media.unregisterVisualizer(true)
+        root._check(splitIdle && splitLive && !Media.positionVisible,
+            "a center or underline visualizer keeps the playback position live for its progress split without the media widget")
         Media.shown = mediaShownWas
         ShellSettings.barShowMedia = showMediaWas
         ShellSettings.mediaWidgetHelper = helperWas
@@ -8789,6 +8966,24 @@ ShellRoot {
             const playStamp = playGlyph?.data.find(item => item.animations?.length === 3)
             root._check(mediaPage._coverWanted && textSwap && playStamp,
                 "an active now playing page requests its cover and exposes its playback animations")
+            const cover = root._findTrayNode(mediaPage, item => item._useA !== undefined && item._shown !== undefined)
+            const coverFile = Qt.createQmlObject("import Quickshell.Io; FileView { blockWrites: true; printErrors: false }", root)
+            coverFile.path = ConfigStore.directory + "/media-probe-cover.svg"
+            coverFile.setText('<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#336699"/></svg>')
+            const artWas = Media.stableArtUrl
+            const coverSettles = wanted => {
+                for (let i = 0; i < 60 && cover && (cover._shown !== wanted || cover._pending !== null); i++)
+                    discoveryClock.wait(50)
+                return cover !== null && cover._shown === wanted
+            }
+            Media.stableArtUrl = "file://" + coverFile.path
+            const coverShown = coverSettles(1)
+            Media.stableArtUrl = String(Qt.resolvedUrl("services/Media.qml"))
+            const staleCleared = coverSettles(0)
+            Media.stableArtUrl = artWas
+            coverFile.destroy()
+            root._check(coverShown && staleCleared,
+                "a cover that cannot be read takes the last track's cover down instead of showing it beside the new title")
             if (textSwap && playStamp) {
                 textSwap.restart()
                 playStamp.restart()
@@ -9772,6 +9967,40 @@ ShellRoot {
             helperRun.destroy()
         })
         helperRun.running = true
+        // every provider's generated check, each tool printing one runaway line beside a real one
+        const widthStubs = "long=$(head -c 5000 /dev/zero | tr '\\0' x); "
+            + "checkupdates() { printf 'core 1-1 -> 1-2\\n%s 1 -> 2\\n' \"$long\"; }; "
+            + "paru() { if [ \"$1\" = -Qua ]; then printf 'aurpkg 1-1 -> 1-2\\n%s 1 -> 2\\n' \"$long\"; "
+            + "else printf 'core 1-1 -> 1-2\\naurpkg 3-1 -> 3-2\\n%s 1 -> 2\\n' \"$long\"; fi; }; "
+            + "pacman() { [ \"$*\" = -Qqm ] && printf 'aurpkg\\n'; }; "
+            + "apt() { printf 'Listing...\\nalpha/stable 2.0 amd64 [upgradable from: 1.0]\\n%s/stable 1 all\\n' \"$long\"; }; "
+            + "dnf() { printf 'alpha.x86_64 2.4-1 updates\\n%s.x86_64 1 updates\\n' \"$long\"; return 100; }; "
+            + "zypper() { printf 'v | repo | alpha | 1.0 | 2.0 | x86_64\\nv | repo | %s | 1 | 2 | x86_64\\n' \"$long\"; }; "
+            + "xbps-install() { printf 'alpha-2.0_1 update x86_64 https://r 1 2\\n%s-1_1 update x86_64 https://r 1 2\\n' \"$long\"; }; "
+            + "ok() { printf '%s\\n' \"$1\" | awk 'length > 1024 { bad = 1 } END { exit bad }' "
+            + "&& printf '%s\\n' \"$1\" | grep -qxF -- \"$2\" && [ \"$(printf '%s\\n' \"$1\" | sed -n 1p)\" = \"$3\" ]; }; fail=0; "
+        const widthFamilyWas = SystemTools.packageFamily
+        const widthToolsWas = SystemTools._tools
+        const widthCases = [
+            ["pacman", { checkupdates: true, paru: true }, "core 1-1 -> 1-2", "4"],
+            ["pacman", { paru: true }, "aurpkg 3-1 -> 3-2", "3"],
+            ["apt", { apt: true }, "alpha/stable 2.0 amd64 [upgradable from: 1.0]", "2"],
+            ["dnf", { dnf: true }, "alpha.x86_64 2.4-1 updates", "2"],
+            ["zypper", { zypper: true }, "v | repo | alpha | 1.0 | 2.0 | x86_64", "2"],
+            ["xbps", { "xbps-install": true }, "alpha-2.0_1 update x86_64 https://r 1 2", "2"]
+        ]
+        const widthScript = widthStubs + widthCases.map((c, i) => "o=$(" + updateCommand(c[0], c[1]) + "); ok \"$o\" '"
+            + c[2] + "' '" + c[3] + "' || fail=$((fail | " + (1 << i) + ")); ").join("") + "exit $fail"
+        SystemTools.packageFamily = widthFamilyWas
+        SystemTools._tools = widthToolsWas
+        const widthRun = processFactory.createObject(root, { command: ["bash", "-c", widthScript] })
+        widthRun.exited.connect(function(code) {
+            root._check(code === 0, "every package checker caps its line width and still reports its count and packages (failed mask "
+                + code + ": pacman 1, aur 2, apt 4, dnf 8, zypper 16, xbps 32)")
+            root._updateWidthDone = true
+            widthRun.destroy()
+        })
+        widthRun.running = true
         Updates.count = 2
         Updates._parseDetail("2\nSPLIT 1 1\ncore 1-1 -> 1-2\nDETAIL AUR\naurpkg 3-1 -> 3-2")
         root._check(Updates.manager === "aur" && Updates.repoCount === 1 && Updates.aurCount === 1
@@ -12873,15 +13102,17 @@ ShellRoot {
         const retiredNotification = {
             transient: false, tracked: true,
             appName: "Probe", appIcon: "", desktopEntry: "",
-            summary: "Retire me", body: "", urgency: 1
+            summary: "Retire me", body: "", urgency: 1,
+            expire() { this.reason = "expired"; this.tracked = false }
         }
         Notifications._times = { "61": 3000 }
         Notifications.list = [{
             notification: retiredNotification, id: 61, time: 3000
         }]
         Notifications._retireActiveNotifications()
-        root._check(Notifications.activeCount === 0 && !retiredNotification.tracked,
-            "disabling popups retires cards instead of leaving timerless notifications")
+        root._check(Notifications.activeCount === 0 && !retiredNotification.tracked
+                && retiredNotification.reason === "expired",
+            "disabling popups retires cards as expired instead of leaving timerless notifications")
         root._check(Notifications.historyCount === 1,
             "a notification retired with the popup window remains in history")
         Notifications.clearHistory()
@@ -12894,9 +13125,10 @@ ShellRoot {
                 appName: "Probe", appIcon: "", desktopEntry: "",
                 summary: "Reply card", body: "Private conversation" }
         ]
+        for (const n of privateCards) n.expire = function() { this.reason = "expired"; this.tracked = false }
         Notifications.list = privateCards.map((n, i) => ({ notification: n, id: 63 + i, time: Date.now() }))
         Notifications.presentationMode = true
-        root._check(Notifications.activeCount === 0 && privateCards.every(n => !n.tracked)
+        root._check(Notifications.activeCount === 0 && privateCards.every(n => !n.tracked && n.reason === "expired")
                 && Notifications.historyCount === 2,
             "presentation mode untracks persistent critical and inline-reply cards while archiving their history")
         Notifications.presentationMode = false
@@ -15839,10 +16071,14 @@ ShellRoot {
         root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")
+        root._check(root._updateWidthDone, "the package checker width check completes")
         root._check(root._launchEnvDone, "the launch fallback environment check completes")
         root._check(root._zoneLinkDone, "the time zone link check completes")
+        root._check(root._trayScanDone, "the tray orphan scan check completes")
+        root._check(root._zonePrefixDone, "the time zone prefix check completes")
         root._check(root._localArtDone, "the cover file check completes")
         root._check(root._launchFailDone, "the launch failure check completes")
+        root._check(root._paletteWatchDone, "the palette watch check completes")
         root._check(Motion.layoutGlides === 0 && !Motion.layoutGliding,
             "every panel glide gives its count back, including one destroyed mid-flight")
         root._runSettingsDiagnosticsProbe()

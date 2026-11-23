@@ -113,6 +113,11 @@ Singleton {
         return isFinite(value) && value <= 100000 ? value : -1
     }
 
+    // head bounds the lines, not their width: one runaway line reached the collector whole
+    function _head(lines: int): string {
+        return "head -n " + lines + " | cut -c1-1024"
+    }
+
     function _safeError(value): string {
         return SafeText.singleLineText(value, 512)
     }
@@ -153,9 +158,9 @@ Singleton {
                    "aur=$(printf '%s' \"$aurout\" | grep -c .); " +
                    "echo $((repo + aur)); " +
                    "echo \"SPLIT $repo $aur\"; " +
-                   "printf '%s\\n' \"$out\" | head -n " + root._maxDetail + "; " +
+                   "printf '%s\\n' \"$out\" | " + root._head(root._maxDetail) + "; " +
                    "echo \"DETAIL AUR\"; " +
-                   "printf '%s\\n' \"$aurout\" | head -n " + root._maxDetail
+                   "printf '%s\\n' \"$aurout\" | " + root._head(root._maxDetail)
         }
         case "aur": {
             const tool = SystemTools.hasParu ? "paru" : "yay"
@@ -171,26 +176,26 @@ Singleton {
                    "aur=$(printf '%s' \"$aurout\" | grep -c .); " +
                    "echo $((repo + aur)); " +
                    "echo \"SPLIT $repo $aur\"; " +
-                   "printf '%s\\n' \"$repoout\" | head -n " + root._maxDetail + "; " +
+                   "printf '%s\\n' \"$repoout\" | " + root._head(root._maxDetail) + "; " +
                    "echo \"DETAIL AUR\"; " +
-                   "printf '%s\\n' \"$aurout\" | head -n " + root._maxDetail
+                   "printf '%s\\n' \"$aurout\" | " + root._head(root._maxDetail)
         }
         case "apt":    return "out=$(" + root._limit(120, "apt list --upgradable") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR apt check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c /; " +
-                              "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 4)
+                              "printf '%s\\n' \"$out\" | " + root._head(root._maxDetail + 4)
         case "dnf":    return "out=$(" + root._limit(120, "dnf -q check-update") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ] && [ \"$rc\" -ne 100 ]; then echo \"ERR dnf check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | awk '/^Obsoleting/ { exit } NF == 3 && $1 ~ /\\./ && $3 !~ /^@/ { n++ } END { print n + 0 }'; " +
-                              "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 8)
+                              "printf '%s\\n' \"$out\" | " + root._head(root._maxDetail + 8)
         case "zypper": return "out=$(" + root._limit(120, "zypper -q list-updates") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR zypper check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | grep -c '^v '; " +
-                              "printf '%s\\n' \"$out\" | head -n " + (root._maxDetail + 4)
+                              "printf '%s\\n' \"$out\" | " + root._head(root._maxDetail + 4)
         case "xbps":   return "out=$(" + root._limit(120, "xbps-install -Mun") + " 2>/dev/null); rc=$?; " +
                               "if [ \"$rc\" -ne 0 ]; then echo \"ERR xbps check failed (exit $rc)\"; exit 0; fi; " +
                               "printf '%s\\n' \"$out\" | awk '$2 == \"update\" { n++ } END { print n + 0 }'; " +
-                              "printf '%s\\n' \"$out\" | head -n " + root._maxDetail
+                              "printf '%s\\n' \"$out\" | " + root._head(root._maxDetail)
         }
         return "echo 0"
     }

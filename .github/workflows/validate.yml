@@ -124,7 +124,11 @@ jobs:
       - name: Exercise tray menus from the keyboard
         if: matrix.compositor == 'kwin'
         shell: bash
-        run: runuser -u silere-test -- bash dev/test-tray-keys.sh 2>&1 | tee /tmp/compositor-tray-keys.log
+        run: runuser -u silere-test -- env SILERE_REQUIRE_TOOLS=1 bash dev/test-tray-keys.sh 2>&1 | tee /tmp/compositor-tray-keys.log
+      - name: Exercise audio device changes and reconnect
+        if: matrix.compositor == 'kwin'
+        shell: bash
+        run: runuser -u silere-test -- env SILERE_REQUIRE_TOOLS=1 bash dev/test-audio.sh 2>&1 | tee /tmp/compositor-audio.log
       - name: Save compositor logs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

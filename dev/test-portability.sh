@@ -1922,6 +1922,23 @@ EOF
     _run >/dev/null 2>&1 \
         || fail "a renamed release withdrawn upstream still blocked the update check"
 
+    # a remote that floods the fetch's stderr: the shell collects all of the updater's stderr and scans it for a line
+    printf '%s\n' '#!/bin/sh' \
+        'awk '\''BEGIN { for (i = 0; i < 200000; i++) print "remote: noise " i > "/dev/stderr" }'\''' \
+        'echo "fatal: the remote hung up on purpose" >&2' 'exit 1' > "$stub_dir/noisy-upload-pack"
+    chmod +x "$stub_dir/noisy-upload-pack"
+    git -C "$client" config remote.origin.uploadpack "$stub_dir/noisy-upload-pack"
+    if _run >/dev/null 2>"$TMP/report-noisy.err"; then fail "a fetch from a failing remote passed the check"; fi
+    git -C "$client" config --unset remote.origin.uploadpack
+    [ "$(wc -c < "$TMP/report-noisy.err")" -le 4096 ] \
+        || fail "a noisy remote reached the shell unbounded ($(wc -c < "$TMP/report-noisy.err") bytes)"
+    grep -qF 'remote hung up on purpose' "$TMP/report-noisy.err" || fail "the cap dropped git's own last words"
+    assert_eq "silere-update: git fetch failed (check network / connectivity)" "$(tail -n 1 "$TMP/report-noisy.err")" \
+        "the updater's reason stays the last line after a noisy remote"
+    assert_eq "git fetch failed (check network / connectivity)" "$(sed -n 2p "$cache/update-error")" \
+        "a noisy remote records the fetch failure"
+    _run >/dev/null 2>&1 || fail "the check did not recover once the remote was quiet"
+
     # git picks the checker from the signature, so a PGP key in the user's own keyring must not stand in for the
     # release key. Every other gate passes here, which is what makes the signature the one being tested
     if command -v gpg >/dev/null 2>&1; then
@@ -2452,6 +2469,28 @@ test_update_lock_survives_orphaned_child() (
 
     grep -q 'git fetch --quiet "$@" 9>&-' "$ROOT/scripts/update.sh" \
         || fail "the update fetch no longer closes the lock fd for its child"
+    grep -qF '| tail -c 2048 >&2 9>&-' "$ROOT/scripts/update.sh" \
+        || fail "the tail that bounds the fetch's stderr holds the lock fd for as long as the fetch lives"
+)
+
+# Settings › Updates collects this output whole, and a commit subject has no length limit of its own
+test_update_recent_width() (
+    export GIT_CONFIG_GLOBAL=/dev/null
+    export GIT_CONFIG_NOSYSTEM=1
+    local repo="$TMP/recent-repo" out
+    git init -q "$repo"
+    mkdir -p "$repo/scripts/lib"
+    cp "$ROOT/scripts/update.sh" "$repo/scripts/update.sh"
+    cp "$ROOT/scripts/lib/xdg.sh" "$ROOT/scripts/lib/qml-modules.sh" "$ROOT/scripts/lib/unit.sh" \
+        "$ROOT/scripts/lib/instances.sh" "$repo/scripts/lib/"
+    git -C "$repo" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m "short subject"
+    git -C "$repo" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty \
+        -m "$(printf 'long subject %.0s' $(seq 4000))"
+    out="$(HOME="$TMP/recent-home" bash "$repo/scripts/update.sh" --recent)"
+    assert_eq 2 "$(wc -l <<<"$out")" "recent history lists both commits"
+    [ "$(wc -L <<<"$out")" -le 220 ] || fail "recent history passed a $(wc -L <<<"$out")-column subject to the shell"
+    grep -qE '^[0-9a-f]{7,} long subject long subject' <<<"$out" || fail "recent history lost the start of a long subject"
+    grep -qE '^[0-9a-f]{7,} short subject *$' <<<"$out" || fail "recent history changed a short subject"
 )
 
 # The confirm screen names one release, and --apply resolves the newest signed tag on
@@ -3227,13 +3266,15 @@ test_cli_restart_and_log() (
         '    log) echo "log $*" >> "$state.calls"; exit 0 ;;' \
         '    --no-detailed-logs) exit 0 ;;' \
         '    --version) [ -z "${SILERE_TEST_QS_BROKEN-}" ] || { echo "qs: symbol lookup error" >&2; exit 127; }; exit 0 ;;' \
-        '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state" ;;' \
+        '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state"' \
+        '       [ -z "${SILERE_TEST_SESSION-}" ] || echo "session ${HYPRLAND_INSTANCE_SIGNATURE-} ${WAYLAND_DISPLAY-}" >> "$state.calls" ;;' \
         'esac' > "$stubs/qs"
     # never the real systemctl: it would restart the live shell of whoever runs the tests
     printf '%s\n' \
         '#!/bin/sh' \
         'echo "systemctl $*" >> "$SILERE_TEST_STATE.calls"' \
         'case "$*" in' \
+        '    *show-environment*) printf "%b" "${SILERE_TEST_SYSTEMD_ENV-}" ;;' \
         '    *is-failed*) [ -n "${SILERE_TEST_UNIT_FAILED-}" ]; exit $? ;;' \
         '    *is-active*|*is-enabled*) [ -n "${SILERE_TEST_UNIT-}" ] && [ -z "${SILERE_TEST_UNIT_INACTIVE-}" ]; exit $? ;;' \
         '    *show*) [ -n "${SILERE_TEST_UNIT-}" ] || exit 1; printf "{ path=/usr/bin/qs ; argv[]=/usr/bin/qs -n -p %s/shell.qml ; }\n" "${SILERE_TEST_UNIT_ROOT:-$SILERE_TEST_ROOT}" ;;' \
@@ -3251,6 +3292,43 @@ test_cli_restart_and_log() (
     assert_eq "Silere restarted (pid 777)" "$out" "restart without a unit"
     assert_eq $'kill\nlaunch --no-duplicate --no-detailed-logs -p '"$ROOT"$'/shell.qml --daemonize locale=<unset>' \
         "$(grep -v '^systemctl' "$state.calls")" "restart stops, then relaunches detached"
+
+    # a terminal from an earlier login names a dead compositor; the systemd environment names the live one
+    local runtime="$TMP/cli-runtime"
+    mkdir -p "$runtime/hypr/live"
+    python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$runtime/hypr/live/.socket.sock"
+    printf '%s\nwayland-1\n' "$$" > "$runtime/hypr/live/hyprland.lock"
+    # a crash leaves the socket file; the pid in the lock (past pid_max) is gone
+    mkdir -p "$runtime/hypr/crashed"
+    python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$runtime/hypr/crashed/.socket.sock"
+    printf '4194305\nwayland-1\n' > "$runtime/hypr/crashed/hyprland.lock"
+    python3 -c 'import socket, sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$runtime/niri.wayland-1.4194305.sock"
+    echo 4242 > "$state"; : > "$state.calls"
+    XDG_RUNTIME_DIR="$runtime" HYPRLAND_INSTANCE_SIGNATURE=crashed WAYLAND_DISPLAY=wayland-old SILERE_TEST_SESSION=1 \
+        SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=live\nWAYLAND_DISPLAY=wayland-1\n' \
+        cli restart >/dev/null || fail "restart after a compositor crash failed"
+    assert_eq "session live wayland-1" "$(grep '^session' "$state.calls")" "a socket left by a crashed Hyprland is dead"
+    echo 4242 > "$state"; : > "$state.calls"
+    (unset HYPRLAND_INSTANCE_SIGNATURE
+        XDG_RUNTIME_DIR="$runtime" NIRI_SOCKET="$runtime/niri.wayland-1.4194305.sock" WAYLAND_DISPLAY=wayland-old \
+            SILERE_TEST_SESSION=1 SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=live\nWAYLAND_DISPLAY=wayland-1\n' \
+            cli restart >/dev/null) || fail "restart after a niri crash failed"
+    assert_eq "session live wayland-1" "$(grep '^session' "$state.calls")" "a socket left by a crashed niri is dead"
+    echo 4242 > "$state"; : > "$state.calls"
+    XDG_RUNTIME_DIR="$runtime" HYPRLAND_INSTANCE_SIGNATURE=dead WAYLAND_DISPLAY=wayland-old SILERE_TEST_SESSION=1 \
+        SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=live\nWAYLAND_DISPLAY=wayland-1\nPATH=/nowhere\n' \
+        cli restart >/dev/null || fail "restart from a stale terminal failed"
+    assert_eq "session live wayland-1" "$(grep '^session' "$state.calls")" "restart from a stale terminal took the live session"
+    echo 4242 > "$state"; : > "$state.calls"
+    XDG_RUNTIME_DIR="$runtime" HYPRLAND_INSTANCE_SIGNATURE=live WAYLAND_DISPLAY=wayland-own SILERE_TEST_SESSION=1 \
+        SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=other\nWAYLAND_DISPLAY=wayland-9\n' \
+        cli restart >/dev/null || fail "restart from a live terminal failed"
+    assert_eq "session live wayland-own" "$(grep '^session' "$state.calls")" "a live session kept its own names"
+    echo 4242 > "$state"; : > "$state.calls"
+    XDG_RUNTIME_DIR="$runtime" HYPRLAND_INSTANCE_SIGNATURE=dead WAYLAND_DISPLAY=wayland-old SILERE_TEST_SESSION=1 \
+        SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=gone\nWAYLAND_DISPLAY=wayland-9\n' \
+        cli restart >/dev/null || fail "restart with no live session failed"
+    assert_eq "session dead wayland-old" "$(grep '^session' "$state.calls")" "a dead systemd session was not taken"
 
     echo 4242 > "$state"; : > "$state.calls"
     if env -u WAYLAND_DISPLAY PATH="$stubs:$PATH" SILERE_TEST_STATE="$state" \
@@ -3747,6 +3825,16 @@ case " $* " in
             GetBrightness)
                 case "${SILERE_KBD_READ_FAIL:-}:$5" in 1:*/led1) exit 1 ;; esac
                 printf 'i 1\n' ;;
+            NameHasOwner)
+                [ "${SILERE_KBD_NO_UPOWER:-0}" = 1 ] || exit 1
+                printf 'b false\n' ;;
+            ListActivatableNames)
+                [ "${SILERE_KBD_NO_UPOWER:-0}" = 1 ] || exit 1
+                if [ "${SILERE_KBD_ACTIVATABLE:-0}" = 1 ]; then
+                    printf 'as 2 "org.freedesktop.DBus" "org.freedesktop.UPower"\n'
+                else
+                    printf 'as 2 "org.freedesktop.DBus" "org.freedesktop.systemd1"\n'
+                fi ;;
             SetBrightness)
                 [ "${SILERE_KBD_FAIL:-0}" = 0 ] || exit 1
                 printf '%s:%s\n' "$5" "$9" >> "$SILERE_KBD_CALLS"
@@ -3776,6 +3864,13 @@ EOF
     fi
     if SILERE_KBD_TREE_FAIL=1 bash "$ROOT/scripts/keyboard-brightness.sh" list >/dev/null; then
         fail "keyboard discovery treated a failed UPower enumeration as an empty device list"
+    fi
+    actual="$(SILERE_KBD_TREE_FAIL=1 SILERE_KBD_NO_UPOWER=1 bash "$ROOT/scripts/keyboard-brightness.sh" list)" \
+        || fail "keyboard discovery reported an error on a machine without UPower"
+    assert_eq "" "$actual" "a machine without UPower has no keyboard lights"
+    if SILERE_KBD_TREE_FAIL=1 SILERE_KBD_NO_UPOWER=1 SILERE_KBD_ACTIVATABLE=1 \
+            bash "$ROOT/scripts/keyboard-brightness.sh" list >/dev/null; then
+        fail "keyboard discovery hid a failed read from a UPower the bus can still start"
     fi
     bash "$ROOT/scripts/keyboard-brightness.sh" write "$path" 0 's "keyboard-0"'
     assert_eq "$path:0" "$(<"$fixture/calls")" "keyboard light supports zero as off"
@@ -3916,6 +4011,8 @@ test_piped_installer_bootstraps
 test_install_path_safety
 test_install_transaction_and_receipt
 test_dry_run_writes_nothing
+test_supervised_autostart_is_current
+test_matugen_repair
 test_installer_options
 test_reinstall_and_uninstall_round_trip
 test_autostart_line_runs

@@ -272,7 +272,7 @@ AnchoredPopupState {
         return Object.keys(seen)
     }
 
-    // a word nothing starts with becomes the closest indexed word: one slip (a swap counts as one), two from 8 letters
+    // a word nothing starts with becomes the closest start of an indexed word: one slip (a swap counts as one), two from 8 letters
     function _correctedTerm(term: string): string {
         const length = term.length
         if (length < 4 || root._searchVocabulary.some(w => w.startsWith(term))) return term
@@ -282,17 +282,21 @@ AnchoredPopupState {
         let best = term, bestCost = most + 1
         for (const word of root._searchVocabulary) {
             // a slip in the first letter and the second at once is rare, and skipping those keeps a keystroke cheap
-            if (word.length < term.length - most || (word[0] !== term[0] && word[1] !== term[1])) continue
-            const whole = word.length <= term.length + most ? root._editCost(term, word) : bestCost
-            const cost = word.length > term.length ? Math.min(whole, root._editCost(term, word.slice(0, term.length))) : whole
-            if (cost < bestCost) { best = word; bestCost = cost }
+            if (word.length < length - most || (word[0] !== term[0] && word[1] !== term[1])) continue
+            const first = Math.min(word.length, length - reach)
+            const last = word.length <= length + most ? word.length : length + reach
+            const hit = root._closestPrefix(term, word, first, last)
+            if (hit.cost < bestCost || (hit.cost === bestCost && word[0] === term[0] && best[0] !== term[0])) {
+                best = word.slice(0, hit.length)
+                bestCost = hit.cost
+            }
         }
         return best
     }
 
-    // optimal string alignment distance
-    function _editCost(a: string, b: string): int {
-        let prev2 = [], prev = Array.from({ length: b.length + 1 }, (_, j) => j)
+    // the last row of optimal string alignment holds the distance to every prefix, including transpositions
+    function _closestPrefix(a: string, b: string, first: int, last: int): var {
+        let prev2 = [], prev = Array.from({ length: last + 1 }, (_, j) => j)
         for (let i = 1; i <= a.length; i++) {
             const row = [i]
             for (let j = 1; j <= last; j++) {
@@ -303,7 +307,9 @@ AnchoredPopupState {
             prev2 = prev
             prev = row
         }
-        return prev[b.length]
+        let length = last
+        for (let j = last - 1; j >= first; j--) if (prev[j] < prev[length]) length = j
+        return { cost: prev[length], length: length }
     }
 
     function _searchTerms(words: string): var {

@@ -160,7 +160,7 @@ Singleton {
     }
     readonly property bool positionVisible: root.positionDemand(
         MenuState.mediaActive,
-        ShellSettings.barShowMedia && root.shown && ShellSettings.mediaWidgetHelper,
+        root.shown && ShellSettings.mediaWidgetHelper && (ShellSettings.barShowMedia || root._visualizerClients > 0),
         OverviewState.active)
 
     function _reanchor(): void {
@@ -182,11 +182,9 @@ Singleton {
         positionNow = root.extrapolatedPosition(root._anchorPos,
             Date.now() - root._anchorMs, root.playing, player.rate, root.length)
     }
-    function seekToRatio(r: real): void {
-        if (!player || !canSeek || length <= 0) return
-        const ratio = Number(r)
-        if (!isFinite(ratio)) return
-        const target = Math.max(0, Math.min(1, ratio)) * length
+    function seekToPosition(seconds: real): void {
+        if (!player || !canSeek || length <= 0 || !isFinite(seconds)) return
+        const target = Math.max(0, Math.min(length, seconds))
         player.position = target
         root._anchorPos = target
         root._anchorMs  = Date.now()
