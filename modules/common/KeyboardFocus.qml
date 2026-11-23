@@ -17,6 +17,9 @@ Item {
     property real radius: Theme.radiusControl
     property real ringY: 0
     property real ringHeight: height
+    // a small button in a hit area as tall as its row, as a row's chevron, rings a circle this wide at its centre the
+    // way an icon button does; around the whole area the ring ran the row's height and touched its edges
+    property real ringSize: 0
     signal activated()
     signal stepped(int direction, int multiplier)
     signal bounded(bool maximum)
@@ -129,12 +132,13 @@ Item {
     // built only for the control holding the focus: a Shape on every control of a panel was a
     // third of what this costs each one as the panel opens
     Loader {
-        y: root.ringY
-        width: parent.width
-        height: root.ringHeight
+        x: root.ringSize > 0 ? Math.round((root.width - root.ringSize) / 2) : 0
+        y: root.ringSize > 0 ? Math.round((root.height - root.ringSize) / 2) : root.ringY
+        width: root.ringSize > 0 ? root.ringSize : parent.width
+        height: root.ringSize > 0 ? root.ringSize : root.ringHeight
         active: root.ringShown && root.canInteract && root.control.activeFocus
         sourceComponent: OutlineBorder {
-            radius: root.radius
+            radius: root.ringSize > 0 ? root.ringSize / 2 : root.radius
             outlineWidth: 2
             outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
         }

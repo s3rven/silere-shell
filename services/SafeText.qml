@@ -40,6 +40,13 @@ Singleton {
         return root._clip(text, cap)
     }
 
+    // a paragraph runs right to left when its first strong letter is Hebrew or Arabic, as Qt reads it: digits, spaces,
+    // punctuation and emoji before it don't count. Only the start is read, so a long body costs no more than a short one
+    function startsRightToLeft(value): bool {
+        return /^[\u0000-@[-`{-¿ -⯿　-〿\uD800-\uDFFF︀-️]*[֐-ࣿיִ-﷿ﹰ-ﻼ]/
+            .test(String(value ?? "").slice(0, 256))
+    }
+
     // stderr from a package helper or gamma tool is often several lines of noise; the last non-empty one is usually the actual failure
     function lastNonEmptyLine(value, fallback: string, limit): string {
         const text = String(value ?? "")

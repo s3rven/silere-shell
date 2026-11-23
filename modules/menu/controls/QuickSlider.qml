@@ -117,7 +117,7 @@ MenuRow {
             + root.accessibleName.toLowerCase() + " options"
         Accessible.focusable: root._canInteract && root.expandable
         Accessible.onPressAction: root._requestExpand()
-        KeyboardFocus { id: _expandFocus; interactive: root._canInteract && root.expandable; onActivated: root._requestExpand() }
+        KeyboardFocus { id: _expandFocus; interactive: root._canInteract && root.expandable; ringSize: Metrics.rowHeightFor(28); onActivated: root._requestExpand() }
         opacity: (_chevHover.hovered) ? 1.0 : 0.7
         MotionBehavior on opacity {NumberAnimation { duration: Motion.fast } }
 

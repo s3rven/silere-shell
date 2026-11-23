@@ -19,6 +19,20 @@ Singleton {
         return encodeURIComponent(JSON.stringify([model, serial]))
     }
 
+    // people know a display by what it is, not by its port: a laptop's own panel names itself by a hex code from its
+    // maker's EDID, so it reads Built-in display; an external one gives its model, and its
+    // port tells two alike apart
+    function label(screen, screens = Quickshell.screens): string {
+        if (!screen) return ""
+        const port = SafeText.singleLineText(screen.name, 64)
+        const builtIn = name => /^(eDP|LVDS|DSI)-/i.test(String(name || ""))
+        if (builtIn(port))
+            return (screens || []).filter(s => s && builtIn(s.name)).length > 1 ? "Built-in display · " + port : "Built-in display"
+        const model = SafeText.singleLineText(screen.model, 48)
+        return model.length > 0 && model !== port && !/^(0x[0-9a-f]*|unknown|none|n\/a|default)$/i.test(model)
+            ? model + " · " + port : port
+    }
+
     function uniqueIdentity(screen, screens): string {
         const key = root.identity(screen)
         return key && screens.filter(s => root.identity(s) === key).length === 1 ? key : ""

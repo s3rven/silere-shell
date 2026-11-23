@@ -39,11 +39,14 @@ Item {
         _glyph.implicitHeight + 12,
         root._controlH + 12) / 4)
 
-    // the value pill grows into whatever the label leaves free, keeping 96px for the
-    // label itself. A flat 148 cap truncated long values (font and display names)
-    // on a wide row while most of the middle sat empty
+    // the value pill grows into whatever the label leaves free. A flat 148 cap truncated long values (font and
+    // display names) on a wide row while most of the middle sat empty. The label keeps its own width up to half
+    // the row, 96px at least: it is the only place that names the setting, while the open list spells every
+    // value out whole, so with both long the value elides first ("Keyboard l…" beside a pill that said it again)
     readonly property int _leadW: root._hasLead ? 14 + Metrics.glyphSlotWidth + 10 : 14
-    readonly property int _pillMaxW: Math.max(92, Metrics.snap4Down(root.width - root._leadW - 10 - 12 - 96))
+    readonly property real _rowTextW: root.width - root._leadW - 10 - 12
+    readonly property real _labelKeepW: Math.max(96, Math.min(Math.ceil(_label.implicitWidth), root._rowTextW / 2))
+    readonly property int _pillMaxW: Math.max(92, Metrics.snap4Down(root._rowTextW - root._labelKeepW))
 
     signal chosen(var value)
 

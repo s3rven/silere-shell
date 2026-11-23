@@ -376,11 +376,12 @@ PageShell {
                 }
             }
 
+            // the line stays when a track names no artist: hiding it moved the seek bar and the buttons 25 px each time a
+            // playlist mixed the two, and a second press on Next landed beside the button
             ShellText {
                 x: 4
                 width: parent.width - 8
                 topPadding: 3
-                visible: root._shownSub.length > 0
                 text: root._shownSub
                 color: Theme.withAlpha(Theme.subtext, 0.86)
                 font.pixelSize: Settings.fontSize

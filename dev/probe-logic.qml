@@ -6307,6 +6307,22 @@ ShellRoot {
                 "leaving a settings page folds its open dropdown")
             MenuState.setSettingsSection(sectionBeforeSelectProbe)
         }
+        // the label is the only name for the setting and the open list spells each value out, so a long value elides first
+        const labelSelect = selectRowFactory.createObject(barFixtureHost, {
+            width: 386, glyph: "󰌌", label: "Keyboard light", currentValue: "k",
+            model: [{ value: "k", label: "Keyboard light · tpacpi::kbd_backlight" }]
+        })
+        const selectText = text => root._findTrayNode(labelSelect, item => item.text === text && item.truncated !== undefined)
+        const keptLabel = selectText("Keyboard light")
+        const elidedValue = selectText("Keyboard light · tpacpi::kbd_backlight")
+        const longLabelKept = keptLabel !== null && !keptLabel.truncated && elidedValue !== null && elidedValue.truncated
+        labelSelect.label = "Font"
+        const shortLabelFloor = labelSelect._pillMaxW === Metrics.snap4Down(labelSelect._rowTextW - 96)
+        labelSelect.label = "A setting whose name runs long enough to fill most of the row on its own"
+        const halfForLabel = labelSelect._labelKeepW === labelSelect._rowTextW / 2
+        root._check(longLabelKept && shortLabelFloor && halfForLabel,
+            "a select keeps its label whole up to half the row and elides a long value first")
+        labelSelect.destroy()
         const pickerHost = Qt.createQmlObject("import QtQuick; Item {}", barFixtureHost)
         const visibilitySelect = selectRowFactory.createObject(pickerHost)
         visibilitySelect._setOpen(true)
@@ -8327,6 +8343,47 @@ ShellRoot {
         root._check(SafeText.singleLineText("pay\u200Bpal\u200F", 32) === "pay pal"
                 && SafeText.singleLineText("a\u061C\u206Ab", 32) === "a b",
             "single-line labels flatten invisible direction marks")
+        // a message in Hebrew or Arabic sets from the right; a row's label keeps to the start, beside its icon
+        root._check(SafeText.startsRightToLeft("שלום") && SafeText.startsRightToLeft("12: مرحبا")
+                && SafeText.startsRightToLeft("😀 مرحبا") && !SafeText.startsRightToLeft("AirPods של דני")
+                && !SafeText.startsRightToLeft("Ελληνικά") && !SafeText.startsRightToLeft("")
+                && !SafeText.startsRightToLeft(undefined),
+            "a paragraph's direction comes from its first strong letter")
+        const rtlLabel = Qt.createQmlObject('import "modules/common"; ShellText { width: 200; text: "רשת הבית" }', barFixtureHost)
+        const rtlCard = notificationCardFactory.createObject(root, { width: 380, notification: ({
+            actions: [], hints: ({}), appIcon: "", image: "", appName: "Probe", desktopEntry: "",
+            summary: "دانا", body: "هل ستأتي غدا؟", urgency: 1, expireTimeout: 5000, resident: false, transient: false
+        }) })
+        const rtlSummary = root._findTrayNode(rtlCard, item => item.text === "دانا" && item.effectiveHorizontalAlignment !== undefined)
+        const rtlBody = root._findTrayNode(rtlCard, item => item.text === "هل ستأتي غدا؟" && item.effectiveHorizontalAlignment !== undefined)
+        root._check(rtlLabel.effectiveHorizontalAlignment === Text.AlignLeft && rtlSummary !== null && rtlBody !== null
+                && rtlSummary.effectiveHorizontalAlignment === Text.AlignRight
+                && rtlBody.effectiveHorizontalAlignment === Text.AlignRight,
+            "a Hebrew label keeps to the start of its row while an Arabic message reads from the right")
+        rtlCard.destroy()
+        rtlLabel.destroy()
+        // a row's chevron rings a circle at its centre, as an icon button does, not the row's whole height
+        const ringedSlider = quickSliderFactory.createObject(barFixtureHost, { expandable: true })
+        const chevronFocus = root._findTrayNode(ringedSlider, item => item.ringSize !== undefined && item.ringSize > 0)
+        const chevronRing = chevronFocus ? Array.prototype.find.call(chevronFocus.children,
+            child => child.sourceComponent !== undefined) : null
+        root._check(chevronRing !== null && chevronRing.width === chevronFocus.ringSize
+                && chevronRing.height === chevronFocus.ringSize && chevronFocus.height > chevronFocus.ringSize
+                && Math.abs(chevronRing.y + chevronRing.height / 2 - chevronFocus.height / 2) <= 0.5,
+            "a slider's chevron rings a centred circle, not the row's height")
+        ringedSlider.destroy()
+        // a display is named by what it is: the laptop's panel as built-in, an external one by its model and port
+        const panel = { name: "eDP-2", model: "0x9a2b" }
+        const dell = { name: "DP-2", model: "DELL U2723QE" }
+        const bare = { name: "HDMI-A-1", model: "" }
+        root._check(Monitors.label(panel, [panel, dell]) === "Built-in display"
+                && Monitors.label(dell, [panel, dell]) === "DELL U2723QE · DP-2"
+                && Monitors.label(bare, [bare]) === "HDMI-A-1"
+                && Monitors.label({ name: "DP-3", model: "0x0000" }, []) === "DP-3"
+                && Monitors.label(panel, [panel, { name: "eDP-1", model: "" }]) === "Built-in display · eDP-2"
+                && Monitors.label({ name: "DP-1", model: "LG\u202E\nULTRA" }, []) === "LG ULTRA · DP-1"
+                && Monitors.label(null) === "",
+            "a display is named built-in or by its model, keeping the port where two could match")
         const cutEmoji = SafeText.singleLineText(" ".repeat(8 * 8 + 63) + "😀", 8)
         root._check(cutEmoji === "",
             "a single-line label cut inside an emoji keeps no half of it (" + cutEmoji.length + " code units left)")
@@ -9532,9 +9589,14 @@ ShellRoot {
         root._check(Audio.sinkLabel(analog, [analog]) === "Ryzen HD Audio Controller"
                 && Audio.sinkLabel(alsa("Analog Stereo", "Analog Stereo"), []) === "Analog Stereo",
             "an ALSA output drops its profile from its name")
-        root._check(Audio.sinkLabel(analog, [analog, digital]) === "Ryzen HD Audio Controller Analog Stereo"
-                && Audio.sinkLabel(digital, [analog, digital]) === "Ryzen HD Audio Controller Digital Stereo (IEC958)",
-            "two outputs of one card keep their profiles so they stay apart")
+        const sofCard = "Tiger Lake-LP Smart Sound Technology Audio Controller"
+        const sofSpeaker = alsa(sofCard + " Speaker + Headphones", "Speaker + Headphones")
+        const sofHdmi = alsa(sofCard + " HDMI / DisplayPort 3 Output", "HDMI / DisplayPort 3 Output")
+        root._check(Audio.sinkLabel(analog, [analog, digital]) === "Analog Stereo · Ryzen HD Audio Controller"
+                && Audio.sinkLabel(digital, [analog, digital]) === "Digital Stereo (IEC958) · Ryzen HD Audio Controller"
+                && Audio.sinkLabel(sofHdmi, [sofSpeaker, sofHdmi]) === "HDMI / DisplayPort 3 Output · " + sofCard
+                && Audio.sinkLabel(sofSpeaker, [sofSpeaker]) === sofCard,
+            "two outputs of one card lead with what sets them apart, so a cut row still tells them apart")
 
         const audioStatus = JSON.parse(Audio._ipc.status())
         root._check(audioStatus.output.ready === Audio.ready
@@ -9863,6 +9925,21 @@ ShellRoot {
         root._check(stopsFor(1, 10, 1) === 8 && stopsFor(0, 24, 4) === 5 && stopsFor(50, 105, 5) === 10
                 && stopsFor(0, 1, 0.3) === 3 && stopsFor(0, 1, 0.05) === 0 && stopsFor(0, 1, 0) === 0,
             "a slider marks the inner stops of a short grid and leaves a fine or continuous one plain")
+        // a dimmed track fades as one layer, so its rail does not show through the handle; a live one draws direct
+        const layerOf = slider => Array.prototype.find.call(slider.children, child => child.children
+            && Array.prototype.some.call(child.children, part => part.hoverGrow !== undefined))
+        const layerTrack = sliderTrackFactory.createObject(barFixtureHost, { width: 100, value: 0.4 })
+        const trackBody = layerOf(layerTrack)
+        const liveDirect = trackBody && !trackBody.layer.enabled
+        layerTrack.interactive = false
+        const idleLayered = trackBody && trackBody.layer.enabled
+        layerTrack.showThumb = false
+        const barePlain = trackBody && !trackBody.layer.enabled
+        layerTrack.showThumb = true
+        layerTrack.interactive = true
+        root._check(liveDirect && idleLayered && barePlain && !trackBody.layer.enabled,
+            "a slider that cannot be used is drawn as one layer while it has a handle, and a live one is not")
+        layerTrack.destroy()
         track.destroy()
         const spineScaleWas = ShellSettings.uiScale
         const spineSlider = sliderRowFactory.createObject(barFixtureHost)
@@ -9950,6 +10027,12 @@ ShellRoot {
         const gradient = gradientSliderFactory.createObject(barFixtureHost, {
             width: 100, position: 0.5, displayScale: 360, wraps: true
         })
+        const gradientBody = layerOf(gradient)
+        const gradientLive = gradientBody && !gradientBody.layer.enabled
+        gradient.interactive = false
+        root._check(gradientLive && gradientBody.layer.enabled,
+            "a colour strip that cannot be used is drawn as one layer, so its dimmed handle stays solid")
+        gradient.interactive = true
         let picked = -1
         gradient.picked.connect(value => picked = value)
         root._check(gradient._wrapped(1.0) === 0

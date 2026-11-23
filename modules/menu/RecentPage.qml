@@ -1083,9 +1083,13 @@ PageShell {
                                     - (_entry._showHeader ? 0 : _entry._rightGutter))
                                 text: (_entry.modelData.summary || "").trim()
                                     || (_entry.modelData.body || "").trim() || "Notification"
+                                // a message in Hebrew or Arabic reads from the right, as in its popup
+                                horizontalAlignment: SafeText.startsRightToLeft(text) ? Text.AlignRight : Text.AlignLeft
                                 color: Theme.text
-                                // bottom-most text owes the chevron its corner
-                                rightPadding: _entry._hasBody || _entry._chevronInline ? 0 : 16
+                                // bottom-most text owes the chevron its corner; set from the right, the summary keeps the
+                                // body's gutter too, so the two share an edge
+                                rightPadding: !(_entry._hasBody || _entry._chevronInline) ? 16
+                                    : _entry._showHeader && _entry._hasBody && horizontalAlignment === Text.AlignRight ? 16 : 0
                                 font.pixelSize: Settings.fontSize
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
@@ -1101,6 +1105,7 @@ PageShell {
                                 visible: _entry._hasBody
                                 text: (_entry.modelData.summary || "").trim().length > 0
                                     ? _entry.modelData.body || "" : ""
+                                horizontalAlignment: SafeText.startsRightToLeft(text) ? Text.AlignRight : Text.AlignLeft
                                 color: Theme.withAlpha(Theme.text, 0.78)
                                 font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.Wrap

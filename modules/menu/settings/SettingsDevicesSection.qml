@@ -84,10 +84,8 @@ Column {
                 model: {
                     const choices = [{ value: "", label: "Follow focus" }]
                     const screens = Quickshell.screens || []
-                    for (let i = 0; i < screens.length; i++) {
-                        const name = screens[i].name
-                        choices.push({ value: name, label: name })
-                    }
+                    for (let i = 0; i < screens.length; i++)
+                        choices.push({ value: screens[i].name, label: Monitors.label(screens[i], screens) })
                     return choices
                 }
             }
@@ -97,7 +95,7 @@ Column {
                 delegate: ToggleRow {
                     required property var modelData
                     glyph: "󰍺"
-                    label: "Bar on " + modelData.name
+                    label: "Bar on " + Monitors.label(modelData).replace(/^Built-in/, "built-in")
                     checked: Monitors.barEnabled(modelData)
                     // turning off the last one is refused, and a switch that springs back with no reason reads as a broken toggle
                     blocked: checked && Monitors.liveBarCount <= 1

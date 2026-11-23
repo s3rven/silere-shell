@@ -207,8 +207,9 @@ the top result.
 ### Displays
 
 With more than one screen, **Settings › System › Devices** chooses where popups and the OSD
-appear and which displays have a bar. A display identified by model and serial keeps its choices
-across dock changes; otherwise they stay with the connector.
+appear and which displays have a bar. A laptop's own screen is listed as Built-in display, any other
+by its model and connector, such as `DELL U2723QE · DP-2`. A display identified by model and serial
+keeps its choices across dock changes; otherwise they stay with the connector.
 
 ### Screen lock
 

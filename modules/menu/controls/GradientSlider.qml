@@ -91,41 +91,50 @@ Item {
         root.picked(root._clamped((mx - _track.x) / Math.max(1, _track.width)))
     }
 
-    Rectangle {
-        id: _track
-        x: Metrics.devicePx(_thumb.width / 2, root._dpr)
-        y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
-        width: Math.max(1, Metrics.devicePx(parent.width, root._dpr) - 2 * x)
-        height: Metrics.devicePx(6, root._dpr)
-        radius: 3
-        antialiasing: true
-        gradient: root.trackGradient
+    // as SliderTrack: dimmed piece by piece, the rail showed through the handle, so a strip that cannot be used is
+    // one layer, on this child because the snapped root would draw it a row taller at 1.25
+    Item {
+        id: _body
+        width: Metrics.devicePx(root.width, root._dpr)
+        height: Metrics.devicePx(root.height, root._dpr)
+        layer.enabled: root.visible && !root._canInteract
 
-        // the grey end of the intensity rail would otherwise dissolve into the card
-        OutlineBorder {
-            radius: _track.radius
-            outlineWidth: 1
-            outlineColor: Theme.controlTrackLine(Theme.accent, false,
-                _mouse.containsMouse, _mouse.pressed)
-            ColorFade on outlineColor {}
+        Rectangle {
+            id: _track
+            x: Metrics.devicePx(_thumb.width / 2, root._dpr)
+            y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
+            width: Math.max(1, Metrics.devicePx(parent.width, root._dpr) - 2 * x)
+            height: Metrics.devicePx(6, root._dpr)
+            radius: 3
+            antialiasing: true
+            gradient: root.trackGradient
+
+            // the grey end of the intensity rail would otherwise dissolve into the card
+            OutlineBorder {
+                radius: _track.radius
+                outlineWidth: 1
+                outlineColor: Theme.controlTrackLine(Theme.accent, false,
+                    _mouse.containsMouse, _mouse.pressed)
+                ColorFade on outlineColor {}
+            }
         }
-    }
 
-    SliderHandle {
-        id: _thumb
-        width: Metrics.devicePx(16, root._dpr)
-        height: width
-        y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
-        x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
-        fillColor: root.thumbColor
-        // the fill is the colour beneath it, so only a solid ring separates the handle from the rail
-        outlineWidth: 2
-        outlineColor: Theme.withAlpha(Theme.text,
-            ShellSettings.highContrast || _mouse.containsMouse || _mouse.pressed ? 0.95 : 0.8)
-        hovered: _mouse.containsMouse
-        pressed: _mouse.pressed
+        SliderHandle {
+            id: _thumb
+            width: Metrics.devicePx(16, root._dpr)
+            height: width
+            y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
+            x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
+            fillColor: root.thumbColor
+            // the fill is the colour beneath it, so only a solid ring separates the handle from the rail
+            outlineWidth: 2
+            outlineColor: Theme.withAlpha(Theme.text,
+                ShellSettings.highContrast || _mouse.containsMouse || _mouse.pressed ? 0.95 : 0.8)
+            hovered: _mouse.containsMouse
+            pressed: _mouse.pressed
 
-        MotionBehavior on x { gate: !_mouse.pressed; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+            MotionBehavior on x { gate: !_mouse.pressed; NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
+        }
     }
 
     MouseArea {

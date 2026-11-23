@@ -130,7 +130,7 @@ Item {
                 label: "Sleep"
                 glyph: "󰒲"
                 enabled: SystemTools.commandAvailable(Settings.suspendCommand)
-                onTriggered: root._runAction(Settings.suspendCommand, "Suspend failed")
+                onTriggered: root._runAction(Settings.suspendCommand, "Sleep failed")
             }
 
             PowerRailRow {
@@ -166,7 +166,7 @@ Item {
                 confirm: true
                 dangerous: true
                 onArmedChanged: if (armed) { _powOut.disarm(); _powReb.disarm() }
-                onTriggered: root._runAction(Settings.poweroffCommand, "Shut down failed")
+                onTriggered: root._runAction(Settings.poweroffCommand, "Power off failed")
             }
         }
     }

@@ -402,14 +402,16 @@ Singleton {
     }
 
     // ALSA names a node card + profile ("… Analog Stereo"), which truncates in the menu; the card
-    // alone is enough unless another node of the same card is in the list beside it
+    // alone is enough unless another node of the same card is in the list beside it. Then what sets them apart
+    // leads, as GNOME writes it: in card order every row of an Intel laptop's outputs cut to the same
+    // "Tiger Lake-LP Smart Sound Technology Audio Con…" before reaching Speaker or HDMI 3
     function _cardLabel(node, peers): string {
         const desc = String(node.description || "")
         const profile = String((node.properties || {})["device.profile.description"] || "")
         if (profile.length === 0 || desc.length <= profile.length + 1 || !desc.endsWith(" " + profile)) return desc
         const card = desc.slice(0, desc.length - profile.length - 1)
         for (const p of peers || [])
-            if (p && p !== node && String(p.description || "").startsWith(card)) return desc
+            if (p && p !== node && String(p.description || "").startsWith(card)) return profile + " · " + card
         return card
     }
 

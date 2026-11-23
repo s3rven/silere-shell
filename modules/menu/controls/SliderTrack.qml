@@ -211,92 +211,103 @@ Item {
         _setFromUser(next)
     }
 
-    WaveLine {
-        visible: root.wavy
-        x: root._railInset
-        width: root._railWidth
-        // fixed, so the amplitude easing to flat never resizes the faded layer
-        height: Metrics.snap4Up(root._railH + 7)
-        y: Math.round((root.height - height) / 2)
-        value: root._ratio
-        endInset: root.showThumb ? root._thumbW / 2 + 3 : 0
-        thickness: root._railH
-        amplitude: root.waveAmplitude
-        swellSource: root.waveSwellSource
-        wavelength: 16
-        waveOpacity: 0.85
-        flowing: root.waveFlowing
-        color: Theme.controlTrackFill(Theme.accent, true, _ma.containsMouse, _ma.pressed)
-        trackColor: root.trackColor
-    }
+    // a dimmed row fades each piece on its own, so the rail's outline and the fill's round end showed through the
+    // handle; drawn as one layer, the handle stays solid. Only while it cannot be used, so a live track costs nothing.
+    // The layer sits on this child, not the track: on the snapped track its texture took the unsnapped fraction of a
+    // pixel and drew a row taller at 1.25
+    Item {
+        id: _body
+        width: Metrics.devicePx(root.width, root._dpr)
+        height: Metrics.devicePx(root.height, root._dpr)
+        layer.enabled: root.visible && root.showThumb && !root._canInteract
 
-    Rectangle {
-        id: _rail
-        visible: !root.wavy
-        x: root._railInset
-        y: Metrics.devicePx((root.height - root._railH) / 2, root._dpr)
-        width: root._railWidth
-        height: root._railH
-        radius: 3; antialiasing: true
-        color: root.trackColor
-        ColorFade on color { gate: root.animate }
+        WaveLine {
+            visible: root.wavy
+            x: root._railInset
+            width: root._railWidth
+            // fixed, so the amplitude easing to flat never resizes the faded layer
+            height: Metrics.snap4Up(root._railH + 7)
+            y: Math.round((root.height - height) / 2)
+            value: root._ratio
+            endInset: root.showThumb ? root._thumbW / 2 + 3 : 0
+            thickness: root._railH
+            amplitude: root.waveAmplitude
+            swellSource: root.waveSwellSource
+            wavelength: 16
+            waveOpacity: 0.85
+            flowing: root.waveFlowing
+            color: Theme.controlTrackFill(Theme.accent, true, _ma.containsMouse, _ma.pressed)
+            trackColor: root.trackColor
+        }
 
         Rectangle {
-            id: _fill
-            // whole device px, or the fill edge slides out from under the rounded handle x
-            width: Metrics.devicePx(parent.width * root._ratio, root._dpr)
-            height: parent.height
-            radius: parent.radius
-            antialiasing: true
-            color: Theme.controlTrackFill(Theme.accent, true,
-                _ma.containsMouse, _ma.pressed)
+            id: _rail
+            visible: !root.wavy
+            x: root._railInset
+            y: Metrics.devicePx((root.height - root._railH) / 2, root._dpr)
+            width: root._railWidth
+            height: root._railH
+            radius: 3; antialiasing: true
+            color: root.trackColor
             ColorFade on color { gate: root.animate }
-            MotionBehavior on width {
+
+            Rectangle {
+                id: _fill
+                // whole device px, or the fill edge slides out from under the rounded handle x
+                width: Metrics.devicePx(parent.width * root._ratio, root._dpr)
+                height: parent.height
+                radius: parent.radius
+                antialiasing: true
+                color: Theme.controlTrackFill(Theme.accent, true,
+                    _ma.containsMouse, _ma.pressed)
+                ColorFade on color { gate: root.animate }
+                MotionBehavior on width {
+                    gate: root.animate && !_ma.pressed
+                    NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
+                }
+            }
+
+            Repeater {
+                model: root._stopCount
+                Rectangle {
+                    required property int index
+                    readonly property real _at: _rail.width * (index + 1) * root.step / (root.max - root.min)
+                    width: root._stopSize
+                    height: root._stopSize
+                    x: Metrics.devicePx(_at - width / 2, root._dpr)
+                    y: Metrics.devicePx((_rail.height - height) / 2, root._dpr)
+                    radius: width / 2
+                    antialiasing: true
+                    // read off the fill's animated edge, so a stop changes tone as the fill reaches it
+                    color: _at <= _fill.width
+                        ? Theme.withAlpha(Theme.menuControlSolid, 0.55)
+                        : Theme.swatchEdge
+                }
+            }
+
+            OutlineBorder {
+                radius: _rail.radius
+                outlineWidth: 1
+                outlineColor: root.trackOutlineColor
+                ColorFade on outlineColor { gate: root.animate }
+            }
+        }
+
+        SliderHandle {
+            visible: root.showThumb
+            width: root._thumbW; height: root._thumbH
+            y: Metrics.devicePx((root.height - height) / 2, root._dpr)
+            x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
+            hovered: _ma.containsMouse
+            pressed: _ma.pressed
+            hoverGrow: root.hoverGrow
+            animate: root.animate
+            fillColor: Theme.sliderKnobFill(Theme.accent,
+                root.hoverGrow && _ma.containsMouse, _ma.pressed)
+            MotionBehavior on x {
                 gate: root.animate && !_ma.pressed
                 NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
             }
-        }
-
-        Repeater {
-            model: root._stopCount
-            Rectangle {
-                required property int index
-                readonly property real _at: _rail.width * (index + 1) * root.step / (root.max - root.min)
-                width: root._stopSize
-                height: root._stopSize
-                x: Metrics.devicePx(_at - width / 2, root._dpr)
-                y: Metrics.devicePx((_rail.height - height) / 2, root._dpr)
-                radius: width / 2
-                antialiasing: true
-                // read off the fill's animated edge, so a stop changes tone as the fill reaches it
-                color: _at <= _fill.width
-                    ? Theme.withAlpha(Theme.menuControlSolid, 0.55)
-                    : Theme.swatchEdge
-            }
-        }
-
-        OutlineBorder {
-            radius: _rail.radius
-            outlineWidth: 1
-            outlineColor: root.trackOutlineColor
-            ColorFade on outlineColor { gate: root.animate }
-        }
-    }
-
-    SliderHandle {
-        visible: root.showThumb
-        width: root._thumbW; height: root._thumbH
-        y: Metrics.devicePx((root.height - height) / 2, root._dpr)
-        x: Metrics.devicePx(root._thumbCenter - width / 2, root._dpr)
-        hovered: _ma.containsMouse
-        pressed: _ma.pressed
-        hoverGrow: root.hoverGrow
-        animate: root.animate
-        fillColor: Theme.sliderKnobFill(Theme.accent,
-            root.hoverGrow && _ma.containsMouse, _ma.pressed)
-        MotionBehavior on x {
-            gate: root.animate && !_ma.pressed
-            NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic }
         }
     }
 

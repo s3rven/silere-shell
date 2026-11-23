@@ -709,6 +709,8 @@ Item {
                     anchors.right:      parent.right
                     anchors.rightMargin: card._iconSide + 6
                     text:             card.titleText
+                    // a message in Hebrew or Arabic reads from the right, as its body does; the labels around it keep to the start
+                    horizontalAlignment: SafeText.startsRightToLeft(text) ? Text.AlignRight : Text.AlignLeft
                     // glyph, rim and ring already carry urgency; red text on the red-tinted fill only costs contrast
                     color:            Theme.text
                     font.pixelSize:   Settings.fontSize + 1
@@ -746,6 +748,7 @@ Item {
                 visible:          card.hasBody
                 width:            parent.width
                 text:             card.bodyText
+                horizontalAlignment: SafeText.startsRightToLeft(text) ? Text.AlignRight : Text.AlignLeft
                 color:            Theme.withAlpha(Theme.menuTextMuted, 0.82)
                 font.pixelSize:   Settings.fontLabel
                 wrapMode:         Text.Wrap

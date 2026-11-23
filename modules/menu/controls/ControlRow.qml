@@ -296,7 +296,7 @@ MenuRow {
                 Accessible.name: (root.expanded ? "Hide " : "Show ") + root.title + " options"
                 Accessible.focusable: enabled
                 Accessible.onPressAction: root._toggleExpanded()
-                KeyboardFocus { id: _expandFocus; onActivated: root._toggleExpanded() }
+                KeyboardFocus { id: _expandFocus; ringSize: Metrics.rowHeightFor(28); onActivated: root._toggleExpanded() }
                 onClicked: {
                     root._toggleExpanded()
                 }
