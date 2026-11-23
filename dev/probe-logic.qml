@@ -1522,12 +1522,47 @@ ShellRoot {
                     "A very long output name ".repeat(20) + " · 45%"]) {
                 OsdBarState._upsertEntry(label === "Microphone muted" ? "microphone" : "volume",
                     "V", 0.45, label, label === "Microphone muted", Theme.accent)
-                const text = root._findTrayNode(widget, item => item.text === label)
-                root._check(text && widget._labelWidth > 60
+                const text = root._findTrayNode(widget, item => item.elide === Text.ElideMiddle)
+                const matches = label.length < 60 ? text?.text === label
+                    : text?.text.startsWith("A very long") && text.text.endsWith(" · 45%")
+                root._check(matches && widget._labelWidth > 60
                         && widget._labelWidth <= 240 * ShellSettings.uiScale
-                        && text.elide === Text.ElideMiddle && widget.Accessible.name === label,
+                        && widget.Accessible.name === label,
                     "the integrated OSD preserves device and microphone context within its width limit: " + label.slice(0, 32))
             }
+            for (const prefix of ["Speakers · ", "Microphone · "]) {
+                const kind = prefix === "Speakers · " ? "volume" : "microphone"
+                OsdBarState._upsertEntry(kind, "V", 0.45, prefix + "45%", false, Theme.accent)
+                const unmuted = widget._labelWidth
+                OsdBarState._upsertEntry(kind, "V", 0.45, prefix + "Muted", true, Theme.accent)
+                root._check(widget._labelWidth === unmuted && unmuted % 4 === 0
+                        && OsdBarState.levelPrefix(prefix + "Muted") === prefix
+                        && OsdBarState.levelPrefix("Paused · Speakers") === "",
+                    "muting a named output keeps the integrated OSD's track and level in place: " + prefix.trim())
+            }
+            const text = root._findTrayNode(widget, item => item.elide === Text.ElideMiddle)
+            const measure = Qt.createQmlObject("import QtQuick; TextMetrics {}", widget)
+            measure.renderType = text.renderType
+            const name = "Studio wireless headphones ".repeat(5)
+            const scaleWas = ShellSettings.uiScale
+            for (const scale of [1, 1.5]) {
+                ShellSettings.uiScale = scale
+                measure.font = text.font
+                for (const level of ["100%", "Muted"]) {
+                    const label = name + " · " + level
+                    OsdBarState._upsertEntry("volume", "V", 1, label, level === "Muted", Theme.accent)
+                    measure.text = level
+                    widget.width = widget._iconWidth + 8 + Math.ceil(measure.advanceWidth) + 2
+                    measure.text = text.text
+                    measure.elide = text.elide
+                    measure.elideWidth = text.width
+                    root._check(measure.elidedText === level && widget.Accessible.name === label,
+                        "a crowded integrated OSD shows the complete " + level + " at " + scale
+                            + "× (drew " + measure.elidedText + ")")
+                }
+            }
+            ShellSettings.uiScale = scaleWas
+            measure.destroy()
             OsdBarState._upsertEntry("volume", "V", 0.45, "45%", false, Theme.accent)
             widget.width = 200
             const track = root._findTrayNode(widget, item => item.radius === 1.5 && item.height === 3)
@@ -2324,6 +2359,11 @@ ShellRoot {
         // the same palette as the neutral base's accent source: its accent was made for a light base
         ShellSettings.neutralTheme = true
         ShellSettings.neutralAccentAuto = true
+        ShellSettings.matugenAccentRole = "tertiary"
+        root._check(Qt.colorEqual(Theme.accent, Theme.sourcedAccent(light.warning))
+                && !Qt.colorEqual(Theme.accent, Theme.sourcedAccent(light.accent)),
+            "Neutral with Auto applies the same Matugen accent role as Wallpaper")
+        ShellSettings.matugenAccentRole = "primary"
         for (const palette of palettes) for (const tone of ["black", "charcoal", "graphite"]) {
             MatugenTheme._palette = palette
             ShellSettings.baseTone = tone
@@ -2350,7 +2390,8 @@ ShellRoot {
         const screen = Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
         const wifiWas = Network.wifiEnabled
         const btWas = Bluetooth.enabled
-        const pickers = { NetworkWidget: "wifi", BluetoothWidget: "bt", BrightnessWidget: "brightness", BatteryWidget: "power" }
+        const pickers = { NetworkWidget: Network.deviceType === "ethernet" ? "wired" : "wifi",
+            BluetoothWidget: "bt", BrightnessWidget: "brightness", BatteryWidget: "power" }
         for (const name of Object.keys(pickers)) {
             const component = Qt.createComponent("modules/bar/widgets/" + name + ".qml")
             const widget = component.status === Component.Ready
@@ -2402,8 +2443,8 @@ ShellRoot {
         const netComponent = Qt.createComponent("modules/bar/widgets/NetworkWidget.qml")
         const net = netComponent.status === Component.Ready ? netComponent.createObject(barFixtureHost, { screen: screen }) : null
         root._check(net !== null && ["Wired connection 1", "Ethernet", "eth0", "enp2s0", "eno1", "ens3", "enx00e04c680001",
-                "end0", "enP1p1s0"].every(n => net.genericWiredName(n))
-                && !["Home LAN", "Office", "en", "eth"].some(n => net.genericWiredName(n)),
+                "end0", "enP1p1s0", "enxaabbccddeeff"].every(n => net.genericWiredName(n))
+                && !["Home LAN", "Office", "en", "eth", "Endpoint", "Ensuite"].some(n => net.genericWiredName(n)),
             "the network pill says Wired for default profile and interface names, and keeps a name someone chose")
         if (net) net.destroy()
         netComponent.destroy()

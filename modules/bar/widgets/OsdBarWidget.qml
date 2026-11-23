@@ -13,6 +13,10 @@ Item {
 
     readonly property real _slide: 5
     readonly property int _iconWidth: Settings.iconSize + 6
+    readonly property string _levelPrefix: OsdBarState.hasBar ? OsdBarState.levelPrefix(OsdBarState.label) : ""
+    readonly property string _levelSuffix: _levelPrefix.length > 0 ? OsdBarState.label.slice(_levelPrefix.length) : ""
+    readonly property real _levelWidth: Math.max(_maxLabel.advanceWidth, _maxValue.advanceWidth)
+    // a named output holds its name plus the wider level, or muting it widened the slot all the same
     readonly property real _labelWidth: Math.min(Math.round(240 * ShellSettings.uiScale),
         OsdBarState.hasBar
             ? Metrics.snap4Up(Math.ceil(_levelPrefix.length > 0 ? _prefixLabel.advanceWidth + _levelWidth
@@ -20,6 +24,16 @@ Item {
             : Math.max(Math.ceil(_alertLabel.advanceWidth) + 2, _alertWidth))
     readonly property real _availableWidth: Math.max(0,
         width - _iconWidth - (OsdBarState.hasBar ? 16 : 8))
+    readonly property real _trackWidth: OsdBarState.hasBar
+        ? Math.min(80, Math.max(0, _availableWidth - _labelWidth)) : 0
+    readonly property real _labelFit: Math.min(_labelWidth,
+        Math.max(0, width - _iconWidth - (_trackWidth > 0 ? 16 : 8)))
+    readonly property string _displayLabel: {
+        if (_levelSuffix.length === 0 || _labelFit >= _contextLabel.advanceWidth + 2)
+            return OsdBarState.label
+        const context = _fittedContext.elidedText
+        return context.length > 0 && context !== "…" ? context + _suffixLabel.text : _levelSuffix
+    }
 
     implicitHeight: _barH
     // the desired width, not the rendered one: the bar grows to fit it while the content still fits mid-animation
@@ -104,9 +118,10 @@ Item {
 
     TextMetrics {
         id: _maxLabel
-        font.family:    Settings.font
+        font.family:    Settings.fontForText(OsdBarState.label)
         font.pixelSize: Settings.fontSize
         font.weight:    Font.Medium
+        renderType: _readout.renderType
         text: "Muted"
     }
 
@@ -119,14 +134,37 @@ Item {
     TextMetrics {
         id: _contextLabel
         font: _maxLabel.font
+        renderType: _maxLabel.renderType
         text: OsdBarState.hasBar ? OsdBarState.label : ""
     }
 
     TextMetrics {
+        id: _prefixLabel
+        font: _maxLabel.font
+        renderType: _maxLabel.renderType
+        text: root._levelPrefix
+    }
+
+    TextMetrics {
+        id: _suffixLabel
+        font: _maxLabel.font
+        renderType: _maxLabel.renderType
+        text: root._levelSuffix.length > 0 ? " · " + root._levelSuffix : ""
+    }
+
+    TextMetrics {
+        id: _fittedContext
+        font: _maxLabel.font
+        renderType: _maxLabel.renderType
+        text: root._levelPrefix.slice(0, -3)
+        elide: Text.ElideRight
+        elideWidth: Math.max(0, root._labelFit - _suffixLabel.advanceWidth - 2)
+    }
+
+    TextMetrics {
         id: _alertLabel
-        font.family:    Settings.font
-        font.pixelSize: Settings.fontSize
-        font.weight:    Font.Medium
+        font: _maxLabel.font
+        renderType: _maxLabel.renderType
         text: !OsdBarState.hasBar ? OsdBarState.label : ""
         onAdvanceWidthChanged: root._refreshAlertWidth()
     }
@@ -165,9 +203,8 @@ Item {
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
-            visible: OsdBarState.hasBar
-            width: OsdBarState.hasBar ? Math.min(80,
-                Math.max(0, root._availableWidth - root._labelWidth)) : 0
+            visible: root._trackWidth > 0
+            width: root._trackWidth
             height: 3
             radius: 1.5
             color:  Theme.withAlpha(Theme.barText, 0.22)
@@ -194,17 +231,17 @@ Item {
         }
 
         ShellText {
+            id: _readout
             anchors.verticalCenter: parent.verticalCenter
-            // device changes and automatic pauses carry context beyond the level
-            text:           OsdBarState.label
-            width: Math.min(root._labelWidth, root._availableWidth)
+            // shorten the device name first so the whole level or mute state survives
+            text: root._displayLabel
+            width: root._labelFit
             elide: OsdBarState.hasBar ? Text.ElideMiddle : Text.ElideRight
             horizontalAlignment: OsdBarState.hasBar ? Text.AlignRight : Text.AlignLeft
             color:          OsdBarState.muted
                                 ? Theme.withAlpha(Theme.barSubtext, 0.7)
                                 : (OsdBarState.hasBar ? Theme.barText : Theme.barInk(OsdBarState.fillColor, true))
-            font.pixelSize: Settings.fontSize
-            font.weight:    Font.Medium
+            font: _maxLabel.font
             ColorFade on color { duration: Motion.medium }
         }
     }

@@ -46,7 +46,8 @@ Pill {
     }
     readonly property string _restText: root.restText(ShellSettings.valuesOnHover, root._battery)
     reserveText: root._restText.length > 0 ? "00%" : ""
-    text: expanded ? Bluetooth.statusText : root._restText
+    text: !expanded ? root._restText : root._battery >= 0 && !Bluetooth.hardBlocked
+        ? root._battery + "% · " + Bluetooth.connectedName : Bluetooth.statusText
     accessibleName: "Bluetooth, " + Bluetooth.statusText
     interactive: root.show
     pressed: _tap.pressed

@@ -9,10 +9,10 @@ Pill {
     property var screen: null
 
     readonly property bool canRead: Network.toolAvailable
-    readonly property bool show: ShellSettings.barShowNetwork
-        && (canRead ? Network.available : true)
+    // Quickshell reads networks through NetworkManager only: under iwd or systemd-networkd a dimmed glyph read as offline
+    readonly property bool show: ShellSettings.barShowNetwork && canRead && Network.available
     property real _pulseOpacity: 1.0
-    readonly property real _baseOpacity: !show ? 0.0 : canRead ? 1.0 : 0.45
+    readonly property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || opacity > 0.001
     collapsed: !show
 
@@ -26,12 +26,8 @@ Pill {
         ? Network.signalStrength + "%"
         : ""
     readonly property string _physicalWithSignal: root._join([root._physical, root._signal], " ")
-    readonly property string _linkSummary: {
-        if (!Network.connected) return ""
-        const label = root.compact ? Network.underlyingIcon
-            : Network.underlyingIcon + " " + root._physical
-        return root._signal.length > 0 ? label + " " + root._signal : label
-    }
+    readonly property string _linkSummary: root.compact ? Network.underlyingIcon
+        : Network.underlyingIcon + " " + root._physical
     readonly property string _vpnText: (Network.vpnName.length > 0 ? Network.vpnName : "VPN")
         + (Network.vpnAddress.length > 0 ? " " + Network.vpnAddress : "")
     readonly property string _inlineText: {
@@ -51,14 +47,13 @@ Pill {
         return root._join(parts)
     }
     readonly property string _detailText: {
-        if (!root.canRead) return "Network backend unavailable"
         if (!Network.connected) return "Disconnected"
 
-        const parts = []
+        const signal = root._showPhysicalLink || !Network.hasVpn ? root._signal : ""
+        const parts = [root._join([Network.connectivityText, signal], ", ")]
         if (Network.hasVpn) parts.push(root._vpnText)
         if (root._showPhysicalLink) parts.push(root._linkSummary)
-        else if (!Network.hasVpn) parts.push(root._physicalWithSignal)
-        parts.push(Network.connectivityText)
+        else if (!Network.hasVpn) parts.push(root._physical)
         if (Network.trafficActive) parts.push(Network.trafficLabel)
         return root._join(parts)
     }
@@ -70,7 +65,8 @@ Pill {
     accessibleName: "Network, " + root._accessibleDetail
     interactive: root.show
     pressed: _tap.pressed
-    onActivated: if (root.canActivate) MenuState.showHomeAt("wifi", root, root.screen)
+    onActivated: if (root.canActivate)
+        MenuState.showHomeAt(Network.deviceType === "ethernet" ? "wired" : "wifi", root, root.screen)
     hasSecondary: Settings.networkSettingsCommand.length > 0
     onSecondaryActivated: SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
 
@@ -84,7 +80,7 @@ Pill {
     shrinkDelay:    2400
 
     MotionBehavior on opacity { gate: !root._isPulsing; NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
-    glyphColor:  canRead && Network.connected ? Theme.barText : Theme.barSubtext
+    glyphColor:  Network.connected ? Theme.barText : Theme.barSubtext
     textColor:   Theme.barSubtext
 
     animateText: false
@@ -96,7 +92,7 @@ Pill {
     }
     // NetworkManager's default profile names and systemd's interface names (eno1, ens3, enp2s0, enx<mac>, end0, eth0)
     function genericWiredName(name: string): bool {
-        return /^(wired connection [0-9]+|(en[dopsx]|eth)[0-9a-z]+)$/i.test(name)
+        return /^(ethernet|wired connection [0-9]+|(en[dops]|eth)[0-9][0-9a-z]*|enx[0-9a-f]{12})$/i.test(name)
     }
 
     function _join(parts, separator = " · "): string {
