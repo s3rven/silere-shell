@@ -104,7 +104,6 @@ Singleton {
             "add_dir \"$HOME/Pictures\"; " +
             "add_dir \"$HOME/Pictures/Screenshots\"; " +
             "add_dir \"$HOME/Screenshots\"; " +
-            "add_dir \"$HOME/.nxc/screenshots\"; " +
             "[ \"${#dirs[@]}\" -gt 0 ] || exit 3; " +
             "envd=(\"${HYPRSHOT_DIR:-}\" \"${GRIM_DEFAULT_DIR:-}\" \"${SCREENSHOT_DIR:-}\" \"${XDG_SCREENSHOTS_DIR:-}\"); " +
             "for r in \"$pic\" \"$HOME/Pictures\"; do own=0; " +
