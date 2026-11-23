@@ -13,7 +13,8 @@ function keyName(key) {
     if (mouseNames[k]) return mouseNames[k]
     // XF86AudioRaiseVolume reads as Audio Raise Volume
     if (k.indexOf("XF86") === 0 && k.length > 4) return k.slice(4).replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    if (k.indexOf("code:") === 0) return "Key " + k.slice(5)
+    // the number row by keycode (evdev + 8), as layout-independent workspace binds use it
+    if (k.indexOf("code:") === 0) return /^1[0-9]$/.test(k.slice(5)) ? String((Number(k.slice(5)) - 9) % 10) : "Key " + k.slice(5)
     return k.length === 1 ? k.toUpperCase() : k
 }
 
@@ -324,13 +325,15 @@ function parse(text, limit) {
         if (!b || typeof b !== "object" || b.catch_all === true) continue
         var d = describe(b)
         var words = d.text.slice(0, 160)
+        // hyprctl leaves key empty for a bind made by keycode and gives the number instead
+        var key = String(b.key || "") || (Number(b.keycode) > 0 ? "code:" + Number(b.keycode) : "")
         var call = d.silere || ""
         // a line pasted from the Keybinds page keeps its words as the description; only those, since a description
         // such as "volume up" is as likely a wpctl bind as Silere's
         for (var k = 0; k < suggestions.length && !call && d.own; k++)
             if (silereCalls[suggestions[k].call].toLowerCase() === words.toLowerCase()) call = suggestions[k].call
         rows.push({
-            keys: chord(b.modmask, b.key).slice(0, 80),
+            keys: chord(b.modmask, key).slice(0, 80),
             action: words,
             exact: d.exact,
             own: d.own,
@@ -339,7 +342,7 @@ function parse(text, limit) {
             // a Lua global names no shortcut, so which one it reaches is unknown
             luaGlobal: String(b.dispatcher || "") === "HL.Dispatcher(global)",
             modmask: Number(b.modmask) || 0,
-            key: String(b.key || "").slice(0, 40),
+            key: key.slice(0, 40),
             submap: String(b.submap || "").slice(0, 40)
         })
     }

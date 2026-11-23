@@ -13041,16 +13041,20 @@ ShellRoot {
                 && KeybindList.chord(8, "mouse:272") === "Alt + Left click" && KeybindList.chord(0, "mouse_down") === "Scroll down"
                 && KeybindList.chord(0, "XF86AudioRaiseVolume") === "Audio Raise Volume"
                 && KeybindList.chord(1, "XF86MonBrightnessUp") === "Shift + Mon Brightness Up"
-                && KeybindList.chord(0, "code:10") === "Key 10",
+                && KeybindList.chord(64, "code:10") === "Super + 1" && KeybindList.chord(64, "code:19") === "Super + 0"
+                && KeybindList.chord(0, "code:65") === "Key 65",
             "a keybind's keys read as people say them: modifiers in order, mouse buttons and media keys by name")
         const binds = JSON.stringify([
             { modmask: 64, key: "Q", has_description: true, description: "terminal", dispatcher: "HL.Dispatcher(exec_cmd)", arg: "57", submap: "" },
             { modmask: 64, key: "E", has_description: false, description: "", dispatcher: "function: 0x5600", arg: "58", submap: "" },
             { modmask: 0, key: "escape", has_description: false, description: "", dispatcher: "submap", arg: "reset", submap: "resize" },
-            { modmask: 0, key: "", catch_all: true, has_description: false, dispatcher: "submap", arg: "reset", submap: "resize" }
+            { modmask: 0, key: "", catch_all: true, has_description: false, dispatcher: "submap", arg: "reset", submap: "resize" },
+            { modmask: 64, key: "", keycode: 11, has_description: false, dispatcher: "workspace", arg: "2", submap: "" }
         ])
         const rows = KeybindList.parse(binds, 500)
-        root._check(rows !== null && rows.length === 3 && rows[0].action === "terminal" && rows[0].keys === "Super + Q"
+        root._check(rows !== null && rows.length === 4 && rows[3].keys === "Super + 2" && rows[3].key === "code:11",
+            "a bind made by keycode, which hyprctl reports with an empty key, reads by its key, the number row as digits")
+        root._check(rows !== null && rows.length === 4 && rows[0].action === "terminal" && rows[0].keys === "Super + Q"
                 && rows[0].own && rows[1].action === "" && !rows[1].exact
                 && rows[2].action === "Leave resize" && rows[2].submap === "resize",
             "keybinds keep the config's order and its descriptions; a Lua function says nothing, a hyprlang submap reset leaves it")
@@ -13058,7 +13062,7 @@ ShellRoot {
                 && KeybindList.parse(binds, 1).length === 1,
             "unreadable keybind output reads as a failure, and the list is bounded")
         root._check(KeybindList.filter(rows, "TERM").length === 1 && KeybindList.filter(rows, "super q").length === 1
-                && KeybindList.filter(rows, "resize").length === 1 && KeybindList.filter(rows, "  ").length === 3
+                && KeybindList.filter(rows, "resize").length === 1 && KeybindList.filter(rows, "  ").length === 4
                 && KeybindList.filter(rows, "volume").length === 0,
             "the keybind filter matches every word against what a bind does, its keys and its submap")
 
