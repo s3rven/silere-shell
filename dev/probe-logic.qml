@@ -1032,6 +1032,32 @@ ShellRoot {
         quick.destroy()
     }
 
+    // the keyboard verbs reach the popup window's own functions; with no window or no card each says so, never ok
+    function _checkNotificationKeyVerbs(): void {
+        const surfaceWas = NotificationKeys.surface
+        const fake = Qt.createQmlObject('import QtQuick; QtObject { property var calls: []; property bool hasCard: true; '
+            + 'function keyDismissNewest() { calls = calls.concat("newest"); return hasCard } '
+            + 'function keyDismissAll() { calls = calls.concat("all"); return hasCard } '
+            + 'function keyInvokeNewest() { calls = calls.concat("invoke"); return hasCard } }', root)
+        NotificationKeys.surface = null
+        const noWindow = NotificationKeys.run("dismiss")
+        NotificationKeys.surface = fake
+        const replies = [NotificationKeys.run("dismiss"), NotificationKeys.run("dismissAll"), NotificationKeys.run("invoke")]
+        fake.hasCard = false
+        const noCard = NotificationKeys.run("invoke")
+        const calls = fake.calls.join()
+        let status = null
+        try { status = JSON.parse(NotificationKeys.statusText()) } catch (e) { status = null }
+        NotificationKeys.surface = surfaceWas
+        fake.destroy()
+        root._check(noWindow === "no notification on screen" && noCard === "no notification on screen"
+                && replies.join() === "ok,ok,ok" && calls === "newest,all,invoke,invoke",
+            "dismiss, dismissAll and invoke reach their own popup action, and say so when nothing is on screen")
+        root._check(status !== null && typeof status.shown === "number" && typeof status.missed === "number"
+                && typeof status.dnd === "boolean" && typeof status.silenced === "boolean",
+            "notifications status answers JSON with the shown and missed counts and both quiet states")
+    }
+
     function _checkNotificationKeyboard(): void {
         const motionWas = ShellSettings.reduceMotion
         ShellSettings.reduceMotion = true
@@ -5059,6 +5085,7 @@ ShellRoot {
         root._checkPageLayout()
         root._checkAccessibleControls()
         root._checkNotificationKeyboard()
+        root._checkNotificationKeyVerbs()
         root._checkHiddenBarControls()
         root._checkWifiScanners()
         root._checkDiscoveryRequests()
