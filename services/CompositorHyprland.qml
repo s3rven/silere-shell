@@ -10,7 +10,7 @@ import "../config"
 QtObject {
     id: root
     property string keyboardLayout: ""
-    // 0 = not read yet; Hyprland lists the main keyboard's layouts comma-separated ("us,lv")
+    // 0 = not read yet; Hyprland lists the main keyboard's layouts comma-separated ("us,de")
     property int keyboardLayoutCount: 0
     function cycleKeyboardLayout(): void {
         Quickshell.execDetached(["hyprctl", "switchxkblayout", "all", "next"])
@@ -43,7 +43,7 @@ QtObject {
         } catch (e) {}
     }
     // wtype, emoji pickers and remote input upload their own keymap, often nameless ("error"), and become main while typing;
-    // Hyprland names most "hl-virtual-keyboard*", but a client may name its own ("vicinae-snippet-virtual-keyboard")
+    // Hyprland names most "hl-virtual-keyboard*", but a client may name its own ("launcher-snippet-virtual-keyboard")
     function _isVirtualKeyboard(name): bool {
         return String(name ?? "").includes("virtual-keyboard")
     }

@@ -70,8 +70,8 @@ body:
       label: Additional environment details
       description: GPU, multi-monitor layout, session setup, or anything else relevant to the problem.
       placeholder: |
-        GPU: AMD Radeon 780M
-        Outputs: laptop at 1.25x plus an external display
+        GPU: Intel Iris Xe
+        Outputs: laptop at 1.5x plus an external display
 
   - type: textarea
     id: logs

@@ -3058,12 +3058,55 @@ ShellRoot {
                 && Math.abs(busiestTop.share - 0.45) < 1e-9 && Math.abs(busiestTop.cores - 0.9) < 1e-9
                 && busiestTop.load === 0.75
                 && SysInfo.busiestProcess(null, secondTop) === null && SysInfo.busiestProcess(secondTop, firstTop) === null,
-            "the busiest process has the most CPU ticks since the last sample, and a reused PID is left out")
-        const oddTop = SysInfo.processSample("cpu 10 0 0 10 0 0 0 0\n77 (a) b (c) R 1 2 3 4 5 6 7 8 9 10 11 12\n"
-            + "79 (z) R 1 2 3 4 5 6 7 8 9 10 11  13 14\n80 (w) R 1 2 3 4 5 6 7 8 9 10 11\nabc (q) R 1\n81 (nope R 1 2\n")
-        root._check(oddTop.names["77"] === "a) b (c" && oddTop.ticks["77"] === 23 && oddTop.ticks["79"] === 11
-                && oddTop.ticks["80"] === undefined && Object.keys(oddTop.ticks).length === 2 && oddTop.total === 20,
-            "a process name holding brackets and spaces, an empty field and a cut-short line each parse as /proc means them")
+            "a process with a reused PID and the same name cannot inherit the old process's CPU sample")
+        const renamedTop = SysInfo.processSample(statAt(1300, 1100, [procLine(41, "encoder", 250, 50)]))
+        root._check(SysInfo.busiestProcess(firstTop, renamedTop)?.name === "encoder"
+                && SysInfo.busiestProcess(firstTop, Object.assign({}, secondTop, { cpus: 1 })) === null
+                && SysInfo.busiestProcess(firstTop, Object.assign({}, secondTop, { idle: 999 })) === null,
+            "process renames preserve identity and changes in CPU accounting discard the interval")
+        const oddTop = SysInfo.processSample(statAt(10, 10, [procLine(77, "a) b (c", 11, 12),
+            procLine(79, "z", "", 13), procLine(80, "w", 11, 12, "broken"),
+            "81 (cut) R 1 2 3 4 5 6 7 8 9 10 11\nabc (q) R 1\n82 (nope R 1 2"]))
+        root._check(oddTop.processes["77"]?.name === "a) b (c" && oddTop.processes["77"].ticks === 23
+                && Object.keys(oddTop.processes).length === 1 && oddTop.total === 20
+                && SysInfo.processSample("cpu 1 0 broken 10 0 0 0 0\n" + procLine(77, "a", 11, 12)) === null,
+            "the CPU sampler handles parentheses in names and rejects missing or malformed counters")
+        const nul = "\u0000"
+        root._check(SysInfo.commandName("node" + nul + "/app/node_modules/.bin/next" + nul + "dev" + nul, "node-MainThread") === "next"
+                && SysInfo.commandName("/opt/zen-browser-bin/zen-bin -contentproc -isForBrowser" + nul, "Isolated Web Co") === "zen-bin"
+                && SysInfo.commandName("/usr/lib/xdg-desktop-portal-hyprland" + nul, "xdg-desktop-por") === "xdg-desktop-portal-hyprland"
+                && SysInfo.commandName("/usr/bin/bash" + nul + "/home/u/build.sh" + nul, "bash") === "build.sh"
+                && SysInfo.commandName("/usr/bin/python3" + nul + "-m" + nul + "http.server" + nul, "python3") === "python3"
+                && SysInfo.commandName("Z:\\games\\SomeGame\\Bin64\\SomeLongGame.x64.exe" + nul, "SomeLongGame.x6")
+                    === "SomeLongGame.x64.exe"
+                && SysInfo.commandName("/opt/wine/drive_c/App/App.exe" + nul + "-flag" + nul, "Main") === "App.exe"
+                && SysInfo.commandName("Z:\\apps\\Tool.exe" + nul + "--flag" + nul, "Main") === "Tool.exe",
+            "a cut, renamed-thread or interpreter process name gives way to the program its command line names")
+        root._check(SysInfo.commandName("/home/u/.steam/ubuntu12_64/exe" + nul + "-x" + nul, "steamwebhelper") === "steamwebhelper"
+                && SysInfo.commandName("sshd: user@pts/0" + nul, "sshd") === "sshd"
+                && SysInfo.commandName("", "kworker/0:1") === "kworker/0:1"
+                && SysInfo.commandName("/games/Some Game/game.x86_64" + nul, "game.x86_64_lon") === "game.x86_64_lon"
+                && SysInfo.commandName("-bash" + nul, "bash") === "bash" && SysInfo.commandName("-sh" + nul, "sh") === "sh",
+            "a whole process name, a written title, a kernel thread, a login shell and a lone path with a space keep the kernel's name")
+        const parentLine = (pid, name, ppid) => pid + " (" + name + ") S " + ppid + " " + pid + " " + pid
+            + " 0 -1 0 0 0 0 0 1 1 0 0 20 0 1 0 1 0 0"
+        const family = SysInfo.processSample(statAt(10, 10, [parentLine(100, "firefox", 1), parentLine(101, "Isolated Web Co", 100),
+            parentLine(200, "kitty", 1), parentLine(201, "fish", 200), parentLine(202, "cc1plus", 201),
+            parentLine(300, "game.exe", 299), parentLine(400, "loop", 400)])).processes
+        const familyWindows = [{ pid: 100, appId: "firefox" }, { pid: 200, appId: "kitty" }, { pid: 300, appId: "steam_app_1" },
+            { pid: 400, appId: "" }, { pid: -1, appId: "ghost" }]
+        root._check(family["101"].ppid === "100" && firstTop.processes["42"].ppid === "1"
+                && SysInfo.windowApp(family, 101, "firefox", familyWindows) === "firefox"
+                && SysInfo.windowApp(family, 100, "", familyWindows) === "firefox"
+                && SysInfo.windowApp(family, 300, "game.exe", familyWindows) === "steam_app_1",
+            "a busy process is named by the app whose window it owns, or by a window of the same program above it")
+        root._check(SysInfo.windowApp(family, 202, "cc1plus", familyWindows) === ""
+                && SysInfo.windowApp(family, 201, "fish", familyWindows) === ""
+                && SysInfo.windowApp(family, 101, "", familyWindows) === ""
+                && SysInfo.windowApp(family, 400, "loop", familyWindows) === ""
+                && SysInfo.windowApp(family, 101, "firefox", []) === "" && SysInfo.windowApp(null, 101, "firefox", familyWindows) === ""
+                && SysInfo.windowApp(family, 999, "x", familyWindows) === "",
+            "a program run in a terminal keeps its own name, as does a process its parent chain cannot tie to a window")
         const heavyTop = { cores: 0.9 }, easingTop = { cores: 0.7 }, lightTop = { cores: 0.2 }
         root._check([SysInfo.topSamplesAfter(heavyTop, 0.1, 0), SysInfo.topSamplesAfter(heavyTop, 0.1, 1),
                 SysInfo.topSamplesAfter(easingTop, 0.1, 2), SysInfo.topSamplesAfter(lightTop, 0.1, 2),
@@ -3289,7 +3332,7 @@ ShellRoot {
 
         const codesWas = InputState._layoutCodes
         InputState._layoutCodes = ({})
-        root._check(InputState.shortLabel("Latvian") === "LV" && InputState.shortLabel("Ukrainian") === "UK",
+        root._check(InputState.shortLabel("French") === "FR" && InputState.shortLabel("Ukrainian") === "UK",
             "without the xkb registry, layout labels come from the language name")
         InputState._layoutCodes = InputState.layoutCodesFrom("! model\n  pc105           Generic 105-key PC\n\n"
             + "! layout\n  us              English (US)\n  ee              Estonian\n  ua              Ukrainian\n\n"
@@ -3345,9 +3388,9 @@ ShellRoot {
         }) && Weather.parseForecast(invertedRange) === null,
             "invalid weather codes and an inverted daily range do not replace the last forecast")
 
-        const url = Weather.forecastUrl(56.9496, 24.1052, true)
-        root._check(url.startsWith("https://api.open-meteo.com/") && url.indexOf("latitude=56.95") > 0
-                && url.indexOf("longitude=24.11") > 0 && url.indexOf("temperature_unit=fahrenheit") > 0
+        const url = Weather.forecastUrl(37.9838, 23.7275, true)
+        root._check(url.startsWith("https://api.open-meteo.com/") && url.indexOf("latitude=37.98") > 0
+                && url.indexOf("longitude=23.73") > 0 && url.indexOf("temperature_unit=fahrenheit") > 0
                 && Weather.forecastUrl(1, 2, false).indexOf("temperature_unit") < 0,
             "requests send rounded coordinates over https")
 
@@ -3369,9 +3412,9 @@ ShellRoot {
         root._check(!Weather.cacheFresh(newYear - 60000, Weather._key(newYear - 60000), newYear),
             "weather cache dates include the year when the calendar rolls over")
 
-        const line = TimeZonePlace.parseLine("+5657+02406\tEurope/Riga\n")
-        root._check(line && Math.abs(line.lat - 56.95) < 0.001 && Math.abs(line.lon - 24.1) < 0.001
-                && line.zone === "Europe/Riga" && TimeZonePlace.parseLine("garbage") === null
+        const line = TimeZonePlace.parseLine("+3758+02343\tEurope/Athens\n")
+        root._check(line && Math.abs(line.lat - 37.9667) < 0.001 && Math.abs(line.lon - 23.7167) < 0.001
+                && line.zone === "Europe/Athens" && TimeZonePlace.parseLine("garbage") === null
                 && TimeZonePlace.placeName("America/Argentina/Buenos_Aires") === "Buenos Aires",
             "the time zone lookup yields coordinates and a readable city name")
         const shared = TimeZonePlace.parseLine("+4339-07923\tAmerica/Toronto\tCA,BS\n")
@@ -3379,9 +3422,9 @@ ShellRoot {
                 && TimeZonePlace.usesFahrenheit("US") && TimeZonePlace.usesFahrenheit("BS")
                 && !TimeZonePlace.usesFahrenheit("CA") && !TimeZonePlace.usesFahrenheit(""),
             "a zone shared by several countries reads as its city's own, for the weather unit")
-        root._check(!Weather.fahrenheitFor("auto", true, "LV") && Weather.fahrenheitFor("auto", true, "US")
+        root._check(!Weather.fahrenheitFor("auto", true, "GR") && Weather.fahrenheitFor("auto", true, "US")
                 && Weather.fahrenheitFor("auto", true, "") && !Weather.fahrenheitFor("auto", false, "US")
-                && Weather.fahrenheitFor("f", false, "LV") && !Weather.fahrenheitFor("c", true, "US"),
+                && Weather.fahrenheitFor("f", false, "GR") && !Weather.fahrenheitFor("c", true, "US"),
             "the default US locale reads Fahrenheit only in a city that uses it, a metric locale holds, and a picked unit wins")
         // the lookup, run as written over a three-line tz database: $1 is the script
         const zoneRun = processFactory.createObject(root, { command: ["bash", "-c",
@@ -3415,6 +3458,15 @@ ShellRoot {
         Weather._fetchedAt = movedFetchedWas
         root._check(placeKept && placeDropped,
             "weather drops a place found under another time zone offset, and keeps one found under this one")
+        Weather._usePlace({ lat: 37.98, lon: 23.73, country: "GR", zone: "Europe/Athens" }, -120)
+        Weather._fetchedAt = 42
+        Weather._usePlace({ lat: 37.98, lon: 23.73, country: "GR", zone: "Europe/Athens" }, -120)
+        const sameCityKept = Weather.hasData
+        Weather._usePlace({ lat: 60.17, lon: 24.94, country: "FI", zone: "Europe/Helsinki" }, -120)
+        root._check(sameCityKept && !Weather.hasData && Weather._place.name === "Helsinki",
+            "weather discards a reading when the city changes at the same UTC offset")
+        Weather._place = movedPlaceWas
+        Weather._fetchedAt = movedFetchedWas
         const lookup = Weather._zoneLookup
         if (lookup) {
             const commandWas = lookup.command.slice()
@@ -3540,6 +3592,35 @@ ShellRoot {
             ShellSettings.clockShowWeather = onlineWas.weather
             ShellSettings.barShowClock = onlineWas.clock
             ShellSettings.weatherEnabled = false
+            if (lookup.running) lookup.running = false
+            lookup.command = commandWas
+            Weather._place = placeWas
+
+            const homeWas = { open: MenuState.open, active: MenuState._activeTab,
+                calendar: CalendarState.open, bar: ShellSettings.clockShowWeather }
+            const homeDeadline = Date.now() + 1000
+            while ((lookup.running || Weather._discardLookup) && Date.now() < homeDeadline) discoveryClock.wait(10)
+            CalendarState.open = false
+            ShellSettings.clockShowWeather = false
+            MenuState._activeTab = MenuState.homeTab
+            MenuState.open = true
+            lookup.command = ["sleep", "2"]
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather._usePlace({ lat: 37.98, lon: 23.73, country: "GR", zone: "Europe/Athens" },
+                new Date().getTimezoneOffset())
+            Weather.loading = false
+            Weather.failed = true
+            Weather._networkBack(false)
+            const stillOffline = !lookup.running && !Weather.loading
+            Weather._networkBack(true)
+            root._check(MenuState.homeActive && stillOffline && lookup.running && Weather.loading,
+                "Home retries weather and checks the city again when the network returns")
+            ShellSettings.weatherEnabled = false
+            MenuState.open = homeWas.open
+            MenuState._activeTab = homeWas.active
+            CalendarState.open = homeWas.calendar
+            ShellSettings.clockShowWeather = homeWas.bar
             if (lookup.running) lookup.running = false
             lookup.command = commandWas
             Weather._place = placeWas
@@ -6562,12 +6643,12 @@ ShellRoot {
                 && migrationRollback.value.notifMutedApps === "Slack",
             "the 1.5 schema step only marks the file, so a rollback to 1.4 keeps what it cannot read")
         const migrationSince16 = SettingsMigrations.migrate({ clockShowWeather: true,
-            overlayMonitorIdentity: "AUO|0x1637|0x00006000", barMonitorIdentities: { "eDP-2": "AUO|0x1637|0x00006000" } },
+            overlayMonitorIdentity: "BOE|0x0a1b|0x00001234", barMonitorIdentities: { "eDP-1": "BOE|0x0a1b|0x00001234" } },
             2, ShellSettings._settingsVersion)
         root._check(ShellSettings._settingsVersion >= 3 && migrationSince16.version === ShellSettings._settingsVersion
                 && migrationSince16.value.clockShowWeather === true
-                && migrationSince16.value.overlayMonitorIdentity === "AUO|0x1637|0x00006000"
-                && migrationSince16.value.barMonitorIdentities["eDP-2"] === "AUO|0x1637|0x00006000",
+                && migrationSince16.value.overlayMonitorIdentity === "BOE|0x0a1b|0x00001234"
+                && migrationSince16.value.barMonitorIdentities["eDP-1"] === "BOE|0x0a1b|0x00001234",
             "the schema moved past 1.6's, so a rollback to 1.6 keeps the settings added since")
         const migrationSince17 = SettingsMigrations.migrate({ mediaPauseOnDisconnect: false }, 3, ShellSettings._settingsVersion)
         root._check(ShellSettings._settingsVersion >= 4 && migrationSince17.version === ShellSettings._settingsVersion
@@ -7297,7 +7378,7 @@ ShellRoot {
                 body: "Review the deployment notes", time: 1001 })
             Notifications._prependHistory({ id: 802, appName: "Chat", summary: "Release discussion",
                 body: "Bring the notes", time: 1002 })
-            Notifications._prependHistory({ id: 803, appName: "Māil", summary: "Lunch in Rīga",
+            Notifications._prependHistory({ id: 803, appName: "Māil", summary: "Lunch in Kraków",
                 body: "Meet at 12:00 [cafe] Café re\u0301sume\u0301 Привет 👩‍💻", time: 1003 })
             filtered.revision = Notifications.historyRevision
             filtered.query = "  RELEASE   notes  "
@@ -7314,13 +7395,13 @@ ShellRoot {
             root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
                 "history search treats punctuation as literal text")
             edits = filtered.inserts + filtered.removes
-            filtered.query = "mail riga resume"
+            filtered.query = "mail krakow resume"
             root._check(filtered.count === 1 && filtered.model.get(0).id === 803
                     && filtered.model.get(0).appName === "Māil"
-                    && filtered.model.get(0).summary === "Lunch in Rīga"
+                    && filtered.model.get(0).summary === "Lunch in Kraków"
                     && filtered.inserts + filtered.removes === edits,
                 "history search folds accents across sender, title and combining-mark body text without rebuilding a matching row")
-            filtered.query = "RĪGA RÉSUMÉ"
+            filtered.query = "KRAKÓW RÉSUMÉ"
             root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
                 "accented uppercase queries match composed and decomposed notification text")
             filtered.filter = "Mail"
@@ -7349,10 +7430,12 @@ ShellRoot {
             filtered.sync()
             root._check(filtered.count === 1 && filtered.model.get(0).id === 803,
                 "a manual history sync searches the edited message text")
+            Notifications.historyModel.setProperty(0, "body", "Replaced with fresh text")
             filtered.revision++
-            filtered.query = "searchable marker"
-            root._check(filtered.count === 1
-                    && filtered.model.get(0).id === 803
+            root._check(filtered.count === 0,
+                "a history revision drops the old match without changing the query")
+            filtered.query = "fresh text"
+            root._check(filtered.count === 1 && filtered.model.get(0).id === 803
                     && filtered.model.get(0).contentKey !== stableContentKey,
                 "an in-place source update refreshes the cached key and search results")
             Notifications.historyModel.setProperty(0, "body", originalSearchBody)
@@ -8042,6 +8125,10 @@ ShellRoot {
         const wine = IconResolver.appMeta("ProbeTool.exe")
         root._check(mc.fallback === "M" && rdns.name === "ProbeTool" && wine.name === "ProbeTool",
             "an app without an icon is named by a reverse-DNS id's last part, never by a version or .exe")
+        root._check(IconResolver.steamGameIcon("steam_app_1234560") === "steam_icon_1234560"
+                && IconResolver.steamGameIcon("steam") === "" && IconResolver.steamGameIcon("steam_app_") === ""
+                && IconResolver.steamGameIcon("steam_app_12x") === "",
+            "a game Proton runs takes the icon Steam installs for it, and Steam itself does not")
         root._check(IconResolver.senderIconSource("IMAGE://icon/x?path=/etc/passwd") === ""
                 && IconResolver.iconSource("Image://Icon/x?path=/etc/passwd") === "",
             "the icon provider guard holds when the sender varies the scheme's case")
@@ -8196,15 +8283,15 @@ ShellRoot {
             const keyboardWas = { layout: hypr.keyboardLayout, revision: hypr._keyboardRevision, count: hypr.keyboardLayoutCount }
             const keyboardSnapshot = JSON.stringify({ keyboards: [null,
                 { main: false, active_keymap: "English (US)" },
-                { main: true, active_keymap: "Latvian" }] })
+                { main: true, active_keymap: "French" }] })
             hypr._acceptKeyboardSnapshot(keyboardSnapshot, hypr._keyboardRevision)
-            root._check(hypr.keyboardLayout === "Latvian",
+            root._check(hypr.keyboardLayout === "French",
                 "the keyboard snapshot selects the main keyboard and tolerates a missing entry")
             const beforeLayoutEvent = hypr._keyboardRevision
             hypr.keyboardLayoutCount = 0
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "at-keyboard,English (US, intl.)" })
             hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
-                { main: true, layout: "us,lv", active_keymap: "Latvian" }] }), beforeLayoutEvent)
+                { main: true, layout: "us,fr", active_keymap: "French" }] }), beforeLayoutEvent)
             root._check(hypr.keyboardLayout === "English (US, intl.)" && hypr.keyboardLayoutCount === 2,
                 "a layout event wins over an older devices snapshot while its layout count still arrives")
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "missing delimiter" })
@@ -8218,19 +8305,19 @@ ShellRoot {
             hypr._eventConn.onRawEvent({ name: "activelayout", data: "hl-virtual-keyboard,English (US)" })
             hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
                 { name: "hl-virtual-keyboard-wtype", main: true, active_keymap: "error" },
-                { name: "at-translated-set-2-keyboard", main: false, active_keymap: "Latvian" }] }),
+                { name: "at-translated-set-2-keyboard", main: false, active_keymap: "French" }] }),
                 hypr._keyboardRevision)
-            root._check(hypr.keyboardLayout === "Latvian" && hypr._keyboardRevision === beforeLayoutEvent + 1,
+            root._check(hypr.keyboardLayout === "French" && hypr._keyboardRevision === beforeLayoutEvent + 1,
                 "a virtual keyboard's own keymap never replaces the physical keyboard's layout")
-            hypr._eventConn.onRawEvent({ name: "activelayout", data: "vicinae-snippet-virtual-keyboard,error" })
+            hypr._eventConn.onRawEvent({ name: "activelayout", data: "launcher-snippet-virtual-keyboard,error" })
             hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
-                { name: "vicinae-snippet-virtual-keyboard", main: true, layout: "us", active_keymap: "error" },
-                { name: "at-translated-set-2-keyboard", main: false, layout: "lv", active_keymap: "Latvian" }] }),
+                { name: "launcher-snippet-virtual-keyboard", main: true, layout: "us", active_keymap: "error" },
+                { name: "at-translated-set-2-keyboard", main: false, layout: "fr", active_keymap: "French" }] }),
                 hypr._keyboardRevision)
-            root._check(hypr.keyboardLayout === "Latvian" && hypr.keyboardLayoutCount === 1,
+            root._check(hypr.keyboardLayout === "French" && hypr.keyboardLayoutCount === 1,
                 "a client-named virtual keyboard is skipped too, and one layout counts as one")
             hypr._acceptKeyboardSnapshot(JSON.stringify({ keyboards: [
-                { name: "at-translated-set-2-keyboard", main: true, layout: "us,lv,", active_keymap: "English (US)" }] }),
+                { name: "at-translated-set-2-keyboard", main: true, layout: "us,fr,", active_keymap: "English (US)" }] }),
                 hypr._keyboardRevision)
             root._check(hypr.keyboardLayoutCount === 2, "the main keyboard's comma-separated layouts are counted")
             hypr._acceptKeyboardSnapshot('{"keyboards":[]}', hypr._keyboardRevision)
@@ -8247,7 +8334,7 @@ ShellRoot {
             keyboardProbe.runningChanged.connect(countKeyboardRead)
             hypr._keyboardWanted = true
             const refreshedKeyboard = JSON.stringify({ keyboards: [
-                { main: true, layout: "us,lv,de", active_keymap: "German" }] })
+                { main: true, layout: "us,fr,de", active_keymap: "German" }] })
             keyboardProbe.command = ["printf", "%s", refreshedKeyboard]
             hypr._refreshKeyboard()
             hypr._refreshKeyboard()
@@ -8259,12 +8346,12 @@ ShellRoot {
             keyboardProbe.command = ["sh", "-c", "sleep 0.1; exit 1"]
             hypr._refreshKeyboard()
             keyboardProbe.command = ["printf", "%s", JSON.stringify({ keyboards: [
-                { main: true, layout: "lv", active_keymap: "Latvian" }] })]
+                { main: true, layout: "fr", active_keymap: "French" }] })]
             hypr._refreshKeyboard()
             const failedRefreshDeadline = Date.now() + 3000
             while ((keyboardReads < 4 || keyboardProbe.running) && Date.now() < failedRefreshDeadline) discoveryClock.wait(10)
             root._check(keyboardReads === 4 && !keyboardProbe.running
-                    && hypr.keyboardLayout === "Latvian" && hypr.keyboardLayoutCount === 1,
+                    && hypr.keyboardLayout === "French" && hypr.keyboardLayoutCount === 1,
                 "a failed devices read still services the keyboard refresh requested while it was running")
             keyboardProbe.command = ["sleep", "0.1"]
             hypr._refreshKeyboard()
@@ -8348,9 +8435,9 @@ ShellRoot {
                 { name: "DP-3", lastIpcObject: { specialWorkspace: { id: -97, name: "special:term" } } },
                 { name: "DP-4", lastIpcObject: {} }, null]
             root._check(JSON.stringify(hypr.serialsFrom([
-                    { lastIpcObject: { name: "eDP-2", serial: " 0x00006000 " } },
+                    { lastIpcObject: { name: "eDP-1", serial: " 0x00001234 " } },
                     { lastIpcObject: { name: "DP-1", serial: "" } }, { lastIpcObject: { name: "DP-2" } },
-                    { lastIpcObject: null }, null])) === '{"eDP-2":"0x00006000"}',
+                    { lastIpcObject: null }, null])) === '{"eDP-1":"0x00001234"}',
                 "hyprland's monitor replies give a serial only where one was reported")
             root._check(JSON.stringify(hypr.specialFromMonitors(specialMons, { "DP-3": true })) === '{"DP-1":true}',
                 "the first monitor read marks a special workspace shown before startup, unless an event spoke since")
@@ -10435,10 +10522,10 @@ ShellRoot {
             "the niri overview flag follows the event both ways")
 
         niri._onLine(JSON.stringify({ KeyboardLayoutsChanged: { keyboard_layouts: {
-            names: ["English (US)", "Latvian"], current_idx: 0
+            names: ["English (US)", "French"], current_idx: 0
         }}}))
         niri._onLine(JSON.stringify({ KeyboardLayoutSwitched: { idx: 1 } }))
-        root._check(niri.keyboardLayout === "Latvian", "niri layout events update the active input language")
+        root._check(niri.keyboardLayout === "French", "niri layout events update the active input language")
         const sharingEvents = []
         niri.sharingState.connect(active => sharingEvents.push(active))
         niri._onLine(JSON.stringify({ CastsChanged: { casts: [] } }))
@@ -10485,6 +10572,14 @@ ShellRoot {
         const nmEmpty = Network._splitNmcliLine("a::b")
         root._check(nmEmpty.length === 3 && nmEmpty[1] === "",
             "an empty nmcli field is kept in place")
+        const wifiAp = { name: "Probe Wi-Fi", connected: true, signalStrength: 0.79 }
+        const wifiLink = { type: Net.DeviceType.Wifi, connected: true, networks: { values: [wifiAp] } }
+        const ethernet = { type: Net.DeviceType.Wired, connected: true, hasLink: true, network: { name: "Office LAN" } }
+        const docked = Network.linkStateFor([wifiLink, ethernet])
+        const unplugged = Network.linkStateFor([Object.assign({}, ethernet, { hasLink: false }), wifiLink])
+        root._check(docked.best.device === ethernet && docked.wifiLink.network === wifiAp && docked.hasWifi
+                && unplugged.best.device === wifiLink && Network.linkStateFor([ethernet]).wifiLink === null,
+            "the wired route and connected Wi-Fi retain independent status on a docked machine")
 
         const netDev = "Inter-|   Receive |  Transmit\n face |bytes    packets\n"
             + "  wlo1: 1 2 3\n    lo: 4 5 6\n  tun0: 7 8 9\n"
@@ -11726,9 +11821,9 @@ ShellRoot {
             "the fallback longitude follows standard time, not summer time")
         const autoLatWas = NightLight._autoLat
         const autoLonWas = NightLight._autoLon
-        root._check(NightLight._parseCoord("+5657+02406")
-                && Math.abs(NightLight._autoLat - 56.95) < 0.0001
-                && Math.abs(NightLight._autoLon - 24.1) < 0.0001,
+        root._check(NightLight._parseCoord("+3758+02343")
+                && Math.abs(NightLight._autoLat - 37.9667) < 0.0001
+                && Math.abs(NightLight._autoLon - 23.7167) < 0.0001,
             "night light parses a valid zone-table coordinate")
         root._check(NightLight._geoOffset === new Date().getTimezoneOffset()
                 && NightLight.zoneMoved(true, 120, 60) && !NightLight.zoneMoved(true, 120, 120)
@@ -11736,7 +11831,7 @@ ShellRoot {
             "night light notes the time zone a place was found under, and looks again only once that changes")
         const validLat = NightLight._autoLat
         const validLon = NightLight._autoLon
-        root._check(!NightLight._parseCoord("+9060+02406")
+        root._check(!NightLight._parseCoord("+9060+02343")
                 && NightLight._autoLat === validLat && NightLight._autoLon === validLon,
             "night light rejects invalid coordinate minutes without replacing its location")
         root._check(!NightLight._parseCoord("+9001+18000")
@@ -12344,14 +12439,14 @@ ShellRoot {
 
         const trayHiddenWas = ShellSettings.trayHidden
         ShellSettings.trayHidden = ""
-        ShellSettings.setTrayItemHidden("vicinae", true)
+        ShellSettings.setTrayItemHidden("launcher", true)
         ShellSettings.setTrayItemHidden("chrome_status,1", true)
         root._check(ShellSettings.trayItemHidden("chrome_status,1")
                 && ShellSettings.trayHiddenIds.length === 2
                 && ShellSettings.setValue("trayHidden", ShellSettings.trayHidden),
             "a hidden tray id holding a comma round-trips and passes the schema")
-        ShellSettings.setTrayItemHidden("vicinae", false)
-        root._check(!ShellSettings.trayItemHidden("vicinae")
+        ShellSettings.setTrayItemHidden("launcher", false)
+        root._check(!ShellSettings.trayItemHidden("launcher")
                 && ShellSettings.trayHiddenIds.length === 1,
             "showing a tray item removes only that id")
         ShellSettings.trayHidden = trayHiddenWas
@@ -12832,10 +12927,10 @@ ShellRoot {
         const reconnectedDisplay = Object.assign({}, dockDisplay, { name: "DP-3" })
         const otherDisplay = { name: "DP-1", model: "Other display", serialNumber: "67890" }
         const displayIdentityKey = Monitors.identity(dockDisplay)
-        const quietPanel = { name: "eDP-2", model: "0x1637", serialNumber: "" }
+        const quietPanel = { name: "eDP-1", model: "0x0a1b", serialNumber: "" }
         root._check(Monitors.identity(quietPanel, {}) === ""
-                && Monitors.identity(quietPanel, { "eDP-2": "0x00006000" })
-                    === Monitors.identity({ name: "eDP-9", model: "0x1637", serialNumber: "0x00006000" }, {})
+                && Monitors.identity(quietPanel, { "eDP-1": "0x00001234" })
+                    === Monitors.identity({ name: "eDP-9", model: "0x0a1b", serialNumber: "0x00001234" }, {})
                 && Monitors.identity(dockDisplay, { "DP-1": "elsewhere" })
                     === Monitors.identity(Object.assign({}, dockDisplay, { serialNumber: "elsewhere" }), {})
                 && Monitors.identity(dockDisplay, {}) === displayIdentityKey,

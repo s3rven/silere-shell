@@ -360,16 +360,12 @@ Singleton {
             if (open <= 0 || close < open) continue
             const pid = line.slice(0, open)
             if (!/^[0-9]+$/.test(pid)) continue
-            // the 12th and 13th fields after the name
-            let at = close + 2
-            for (let k = 0; k < 11 && at > 0; k++) at = line.indexOf(" ", at) + 1
-            const gap = at > 0 ? line.indexOf(" ", at) : -1
-            if (gap < 0) continue
-            const end = line.indexOf(" ", gap + 1)
-            const used = Number(line.slice(at, gap)) + Number(line.slice(gap + 1, end < 0 ? line.length : end))
-            if (!isFinite(used)) continue
-            ticks[pid] = used
-            names[pid] = line.slice(open + 2, close)
+            // fields 4, 14, 15 and 22: the parent, user ticks, system ticks and the process start time
+            const fields = /^[^ ]+ (\d+) (?:[^ ]+ ){9}(\d+) (\d+) (?:[^ ]+ ){6}(\d+)(?: |$)/.exec(line.slice(close + 2))
+            if (!fields) continue
+            const ticks = Number(fields[2]) + Number(fields[3])
+            if (isFinite(ticks)) processes[pid] = { ticks: ticks, started: fields[4], ppid: fields[1],
+                name: line.slice(open + 2, close) }
         }
         return { total: cpu.total, idle: cpu.idle, cpus: Math.max(1, cpus), processes: processes }
     }
@@ -400,12 +396,83 @@ Singleton {
         return samples >= 2 && (cpuPct >= 0.35 || busiest.cores >= 0.6) ? 2 : 0
     }
 
+    // comm is cut at 15 and Node and Firefox rename their main threads ("node-MainThread"); a whole comm stays,
+    // since Steam's helpers start from a launcher path ending in "exe"
+    function commandName(cmdline: string, comm: string): string {
+        let argv = String(cmdline || "").split("\u0000").filter(arg => arg.length > 0)
+        // Firefox joins its arguments into one string: its path, then flags. A lone path can hold a space
+        // ("…/common/Some Game/game"), and a title a program wrote ("sshd: user@pts/0") has no path at all
+        if (argv.length === 1 && /^\/\S+\s+-/.test(argv[0])) argv = argv[0].split(/\s+/)
+        if (argv.length === 0 || /\s/.test(argv[0])) return comm
+        const base = arg => arg.split(/[\\/]/).pop()
+        const interpreter = /^(node|nodejs|bun|deno|python[0-9.]*|ruby|perl|php|bash|sh)$/
+        // a login shell's argv[0] is its name after a dash: as an interpreter's own, "-bash" was shown as the name
+        let name = base(argv[0]).replace(/^-/, "")
+        if (interpreter.test(name) && argv.length > 1 && !argv[1].startsWith("-")) name = base(argv[1])
+        if (name.length === 0 || name === comm) return comm
+        // wine names a Windows program's process after its main thread ("Main"), so the .exe its command line runs wins
+        const cut = comm.length >= 15 || name.startsWith(comm) || interpreter.test(comm) || /\.exe$/i.test(name)
+        return cut ? SafeText.singleLineText(name, 32) : comm
+    }
+    // the app a busy process works for: the window it owns, or the nearest window up its parents when that one runs
+    // the same program (a browser's content process, an Electron renderer). Another program's window, a terminal's,
+    // leaves a build or a script under its own name
+    function windowApp(processes, pid: int, program: string, windows): string {
+        if (!processes || !processes[pid] || !windows || windows.length === 0) return ""
+        const owners = Object.create(null)
+        for (const w of windows) if (w && w.pid > 0 && w.appId) owners[w.pid] = String(w.appId)
+        const names = [processes[pid].name, String(program || "").slice(0, 15)]
+        let at = String(pid)
+        for (let depth = 0; depth < 32 && processes[at]; depth++) {
+            const appId = owners[at]
+            if (appId) return at === String(pid) || names.indexOf(processes[at].name) >= 0 ? appId : ""
+            at = processes[at].ppid
+        }
+        return ""
+    }
+    // as its launcher names it ("Firefox", a Steam game's title), else the program
+    function _nameFor(pid: int, comm: string, program: string): string {
+        const appId = root.windowApp(root._topLast ? root._topLast.processes : null, pid, program, Compositor.toplevels)
+        const entry = appId.length > 0 ? IconResolver.appEntry(appId) : null
+        const app = entry ? SafeText.singleLineText(entry.name, 32) : ""
+        return app.length > 0 ? app : program.length > 0 ? program : comm
+    }
+    // read for the first busy sample's pick, so the name is there when the second one shows it
+    property int _cmdlinePid: 0
+    property string _cmdlineStart: ""
+    property string _cmdlineComm: ""
+    property int _cmdNamePid: 0
+    property string _cmdName: ""
+    FileView {
+        id: _cmdlineFile
+        path: root._cmdlinePid > 0 ? "/proc/" + root._cmdlinePid + "/cmdline" : ""
+        blockLoading: false
+        blockAllReads: false
+        printErrors: false
+        onLoaded: {
+            root._cmdNamePid = root._cmdlinePid
+            root._cmdName = root.commandName(_cmdlineFile.text(), root._cmdlineComm)
+            if (root.topShown && root.topPid === root._cmdNamePid && root._cmdName.length > 0)
+                root.topName = root._nameFor(root._cmdNamePid, root._cmdlineComm, root._cmdName)
+        }
+        onLoadFailed: root._cmdNamePid = 0
+    }
+
     function _applyTop(sample): void {
         const busiest = root.busiestProcess(root._topLast, sample)
         root._topLast = sample
         root._topSamples = root.topSamplesAfter(busiest, busiest?.load ?? 0, root._topSamples)
         root.topShown = root._topSamples >= 2
-        root.topName = root.topShown ? busiest.name : ""
+        if (busiest && (busiest.pid !== root._cmdlinePid || busiest.started !== root._cmdlineStart
+                || busiest.name !== root._cmdlineComm)) {
+            root._cmdNamePid = 0
+            root._cmdlineStart = busiest.started
+            root._cmdlineComm = busiest.name
+            if (busiest.pid === root._cmdlinePid) _cmdlineFile.reload()
+            else root._cmdlinePid = busiest.pid
+        }
+        root.topName = !root.topShown ? ""
+            : root._nameFor(busiest.pid, busiest.name, root._cmdNamePid === busiest.pid ? root._cmdName : "")
         root.topPid = root.topShown ? busiest.pid : 0
         root.topShare = root.topShown ? busiest.share : 0
     }

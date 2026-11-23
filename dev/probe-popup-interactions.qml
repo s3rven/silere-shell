@@ -175,7 +175,7 @@ Item {
         ShellSettings.weatherEnabled = true
         CalendarState.open = true
         Weather._fetchedAt = Date.now()
-        Weather.place = "Riga"
+        Weather.place = "Athens"
         Weather.temperature = 8
         Weather.high = 11
         Weather.low = 4
