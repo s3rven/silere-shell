@@ -1310,8 +1310,8 @@ test_interrupted_update_recovery() (
     [ ! -e "$APPLY_JOURNAL" ] && [ ! -e "$APPLY_TRUSTED_SIGNERS" ] \
         || fail "prepared transaction recovery left state behind"
 
-    # A durable validated phase is the commit point. Recovery keeps it even if
-    # the updater lost power before deleting the journal or restarting Silere.
+    # The signed update stays installed after validation. Its rollback record
+    # stays until the supervising unit's main process reports the new revision.
     local stub_dir="$TMP/update-rollback-stub"
     local calls="$TMP/update-rollback-calls"
     mkdir -p "$stub_dir"
@@ -1323,10 +1323,23 @@ test_interrupted_update_recovery() (
         || fail "an apply transaction did not pin its release tag"
     git -C "$repo" merge --ff-only -q "$new_rev"
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
-    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$old_rev" _recover_interrupted_apply 2>/dev/null
     assert_eq "$new_rev" "$(git -C "$repo" rev-parse HEAD)" \
         "validated interrupted update retained"
-    [ ! -e "$APPLY_JOURNAL" ] || fail "validated transaction journal was not cleared"
+    [ -e "$APPLY_JOURNAL" ] || fail "the old supervised shell cleared the rollback journal"
+    git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
+        || fail "the old supervised shell released the signed rollback pin"
+    PATH="$stub_dir:$PATH" SILERE_TEST_MAIN_PID=0 SILERE_TEST_LAUNCH_REVISION="$new_rev" \
+        _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "a supervised service without a main process cleared the rollback journal"
+
+    # A rejected restart can leave the old shell running. A later manual restart
+    # can complete that same update once the right process responds.
+    _write_apply_journal restart-failed "$old_rev" "$new_rev" v1.0.1
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$old_rev" _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "a failed restart lost its rollback journal while the old shell was running"
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$new_rev" _recover_interrupted_apply 2>/dev/null
+    [ ! -e "$APPLY_JOURNAL" ] || fail "a supervised restart on the new revision kept its recovery journal"
     git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
         && fail "a cleared transaction left its release pin behind"
 
@@ -1391,15 +1404,16 @@ EOF
     # With no unit in use, a shell running this checkout is what shows the update came up;
     # a daily check after a login whose shell never returned must not take --rollback away
     printf '#!/bin/sh\nexit 1\n' > "$stub_dir/systemctl"
-    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
-    chmod +x "$stub_dir/systemctl" "$stub_dir/qs"
+    SILERE_TEST_INSTANCE_FLAG=-p
+    SILERE_TEST_INSTANCE="$repo/shell.qml"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     git -C "$repo" merge --ff-only -q "$new_rev"
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
-    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
-    [ -e "$APPLY_JOURNAL" ] || fail "an update whose unsupervised shell never came back lost its recovery journal"
-    printf '#!/bin/sh\nprintf "Instance probe:\\n  Process ID: 4242\\n"\n' > "$stub_dir/qs"
-    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION='' _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "an update without a reported launch revision lost its recovery journal"
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$old_rev" _recover_interrupted_apply 2>/dev/null
+    [ -e "$APPLY_JOURNAL" ] || fail "the old unsupervised shell cleared the rollback journal"
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$new_rev" _recover_interrupted_apply 2>/dev/null
     [ ! -e "$APPLY_JOURNAL" ] || fail "an update whose unsupervised shell came back kept its recovery journal"
 
     # a unit that is up for another checkout says nothing about this one: only this checkout's shell counts
@@ -1410,14 +1424,12 @@ case "\$*" in
 esac
 exit 0
 EOF
-    printf '#!/bin/sh\nexit 0\n' > "$stub_dir/qs"
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     git -C "$repo" merge --ff-only -q "$new_rev"
     _write_apply_journal validated "$old_rev" "$new_rev" v1.0.1
-    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION='' _recover_interrupted_apply 2>/dev/null
     [ -e "$APPLY_JOURNAL" ] || fail "a unit running another checkout counted as this update's shell coming back"
-    printf '#!/bin/sh\nprintf "Instance probe:\\n  Process ID: 4242\\n"\n' > "$stub_dir/qs"
-    PATH="$stub_dir:$PATH" _recover_interrupted_apply 2>/dev/null
+    PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$new_rev" _recover_interrupted_apply 2>/dev/null
     [ ! -e "$APPLY_JOURNAL" ] || fail "this checkout's shell beside another checkout's unit kept the recovery journal"
     rm -f "$stub_dir/qs"
 

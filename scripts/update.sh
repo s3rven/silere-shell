@@ -252,16 +252,21 @@ _unsupervised_shell_runs() {
     _silere_shell_running "$ROOT/shell.qml"
 }
 
-# A completed update is only known-good once the shell is up on it: the unit when it owns this checkout's shell,
-# otherwise a shell running this checkout; a unit for another checkout says nothing about this one. A daily check after a login whose shell never came back
-# cleared the journal, and --rollback with it. Without qs there is nothing to ask, so absence counts as running
+# An active unit can still be running the old release. Ask its main process, or the instance for
+# this checkout, for the revision it captured at launch. A timer can ask from outside the display.
 _updated_shell_is_running() {
+    local pid revision
+    local -a instance=(-p "$ROOT/shell.qml")
+    command -v qs >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 || return 1
     if _silere_unit_owns_shell "$ROOT"; then
-        systemctl --user is-active --quiet silere-shell.service 2>/dev/null
-        return
+        systemctl --user is-active --quiet silere-shell.service 2>/dev/null || return 1
+        pid="$(systemctl --user show silere-shell.service -p MainPID --value 2>/dev/null)" || return 1
+        [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
+        instance=(--pid "$pid")
     fi
-    command -v qs >/dev/null 2>&1 || return 0
-    _unsupervised_shell_runs
+    revision="$(timeout -k 1 3 env -u LC_ALL qs ipc --any-display "${instance[@]}" call runtime launchRevision 2>/dev/null 9>&-)" \
+        || return 1
+    [ "$revision" = "$JOURNAL_TO" ]
 }
 
 # A SIGKILL or power loss can land after the fast-forward but before validation.
@@ -294,21 +299,15 @@ _recover_interrupted_apply() {
     fi
     [ "$head" = "$JOURNAL_TO" ] \
         || _quiet_fail "checkout moved during an interrupted update — inspect $APPLY_JOURNAL"
-    if [ "$JOURNAL_PHASE" = restart-failed ]; then
-        # the old service can still be active after rejecting a restart; it cannot prove the new release ran
-        echo "silere-update: the shell restart failed; rollback remains available with silere update --rollback" >&2
-        return 0
-    fi
-    if [ "$JOURNAL_PHASE" = validated ]; then
-        # The journal is kept until the shell is seen running on the new revision; a
-        # release that passes the candidate gate can still fail in the live session,
-        # and --rollback needs the journal to restore it.
+    if [ "$JOURNAL_PHASE" = validated ] || [ "$JOURNAL_PHASE" = restart-failed ]; then
         if _updated_shell_is_running; then
             _clear_apply_transaction \
                 || _quiet_fail "could not clear the completed update recovery journal"
-            echo "silere-update: kept the signed update that last completed validation" >&2
+            echo "silere-update: confirmed the shell is running the signed update" >&2
+        elif [ "$JOURNAL_PHASE" = restart-failed ]; then
+            echo "silere-update: the shell restart failed. Rollback remains available with silere update --rollback" >&2
         else
-            echo "silere-update: the updated shell is not running; run --rollback to restore $JOURNAL_FROM" >&2
+            echo "silere-update: could not confirm that the updated shell started. Run silere update --rollback to restore $JOURNAL_FROM" >&2
         fi
         return 0
     fi

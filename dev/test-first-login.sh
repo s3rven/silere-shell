@@ -99,6 +99,12 @@ if [ "${1:-}" = --inner ]; then
         sleep 0.1
     done
     [ "$up" = 1 ] || fail "the bar did not come up at login"
+    launch_rev="$(git -C "$installed" rev-parse HEAD)"
+    git -C "$installed" -c user.name=lab -c user.email=lab@example.invalid -c commit.gpgsign=false \
+        commit --allow-empty -qm next-revision
+    runtime_rev="$("${home_env[@]}" timeout -k 1 3 qs ipc --any-display -p "$installed/shell.qml" \
+        call runtime launchRevision 2>/dev/null)" || fail "the running shell did not answer the revision probe"
+    [ "$runtime_rev" = "$launch_rev" ] || fail "the running shell lost its launch revision after HEAD moved"
     # a new profile saves the tray switched on; an existing one keeps the default
     tray_on=0
     for _ in $(seq 1 50); do

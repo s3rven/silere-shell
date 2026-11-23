@@ -28,8 +28,8 @@ If no shell is running, the next start uses it. `silere version` shows the insta
 If the release installs but the service manager rejects its restart, the updater
 reports the failure and keeps rollback available. Run `silere restart` to retry, or
 `silere update --rollback` to restore the previous revision.
-Later update checks keep that rollback too; the old shell still running does not
-prove the new release started.
+The next update check clears the recovery record once the shell started by
+`silere restart` reports the updated revision.
 
 ## Restore the previous version
 
@@ -94,4 +94,5 @@ skipped the startup check.
 
 A private transaction journal records that validation passed. Recovery authenticates
 it against a snapshot of the previously installed release key. The journal remains
-until the shell is confirmed running on the new revision.
+until the running shell reports the Git revision captured by the Silere launcher.
+If the check cannot reach a running shell with that revision, rollback stays available.

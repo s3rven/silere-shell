@@ -8,6 +8,7 @@
 pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "modules/bar"
 import "modules/osd"
 import "modules/notifications" // qmllint disable unused-imports
@@ -37,6 +38,12 @@ ShellRoot {
         : TrayMenuState.open ? _trayPopup.latchedScreen
         : QuickActionsState.open ? _quickActionsPopup.latchedScreen
         : null
+
+    IpcHandler {
+        target: "runtime"
+
+        function launchRevision(): string { return Quickshell.env("SILERE_LAUNCH_REVISION") || "" }
+    }
 
     // auto night light tracks the sun, and one left on returns after a restart; otherwise lazy
     function armNightLightIfNeeded(): void {
