@@ -3018,21 +3018,23 @@ ShellRoot {
 
         const topWas = { shown: SysInfo.topShown, name: SysInfo.topName, pid: SysInfo.topPid, share: SysInfo.topShare,
             samples: SysInfo._topSamples, last: SysInfo._topLast, active: SysInfo._active }
-        const procLine = (pid, name, utime, stime) => pid + " (" + name + ") R 1 " + pid + " " + pid
-            + " 0 -1 0 0 0 0 0 " + utime + " " + stime + " 0 0 20 0 1 0 1 0 0"
+        const procLine = (pid, name, utime, stime, started = 1) => pid + " (" + name + ") R 1 " + pid + " " + pid
+            + " 0 -1 0 0 0 0 0 " + utime + " " + stime + " 0 0 20 0 1 0 " + started + " 0 0"
         const statAt = (user, idle, procs) => ["cpu " + user + " 0 0 " + idle + " 0 0 0 0",
             "cpu0 " + user / 2 + " 0 0 " + idle / 2 + " 0 0 0 0", "cpu1 " + user / 2 + " 0 0 " + idle / 2 + " 0 0 0 0",
             "intr 1 2 3"].concat(procs).join("\n") + "\n"
         const firstTop = SysInfo.processSample(statAt(1000, 1000,
             [procLine(41, "ffmpeg", 100, 20), procLine(42, "Web Content (2)", 50, 10), procLine(43, "make", 5, 5)]))
         const secondTop = SysInfo.processSample(statAt(1300, 1100,
-            [procLine(41, "ffmpeg", 250, 50), procLine(42, "Web Content (2)", 90, 20), procLine(43, "cc1", 400, 5)]))
+            [procLine(41, "ffmpeg", 250, 50), procLine(42, "Web Content (2)", 90, 20), procLine(43, "make", 400, 5, 2)]))
         const thirdTop = SysInfo.processSample(statAt(1600, 1200,
             [procLine(41, "ffmpeg", 400, 80), procLine(42, "Web Content (2)", 100, 20)]))
         const busiestTop = SysInfo.busiestProcess(firstTop, secondTop)
-        root._check(firstTop.cpus === 2 && firstTop.names["42"] === "Web Content (2)" && firstTop.ticks["41"] === 120
+        root._check(firstTop.cpus === 2 && firstTop.processes["42"].name === "Web Content (2)"
+                && firstTop.processes["41"].ticks === 120
                 && busiestTop !== null && busiestTop.pid === 41 && busiestTop.name === "ffmpeg"
                 && Math.abs(busiestTop.share - 0.45) < 1e-9 && Math.abs(busiestTop.cores - 0.9) < 1e-9
+                && busiestTop.load === 0.75
                 && SysInfo.busiestProcess(null, secondTop) === null && SysInfo.busiestProcess(secondTop, firstTop) === null,
             "the busiest process has the most CPU ticks since the last sample, and a reused PID is left out")
         const oddTop = SysInfo.processSample("cpu 10 0 0 10 0 0 0 0\n77 (a) b (c) R 1 2 3 4 5 6 7 8 9 10 11 12\n"
@@ -3072,6 +3074,11 @@ ShellRoot {
         root._check(topQuietOff && topWantedOn && topHeld && !SysInfo._topWanted && !SysInfo.topShown
                 && SysInfo.topName === "" && w._parts[0].detail === "62%",
             "the busiest process is read only while a view asks for it, and forgotten once that view has faded out")
+        SysInfo._topLast = thirdTop
+        SysInfo._topSamples = 2
+        SysInfo._applyTop(SysInfo.processSample(statAt(1620, 1580, [procLine(41, "ffmpeg", 410, 80)])))
+        root._check(!SysInfo.topShown && w._parts[0].detail === "62%",
+            "a busy bar percentage from a different interval cannot keep the busiest process shown")
         SysInfo.topName = "cc1plus"
         SysInfo.topPid = 48211
         w._minW = 999

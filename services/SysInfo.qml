@@ -84,6 +84,8 @@ Singleton {
         && (ShellSettings.systemShowCpu || ShellSettings.systemShowMemory)
         && !Idle.isIdle && !OverviewState.active
     readonly property bool _wanted: _homeWanted || _barWanted
+    readonly property bool _cpuWanted: _homeWanted || (_barWanted && ShellSettings.systemShowCpu)
+    readonly property bool _memoryWanted: _homeWanted || (_barWanted && ShellSettings.systemShowMemory)
 
     on_WantedChanged: {
         if (_wanted) {
@@ -101,23 +103,23 @@ Singleton {
     property Timer _topRelease: Timer { interval: 300; onTriggered: if (!root._topWanted) root._clearTop() }
     on_HomeWantedChanged: {
         if (!root._active) return
-        if (root._homeWanted) root._refreshHome()
+        if (root._homeWanted) root._refreshSlow()
         else _uptimePoll.stop()
     }
+    on_CpuWantedChanged: {
+        if (!root._active || !root._cpuWanted) return
+        root._clearCpuSample()
+        _cpuPrime.restart()
+    }
+    on_MemoryWantedChanged: if (!root._memoryWanted) root._vmstat = ""
 
     function _activate(): void {
         if (_active) return
         _active = true
         cpuReady = false
-        _refreshFast()
-        if (_homeWanted) _refreshHome()
-        // cpuPct is a delta between two /proc/stat reads; without a quick second sample the tile shows the last session's figure
-        _cpuPrime.restart()
-    }
-
-    function _refreshHome(): void {
-        _uptimeFile.reload()
-        _refreshSlow()
+        if (_homeWanted) _refreshSlow()
+        // the file loads as soon as it has a reader; prime a second sample so CPU appears quickly
+        if (root._cpuWanted) _cpuPrime.restart()
     }
 
     function _deactivate(): void {
@@ -135,7 +137,7 @@ Singleton {
     Component.onCompleted: if (_wanted) _startDelay.restart()
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
-    Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active) _statFile.reload() }
+    Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active && root._cpuWanted) _statFile.reload() }
     Timer { id: _topPrime; interval: 1000; onTriggered: if (root._topWanted) root._sampleTop() }
     Timer { id: _uptimePoll; onTriggered: if (root._active && root._homeWanted) _uptimeFile.reload() }
 
@@ -157,12 +159,12 @@ Singleton {
 
     FileView {
         id: _meminfoFile
-        path: "/proc/meminfo"
+        path: root._active && root._memoryWanted ? "/proc/meminfo" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: root._applyMeminfo(_meminfoFile.text())
-        onLoadFailed: if (root._active) {
+        onLoaded: if (root._memoryWanted) root._applyMeminfo(_meminfoFile.text())
+        onLoadFailed: if (root._active && root._memoryWanted) {
             root.memTotalKb = 0; root.memAvailKb = 0
             root.swapTotalKb = 0; root.swapUsedKb = 0
         }
@@ -171,31 +173,32 @@ Singleton {
     // absent before the kernel counted this pool, which leaves the reading as MemAvailable gives it
     FileView {
         id: _vmstatFile
-        path: "/proc/vmstat"
+        path: root._active && root._memoryWanted ? "/proc/vmstat" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: root._vmstat = _vmstatFile.text()
+        onLoaded: if (root._memoryWanted) root._vmstat = _vmstatFile.text()
+        onLoadFailed: root._vmstat = ""
     }
 
     // absent on a kernel built without PSI, which simply leaves swap unreported
     FileView {
         id: _pressureFile
-        path: "/proc/pressure/memory"
+        path: root._active && root._memoryWanted ? "/proc/pressure/memory" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: root._applyPressure(_pressureFile.text())
-        onLoadFailed: if (root._active) root._applyPressure("")
+        onLoaded: if (root._memoryWanted) root._applyPressure(_pressureFile.text())
+        onLoadFailed: if (root._active && root._memoryWanted) root._applyPressure("")
     }
 
     FileView {
         id: _uptimeFile
-        path: "/proc/uptime"
+        path: root._active && root._homeWanted ? "/proc/uptime" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: root._applyUptime(_uptimeFile.text())
+        onLoaded: if (root._homeWanted) root._applyUptime(_uptimeFile.text())
         onLoadFailed: {
             if (!root._active || !root._homeWanted) return
             _uptimePoll.interval = 2000
@@ -205,20 +208,22 @@ Singleton {
 
     FileView {
         id: _statFile
-        path: "/proc/stat"
+        path: root._active && root._cpuWanted ? "/proc/stat" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: root._applyCpuStat(_statFile.text())
-        onLoadFailed: if (root._active) root._clearCpuSample()
+        onLoaded: if (root._cpuWanted) root._applyCpuStat(_statFile.text())
+        onLoadFailed: if (root._active && root._cpuWanted) root._clearCpuSample()
     }
 
     function _refreshFast(): void {
         if (!_active) return
-        _vmstatFile.reload()
-        _meminfoFile.reload()
-        _pressureFile.reload()
-        _statFile.reload()
+        if (root._memoryWanted) {
+            _vmstatFile.reload()
+            _meminfoFile.reload()
+            _pressureFile.reload()
+        }
+        if (root._cpuWanted) _statFile.reload()
         if (root._topWanted) root._sampleTop()
     }
 
@@ -302,54 +307,52 @@ Singleton {
         }
     }
 
-    function _applyCpuStat(_cpuRaw: string): void {
-        if (!root._active) return
-        const _cpuNl  = _cpuRaw.indexOf('\n')
-        const cpuLine = _cpuNl < 0 ? _cpuRaw.trim() : _cpuRaw.slice(0, _cpuNl)
-        const p = cpuLine.trim().split(/\s+/)
-        if (p.length >= 9 && p[0] === "cpu") {
-            const vals = []
-            for (let i = 1; i <= 8; i++) {
-                const value = Number(p[i])
-                if (!/^[0-9]+$/.test(p[i]) || !isFinite(value)) {
-                    root._clearCpuSample()
-                    return
-                }
-                vals.push(value)
-            }
-            const idle  = vals[3] + vals[4]
-            const total = vals.reduce((s, v) => s + v, 0)
-            if (!isFinite(total) || !isFinite(idle)) {
-                root._clearCpuSample()
-                return
-            }
-            if (root._lastCpuTotal > 0 && total > root._lastCpuTotal) {
-                const dTotal = total - root._lastCpuTotal
-                const dIdle  = idle  - root._lastCpuIdle
-                // hotplug and counter resets move the totals backwards; re-prime instead of keeping a stale or 100% reading
-                root.cpuReady = dIdle >= 0 && dIdle <= dTotal
-                root.cpuPct = root.cpuReady ? (dTotal - dIdle) / dTotal : 0
-            } else {
-                root.cpuReady = false
-                root.cpuPct = 0
-            }
-            root._lastCpuTotal = total
-            root._lastCpuIdle  = idle
-            root._updateCpuLoad()
-        } else {
-            root._clearCpuSample()
+    function _cpuCounters(line: string): var {
+        const fields = line.trim().split(/\s+/)
+        if (fields.length < 9 || fields[0] !== "cpu") return null
+        let total = 0
+        for (let i = 1; i <= 8; i++) {
+            if (!/^[0-9]+$/.test(fields[i])) return null
+            total += Number(fields[i])
         }
+        // user and nice already include the guest columns
+        return isFinite(total) ? { total: total, idle: Number(fields[4]) + Number(fields[5]) } : null
     }
 
-    // per-process ticks from /proc against the machine's, so the name is what runs now: ps gives a lifetime average.
-    // utime and stime are found by walking spaces: splitting each of ~400 lines into its fields took 3.6 ms a sample
+    function _cpuLoad(total: real, idle: real, lastTotal: real, lastIdle: real): real {
+        const delta = total - lastTotal
+        const idleDelta = idle - lastIdle
+        // a changed accounting baseline cannot substantiate a load for this interval
+        return lastTotal > 0 && delta > 0 && idleDelta >= 0 && idleDelta <= delta
+            ? (delta - idleDelta) / delta : -1
+    }
+
+    function _applyCpuStat(raw: string): void {
+        if (!root._active) return
+        const sample = root._cpuCounters(raw.split("\n", 1)[0])
+        if (!sample) {
+            root._clearCpuSample()
+            return
+        }
+        const load = root._cpuLoad(sample.total, sample.idle, root._lastCpuTotal, root._lastCpuIdle)
+        root.cpuReady = load >= 0
+        root.cpuPct = Math.max(0, load)
+        root._lastCpuTotal = sample.total
+        root._lastCpuIdle = sample.idle
+        root._updateCpuLoad()
+    }
+
+    // per-process ticks against the aggregate over the same interval
     function processSample(raw: string): var {
-        const ticks = {}, names = {}
-        let total = 0, cpus = 0
-        for (const line of raw.split("\n")) {
+        const lines = raw.split("\n")
+        const cpu = root._cpuCounters(lines[0])
+        if (!cpu) return null
+        const processes = Object.create(null)
+        let cpus = 0
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i]
             if (line.startsWith("cpu")) {
-                if (line.startsWith("cpu ")) total = line.trim().split(/\s+/).slice(1, 9).reduce((sum, v) => sum + (Number(v) || 0), 0)
-                else if (/^cpu[0-9]+ /.test(line)) cpus++
+                if (/^cpu[0-9]+ /.test(line)) cpus++
                 continue
             }
             const open = line.indexOf(" (")
@@ -368,20 +371,26 @@ Singleton {
             ticks[pid] = used
             names[pid] = line.slice(open + 2, close)
         }
-        return { total: total, cpus: Math.max(1, cpus), ticks: ticks, names: names }
+        return { total: cpu.total, idle: cpu.idle, cpus: Math.max(1, cpus), processes: processes }
     }
 
     function busiestProcess(last, next): var {
-        if (!last || !next || !(next.total > last.total)) return null
+        if (!last || !next || last.cpus !== next.cpus) return null
+        const load = root._cpuLoad(next.total, next.idle, last.total, last.idle)
+        if (load < 0) return null
         let pid = "", most = 0
-        for (const id in next.ticks) {
-            if (last.ticks[id] === undefined || last.names[id] !== next.names[id]) continue
-            const used = next.ticks[id] - last.ticks[id]
+        for (const id in next.processes) {
+            const before = last.processes[id]
+            const after = next.processes[id]
+            if (!before || before.started !== after.started) continue
+            const used = after.ticks - before.ticks
             if (used > most) { most = used; pid = id }
         }
         if (pid.length === 0) return null
         const share = Math.min(1, most / (next.total - last.total))
-        return { pid: Number(pid), name: SafeText.singleLineText(next.names[pid], 32), share: share, cores: share * next.cpus }
+        const process = next.processes[pid]
+        return { pid: Number(pid), started: process.started, name: SafeText.singleLineText(process.name, 32),
+            share: share, cores: share * next.cpus, load: load }
     }
 
     // a busy machine, or one process holding a core, for two samples in a row; it eases out under a lower line
@@ -394,7 +403,7 @@ Singleton {
     function _applyTop(sample): void {
         const busiest = root.busiestProcess(root._topLast, sample)
         root._topLast = sample
-        root._topSamples = root.topSamplesAfter(busiest, root.cpuReady ? root.cpuPct : 0, root._topSamples)
+        root._topSamples = root.topSamplesAfter(busiest, busiest?.load ?? 0, root._topSamples)
         root.topShown = root._topSamples >= 2
         root.topName = root.topShown ? busiest.name : ""
         root.topPid = root.topShown ? busiest.pid : 0
@@ -415,6 +424,10 @@ Singleton {
         root.topName = ""
         root.topPid = 0
         root.topShare = 0
+        root._cmdlinePid = 0
+        root._cmdlineStart = ""
+        root._cmdlineComm = ""
+        root._cmdNamePid = 0
     }
 
     BoundedProcess {
