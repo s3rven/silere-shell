@@ -57,6 +57,8 @@ Hardware not already listed takes a new letter.
 | 1.7.0 | 2026-11-12 | A | warm | 115 MB | 234 MB | 0.4% | 29 | 61 |
 | 1.8.0 | 2026-11-19 | A | cold | 107 MB | 228 MB | 0.3% | 25 | 55 |
 | 1.8.0 | 2026-11-19 | A | warm | 108 MB | 230 MB | 0.3% | 25 | 55 |
+| 1.9.0 | 2026-11-24 | A | cold | 96 MB | 217 MB | 0.4% | 20 | 59 |
+| 1.9.0 | 2026-11-24 | A | warm | 105 MB | 226 MB | 0.4% | 20 | 59 |
 
 A dash means that release was not measured.
 
