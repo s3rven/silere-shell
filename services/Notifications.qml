@@ -791,11 +791,12 @@ Singleton {
         return Math.ceil((nowMs + minutes * 60000) / 60000) * 60000
     }
 
+    // day and hour built together: setting the hour on a spring-forward day lands in the skipped hour, and moving that
+    // on a day kept its shifted time, so 03:00 chosen that afternoon ended the next day at 02:00
     function dndEndAtHour(nowMs: real, hour: int): real {
-        const end = new Date(nowMs)
-        end.setHours(hour, 0, 0, 0)
-        if (end.getTime() <= nowMs) end.setDate(end.getDate() + 1)
-        return end.getTime()
+        const now = new Date(nowMs)
+        const at = days => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime()
+        return at(0) > nowMs ? at(0) : at(1)
     }
 
     readonly property bool _dndElapsed: root.dndUntil > 0

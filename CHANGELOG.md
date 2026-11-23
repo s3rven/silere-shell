@@ -88,6 +88,7 @@ settings file carries its own `__version` and migrates separately.
 - `silere doctor` finds compositor config paths locally even when the shell entry file is missing.
 - A tray icon an app names from the icon theme, where the theme has none by that name, shows the app's initial instead of a magenta and black pattern.
 - On Hyprland, a menu, calendar or Quick Actions opened from a keybind while the pointer rested on another open one no longer closes as it opens.
+- Do Not Disturb until the end of quiet hours, chosen on the afternoon the clocks spring forward, ends that night instead of an hour early the next day.
 - Settings › System › Overview no longer says No issues found while a device check right below it needs attention, such as sound output with PipeWire not running.
 - Settings › System › Overview no longer reports a missing wallpaper palette as a problem while colors are Neutral; it is listed with the optional features until Wallpaper colors are chosen.
 - Quick Actions, the calendar, and tray menus keep keyboard focus visible when their contents move or the popup shrinks.

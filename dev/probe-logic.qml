@@ -12614,6 +12614,13 @@ ShellRoot {
                 && Notifications.dndEndAtHour(new Date(2026, 9, 11, 2, 0).getTime(), 8)
                     === new Date(2026, 9, 11, 8, 0).getTime(),
             "timed Do Not Disturb ends on a whole minute, or at the next morning hour still ahead")
+        // where clocks spring forward on 29 March 2026 (Europe/Riga skips 03:00), the afternoon's "until 03:00" is the next
+        // night's; anywhere without that change it is the same date, so the check holds in every zone
+        root._check(Notifications.dndEndAtHour(new Date(2026, 2, 29, 15, 0).getTime(), 3) === new Date(2026, 2, 30, 3, 0).getTime()
+                && Notifications.dndEndAtHour(new Date(2026, 11, 31, 23, 30).getTime(), 3) === new Date(2027, 0, 1, 3, 0).getTime()
+                && Notifications.dndEndAtHour(new Date(2026, 9, 11, 8, 0).getTime(), 8) === new Date(2026, 9, 12, 8, 0).getTime(),
+            "Do Not Disturb until an hour ends at that hour the next night across a clock change, a year's end and the hour itself (got "
+                + new Date(Notifications.dndEndAtHour(new Date(2026, 2, 29, 15, 0).getTime(), 3)) + ")")
         const dndWas = ShellSettings.dnd
         const dndUntilWas = ShellSettings.dndUntil
         Notifications.setDnd(true, Date.now() + 3600000)
