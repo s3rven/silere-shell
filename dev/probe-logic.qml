@@ -105,8 +105,12 @@ ShellRoot {
             sourceComponent: PageShell {
                 property bool built: false
                 property real opaqueBeforeBuilt: 0
+                property bool enabledAtCompletion: true
                 onOpacityChanged: if (!built) opaqueBeforeBuilt = Math.max(opaqueBeforeBuilt, opacity)
-                Component.onCompleted: built = true
+                Component.onCompleted: {
+                    enabledAtCompletion = enabled
+                    built = true
+                }
             }
         }
     }
@@ -3424,6 +3428,8 @@ ShellRoot {
         const page = loader ? loader.item : null
         root._check(page !== null && page.active && page.built && page.opaqueBeforeBuilt < 0.001 && page.opacity < 0.001,
             "a page built while the menu is open stays hidden until it has finished building, then fades in")
+        root._check(page !== null && !page.enabledAtCompletion && page.enabled,
+            "a menu page cannot accept input until its loader has connected it")
         if (loader) loader.destroy()
         MenuState.open = openWas
         ShellSettings.reduceMotion = reduceWas

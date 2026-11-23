@@ -12,13 +12,16 @@ QtObject {
     signal workspaceActivated(string output)
     signal overviewRaw(bool open)
     signal sharingState(bool active)
+    signal screenshotTaken(string path)
     property bool sharingSupported: false
     property var _castIds: []
     property var _keyboardNames: []
     property int _keyboardIndex: 0
     readonly property string keyboardLayout: SafeText.singleLineText(root._keyboardNames[root._keyboardIndex] || "", 128)
     readonly property int keyboardLayoutCount: root._keyboardNames.length
-    function cycleKeyboardLayout(): void { root._action(["switch-layout", "next"]) }
+    function cycleKeyboardLayout(): void {
+        root._sendAction({ SwitchLayout: { layout: "Next" } })
+    }
 
     readonly property string socketPath: String(Quickshell.env("NIRI_SOCKET") || "")
 
@@ -50,41 +53,59 @@ QtObject {
         return workspace ? { Id: workspace.id } : null
     }
 
-    function moveWorkspaceCommand(wsId, output, windowId, windowOutput): var {
-        const targetOutput = String(output || "")
-        const sourceOutput = String(windowOutput || "")
-        const id = String(windowId)
-        if (targetOutput.length > 0 && targetOutput !== sourceOutput) {
-            // numeric workspace refs are per-output, so land the window on the clicked output first
-            return ["sh", "-c",
-                "niri msg action move-window-to-monitor --id \"$1\" \"$2\" "
-                    + "&& niri msg action move-window-to-workspace "
-                    + "--window-id \"$1\" --focus false \"$3\"",
-                "sh", id, targetOutput, String(wsId)]
-        }
-        return ["niri", "msg", "action", "move-window-to-workspace",
-            "--window-id", id, "--focus", "false", String(wsId)]
+    function focusWorkspace(wsId, output): void {
+        const reference = root._workspaceRef(wsId, output)
+        if (reference) root._sendAction({ FocusWorkspace: { reference } })
     }
 
     function moveActiveToWorkspace(wsId, output): void {
         const active = root.activeToplevel
         if (!active || active.ref === undefined || active.ref === null) return
-        Quickshell.execDetached(root.moveWorkspaceCommand(
-            wsId, output, active.ref, active.output))
+        const reference = root._workspaceRef(wsId, output)
+        if (reference) root._sendAction({ MoveWindowToWorkspace: {
+            window_id: active.ref, reference, focus: false
+        } })
+    }
+
+    function _sendAction(action): void {
+        if (root.socketPath.length > 0)
+            _actionRequest.createObject(root, { message: JSON.stringify({ Action: action }) + "\n" })
+    }
+
+    // the event stream owns its socket. each request gets one reply on its own connection
+    property Component _actionSocket: Component {
+        id: _actionRequest
+
+        Socket {
+            id: request
+
+            required property string message
+            path: root.socketPath
+            Component.onCompleted: connected = true
+            onConnectedChanged: {
+                if (connected) {
+                    write(message)
+                    flush()
+                }
+            }
+            onError: request.destroy()
+            parser: SplitParser { onRead: request.destroy() }
+            property Timer _deadline: Timer {
+                interval: 3000
+                running: true
+                onTriggered: request.destroy()
+            }
+        }
     }
 
     function focusToplevel(c): void {
-        if (c.ref) root._action(["focus-window", "--id", String(c.ref)])
+        if (c.ref) root._sendAction({ FocusWindow: { id: c.ref } })
     }
 
     function refreshToplevels(): void {
         // window actions match on titles; flush the title events a hidden title widget left coalesced
         root._titleTick++
         root._activeTitleTick++
-    }
-
-    function _action(args): void {
-        Quickshell.execDetached(["niri", "msg", "action"].concat(args))
     }
 
     // niri sends WindowOpenedOrChanged for title-only updates too: publish at most one
@@ -174,6 +195,8 @@ QtObject {
         return out
     }
 
+    readonly property var urgentRefs: root._winRaw.filter(w => w && w.is_urgent).map(w => w.id)
+
     readonly property var toplevels: {
         void root._titleTick
         const wins = root._winRaw
@@ -261,6 +284,7 @@ QtObject {
             || previous.pid !== next.pid
             || previous.workspace_id !== next.workspace_id
             || previous.is_focused !== next.is_focused
+            || previous.is_urgent !== next.is_urgent
             || oldStamp.secs !== newStamp.secs
             || oldStamp.nanos !== newStamp.nanos
     }
@@ -275,6 +299,7 @@ QtObject {
             pid: raw.pid ?? -1,
             workspace_id: raw.workspace_id,
             is_focused: !!raw.is_focused,
+            is_urgent: !!raw.is_urgent,
             focus_timestamp: raw.focus_timestamp ? {
                 secs: Number(stamp.secs ?? 0),
                 nanos: Number(stamp.nanos ?? 0)
@@ -382,9 +407,19 @@ QtObject {
             root._winRaw = NiriEvents.windowsWithFocus(root._winRaw, ev.WindowFocusChanged.id)
             return
         }
+        // niri marks a window urgent where it refuses an activation (a token with no serial), as hyprland does
+        if (ev.WindowUrgencyChanged) {
+            const d = ev.WindowUrgencyChanged
+            root._winRaw = NiriEvents.workspacesWithUrgency(root._winRaw, d.id, !!d.urgent)
+            return
+        }
         if (ev.WindowFocusTimestampChanged) {
             const d = ev.WindowFocusTimestampChanged
             root._winRaw = NiriEvents.windowsWithFocusStamp(root._winRaw, d.id, d.focus_timestamp)
+            return
+        }
+        if (ev.ScreenshotCaptured) {
+            root.screenshotTaken(String(ev.ScreenshotCaptured.path ?? ""))
             return
         }
         if (ev.OverviewOpenedOrClosed) {

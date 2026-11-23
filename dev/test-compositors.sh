@@ -16,7 +16,16 @@ if [ "${1:-}" = --inner ]; then
     [ -S "$XDG_RUNTIME_DIR/silere-test-parent" ] || { cat "$scratch/parent.log" >&2; exit 1; }
     export WAYLAND_DISPLAY=silere-test-parent QT_QPA_PLATFORM=wayland SILERE_WATCH_FILES=0
     if [ "$backend" = niri ]; then
-        printf 'hotkey-overlay { skip-at-startup; }\n' > "$scratch/niri.kdl"
+        cat > "$scratch/niri.kdl" <<'EOF'
+hotkey-overlay { skip-at-startup; }
+input {
+    keyboard {
+        xkb { layout "us,de"; }
+    }
+}
+workspace "silere-source"
+workspace "silere-target"
+EOF
         niri --config "$scratch/niri.kdl" > "$scratch/child.log" 2>&1 &
         child_pid=$!
     elif [ "$backend" = hyprland ]; then
@@ -228,6 +237,20 @@ EOF
         errors="$(_probe_errors "$scratch/monitors.log")"
         [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
         checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy, numeric workspace names"
+    elif [ "$backend" = niri ]; then
+        niri msg action focus-workspace silere-source >/dev/null
+        mkdir -p "$scratch/workspaces"
+        _probe_project "$ROOT" "$ROOT/dev/probe-niri-workspaces.qml" "$scratch/workspaces"
+        qs -p "$scratch/workspaces/probe-niri-workspaces.qml" --no-color > "$scratch/workspaces.log" 2>&1 &
+        window_pid=$!
+        if ! _probe_wait "$scratch/workspaces.log" "$window_pid" '^.*PROBE-NIRI-WORKSPACES passed' 100 0.1; then
+            cat "$scratch/workspaces.log" >&2
+            printf 'FAIL: the niri workspace, window, layout or screenshot probe did not finish\n' >&2
+            exit 1
+        fi
+        errors="$(_probe_errors "$scratch/workspaces.log")"
+        [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
+        checked="$checked, move and focus after workspace renumbering, window focus, keyboard layout, clipboard screenshot"
     fi
     errors="$(_probe_errors "$scratch/shell.log")"
     [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
