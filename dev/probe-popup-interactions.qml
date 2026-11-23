@@ -86,6 +86,23 @@ Item {
         root._check(current !== null && current.Accessible.role === Accessible.StaticText,
             "current-month dates are announced as text rather than controls")
 
+        const localeWas = card._locale
+        card._locale = Qt.locale("fr_FR")
+        card._readToday(new Date(2026, 0, 5, 12))
+        card._go(2026, 0, 1)
+        const frenchToday = root._find(card, item => item.Accessible.name === "Today")
+        const frenchDate = root._find(card, item => item.index === card._todayCell && item.date !== undefined)
+        const frenchAdjacent = root._find(card, item => item.index === 0 && item.date !== undefined)
+        root._check(card.monthName === "janvier" && card.monthLabel === "janvier 2026"
+                && card.todayWeekday === "lundi" && frenchToday !== null
+                && frenchToday.Accessible.description.startsWith("lundi, 5 janvier 2026")
+                && frenchDate !== null && frenchDate.Accessible.name === "lundi, 5 janvier 2026"
+                && frenchDate.Accessible.description === "Today" && frenchAdjacent !== null
+                && frenchAdjacent.Accessible.description === "Show décembre 2025",
+            "calendar headings and accessible dates agree in a non-English locale and include the full date")
+        card._locale = localeWas
+        card._snapToday()
+
         // February 2027 fills exactly four Monday-first weeks, November 2026 needs six
         card._go(2027, 1, 1)
         const fourWeekRows = card._rowCount
@@ -110,17 +127,41 @@ Item {
         card._go(2024, 3, 1)
         card._step(1)
         card._step(1)
-        root._check(card.monthLabel === Qt.formatDateTime(new Date(2024, 5, 1), "MMMM yyyy")
+        root._check(card.monthLabel === card.monthName + " 2024"
                 && card.dispMonth === 5,
             "fast month scrolling names the month it is heading to before the grid catches up")
         ShellSettings.reduceMotion = true
 
         card._go(2026, 0, 1)
-        const pagedDown = card._pageKey(Qt.Key_PageDown) && card.dispMonth === 1
-        const pagedUp = card._pageKey(Qt.Key_PageUp) && card._pageKey(Qt.Key_PageUp)
+        const pagedDown = card._navigateKey(Qt.Key_PageDown, Qt.NoModifier) && card.dispMonth === 1
+        const pagedUp = card._navigateKey(Qt.Key_PageUp, Qt.NoModifier)
+            && card._navigateKey(Qt.Key_PageUp, Qt.NoModifier)
             && card.dispYear === 2025 && card.dispMonth === 11
-        root._check(pagedDown && pagedUp && !card._pageKey(Qt.Key_Left),
+        root._check(pagedDown && pagedUp && !card._navigateKey(Qt.Key_Left, Qt.NoModifier),
             "Page Up and Page Down turn the calendar month across a year and leave other keys alone")
+        const nextYear = card._navigateKey(Qt.Key_PageDown, Qt.ShiftModifier)
+            && card.dispYear === 2026 && card.dispMonth === 11
+        const previousYear = card._navigateKey(Qt.Key_PageUp, Qt.ShiftModifier)
+            && card.dispYear === 2025 && card.dispMonth === 11
+        root._check(nextYear && previousYear && !card._navigateKey(Qt.Key_PageDown, Qt.ControlModifier),
+            "Shift with a page key changes the year and Ctrl with a page key leaves the date alone")
+        card._go(2020, 0, -1)
+        root._check(card._navigateKey(Qt.Key_Home, Qt.NoModifier) && card.onTodayMonth,
+            "Home returns to the current month")
+
+        const clockWas = DateTime.minuteSample
+        DateTime.minuteSample = new Date(2026, 11, 31, 23, 59)
+        card._go(2026, 11, 1)
+        DateTime.minuteSample = new Date(2027, 0, 1, 0, 0)
+        root._check(card.shownYear === 2027 && card.shownMonth === 0 && card.onTodayMonth
+                && root._isDate(card._dateForCell(card._todayCell), 2027, 0, 1),
+            "a calendar on the current month follows today across a year boundary")
+        card._go(2026, 9, -1)
+        DateTime.minuteSample = new Date(2027, 1, 1, 0, 0)
+        root._check(card.shownYear === 2026 && card.shownMonth === 9 && !card.onTodayMonth,
+            "a calendar browsing another month keeps that month when today changes")
+        DateTime.minuteSample = clockWas
+        card._snapToday()
 
         ShellSettings.calendarWeekStart = "sunday"
         card._go(2026, 0, 1)

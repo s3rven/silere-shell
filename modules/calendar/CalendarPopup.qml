@@ -61,6 +61,7 @@ FittedPopupWindow {
         property int shownYear:  2000
         property int shownMonth: 0
         property int navDir:     0
+        property var _locale: Qt.locale()
 
         // "today" captured fresh on each open — the card persists, so a readonly `new Date()` binding would freeze at first build and highlight the wrong day forever
         property int    _todayY:      -1
@@ -77,13 +78,24 @@ FittedPopupWindow {
         // which under a bottom bar moved the arrows out from under the pointer
         readonly property int _rowCount: 6
         // the target month, not the drawn one: fast scrolling keeps the grid mid-swap, and the label must not freeze with it
-        readonly property string monthLabel: Qt.formatDateTime(new Date(dispYear, dispMonth, 1), "MMMM yyyy")
+        readonly property string monthLabel: card.monthName + " " + card.dispYear
         // standalone, not the "MMMM" format form: some locales decline the month inside a date
-        readonly property string monthName: Qt.locale().standaloneMonthName(dispMonth, Locale.LongFormat)
+        readonly property string monthName: card._monthName(dispMonth)
         readonly property bool onTodayMonth: dispYear === _todayY && dispMonth === _todayM
-        readonly property string todayCaption: _todayM < 0 ? ""
-            : Qt.locale().standaloneMonthName(_todayM, Locale.LongFormat)
-                + (ShellSettings.calendarWeekNumbers && _todayWeek > 0 ? " · Week " + _todayWeek : "")
+        readonly property string _todayWeekLabel: ShellSettings.calendarWeekNumbers && _todayWeek > 0
+            ? "Week " + _todayWeek : ""
+        readonly property string todayCaption: _todayM < 0 ? "" : card._monthName(_todayM)
+            + (card._todayWeekLabel.length > 0 ? " · " + card._todayWeekLabel : "")
+        readonly property string _todayDateLabel: _todayD < 0 ? ""
+            : card._dateLabel(new Date(_todayY, _todayM, _todayD))
+
+        function _monthName(month: int): string {
+            return card._locale.standaloneMonthName(month, Locale.LongFormat)
+        }
+
+        function _dateLabel(day: date): string {
+            return day.toLocaleDateString(card._locale, "dddd, d MMMM yyyy")
+        }
 
         function _dateForCell(index: int): var {
             return new Date(card.shownYear, card.shownMonth, index - card._lead + 1)
@@ -103,7 +115,10 @@ FittedPopupWindow {
         function _readToday(t: date): void {
             _todayY = t.getFullYear(); _todayM = t.getMonth(); _todayD = t.getDate()
             _todayWeek = DateTime.isoWeek(t)
-            todayWeekday = Qt.formatDateTime(t, "dddd")
+            todayWeekday = card._locale.standaloneDayName(t.getDay(), Locale.LongFormat)
+        }
+        function _snapToday(): void {
+            card._readToday(new Date())
             dispYear  = _todayY; dispMonth  = _todayM
             shownYear = _todayY; shownMonth = _todayM
             _gridSwap.stop(); _grid.opacity = 1; _grid.xOff = 0
@@ -264,6 +279,7 @@ FittedPopupWindow {
 
                     Accessible.role: Accessible.Button
                     Accessible.name: "Today"
+                    Accessible.description: [card._todayDateLabel, card._todayWeekLabel].filter(text => text.length > 0).join(", ")
                     Accessible.focusable: CalendarState.open
                     Accessible.onPressAction: card._goToday()
                     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
@@ -433,7 +449,7 @@ FittedPopupWindow {
                         readonly property bool weekend: CalendarState.isWeekend(dayHdr.weekday)
                         width: card.cell; height: 20
                         Accessible.role: Accessible.StaticText
-                        Accessible.name: Qt.locale().standaloneDayName(dayHdr.weekday, Locale.LongFormat)
+                        Accessible.name: card._locale.standaloneDayName(dayHdr.weekday, Locale.LongFormat)
                         ShellText {
                             anchors.centerIn: parent
                             width: parent.width - 4
@@ -513,16 +529,27 @@ FittedPopupWindow {
                             width: card.cell; height: card.rowH
 
                             Accessible.role: _dayCell.cur ? Accessible.StaticText : Accessible.Button
-                            Accessible.name: Qt.formatDateTime(_dayCell.date, "dddd, d MMMM yyyy")
-                            Accessible.description: _dayCell.cur ? ""
-                                : "Show " + Qt.formatDateTime(_dayCell.date, "MMMM yyyy")
+                            Accessible.name: card._dateLabel(_dayCell.date)
+                            Accessible.description: _dayCell.today ? "Today" : _dayCell.cur ? ""
+                                : "Show " + card._monthName(_dayCell.date.getMonth()) + " " + _dayCell.date.getFullYear()
                             Accessible.focusable: !_dayCell.cur && CalendarState.open && !_gridSwap.running
                             Accessible.onPressAction: card._activateDay(_dayCell.index)
                             KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+                            HoverHandler {
+                                id: _dayH
+                                enabled: _dayCell.Accessible.focusable
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                            TapHandler {
+                                id: _dayTap
+                                enabled: _dayCell.Accessible.focusable
+                                onTapped: card._activateDay(_dayCell.index)
+                            }
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: card.rowH - 4; height: width; radius: Theme.radiusInline
+                                width: Math.max(0, Math.min(card.cell, card.rowH) - 4)
+                                height: width; radius: Theme.radiusInline
                                 antialiasing: true
                                 color: _dayCell.today ? Theme.accent
                                     : _dayTap.pressed
@@ -532,16 +559,6 @@ FittedPopupWindow {
                                         : "transparent")
                                 ColorFade on color {}
 
-                                HoverHandler {
-                                    id: _dayH
-                                    enabled: !_dayCell.cur && CalendarState.open && !_gridSwap.running
-                                    cursorShape: Qt.PointingHandCursor
-                                }
-                                TapHandler {
-                                    id: _dayTap
-                                    enabled: !_dayCell.cur && CalendarState.open && !_gridSwap.running
-                                    onTapped: card._activateDay(_dayCell.index)
-                                }
                                 ShellText {
                                     anchors.centerIn: parent
                                     text: _dayCell.dayNum

@@ -36,6 +36,7 @@ STATE_DIR="$STATE_HOME/silere-shell"
 CACHE_DIR="$CACHE_HOME/silere-shell"
 SETTINGS="$CONFIG_DIR/settings.json"
 HISTORY="$STATE_DIR/notifications.json"
+LEGACY_HISTORY="$CONFIG_DIR/notifications.json"
 SAVED_SETTINGS="$STATE_DIR/settings.pre-reset.json"
 SAVED_DIR="$STATE_DIR/reset-saved"
 
@@ -61,16 +62,21 @@ _changed_settings() {
 _settings_readable() {
     [ -f "$SETTINGS" ] || return 0
     command -v python3 >/dev/null 2>&1 || return 0
-    python3 -I -c 'import json, sys; json.load(open(sys.argv[1]))' "$SETTINGS" 2>/dev/null
+    python3 -I -c 'import json, sys; sys.exit(not isinstance(json.load(open(sys.argv[1])), dict))' "$SETTINGS" 2>/dev/null
 }
 
 # nothing reads these any more: removed features, and backups of migrations long finished
 _leftovers() {
     local path
-    for path in "$CONFIG_DIR"/calendar-marks.json "$CONFIG_DIR"/notifications.json \
+    for path in "$CONFIG_DIR"/calendar-marks.json \
             "$CONFIG_DIR"/settings.pre-reset-*.bak.json "$CONFIG_DIR"/settings.pre-v*.bak.json; do
         [ -e "$path" ] && printf '%s\n' "${path##*/}"
     done
+    # leave a sole legacy copy for startup to migrate, and keep the live file when both XDG paths name it
+    if [ "$WITH_HISTORY" = 0 ] && [ -f "$HISTORY" ] && [ -f "$LEGACY_HISTORY" ] \
+            && ! [[ "$LEGACY_HISTORY" -ef "$HISTORY" ]]; then
+        printf '%s\n' "${LEGACY_HISTORY##*/}"
+    fi
     return 0
 }
 
@@ -173,7 +179,7 @@ _preview() {
     edited="$(_edited_files)"
     old="$(_leftovers)"
     caches="$(_caches)"
-    if [ -z "$keys$edited$old$caches" ] && _settings_readable; then
+    if [ -z "$keys$edited$old$caches" ] && _settings_readable && ! _has_history_to_clear; then
         printf 'Nothing to reset: Silere already matches a fresh install.\n'
         _undo_hint
         return 0
@@ -187,8 +193,14 @@ _preview() {
     [ -z "$edited" ] || printf '  %-11s%s edited in this checkout, saved in a Git stash and restored to the installed revision\n' "Files" "$(_count "$edited")"
     [ -z "$old" ] || printf '  %-11s%s from older versions, set aside: %s\n' "Leftovers" "$(_count "$old")" "$(_names <<<"$old")"
     [ -z "$caches" ] || printf '  %-11s%s cleared: %s\n' "Caches" "$(du -sh -- "$CACHE_DIR" 2>/dev/null | cut -f1)" "$(_names <<<"$caches")"
-    printf '\nKept: notification history (--history clears it), hooks, the Matugen palette, autostart and the service.\n'
-    printf 'Everything but caches comes back with silere reset --undo.\n\n'
+    if [ "$WITH_HISTORY" = 1 ]; then
+        printf '\nNotification history will be deleted. This part cannot be undone.\n'
+        printf 'Kept: hooks, the Matugen palette, autostart and the service.\n'
+        printf 'Settings and edited files come back with silere reset --undo.\n\n'
+    else
+        printf '\nKept: notification history (--history clears it), hooks, the Matugen palette, autostart and the service.\n'
+        printf 'Everything but caches comes back with silere reset --undo.\n\n'
+    fi
     printf 'Nothing was changed. silere reset --apply does it.\n'
 }
 
@@ -212,26 +224,23 @@ _apply() {
     edited="$(_edited_files)"
     old="$(_leftovers)"
     caches="$(_caches)"
-    local history_there=0
-    [ "$WITH_HISTORY" = 1 ] && [ -e "$HISTORY" ] && history_there=1
-    if [ -z "$keys$edited$old$caches" ] && [ "$history_there" = 0 ] && _settings_readable; then
+    if [ -z "$keys$edited$old$caches" ] && _settings_readable && ! _has_history_to_clear; then
         printf 'Nothing to reset: Silere already matches a fresh install.\n'
         return 0
     fi
     _preview | sed '/^Nothing was changed/d'
-    [ "$history_there" = 0 ] || printf 'Notification history will be deleted. This part cannot be undone.\n\n'
     _confirm "Reset Silere?" || { printf 'Cancelled; nothing was changed.\n'; return 0; }
 
     _lock_reset
     _stop_shell
-    (umask 077 && mkdir -p -- "$STATE_DIR")
-    # only one reset is kept; a second has to replace the first or an undo would mix the two
-    rm -rf -- "$SAVED_DIR" "$SAVED_SETTINGS"
-    mkdir -m 0700 -- "$SAVED_DIR"
-
-    if [ -f "$SETTINGS" ]; then
-        cp -- "$SETTINGS" "$SAVED_SETTINGS" || _die "could not save a copy of the settings; nothing was reset"
-        chmod 0600 -- "$SAVED_SETTINGS"
+    old="$(_leftovers)"
+    pending="$(mktemp -d "$STATE_DIR/.reset-saved.XXXXXX")" || _die "could not prepare the reset backup"
+    # keep the CLI settings and stash together; the GUI keeps its own settings-only backup
+    if ! (umask 077; printf 'stash=\n' > "$pending/manifest" && {
+        [ ! -f "$SETTINGS" ] || cp -- "$SETTINGS" "$pending/settings.json"
+    }); then
+        rm -rf -- "$pending"
+        _die "could not save a copy of the settings; nothing was reset"
     fi
     rm -rf -- "$SAVED_DIR"
     mv -T -- "$pending" "$SAVED_DIR"
@@ -247,7 +256,12 @@ _apply() {
         rm -rf -- "${CACHE_DIR:?}/$name"
     done <<< "$caches"
 
-    [ "$history_there" = 0 ] || rm -f -- "$HISTORY"
+    if [ "$WITH_HISTORY" = 1 ]; then
+        for name in "$HISTORY" "$LEGACY_HISTORY"; do
+            [ -f "$name" ] || [ -L "$name" ] || continue
+            rm -f -- "$name"
+        done
+    fi
 
     if [ -n "$edited" ]; then
         # last before the restart: it can replace this very file, and the restart then runs the restored shell

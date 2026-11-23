@@ -2886,7 +2886,8 @@ test_reset_workflow() (
     printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
     chmod +x "$stubs/qs" "$stubs/systemctl"
     run_reset() {
-        env -u LC_ALL -u SILERE_TEST_ROOT PATH="$stubs:$PATH" HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" \
+        env -u LC_ALL -u SILERE_TEST_ROOT PATH="$stubs:$PATH" HOME="$home" XDG_CONFIG_HOME="$home/config" \
+            XDG_STATE_HOME="${SILERE_TEST_RESET_STATE_HOME:-$home/state}" \
             XDG_CACHE_HOME="$home/cache" SILERE_TEST_STATE="$state" WAYLAND_DISPLAY=wayland-test bash "$repo/scripts/silere" reset "$@"
     }
     fill() {
@@ -2999,6 +3000,8 @@ test_reset_workflow() (
     # a settings file in a dotfiles repo stays where it is, and history goes only when asked for
     printf '{\n  "barHeight": 40\n}\n' > "$home/dotfile.json"
     rm -f "$config/settings.json"; ln -s "$home/dotfile.json" "$config/settings.json"
+    local legacy_history='{"history":[{"summary":"older copy"}]}'
+    printf '%s\n' "$legacy_history" > "$config/notifications.json"
     run_reset --apply --yes --history >/dev/null || fail "reset --history failed"
     [ -L "$config/settings.json" ] || fail "reset replaced a linked settings file with a plain one"
     assert_eq $'{\n  "__version": '"$schema"$'\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
