@@ -230,6 +230,8 @@ cat > "$scratch/bus.conf" <<'EOF'
 </busconfig>
 EOF
 printf 'Starting a private preview of Silere with %s.\n' "$COMPOSITOR"
+# its settings are private, but PipeWire, NetworkManager and BlueZ are this computer's
+printf 'Its settings are its own; its sound, network and Bluetooth controls change this computer.\n'
 printf 'Session files: %s\n' "$scratch"
 
 # fonts and icons live in the real data dir, so that one stays; SILERE_SANDBOX keeps it from locking or suspending this desktop
@@ -242,7 +244,7 @@ inner_pid=$!
 status=0
 wait "$inner_pid" || status=$?
 [ "$status" = 0 ] || exit "$status"
-printf 'Preview ended and its files are gone. Nothing on your desktop changed.\n'
+printf 'Preview ended and its files are gone. Your Silere settings and compositor config are as they were.\n'
 if [ ! -x "$(command -v silere 2>/dev/null || true)" ]; then
     printf 'To install it: bash %s/scripts/install.sh\n' "$ROOT"
 fi
