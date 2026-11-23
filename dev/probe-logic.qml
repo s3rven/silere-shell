@@ -11700,6 +11700,31 @@ ShellRoot {
                 && Network.formatRate(1048575) === " 1.0 MB/s" && Network.formatRate(1073741823) === " 1.0 GB/s"
                 && Network.formatRate(102350) === " 100 KB/s" && Network.formatRate(0) === "   0 B/s ",
             "a traffic rate that rounds up to 1024 moves to the next unit instead of printing 1024")
+        const trafficState = ["downBps", "upBps", "_lastRxBytes", "_lastTxBytes", "_lastStatsMs", "_trafficLatch"]
+        const trafficSaved = trafficState.map(key => Network[key])
+        const traffic = (rx, tx, now) => {
+            Network._applyTrafficSample("lo: 9000 0 0 0 0 0 0 0 9000 0 0 0 0 0 0 0\n"
+                + "  eth0: " + rx + " 0 0 0 0 0 0 0 " + tx + " 0 0 0 0 0 0 0\n", "eth0", now)
+        }
+        Network._resetTraffic()
+        traffic(10000, 20000, 1000)
+        traffic(15000, 22000, 1100)
+        traffic(18000, 26000, 3000)
+        root._check(Network.downBps === 4000 && Network.upBps === 3000 && Network._trafficLatch,
+            "an early network read preserves the bytes and time for the next accepted interval")
+        traffic(100, 36000, 5000)
+        root._check(Network.downBps === 0 && Network.upBps === 0 && !Network._trafficLatch,
+            "a reset interface counter clears the rates in both directions")
+        traffic(6100, 38000, 7000)
+        root._check(Network.downBps === 3000 && Network.upBps === 1000,
+            "network speeds recover from the new counter baseline on the next interval")
+        traffic(7100, 39000, 6000)
+        root._check(Network.downBps === 0 && Network.upBps === 0 && Network._lastStatsMs === 6000,
+            "a clock moved backwards clears stale rates and seeds new traffic counters")
+        traffic("0xff", 40000, 8000)
+        root._check(Network._lastRxBytes === -1 && Network._lastTxBytes === -1,
+            "malformed network counter fields cannot seed a traffic rate")
+        for (let i = 0; i < trafficState.length; i++) Network[trafficState[i]] = trafficSaved[i]
         root._check(Network.wifiPasswordless(Net.WifiSecurityType.Unknown, false) && !Network.wifiPasswordless(Net.WifiSecurityType.Unknown, true)
                 && Network.wifiPasswordless(Net.WifiSecurityType.Open, true) && !Network.wifiPasswordless(Net.WifiSecurityType.Wpa2Psk, false),
             "an Unknown network joins without a password only where quickshell 0.3.1 mislabels open ones")

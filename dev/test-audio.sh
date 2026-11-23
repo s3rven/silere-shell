@@ -5,10 +5,17 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/dev/probe-lib.sh"
-_probe_private_bus "$@"
-for tool in pipewire wireplumber wpctl pw-cli; do
-    command -v "$tool" >/dev/null 2>&1 || { printf 'SKIP: the audio test needs %s\n' "$tool"; exit 0; }
+for tool in qs pipewire wireplumber wpctl pw-cli dbus-run-session setsid; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        if [ "${SILERE_REQUIRE_TOOLS:-0}" = 1 ]; then
+            printf 'FAIL: the audio test needs %s\n' "$tool" >&2
+            exit 1
+        fi
+        printf 'SKIP: the audio test needs %s\n' "$tool"
+        exit 0
+    fi
 done
+_probe_private_bus "$@"
 _probe_require_qs
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/silere-audio.XXXXXX")"

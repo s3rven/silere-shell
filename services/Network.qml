@@ -20,9 +20,9 @@ Singleton {
         return hasLink === false ? 1 : 3
     }
 
-    readonly property var _linkState: {
-        const devices = root._devices
+    function linkStateFor(devices): var {
         let best = null
+        let wifiLink = null
         let hasWifi = false
 
         for (let i = 0; i < devices.length; i++) {
@@ -50,13 +50,16 @@ Singleton {
             const connected = device.connected || (network && network.connected)
             if (!connected) continue
             const priority = root._linkPriority(wired, device.hasLink)
+            const link = { device: device, network: network, wifi: wifi, priority: priority }
             if (!best || priority > best.priority)
-                best = { device: device, network: network, wifi: wifi, priority: priority }
+                best = link
+            if (wifi && (!wifiLink || (!wifiLink.network && network))) wifiLink = link
         }
 
-        return { best: best, hasWifi: hasWifi }
+        return { best: best, wifiLink: wifiLink, hasWifi: hasWifi }
     }
 
+    readonly property var _linkState: root.linkStateFor(root._devices)
     readonly property bool _rawAvailable: toolAvailable && _devices.length > 0
     // the device model empties for a frame while NetworkManager re-enumerates (vpn up/down, resume)
     property bool available: false
@@ -77,11 +80,13 @@ Singleton {
     readonly property bool connected: _linkState.best !== null
     readonly property bool isWifi: connected && _linkState.best.wifi
     readonly property bool hasWifiDevice: _linkState.hasWifi
-    readonly property string connectionName: {
-        const best = _linkState.best
-        return best && best.network
-            ? SafeText.singleLineText(best.network.name, 128) : ""
+    readonly property bool wifiConnected: _linkState.wifiLink !== null
+    readonly property string wifiConnectionName: root._networkName(_linkState.wifiLink?.network)
+    readonly property int wifiSignalStrength: root._signalPercent(_linkState.wifiLink?.network)
+    function _networkName(network): string {
+        return network ? SafeText.singleLineText(network.name, 128) : ""
     }
+    readonly property string connectionName: root._networkName(_linkState.best?.network)
     readonly property string deviceName: {
         const best = _linkState.best
         return best && best.device ? (best.device.name || "") : ""
@@ -92,11 +97,10 @@ Singleton {
     // so writing wifiEnabled is refused and every retry looks like nothing happening
     readonly property bool wifiHardBlocked: toolAvailable && hasWifiDevice
         && !Networking.wifiHardwareEnabled
-    readonly property int signalStrength: {
-        const best = _linkState.best
-        if (!best || !best.wifi || !best.network) return 0
-        return Math.round(Math.max(0, Math.min(1, best.network.signalStrength || 0)) * 100)
+    function _signalPercent(network): int {
+        return network ? Math.round(Math.max(0, Math.min(1, network.signalStrength || 0)) * 100) : 0
     }
+    readonly property int signalStrength: root.isWifi ? root._signalPercent(root._linkState.best.network) : 0
 
     property var _vpnState: ({ active: false, name: "", uuid: "" })
     readonly property bool hasVpn: _vpnState.active === true
@@ -724,22 +728,6 @@ Singleton {
         _vpnSettle.restart()
     }
 
-    FileView {
-        id: _interfaceFile
-        path: root._vpnWanted ? "/proc/net/dev" : ""
-        blockLoading: false
-        blockAllReads: false
-        printErrors: false
-        onLoaded: root._applyInterfaceNames(_interfaceFile.text())
-    }
-
-    Timer {
-        interval: 5000
-        repeat: true
-        running: root._vpnWanted
-        onTriggered: _interfaceFile.reload()
-    }
-
     property Timer _vpnSettleTimer: Timer {
         id: _vpnSettle
         interval: 3000
@@ -751,13 +739,14 @@ Singleton {
     property real _lastRxBytes: -1
     property real _lastTxBytes: -1
     property real _lastStatsMs: 0
-    property bool _statsRefreshing: false
 
     readonly property bool statsDeviceReady: connected
         && deviceName.length > 0
         && deviceName.indexOf("/") < 0
         && deviceName.indexOf("..") < 0
     readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
+    readonly property bool _trafficWanted: root.statsWanted && root.statsDeviceReady
+        && !Idle.isIdle && !OverviewState.active
     property bool _trafficLatch: false
     readonly property bool trafficActive: statsWanted && connected && _trafficLatch
     readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)
@@ -789,77 +778,75 @@ Singleton {
         _lastRxBytes = -1
         _lastTxBytes = -1
         _lastStatsMs = 0
-        _statsRefreshing = false
         _trafficLatch = false
     }
 
-    // no in-flight guard: a reload that never reports back would wedge the poll for the session
-    function _sampleTraffic(): void {
-        if (!statsWanted || !statsDeviceReady || Idle.isIdle || OverviewState.active) return
-        _statsRefreshing = true
-        _netDevFile.reload()
-    }
-
-    function _applyTrafficSample(raw: string): void {
-        if (!_statsRefreshing) return
-        try {
-            const lines = (raw || "").split(/\r?\n/)
-            let rx = -1
-            let tx = -1
-            for (let i = 0; i < lines.length; i++) {
-                const sep = lines[i].indexOf(":")
-                if (sep < 0 || lines[i].slice(0, sep).trim() !== root.deviceName) continue
-                const fields = lines[i].slice(sep + 1).trim().split(/\s+/)
-                if (fields.length >= 9) {
-                    rx = Number(fields[0])
-                    tx = Number(fields[8])
-                }
-                break
+    function _applyTrafficSample(raw: string, device: string, now: real): void {
+        const lines = raw.split(/\r?\n/)
+        let rx = -1
+        let tx = -1
+        for (let i = 0; i < lines.length; i++) {
+            const sep = lines[i].indexOf(":")
+            if (sep < 0 || lines[i].slice(0, sep).trim() !== device) continue
+            const fields = lines[i].slice(sep + 1).trim().split(/\s+/)
+            if (fields.length >= 9 && /^[0-9]+$/.test(fields[0]) && /^[0-9]+$/.test(fields[8])) {
+                rx = Number(fields[0])
+                tx = Number(fields[8])
             }
-            if (!isFinite(rx) || !isFinite(tx) || rx < 0 || tx < 0) {
-                _resetTraffic()
-                return
-            }
+            break
+        }
+        if (!isFinite(rx) || !isFinite(tx) || rx < 0 || tx < 0) {
+            root._resetTraffic()
+            return
+        }
 
-            const now = Date.now()
-            const dt = (now - root._lastStatsMs) / 1000
-            if (root._lastRxBytes >= 0 && root._lastTxBytes >= 0 && root._lastStatsMs > 0 && dt >= 0.2) {
-                root.downBps = rx >= root._lastRxBytes ? (rx - root._lastRxBytes) / dt : 0
-                root.upBps = tx >= root._lastTxBytes ? (tx - root._lastTxBytes) / dt : 0
+        if (root._lastStatsMs > 0) {
+            const elapsed = now - root._lastStatsMs
+            if (elapsed < 0 || rx < root._lastRxBytes || tx < root._lastTxBytes) {
+                root._resetTraffic()
+            } else {
+                // an early reload adds to the next interval without consuming its bytes
+                if (elapsed < 200) return
+                root.downBps = (rx - root._lastRxBytes) * 1000 / elapsed
+                root.upBps = (tx - root._lastTxBytes) * 1000 / elapsed
                 root._updateTrafficLatch()
             }
-            root._lastRxBytes = rx
-            root._lastTxBytes = tx
-            root._lastStatsMs = now
-        } finally {
-            _statsRefreshing = false
         }
+        root._lastRxBytes = rx
+        root._lastTxBytes = tx
+        root._lastStatsMs = now
+    }
+
+    on_TrafficWantedChanged: {
+        if (!root._trafficWanted) root._resetTraffic()
+        else if (_netPoll.running) _netPoll.restart()
     }
 
     onDeviceNameChanged: {
         root._resetTraffic()
-        if (_statsPoll.running) _statsPoll.restart()
+        if (root._trafficWanted) _netPoll.restart()
     }
 
     FileView {
         id: _netDevFile
-        path: root.statsWanted ? "/proc/net/dev" : ""
+        path: _netPoll.running ? "/proc/net/dev" : ""
         blockLoading: false
         blockAllReads: false
         printErrors: false
-        onLoaded: if (root._statsRefreshing)
-            root._applyTrafficSample(_netDevFile.text())
-        onLoadFailed: if (root._statsRefreshing) root._resetTraffic()
+        onLoaded: {
+            const data = _netDevFile.text()
+            if (root._trafficWanted) root._applyTrafficSample(data, root.deviceName, Date.now())
+            if (root._vpnWanted) root._applyInterfaceNames(data)
+        }
+        onLoadFailed: if (root._trafficWanted) root._resetTraffic()
     }
 
     Timer {
-        id: _statsPoll
-        interval: 2000
+        id: _netPoll
+        interval: root._trafficWanted ? 2000 : 5000
         repeat: true
         triggeredOnStart: true
-        running: root.statsWanted && root.statsDeviceReady
-            && !Idle.isIdle && !OverviewState.active
-        onTriggered: root._sampleTraffic()
-        onRunningChanged: if (!running) root._resetTraffic()
+        running: root._trafficWanted || root._vpnWanted
+        onTriggered: _netDevFile.reload()
     }
 }

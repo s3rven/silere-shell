@@ -231,12 +231,18 @@ Singleton {
 
     // UPower's percentage, power source and state can update in one event turn.
     // Reading them together avoids transient low/critical pairs and AC alerts
-    onAvailableChanged: Qt.callLater(root._updateNotificationState)
+    onAvailableChanged: {
+        Qt.callLater(root._updateNotificationState)
+        Qt.callLater(root._sampleRate)
+    }
     onPctChanged: Qt.callLater(root._updateNotificationState)
     onOnBatteryChanged: Qt.callLater(root._updateNotificationState)
     onChargingChanged: Qt.callLater(root._updateNotificationState)
     onFullChanged: Qt.callLater(root._updateNotificationState)
-    Component.onCompleted: Qt.callLater(root._updateNotificationState)
+    Component.onCompleted: {
+        Qt.callLater(root._updateNotificationState)
+        Qt.callLater(root._sampleRate)
+    }
 
     Connections {
         target: ShellSettings
