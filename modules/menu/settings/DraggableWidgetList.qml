@@ -593,7 +593,7 @@ Item {
                 text: _row.meta.glyph
                 color: _row.checked
                     ? Theme.withAlpha(Theme.accentInk, 0.90)
-                    : Theme.withAlpha(Theme.subtext, 0.48)
+                    : Theme.menuTextQuiet
                 font.pixelSize: Settings.iconSize + 2
                 ColorFade on color {}
             }
@@ -606,7 +606,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: _row.meta.label
                 elide: Text.ElideRight
-                color: _row.checked ? Theme.text : Theme.withAlpha(Theme.text, 0.48)
+                color: _row.checked ? Theme.text : Theme.menuTextDetail
                 font.pixelSize: Settings.fontSize
                 ColorFade on color {}
             }
@@ -926,7 +926,7 @@ Item {
                             text: _sub.label
                             elide: Text.ElideRight
                             color: _sub.checked
-                                ? Theme.withAlpha(Theme.text, 0.86) : Theme.withAlpha(Theme.text, 0.48)
+                                ? Theme.withAlpha(Theme.text, 0.86) : Theme.menuTextDetail
                             font.pixelSize: Settings.fontLabel
                             ColorFade on color {}
                         }

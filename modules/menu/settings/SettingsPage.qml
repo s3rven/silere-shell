@@ -472,7 +472,7 @@ PageShell {
                 y: root.compactNavigation ? _detailHeader._mainH : Math.round(_hdrText.y + _hdrText.height)
                 opacity: _detail._fade
                 text: _detailHeader._meta.description
-                color: Theme.withAlpha(Theme.subtext, 0.86)
+                color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption
                 elide: Text.ElideRight
             }

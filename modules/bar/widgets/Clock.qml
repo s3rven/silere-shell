@@ -253,7 +253,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canInteract
     Accessible.onPressAction: root._openCalendar()
-    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+    KeyboardFocus { ringY: Metrics.barWidgetReach; ringHeight: height - 2 * Metrics.barWidgetReach; interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     TapHandler {
         id: _calTap

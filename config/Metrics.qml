@@ -134,6 +134,9 @@ Singleton {
     // how far the bar surface sits from the screen edge; every surface that hugs the bar derives from this,
     // so bar geometry has one definition instead of a copy per popup
     readonly property int barEdgeInset: ShellSettings.barFloating ? ShellSettings.barGap : 0
+    // bar widgets stand this far past the surface on both sides, into that gap, so a click thrown at the screen edge lands
+    // (Fitts). Whatever a widget draws against its own top or bottom sits this far in
+    readonly property int barWidgetReach: barEdgeInset
     readonly property bool barAtBottom: ShellSettings.barPosition === "bottom"
 
     // a floating bar's gap to each screen side. On the 4px grid, and never under the edge gap, or a full-width bar presses its rounded corners into the screen sides

@@ -177,7 +177,7 @@ Item {
         elide: Text.ElideRight
         color: root._attentive ? root._attention
             : root.selected ? Theme.mix(root._ink, Theme.text, 0.14)
-            : Theme.withAlpha(Theme.subtext, root._hot ? 0.70 : 0.54)
+            : root._hot ? Theme.mix(Theme.menuTextDetail, Theme.text, 0.35) : Theme.menuTextDetail
         font.pixelSize: Settings.fontCaption
         font.weight: root._attentive || root.selected ? Font.Medium : Font.Normal
         ColorFade on color { gate: root.motionReady }

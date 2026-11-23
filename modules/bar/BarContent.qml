@@ -131,14 +131,11 @@ Item {
     Timer {
         id: _layoutSettle
         interval: Motion.width + 40
-        onTriggered: root._remeasureAutoCompact()
-    }
-
-    function _remeasureAutoCompact(): void {
-        if (!_autoCompact) return
-        _clearCompactMeasure()
-        _compactModeSettle.stop()
-        _queueAutoCompact()
+        onTriggered: {
+            // the new widget order needs a fresh expanded measurement once the pointer leaves
+            root._compactRemeasurePending = true
+            root._queueAutoCompact()
+        }
     }
 
     Timer {
@@ -174,7 +171,7 @@ Item {
     }
 
     // widgets bind height to root.height, not a forced-height Loader - Loader resize-to-fit mis-centres the diamond
-    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cWorkspaces;  Workspaces       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cShellUpdate; ShellUpdateWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cTray;        TrayWidget       { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cUpdates;     UpdatesWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -263,7 +260,8 @@ Item {
         id: _centerVisualizer
         x: root._centerVizX
         width: root._centerVizWidth
-        height: parent.height - Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
+        y: Metrics.barWidgetReach
+        height: parent.height - 2 * Metrics.barWidgetReach - Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
         // unloading in the same frame the opacity drops leaves the fade animating an empty Loader
         readonly property bool _wanted: root._centerVizWanted && root._centerVizHasRoom
         active: _wanted || _vizHold.running

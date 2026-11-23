@@ -203,7 +203,7 @@ Item {
                 Accessible.description: SafeText.singleLineText(modelData.tooltipDescription, 256)
                 Accessible.focusable: root._canInteract && !_tile.hidden
                 Accessible.onPressAction: root._activateItem(_tile.modelData, _tile)
-                KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+                KeyboardFocus { ringY: Metrics.barWidgetReach; ringHeight: height - 2 * Metrics.barWidgetReach; interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
                 // the gap opens with the label's first pixels, so the cell never jumps by it
                 readonly property real _labelSpan: _hoverLabel.width > 0

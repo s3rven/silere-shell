@@ -85,7 +85,16 @@ PanelWindow {
     implicitHeight: 4 * Math.ceil((bar.surfaceHeight
         + bar.insetPad * bar.floatingProgress + bar.effectPad) / 4)
 
-    mask: Region { item: bar.concealed ? null : surface }
+    mask: Region {
+        item: bar.concealed ? null : surface
+        // a floating bar's gap to the screen edge takes input too: the widgets reach into it (Metrics.barWidgetReach)
+        Region {
+            x: surface.x
+            y: bar.atBottom ? Math.floor(surface.y + surface.height) : 0
+            width: bar.concealed ? 0 : surface.width
+            height: bar.atBottom ? bar.height - Math.floor(surface.y + surface.height) : Math.ceil(surface.y)
+        }
+    }
     // at full width the bar's origin is the corner of the screen
     ContextMenuGuard {}
     // blur with no tint over it reads as a frosted slab, so it waits for the fade's midpoint
@@ -207,6 +216,10 @@ PanelWindow {
         Item {
             id: contents
             anchors.fill: parent
+            // grown both ways, so centred content stays put. Not a hit shape: Qt skips any subtree whose box misses the
+            // point once all its children fit inside it
+            anchors.topMargin:    -Metrics.barWidgetReach
+            anchors.bottomMargin: -Metrics.barWidgetReach
             opacity: 0
             visible: opacity > 0.001
 
@@ -286,8 +299,8 @@ PanelWindow {
             Item {
                 id: _outlineBox
                 anchors.fill: parent
-                anchors.topMargin:    -surface.bleedTop
-                anchors.bottomMargin: -surface.bleedBottom
+                anchors.topMargin:    Metrics.barWidgetReach - surface.bleedTop
+                anchors.bottomMargin: Metrics.barWidgetReach - surface.bleedBottom
                 anchors.leftMargin:   -surface.bleedSide
                 anchors.rightMargin:  -surface.bleedSide
             }

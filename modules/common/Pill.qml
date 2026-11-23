@@ -82,7 +82,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: if (root.canActivate) root.activated()
-    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+    KeyboardFocus { ringY: Metrics.barWidgetReach; ringHeight: height - 2 * Metrics.barWidgetReach; interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     readonly property int  pillH:   Metrics.barRowHeight
     readonly property bool hasText: text.length > 0

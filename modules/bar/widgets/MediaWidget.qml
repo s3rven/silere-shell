@@ -83,6 +83,7 @@ Item {
 
     Item {
         anchors.bottom: parent.bottom
+        anchors.bottomMargin: Metrics.barWidgetReach
         anchors.left:   parent.left
         anchors.right:  parent.right
         height: 2
@@ -120,8 +121,9 @@ Item {
     Loader {
         id: _vizLoader
         anchors.top: parent.top
+        anchors.topMargin: Metrics.barWidgetReach
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
+        anchors.bottomMargin: Metrics.barWidgetReach + Metrics.visualizerLiftFor(QsWindow.window ? QsWindow.window.devicePixelRatio : 1)
         anchors.horizontalCenter: parent.horizontalCenter
         // snapped to an 8px grid: the Canvas backing this width drops and reallocates its texture on
         // every resize, and parent.width tracks root.implicitWidth's own glide every frame
@@ -270,7 +272,7 @@ Item {
     Accessible.name: [root._playAction, Media.label].filter(part => part.length > 0).join(" ") || "Media"
     Accessible.focusable: root._canInteract
     Accessible.onPressAction: if (root._canInteract) Media.togglePlay()
-    KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
+    KeyboardFocus { ringY: Metrics.barWidgetReach; ringHeight: height - 2 * Metrics.barWidgetReach; interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
 
     HoverHandler {
         id: _rootHover

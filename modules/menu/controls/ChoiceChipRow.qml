@@ -59,7 +59,10 @@ MenuRow {
         return w
     }
     // chips, gaps and the leftover share all step in 4px so every chip outline lands on whole device pixels at 1.25
-    readonly property int _chipW: Math.max(44, Metrics.snap4Up(root._widestOptionW + 22))
+    readonly property int naturalChipWidth: Math.max(44, Metrics.snap4Up(root._widestOptionW + 22))
+    // rows of one card pass their widest natural width here, so their chip columns line up
+    property int chipWidthFloor: 0
+    readonly property int _chipW: Math.max(root.naturalChipWidth, Metrics.snap4Up(root.chipWidthFloor))
     // with nothing in the label column the row is a standalone control, not a setting:
     // holding it to the right cap leaves the gutter it would have used as dead space
     readonly property bool _headless: root.label.length === 0 && root.glyph.length === 0
@@ -289,8 +292,8 @@ MenuRow {
                             color: _option.active
                                 ? Theme.mix(Theme.text, root._ink,
                                     ShellSettings.highContrast ? 0 : 0.22)
-                                : Theme.withAlpha(Theme.subtext,
-                                    _hover.hovered ? 0.90 : 0.72)
+                                : _hover.hovered ? Theme.mix(Theme.menuTextDetail, Theme.text, 0.35)
+                                : Theme.menuTextDetail
                             font.pixelSize: Settings.fontLabel
                             font.weight: _option.active
                                 ? Font.DemiBold : Font.Medium

@@ -36,120 +36,6 @@ Item {
     width: rail._overlayDrawn ? rail.menu.railCollapsedW + rail.menu._navOverlayW : rail.menu.railW
     height: rail.menu.height
 
-    Item {
-        anchors.fill: parent
-        clip: true
-
-        Rectangle {
-            x: 0; y: 0
-            width: parent.width + rail.menu.radius
-            height: parent.height
-            radius: rail.menu.radius
-            antialiasing: true
-            color: Theme.menuPane
-        }
-
-        Rectangle {
-            x: rail.menu.railCollapsedW
-            width: Math.max(0, parent.width - x)
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            color: Theme.blend(Theme.menuPane, Theme.menuControl, 0.14)
-            visible: parent.width > rail.menu.railCollapsedW + 0.5
-        }
-
-        RailDrawer {
-            id: _settingsDrawer
-            x: rail.menu.railCollapsedW
-            width: rail.menu.navW
-            revealedWidth: Math.max(0, rail.menu.railW - rail.menu.railCollapsedW)
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            shown: rail.menu._settingsNavVisible
-            retained: rail.menu._settingsNavRetained
-                || (MenuState.open && rail.menu.activeTab === 1)
-            content: Component {
-                SettingsNav {
-                    powerOpen: rail.menu.powerOpen
-                    onCurrentPageRetapped: rail.scrollToTopRequested()
-                    onGroupToggled: rail.menu._armOuterHeightMotion()
-                }
-            }
-        }
-
-        RailDrawer {
-            id: _recentDrawer
-            x: rail.menu.railCollapsedW
-            width: rail.menu.navW
-            revealedWidth: Math.max(0, rail.menu.railW - rail.menu.railCollapsedW)
-            anchors.top: parent.top
-            anchors.bottom: parent.bottom
-            shown: rail.menu._recentNavVisible
-            retained: rail.menu._recentRetained
-                || (MenuState.open && rail.menu.activeTab === 2)
-            content: Component {
-                RecentNav {
-                    onFilterPicked: rail.scrollToTopRequested()
-                }
-            }
-        }
-
-        Item {
-            id: _powerRailSurface
-            x: rail.menu.railCollapsedW
-            // the closing rows keep their open width while the rail clips them away, as the drawers keep their labels:
-            // navW drops to the compact share the moment power closes, and every row reflowed 48 px narrower first
-            property real _openW: rail.menu.navW
-            Connections {
-                target: rail.menu
-                function onNavWChanged() { if (rail.menu.powerOpen) _powerRailSurface._openW = rail.menu.navW }
-            }
-            width: rail.menu.powerOpen ? rail.menu.navW : _powerRailSurface._openW
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 10
-            height: rail.menu.powerOpen
-                ? (_powerRailLoader.item?.implicitHeight ?? 0) : 0
-            clip: true
-            opacity: rail.menu.powerOpen ? 1 : 0
-            visible: height > 0.5 || opacity > 0.001
-            enabled: rail.menu.powerOpen
-
-            MotionBehavior on height {
-                id: _powerRailHeight
-                NumberAnimation {
-                    duration: _powerRailHeight.targetValue > 0 ? Motion.panelResize : Motion.panelCollapse
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: _powerRailHeight.targetValue > 0
-                        ? Motion.emphasizedDecel : Motion.emphasizedAccel
-                }
-            }
-            MotionBehavior on opacity {
-                id: _powerRailFade
-                NumberAnimation {
-                    duration: Motion.fast
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: _powerRailFade.targetValue > 0.5
-                        ? Motion.standardDecel : Motion.standardAccel
-                }
-            }
-
-            Loader {
-                id: _powerRailLoader
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.leftMargin: 9
-                anchors.rightMargin: 9
-                anchors.bottom: parent.bottom
-                height: item ? item.implicitHeight : 0
-                active: rail.menu.powerOpen || _powerRailSurface.height > 0.5
-                sourceComponent: Component {
-                    PowerRailContent { active: rail.menu.powerOpen }
-                }
-            }
-        }
-
-    }
-
     RailLabelGroup { id: _railLabels }
 
     Timer {
@@ -382,5 +268,134 @@ Item {
             active: rail.menu.powerOpen
             onTapped: rail.menu.powerOpen = !rail.menu.powerOpen
         }
+    }
+
+    Item {
+        // declared after the rail's buttons, so Tab reaches them before the section list or the power rows; z keeps
+        // it painted beneath them
+        z: -1
+        anchors.fill: parent
+        clip: true
+
+        Rectangle {
+            x: 0; y: 0
+            width: (rail._overlayDrawn ? rail.menu.railCollapsedW : parent.width) + rail.menu.radius
+            height: parent.height
+            radius: rail.menu.radius
+            antialiasing: true
+            color: Theme.menuPane
+        }
+
+        Rectangle {
+            x: rail.menu.railCollapsedW
+            width: Math.max(0, parent.width - x)
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            color: Theme.blend(Theme.menuPane, Theme.menuControl, 0.14)
+            visible: parent.width > rail.menu.railCollapsedW + 0.5
+            opacity: rail._overlayDrawn ? rail._overlayOpacity : 1
+        }
+
+        RailDrawer {
+            id: _settingsDrawer
+            x: rail.menu.railCollapsedW
+            width: rail.menu._compactSettingsNav ? rail.menu._navOverlayW : rail.menu.navW
+            revealedWidth: rail.menu._settingsNavOverlay ? width
+                : Math.max(0, rail.menu.railW - rail.menu.railCollapsedW)
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            shown: rail.menu._settingsNavVisible
+            retained: rail.menu._settingsNavRetained
+                || (MenuState.open && rail.menu.activeTab === 1)
+            onEnabledChanged: if (enabled && rail.menu._settingsNavOverlay) item?.focusCurrentSection()
+            content: Component {
+                SettingsNav {
+                    powerOpen: rail.menu.powerOpen
+                    overlay: rail.menu._compactSettingsNav
+                    onCurrentPageRetapped: rail.scrollToTopRequested()
+                    onGroupToggled: rail.menu._armOuterHeightMotion()
+                    onDismissRequested: rail.menu.dismissNav()
+                }
+            }
+        }
+
+        RailDrawer {
+            id: _recentDrawer
+            x: rail.menu.railCollapsedW
+            width: rail.menu._compactRecentNav ? rail.menu._navOverlayW : rail.menu.navW
+            revealedWidth: rail.menu._recentNavOverlay ? width
+                : Math.max(0, rail.menu.railW - rail.menu.railCollapsedW)
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            shown: rail.menu._recentNavVisible
+            retained: rail.menu._recentRetained
+                || (MenuState.open && rail.menu.activeTab === 2)
+            onEnabledChanged: if (enabled && rail.menu._recentNavOverlay) item?.focusCurrentFilter()
+            content: Component {
+                RecentNav {
+                    overlay: rail.menu._compactRecentNav
+                    onFilterPicked: {
+                        rail.scrollToTopRequested()
+                        rail.menu.dismissNav()
+                    }
+                    onDismissRequested: rail.menu.dismissNav()
+                }
+            }
+        }
+
+        Item {
+            id: _powerRailSurface
+            x: rail.menu.railCollapsedW
+            // the closing rows keep their open width while the rail clips them away, as the drawers keep their labels:
+            // navW drops to the compact share the moment power closes, and every row reflowed 48 px narrower first
+            property real _openW: rail.menu.navW
+            Connections {
+                target: rail.menu
+                function onNavWChanged() { if (rail.menu.powerOpen) _powerRailSurface._openW = rail.menu.navW }
+            }
+            width: rail.menu.powerOpen ? rail.menu.navW : _powerRailSurface._openW
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 10
+            height: rail.menu.powerOpen
+                ? (_powerRailLoader.item?.implicitHeight ?? 0) : 0
+            clip: true
+            opacity: rail.menu.powerOpen ? 1 : 0
+            visible: height > 0.5 || opacity > 0.001
+            enabled: rail.menu.powerOpen
+
+            MotionBehavior on height {
+                id: _powerRailHeight
+                NumberAnimation {
+                    duration: _powerRailHeight.targetValue > 0 ? Motion.panelResize : Motion.panelCollapse
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: _powerRailHeight.targetValue > 0
+                        ? Motion.emphasizedDecel : Motion.emphasizedAccel
+                }
+            }
+            MotionBehavior on opacity {
+                id: _powerRailFade
+                NumberAnimation {
+                    duration: Motion.fast
+                    easing.type: Easing.BezierSpline
+                    easing.bezierCurve: _powerRailFade.targetValue > 0.5
+                        ? Motion.standardDecel : Motion.standardAccel
+                }
+            }
+
+            Loader {
+                id: _powerRailLoader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 9
+                anchors.rightMargin: 9
+                anchors.bottom: parent.bottom
+                height: item ? item.implicitHeight : 0
+                active: rail.menu.powerOpen || _powerRailSurface.height > 0.5
+                sourceComponent: Component {
+                    PowerRailContent { active: rail.menu.powerOpen }
+                }
+            }
+        }
+
     }
 }

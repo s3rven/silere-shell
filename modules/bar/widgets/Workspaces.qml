@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import "../../../config"
 import "../../../services"
+import "../../common"
 import "workspaces"
 
 Item {
@@ -606,6 +607,10 @@ Item {
         id: wsRow
         objectName: "workspace-row"
         x: -root._leadTrim
+        // as tall as the widget, so a point in a floating bar's edge gap still reaches a button's click target: Qt skips
+        // a subtree whose box misses the point, and the strip's box is only a button tall
+        y: -root._rowY
+        height: root.height
         spacing: root.gap
         enabled: root._displayIdsKey === slotModel.visibleIdsKey
 
@@ -616,6 +621,7 @@ Item {
             WorkspaceButton {
                 id: ws
                 required property int index
+                y: root._rowY
 
                 wsId:         root._displayIds[index] ?? -1
                 monitorReady: root.monitorLive
@@ -662,5 +668,36 @@ Item {
         hitBottom: root._rowBelow
         onJumpRequested: id => root.activate(id)
     }
+    }
+
+    // a Hyprland submap holding the keyboard, on the bar of the monitor that has it: nothing else shows that keys now
+    // do something else. Its name, as the config spells it; a click leaves it
+    property string _mode: Compositor.submap.length > 0
+        && (Compositor.focusedMonitor.length === 0 || Compositor.focusedMonitor === root.monitorName)
+        ? Compositor.submap : ""
+    on_ModeChanged: if (root._mode.length > 0) modeChip._lastMode = root._mode
+    // its own condition, not the chip's effective visibility: shown, or still folding away
+    readonly property bool _modeShown: root._mode.length > 0 || modeChip.implicitWidth > 0.5
+    Pill {
+        id: modeChip
+        objectName: "workspace-submap"
+        x: wsRow.x + wsRow.implicitWidth + root._tickRoom
+        y: 0
+        height: root.height
+        barActive: root.barActive
+        compact: root.compact
+        property string _lastMode: ""
+        readonly property bool show: root._mode.length > 0
+        collapsed: !show
+        visible: root._modeShown
+        glyph: "󰌌"
+        glyphColor: Theme.barAccentMark
+        text: root._mode.length > 0 ? root._mode : modeChip._lastMode
+        maxTextWidth: compact ? 140 : 220
+        accessibleName: "Keyboard mode " + (root._mode.length > 0 ? root._mode : modeChip._lastMode) + ", press to leave it"
+        interactive: show
+        onActivated: if (modeChip.canActivate) Compositor.leaveSubmap()
+        pressed: _modeTap.pressed
+        TapHandler { id: _modeTap; enabled: modeChip.canActivate; onTapped: modeChip.activated() }
     }
 }

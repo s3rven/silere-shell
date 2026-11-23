@@ -5217,6 +5217,13 @@ ShellRoot {
                 && Math.abs(tallStrip._rowY - tallStrip._rowBelow) < 0.01
                 && stripRow && stripRow.y === tallStrip._rowY && stripRow.height === tallStrip.btnH,
             "the workspace strip takes the bar's height and keeps its row centred in it")
+        // a floating bar's widgets run into its edge gap (Metrics.barWidgetReach); Qt only delivers a point there to a
+        // button's click target if every box on the way contains it, so the row must span the widget, not the strip
+        tallStrip.height = Metrics.barHeight + 16
+        const reachRow = root._findTrayNode(tallStrip, item => item.objectName === "workspace-row")
+        root._check(reachRow && reachRow.mapToItem(tallStrip, 0, 0).y === 0 && reachRow.height === tallStrip.height
+                && stripRow.y === tallStrip._rowY && Math.abs(tallStrip._rowY - tallStrip._rowBelow) < 0.01,
+            "in a taller bar box the workspace row spans it, and the buttons stay centred")
         tallStrip.destroy()
         const modeStrip = workspaceStripFactory.createObject(root)
         const modeChip = root._findTrayNode(modeStrip, item => item.objectName === "workspace-submap")
