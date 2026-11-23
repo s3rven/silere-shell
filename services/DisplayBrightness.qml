@@ -23,7 +23,8 @@ Singleton {
     property string _scanError: ""
     property string _writeError: ""
     readonly property string lastError: root._writeError || root._scanError
-    readonly property bool scanning: _scan.running
+    // the wait for a second read counts: until then "nothing found" or a warning would be a guess
+    readonly property bool scanning: _scan.running || _settleRetry.running
     property var _queued: ({})
     property string _writingKey: ""
     property int _generation: 0
@@ -31,18 +32,22 @@ Singleton {
     property int _writeGeneration: 0
     property bool _refreshPending: false
     property real _lastScan: 0
+    property bool _settleRetried: false
 
-    function parseDisplays(raw: string): var {
+    // screens: Quickshell's, so a display reads as Settings names it elsewhere ("DELL U2723QE · DP-2"); a connector no
+    // screen shows (switched off in the compositor) keeps its port
+    function parseDisplays(raw: string, screens): var {
         const result = []
         for (const line of raw.split(/\r?\n/)) {
             const f = line.split("\t")
             if (f.length !== 5 || !/^card[0-9]+-[A-Za-z0-9-]+$/.test(f[0])
                     || !/^[0-9]+$/.test(f[1]) || !/^[a-f0-9]{64}$/.test(f[2])) continue
-            const current = Number(f[3]), maximum = Number(f[4])
+            const current = Number(f[3]), maximum = Number(f[4]), port = f[0].replace(/^card[0-9]+-/, "")
+            const screen = (screens || []).find(s => s && s.name === port)
             // -1: switched off, so not read; -2: it answered on none of its buses
             if (!isFinite(current) || !isFinite(maximum) || maximum <= 0 || current < -2 || current > maximum) continue
-            result.push({ key: f[0] + ":" + f[2], connector: f[0], label: f[0].replace(/^card[0-9]+-/, ""),
-                bus: f[1], identity: f[2], unreadable: current === -2,
+            result.push({ key: f[0] + ":" + f[2], connector: f[0], label: screen ? Monitors.label(screen, screens) : port,
+                bus: f[1], identity: f[2], unreadable: current === -2, maximum,
                 percent: current < 0 ? -1 : Math.round(100 * current / maximum) })
         }
         return result
@@ -54,7 +59,17 @@ Singleton {
         const keys = ShellSettings.ddcDisabledDisplays.split(",").filter(k => k.length > 0 && k !== key)
         if (!on) keys.push(key)
         ShellSettings.ddcDisabledDisplays = keys.join(",")
-        root.invalidate()
+        root._rescan()
+    }
+    // not invalidate(): emptying the list took every display's switch away, the one just pressed with them, and Home's
+    // sliders on waking, until the scan answered. An older scan or write still loses its result to the new generation
+    function _rescan(): void {
+        root._generation++
+        root._lastScan = 0
+        root._scanError = ""
+        root._settleRetried = false
+        _settleRetry.stop()
+        Qt.callLater(root.refresh, true)
     }
     function refresh(force: bool): void {
         if (!root._wanted) return
@@ -80,10 +95,16 @@ Singleton {
         root.values = ({})
         root._scanError = ""
         root._writeError = ""
+        root._settleRetried = false
+        _settleRetry.stop()
         // running commands still verify their captured EDID; no later queued write survives
         Qt.callLater(root.refresh, true)
     }
-    on_WantedChanged: if (root._wanted) root.refresh(root._refreshPending)
+    // deferred like invalidate() and _rescan(): a start or a wake sets off both, and Qt.callLater runs one refresh for
+    // the two, where a scan begun here predated their new generation and every display was read twice
+    on_WantedChanged: if (root._wanted) Qt.callLater(root.refresh, root._refreshPending)
+    on_MenuWantedChanged: if (root._menuWanted && ShellSettings.barShowBrightness && !_scan.running)
+        root.refresh(false)
     onAvailableChanged: root.invalidate()
     Connections {
         target: Quickshell
@@ -91,7 +112,11 @@ Singleton {
     }
     Connections {
         target: Idle
-        function onIsIdleChanged() { if (!Idle.isIdle) root.invalidate() }
+        function onIsIdleChanged() {
+            if (Idle.isIdle) return
+            root._writeError = ""
+            root._rescan()
+        }
     }
     function levelFor(key: string): real { return Number(root.values[key] ?? 50) }
     // a wheel notch lands on the 5% grid, as the backlight's does, so a display that started off it lines up after one
@@ -133,7 +158,7 @@ Singleton {
         root._writingKey = key
         root._writeGeneration = root._generation
         _write.command = ["bash", Quickshell.shellDir + "/scripts/display-brightness.sh", "write",
-            display.connector, display.bus, display.identity, String(percent)]
+            display.connector, display.bus, display.identity, String(percent), String(display.maximum)]
         _write.running = true
     }
     function _resume(): void {
@@ -147,7 +172,23 @@ Singleton {
             return
         }
         const complete = code === 0 && !timedOut
-        const found = root.parseDisplays(raw)
+        const found = root.parseDisplays(raw, Quickshell.screens)
+        // a monitor still waking from sleep, or just plugged in, can miss its first DDC read: that answer waits for one
+        // more a few seconds on. What showed stays, an empty list takes the displays that answered, and no warning yet
+        if (complete) {
+            root._settleRetried = false
+        } else if (!root._settleRetried) {
+            root._settleRetried = true
+            _settleRetry.restart()
+            if (root.displays.length === 0) {
+                root.displays = found.filter(d => !d.unreadable)
+                const provisional = {}
+                for (const display of root.displays)
+                    provisional[display.key] = root._queued[display.key] ?? display.percent
+                root.values = provisional
+            }
+            return
+        }
         // each row is a completed read of one display. A slow or hung monitor
         // later in the scan must not discard the controls already discovered
         if (complete || found.length > 0) {
@@ -168,6 +209,7 @@ Singleton {
     }
 
     Timer { id: _debounce; interval: 100; onTriggered: root._applyNext() }
+    Timer { id: _settleRetry; interval: 3000; onTriggered: root.refresh(true) }
     BoundedProcess {
         id: _scan
         timeoutMs: 20000
@@ -180,18 +222,15 @@ Singleton {
     }
     BoundedProcess {
         id: _write
-        timeoutMs: 15000
+        // an unlinked connector needs a bounded detection before the write
+        timeoutMs: 14000
         onExited: code => {
-            const key = root._writingKey
             root._writingKey = ""
             if (root._writeGeneration !== root._generation) {
                 root._refreshPending = true
             } else if (!_write.completedSuccessfully(code)) {
                 root._writeError = "Display brightness could not be changed."
-                // the failed display must be read back; other displays still own their queued changes
-                const queued = Object.assign({}, root._queued)
-                delete queued[key]
-                root._queued = queued
+                // the job already left the queue when it started; any value queued now belongs to a later adjustment
                 root._lastScan = 0
                 root._refreshPending = true
             } else {

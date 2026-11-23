@@ -143,7 +143,7 @@ device.
 |---|---|
 | Output device | Expand Volume and choose **Output**. A Bluetooth headset gets **Listening** and **Calls** profiles (needs `wpctl` and `pw-dump`). |
 | Several backlights | Expand the brightness slider, or set **Brightness display** under **Settings › System › Devices** |
-| External monitors | Turn on **External brightness** under **Settings › System › Devices**. Needs `ddcutil` and DDC/CI switched on in the monitor's menu. |
+| External monitors | Turn on **External brightness** under **Settings › System › Devices**. Needs `ddcutil` and DDC/CI switched on in the monitor's menu. Scrolling the bar's brightness widget adjusts each enabled display from its current level. On a laptop, Home's brightness arrow shows a slider for each one; on a desktop each has its own row. |
 | Keyboard light | Appears when UPower exposes one. Its steps follow the hardware. |
 | CPU row | Names the busiest process while the CPU is busy. Click to open your system monitor. |
 | Battery | Click it in the system readings for health, stored energy and power draw, per battery or UPS |

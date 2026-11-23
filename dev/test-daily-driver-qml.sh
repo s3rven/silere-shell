@@ -344,10 +344,13 @@ if [ "$1" = list ]; then
     printf '%s\n' "$snapshot"
     [ ! -s "$fixtures/ddc-scan-fail" ] || exit 1
 else
+    # the write carries the maximum the scan listed for that display
+    [ "$#" -eq 6 ] && [ "$6" = "$(awk -F '\t' -v connector="$2" '$1 == connector { print $5 }' "$fixtures/ddc-displays")" ] \
+        || exit 2
     printf 'write %s\n' "$5" >> "$fixtures/ddc-calls"
     sleep 0.2
     [ ! -s "$fixtures/ddc-fail" ] || exit 1
-    if [ -s "$fixtures/ddc-fail-connector" ] && [ "$(cat "$fixtures/ddc-fail-connector")" = "$2" ]; then exit 1; fi
+    if [ -s "$fixtures/ddc-reject-write" ] && [ "$(cat "$fixtures/ddc-reject-write")" = "$2 $5" ]; then exit 1; fi
     awk -F '\t' -v level="$5" -v connector="$2" 'BEGIN { OFS="\t" } $1 == connector { $4=level } { print }' \
         "$fixtures/ddc-displays" > "$fixtures/ddc-next"
     mv "$fixtures/ddc-next" "$fixtures/ddc-displays"
@@ -399,7 +402,8 @@ SILERE_SANDBOX=0 SILERE_DAILY_FIXTURES="$scratch/fixtures" PATH="$scratch/bin:$P
     QT_FORCE_STDERR_LOGGING=1 QT_QPA_PLATFORM=offscreen \
     qs -p "$scratch/probe.qml" --no-color > "$scratch/probe.log" 2>&1 &
 probe_pid=$!
-_probe_wait "$scratch/probe.log" "$probe_pid" 'PROBE-DAILY' 180 0.25 || true
+# 75 s: three checks sit through the brightness service's 3 s second read after a failed one
+_probe_wait "$scratch/probe.log" "$probe_pid" 'PROBE-DAILY' 300 0.25 || true
 if ! grep -q 'PROBE-DAILY passed' "$scratch/probe.log" || grep -q 'PROBE-FAIL' "$scratch/probe.log" \
     || [ -n "$(_probe_errors "$scratch/probe.log")" ]; then
     cat "$scratch/probe.log" >&2

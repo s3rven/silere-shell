@@ -10,6 +10,39 @@ if [ "${SILERE_SANDBOX:-0}" = 1 ]; then
 fi
 
 identity() { sha256sum "$1/edid" | cut -d' ' -f1; }
+direct_buses() {
+    local device bus
+    for device in "$1"/ddc/i2c-dev/i2c-*; do
+        [ -d "$device" ] || continue
+        bus="${device##*i2c-}"
+        [[ "$bus" =~ ^[0-9]+$ ]] && printf '%s\n' "$bus"
+    done
+    return 0
+}
+
+# some drivers omit the connector's ddc symlink even when ddcutil can identify its bus
+detect_buses() {
+    timeout 4 ddcutil detect --brief 2>/dev/null | awk '
+        function remember() {
+            if (name != "" && bus != "") {
+                by_name[name]++
+                by_bus[bus]++
+                pairs[name] = bus
+            }
+            name = bus = ""
+        }
+        /^[^[:space:]]/ || /^[[:space:]]*$/ { remember(); next }
+        $1 == "I2C" && $2 == "bus:" && $3 ~ /^\/dev\/i2c-[0-9]+$/ {
+            bus = substr($3, length("/dev/i2c-") + 1)
+        }
+        $1 == "DRM" && $2 == "connector:" && $3 ~ /^card[0-9]+-[A-Za-z0-9-]+$/ { name = $3 }
+        END {
+            remember()
+            for (name in pairs)
+                if (by_name[name] == 1 && by_bus[pairs[name]] == 1)
+                    printf "%s\t%s\n", name, pairs[name]
+        }'
+}
 levels() {
     timeout 4 ddcutil --bus "$1" getvcp 10 --brief 2>/dev/null \
         | awk '$1=="VCP" && $2=="10" && $3=="C" && $4 ~ /^[0-9]+$/ && $5 ~ /^[0-9]+$/ && $5>0 && $5<=65535 && $4<=$5 {print $4, $5; found=1; exit} END {if (!found) exit 1}'
@@ -65,24 +98,30 @@ case "${1:-}" in
         [ "$failed" -eq 0 ] || exit 1
         ;;
     write)
-        [ "$#" -eq 5 ] || exit 2
-        name="$2"; bus="$3"; fingerprint="$4"; percent="$5"
-        [[ "$name" =~ ^card[0-9]+-[A-Za-z0-9-]+$ && "$bus" =~ ^[0-9]+$ \
-            && "$fingerprint" =~ ^[a-f0-9]{64}$ && "$percent" =~ ^[0-9]{1,3}$ ]] || exit 2
-        percent=$((10#$percent))
-        [ "$percent" -ge 1 ] && [ "$percent" -le 100 ] || exit 2
+        # the maximum comes from the scan that read this same EDID: a monitor's range is fixed, and reading it again
+        # cost every step a DDC read (and, on an unlinked connector, a second detection)
+        [ "$#" -eq 6 ] || exit 2
+        name="$2"; bus="$3"; fingerprint="$4"; percent="$5"; maximum="$6"
+        [[ "$name" =~ ^card[0-9]+-[A-Za-z0-9-]+$ && "$bus" =~ ^[0-9]+$ && "$fingerprint" =~ ^[a-f0-9]{64}$ \
+            && "$percent" =~ ^[0-9]{1,3}$ && "$maximum" =~ ^[0-9]{1,5}$ ]] || exit 2
+        percent=$((10#$percent)); maximum=$((10#$maximum))
+        [ "$percent" -ge 1 ] && [ "$percent" -le 100 ] && [ "$maximum" -ge 1 ] && [ "$maximum" -le 65535 ] || exit 2
         connector="$drm_root/$name"
         target_present() {
             [ -r "$connector/status" ] && [ "$(cat "$connector/status")" = connected ] \
                 && [ "$(identity "$connector")" = "$fingerprint" ]
         }
-        check_target || exit 3
-        read -r _current maximum < <(levels "$bus") || exit 1
+        check_target() {
+            local mapping
+            target_present || return 1
+            [ ! -d "$connector/ddc/i2c-dev/i2c-$bus" ] || return 0
+            [ -z "$(direct_buses "$connector")" ] && mapping="$(detect_buses)" \
+                && grep -Fxq -- "$name"$'\t'"$bus" <<< "$mapping" && target_present
+        }
         value=$(((percent * maximum + 50) / 100))
         [ "$value" -gt 0 ] || value=1
-        # an unplug while reading must not turn a queued write into a different display's value
         check_target || exit 3
         timeout 8 ddcutil --bus "$bus" setvcp 10 "$value" >/dev/null 2>&1
         ;;
-    *) echo 'Usage: display-brightness.sh list [disabled]|write connector bus identity percent' >&2; exit 2 ;;
+    *) echo 'Usage: display-brightness.sh list [disabled]|write connector bus identity percent maximum' >&2; exit 2 ;;
 esac

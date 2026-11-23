@@ -194,8 +194,32 @@ and `silere restart`.
 
 ### Brightness controls the wrong screen
 
-On hybrid laptops with several backlights, pick the right display under Settings ›
-System › Devices, or expand Home's brightness slider.
+If your laptop exposes several backlights, pick its panel with **Brightness display** under
+**Settings › System › Devices**, or expand Home's brightness slider and choose it there.
+
+### External monitor brightness is missing or does not respond
+
+1. Turn on **DDC/CI** in the monitor's own settings menu and install `ddcutil`.
+2. Under **Settings › System › Devices**, turn on **External brightness**. Check that
+   **Control ‹monitor name›** is on for each monitor you want to adjust.
+3. Scroll the bar's brightness widget to step the selected laptop backlight and every enabled
+   external monitor from its own level. Adjust one display at a time in **Home**: on a laptop,
+   under the brightness slider's arrow.
+
+If a monitor is missing or does not respond, run these checks as the same user running Silere.
+Replace `7` with your monitor's bus number from `detect`, such as `/dev/i2c-7`.
+
+```bash
+ddcutil detect --brief
+ddcutil --bus 7 getvcp 10 --brief
+```
+
+- If detection reports a permissions error, check your distribution's `ddcutil` udev rules
+  and I²C device access. [ddcutil device permissions](https://www.ddcutil.com/i2c_permissions/)
+- If the monitor is absent or the brightness read fails, recheck DDC/CI in its menu and try
+  a direct connection if you're using a dock or adapter. [ddcutil troubleshooting](https://www.ddcutil.com/faq/)
+- If both commands work but Silere still misses the monitor, include their output and the
+  connector name in a [bug report](#reporting-a-problem).
 
 ### Night light is unavailable on niri
 

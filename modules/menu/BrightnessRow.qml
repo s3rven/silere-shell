@@ -17,7 +17,12 @@ Item {
     property real cardInset: 1
     property real cardLeftBleed: 0
     property bool reserveExpandSlot: false
-    readonly property bool expandable: Brightness.devices.length > 1
+    // external displays fold under the backlight's slider, one Home row for every display; one the selected kernel DDC
+    // backlight already drives is that slider
+    readonly property var _externalDisplays: DisplayBrightness.controllableDisplays
+        .filter(d => Brightness.deviceName !== "ddcci" + d.bus).map(d => ({ key: d.key, label: d.label }))
+    readonly property bool expandable: Brightness.devices.length > 1 || root._externalDisplays.length > 0
+    onExpandableChanged: if (!root.expandable) root.closeInline()
 
     width: parent ? parent.width : 0
     implicitHeight: _slider.height + _options.height
@@ -37,13 +42,6 @@ Item {
         _slider.restorePickerFocus(_options)
         root.open = false
         return true
-    }
-
-    Connections {
-        target: Brightness
-        function onDevicesChanged(): void {
-            if (Brightness.devices.length <= 1) root.closeInline()
-        }
     }
 
     QuickSlider {
@@ -91,7 +89,8 @@ Item {
 
             Repeater {
                 id: _deviceRepeater
-                model: root._optionsShown ? Brightness.deviceChoices : []
+                // a choice only among several: a lone backlight's fold holds the external displays alone
+                model: root._optionsShown && Brightness.devices.length > 1 ? Brightness.deviceChoices : []
 
                 delegate: InlineOptionRow {
                     id: _option
@@ -108,6 +107,46 @@ Item {
                     onTriggered: {
                         ShellSettings.brightnessDevice = modelData.value
                         root.closeInline()
+                    }
+                }
+            }
+
+            Hairline {
+                visible: _deviceRepeater.count > 0 && root._externalDisplays.length > 0
+                x: 14
+                width: parent.width - 28
+                color: Theme.menuDivider
+            }
+            // named above the slider, as Volume's apps are: the value slot is measured for "100%"
+            Repeater {
+                model: root._optionsShown ? root._externalDisplays : []
+                delegate: Column {
+                    id: _display
+                    required property var modelData
+                    width: _optionColumn.width
+
+                    ShellText {
+                        x: 14
+                        width: Math.max(1, parent.width - 28)
+                        topPadding: 6
+                        text: _display.modelData.label
+                        elide: Text.ElideRight
+                        color: Theme.withAlpha(Theme.text, 0.88)
+                        font.pixelSize: Settings.fontLabel
+                    }
+                    QuickSlider {
+                        id: _displaySlider
+                        width: _display.width
+                        glyph: "󰍹"
+                        accessibleName: _display.modelData.label + " brightness"
+                        wheelKey: "displaybrightness"
+                        interactionKey: _display.modelData.key
+                        value: DisplayBrightness.levelFor(_display.modelData.key) / 100
+                        valueText: Math.round(_displaySlider.shownValue * 100) + "%"
+                        // a DDC write takes most of a second: one when the drag ends
+                        commitOnRelease: true
+                        reserveExpandSlot: true
+                        onMoved: value => DisplayBrightness.setPercent(_display.modelData.key, value * 100)
                     }
                 }
             }

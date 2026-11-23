@@ -19,6 +19,8 @@ MenuRow {
     property bool   adjustable: true
     // hold the chevron gutter open on a non-expandable row so stacked sliders keep one track length
     property bool   reserveExpandSlot: false
+    property alias  commitOnRelease: _track.commitOnRelease
+    readonly property real shownValue: _track.shownValue
     readonly property bool _hasChevSlot: root.expandable || root.reserveExpandSlot
     readonly property bool _canInteract: root.enabled && root.visible
 

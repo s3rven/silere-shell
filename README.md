@@ -35,8 +35,8 @@ config, launcher, wallpaper tool and lock screen stay your own.
 
 | Feature | What you get |
 |---|---|
-| Bar | Workspaces with app icons, window title, media, system readings, tray, and a clock with a calendar and optional weather. Choose the widgets and their order. |
-| Quick settings | Output, microphone and per-app volume; brightness; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake; battery health and charge limit. |
+| Bar | Workspaces with app icons, window title, media, system readings, tray, and a clock with a calendar and optional weather. A Command widget shows a script's output, Waybar custom modules included. Choose the widgets and their order. |
+| Quick settings | Output, microphone and per-app volume; brightness, external monitors included over DDC/CI; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake; battery health and charge limit. |
 | Notifications | Actions, inline replies, conversation grouping, searchable history, app muting and Do Not Disturb. |
 | Media | Album art, seeking, player switching and an optional Cava visualizer. |
 | On-screen display | Volume, brightness, power mode changes and battery warnings, floating or inside the bar. |
@@ -88,9 +88,11 @@ See the [installation guide](docs/install.md) for first start, custom paths and 
 | Now Playing | Right-click the media widget |
 | Settings | Open the menu and choose **Settings**. Press **Ctrl+F** to search. |
 
-Tab, Enter and the arrow keys work in every panel, and Escape steps back, then closes the panel.
-Any keybind can run `silere ipc menu toggle`. The [usage guide](docs/usage.md) lists every click,
-scroll and shortcut, and the [scripting guide](docs/scripting.md) covers IPC and hooks.
+Use **Tab** to move between controls, **Enter** to activate them, and **Esc** to step back or close.
+The [usage guide](docs/usage.md#keyboard) lists the keyboard shortcuts. Bind commands like
+`silere menu`, `silere toggle dnd` or `silere volume up` in your compositor; on Hyprland,
+**Settings › System › Keybinds** lists your shortcuts and copies Silere's. See the
+[scripting guide](docs/scripting.md) for keybinds, IPC, hooks and the [Command widget](docs/scripting.md#command-widget).
 
 Settings apply as you change them. Saved overrides live in `~/.config/silere-shell/settings.json`
 by default. For multiple monitors, use **Settings › System › Devices** to choose which screens

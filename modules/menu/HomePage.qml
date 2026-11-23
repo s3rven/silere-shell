@@ -103,10 +103,20 @@ PageShell {
             root.controlRequested(_wiredRow, null)
             return
         }
-        const allowed = want === "wifi" ? root._wifiAvailable && Network.wifiEnabled
-            : want === "bt" ? root._btAvailable && Bluetooth.enabled
-            : want === "power" ? PowerProfiles.available && PowerProfiles.choices.length > 1
-            : false
+        if (want === "brightness") {
+            const slider = root._brightnessAvailable ? _brightnessRow : _externalBrightnessRows.itemAt(0)
+            if (!slider) return
+            root._armSwapFold()
+            root._closePicker()
+            _volumeRow.closeInline()
+            _brightnessRow.open = root._brightnessAvailable && _brightnessRow.expandable
+            root.controlRequested(slider, null)
+            return
+        }
+        const radioRow = want === "wifi" && root._wifiAvailable ? _wifiRow
+            : want === "bt" && root._btAvailable ? _btRow : null
+        const allowed = radioRow ? radioRow.expandable
+            : want === "power" && PowerProfiles.available && PowerProfiles.choices.length > 1
         // an already open picker is still brought into view
         if (allowed && root._picker !== want) root._togglePicker(want)
         else if (allowed) {
@@ -250,7 +260,11 @@ PageShell {
                     textColor: Theme.menuTextWarning
                 }
                 Repeater {
-                    model: DisplayBrightness.displays
+                    id: _externalBrightnessRows
+                    // with a backlight they fold under its slider; without the scanned level, so a rescan that only read a
+                    // new level does not rebuild a slider in use
+                    model: root._brightnessAvailable ? []
+                        : DisplayBrightness.controllableDisplays.map(d => ({ key: d.key, label: d.label }))
                     SliderRow {
                         required property var modelData
                         glyph: "󰍹"

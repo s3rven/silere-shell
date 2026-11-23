@@ -10326,6 +10326,31 @@ ShellRoot {
                 && backlightChoice.Accessible.role === Accessible.RadioButton && backlightChoice.Accessible.checkable,
             "a backlight choice on Home is announced as a named, checkable choice")
         if (brightnessRow) brightnessRow.destroy()
+        // an external display folds under the backlight's slider instead of taking a row of its own; one the selected
+        // kernel DDC backlight drives is that slider already
+        const foldDisplaysWas = { displays: DisplayBrightness.displays, values: DisplayBrightness.values }
+        const foldDeviceWas = Brightness._device
+        const foldKey = "card1-DP-1:" + "b".repeat(64)
+        Brightness.devices = [{ name: "ddcci8" }]
+        Brightness._device = "ddcci8"
+        DisplayBrightness.displays = [
+            { key: foldKey, connector: "card1-DP-1", label: "DP-1", bus: "7", identity: "b".repeat(64),
+                unreadable: false, percent: 40, maximum: 100 },
+            { key: "card1-DP-2:" + "c".repeat(64), connector: "card1-DP-2", label: "DP-2", bus: "8",
+                identity: "c".repeat(64), unreadable: false, percent: 30, maximum: 100 }]
+        DisplayBrightness.values = { [foldKey]: 40 }
+        const foldRow = Qt.createComponent(Qt.resolvedUrl("modules/menu/BrightnessRow.qml"))
+            .createObject(barFixtureHost, { width: 320, open: true })
+        const foldSlider = root._findTrayNode(foldRow, item => item.accessibleName === "DP-1 brightness"
+            && item.commitOnRelease !== undefined)
+        root._check(foldRow && foldRow.expandable && foldSlider !== null && foldSlider.value === 0.4
+                && foldSlider.valueText === "40%" && foldSlider.commitOnRelease
+                && root._findTrayNode(foldRow, item => item.accessibleName === "DP-2 brightness") === null,
+            "an external display folds under the backlight's slider, and the one its kernel backlight drives does not")
+        if (foldRow) foldRow.destroy()
+        Brightness._device = foldDeviceWas
+        DisplayBrightness.displays = foldDisplaysWas.displays
+        DisplayBrightness.values = foldDisplaysWas.values
         Brightness.devices = backlightsWas
         ShellSettings.reduceMotion = backlightReduceWas
     }
@@ -14833,13 +14858,17 @@ ShellRoot {
         const ddcRows = DisplayBrightness.parseDisplays("card1-DP-1\t7\t" + displayIdentity + "\t20\t80\n"
             + "card1-HDMI-A-1\t9\t" + displayIdentity + "\t101\t100\n"
             + "card1-DP-2\t7\tinvalid\t20\t100\n")
-        root._check(ddcRows.length === 1 && ddcRows[0].percent === 25
+        root._check(ddcRows.length === 1 && ddcRows[0].percent === 25 && ddcRows[0].maximum === 80
                 && ddcRows[0].key === "card1-DP-1:" + displayIdentity,
             "external display parsing normalizes non-100 ranges and rejects invalid identities and levels")
         const silentRow = DisplayBrightness.parseDisplays("card1-DP-3\t8\t" + displayIdentity + "\t-2\t100\n")
         root._check(silentRow.length === 1 && silentRow[0].unreadable && silentRow[0].percent === -1
                 && !ddcRows[0].unreadable,
             "a display that answered on none of its buses parses as an unreadable row")
+        const namedRow = DisplayBrightness.parseDisplays("card2-DP-1\t3\t" + displayIdentity + "\t20\t80\n",
+            [{ name: "eDP-1", model: "0x9a2b" }, { name: "DP-1", model: "DELL U2723QE" }])
+        root._check(namedRow.length === 1 && namedRow[0].label === "DELL U2723QE · DP-1" && ddcRows[0].label === "DP-1",
+            "an external display is named by its screen's model and port, and by its port when no screen shows it")
 
         const previewToolsWas = SystemTools._tools
         const previewDdcWas = ShellSettings.ddcBrightnessEnabled
@@ -14862,7 +14891,15 @@ ShellRoot {
         DisplayBrightness.displays = []
         DisplayBrightness.values = ({})
         DisplayBrightness._queued = ({ [partialKey]: 65 })
+        const settleWas = DisplayBrightness._settleRetried
+        DisplayBrightness._settleRetried = false
         DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 0, true, partialRead)
+        root._check(DisplayBrightness.displays.length === 1 && DisplayBrightness.levelFor(partialKey) === 65
+                && DisplayBrightness._scanError.length === 0 && DisplayBrightness._settleRetried,
+            "a first incomplete brightness scan shows the displays that answered and reads again before it warns")
+        // the second read fails as well
+        DisplayBrightness._acceptScanResult(DisplayBrightness._generation, 0, true, partialRead)
+        DisplayBrightness._settleRetried = settleWas
         root._check(DisplayBrightness.displays.length === 1
                 && DisplayBrightness.levelFor(partialKey) === 65
                 && DisplayBrightness._scanError.length > 0 && DisplayBrightness._lastScan === 0,

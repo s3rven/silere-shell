@@ -325,6 +325,32 @@ Scope {
         MenuState.open = true
         root.waitFor(() => DisplayBrightness.displays.length === 1 && !DisplayBrightness.scanning,
             "external display discovery completes")
+        const scans = () => (root.read("ddc-calls").match(/^scan$/gm) || []).length
+        input.wait(500)
+        root.check(scans() === 1 && !DisplayBrightness.scanning, "turning external brightness on reads the displays once")
+        root.write("ddc-calls", "")
+        Idle.isIdle = true
+        Idle.isIdle = false
+        root.check(DisplayBrightness.displays.length === 1, "waking keeps the external displays while they are read again")
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness._lastScan > 0 && scans() > 0,
+            "waking reads the external displays again")
+        input.wait(500)
+        root.check(scans() === 1 && !DisplayBrightness.scanning, "waking reads the external displays once")
+        // a monitor still waking can miss its first read: its slider stays, no warning yet, and one more read follows
+        root.write("ddc-calls", "")
+        root.write("ddc-displays", root.display(20).replace("\t20\t", "\t-2\t"))
+        root.write("ddc-scan-fail", "fail")
+        Idle.isIdle = true
+        Idle.isIdle = false
+        root.waitFor(() => DisplayBrightness._settleRetried, "a wake's first display read can fail")
+        root.check(DisplayBrightness.controllableDisplays.length === 1 && DisplayBrightness.lastError.length === 0
+                && DisplayBrightness.scanning,
+            "a display that misses its first read after a wake keeps its slider, raises no warning and still reads as checking")
+        root.write("ddc-displays", root.display(20))
+        root.write("ddc-scan-fail", "")
+        root.waitFor(() => scans() === 2 && !DisplayBrightness.scanning && DisplayBrightness._lastScan > 0
+                && DisplayBrightness.lastError.length === 0 && DisplayBrightness.controllableDisplays.length === 1,
+            "the display is read again a few seconds later and answers", 6000)
 
         DisplayBrightness.refresh(true)
         input.wait(50)
@@ -383,7 +409,7 @@ Scope {
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2,
             "brightness discovery includes a second external display")
         root.write("ddc-calls", "")
-        root.write("ddc-fail-connector", "card1-DP-1")
+        root.write("ddc-reject-write", "card1-DP-1 80")
         DisplayBrightness.setPercent(root.displayKey, 80)
         root.waitFor(() => DisplayBrightness._writingKey === root.displayKey,
             "a brightness write starts on the display that will reject it")
@@ -392,18 +418,19 @@ Scope {
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness._writingKey.length === 0
                 && root.read("ddc-calls").indexOf("write 55") >= 0,
             "one display's failed write preserves a pending brightness change for another display")
-        root.check(DisplayBrightness.levelFor(root.displayKey) === 90
+        root.check(DisplayBrightness.levelFor(root.displayKey) === 75
                 && DisplayBrightness.levelFor(secondKey) === 55
-                && root.read("ddc-calls").indexOf("write 75") < 0,
-            "a failed display returns to its measured level without retrying its rejected queued value")
-        root.write("ddc-fail-connector", "")
+                && root.read("ddc-displays").startsWith(root.display(75))
+                && (root.read("ddc-calls").match(/^write 80$/gm) || []).length === 1,
+            "a failed brightness write leaves the newer same-display request queued without resending the rejected level")
+        root.write("ddc-reject-write", "")
 
         root.write("ddc-displays", root.display(35))
         root.write("ddc-scan-fail", "fail")
         DisplayBrightness.invalidate()
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 1
                 && DisplayBrightness.levelFor(root.displayKey) === 35 && DisplayBrightness.lastError.length > 0,
-            "a scan that fails after one display keeps that display's brightness control")
+            "a scan that fails after one display keeps that display's brightness control", 6000)
         root.write("ddc-scan-fail", "")
         DisplayBrightness.refresh(false)
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.lastError.length === 0,
@@ -416,7 +443,7 @@ Scope {
         DisplayBrightness.refresh(true)
         root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.displays.length === 2
                 && DisplayBrightness.lastError.indexOf("DP-2 does not answer") === 0,
-            "a display that never answers is listed and named in the warning")
+            "a display that never answers is listed and named in the warning, once its second read fails too", 6000)
         root.check(DisplayBrightness.displays.find(d => d.key === silentKey)?.unreadable === true
                 && DisplayBrightness.displays.find(d => d.key === root.displayKey)?.unreadable === false,
             "only the display that did not answer is marked unreadable")
@@ -455,6 +482,37 @@ Scope {
         root.check(!DisplayBrightness._wanted, "a remembered settings section does not scan from another page")
         MenuState.open = false
         ShellSettings.ddcBrightnessEnabled = false
+
+        const disabledKey = "card1-DP-3:" + root.identity
+        root.write("ddc-fail", "")
+        root.write("ddc-displays", root.display(98)
+            + "card1-DP-2\t8\t" + root.identity + "\t34\t100\n"
+            + "card1-DP-3\t9\t" + root.identity + "\t-1\t100\n"
+            + "card1-DP-4\t10\t" + root.identity + "\t-2\t100\n")
+        ShellSettings.ddcDisabledDisplays = disabledKey
+        ShellSettings.barShowBrightness = true
+        ShellSettings.ddcBrightnessEnabled = true
+        root.waitFor(() => !DisplayBrightness.scanning && DisplayBrightness.controllableDisplays.length === 2,
+            "enabling the brightness widget discovers external displays with Home closed")
+        root.write("ddc-calls", "")
+        DisplayBrightness.bumpAllBy(5, "")
+        DisplayBrightness.bumpAllBy(5, "")
+        root.waitFor(() => DisplayBrightness._writingKey.length === 0
+                && root.read("ddc-displays").includes("\t40\t100\n"),
+            "wheel steps adjust each enabled display from its own level, onto the backlight's 5% grid (34 -> 35 -> 40)")
+        root.check(root.read("ddc-calls") === "write 100\nwrite 40\n",
+            "rapid steps coalesce per display, clamp at 100%, and skip disabled and unreadable displays")
+
+        root.write("ddc-calls", "")
+        DisplayBrightness.bumpAllBy(-5, "ddcci7")
+        root.waitFor(() => DisplayBrightness._writingKey.length === 0
+                && root.read("ddc-displays").includes("\t35\t100\n"),
+            "a second display still follows when the first uses a kernel backlight")
+        root.check(root.read("ddc-calls") === "write 35\n",
+            "the display already controlled by the selected kernel backlight is written only once")
+        ShellSettings.ddcBrightnessEnabled = false
+        ShellSettings.barShowBrightness = false
+        ShellSettings.ddcDisabledDisplays = ""
     }
 
     function audioNode(mode: string, serial: string, address = "aa:bb:cc:dd:ee:ff"): var {

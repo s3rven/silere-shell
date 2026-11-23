@@ -25,8 +25,8 @@ cat > "$scratch/bin/ddcutil" <<'EOF'
 case " $* " in
     *' detect '*) cat "$SILERE_TEST_DDC_DETECT" ;;
     *' getvcp '*)
+        printf '%s\n' "$*" >> "$SILERE_TEST_LOG.reads"
         case " $* " in *' --bus 9 '*) exit 1 ;; esac
-        [ "${SILERE_TEST_REPLACE:-0}" != 1 ] || printf changed > "$SILERE_TEST_DRM_ROOT/card1-DP-1/edid"
         echo 'VCP 10 C 20 80' ;;
     *' setvcp '*) printf '%s\n' "$*" >> "$SILERE_TEST_LOG" ;;
     *) exit 2 ;;
@@ -116,16 +116,66 @@ check test "$short" = "$(printf '%s\ncard1-DP-2\t9\t%s\t-2\t100' "$listed" "$sil
 off="$(bash "$ROOT/scripts/display-brightness.sh" list "card1-DP-2:$silent_fp")"
 check test "$off" = "$(printf '%s\ncard1-DP-2\t9\t%s\t-1\t100' "$listed" "$silent_fp")"
 rm -rf -- "$scratch/drm/card1-DP-2"
-check bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75
+rm -f -- "$SILERE_TEST_LOG.reads"
+check bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75 80
 check grep -qx -- '--bus 7 setvcp 10 60' "$SILERE_TEST_LOG"
+# the scan's maximum stands in for a read: a step asks the display nothing before it writes
+check test ! -e "$SILERE_TEST_LOG.reads"
 before="$(wc -l < "$SILERE_TEST_LOG")"
-if bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 0; then exit 1; fi
+for bad in "0 80" "50 0" "50 65536" "50"; do
+    # shellcheck disable=SC2086 # each case is the percent and maximum as separate words
+    if bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" $bad; then exit 1; fi
+done
 checks=$((checks+1))
-if SILERE_TEST_REPLACE=1 bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 50; then exit 1; fi
+# another monitor on the same connector takes none of the old one's writes
+printf changed > "$scratch/drm/card1-DP-1/edid"
+if bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 50 80; then exit 1; fi
+printf 'fixture-edid' > "$scratch/drm/card1-DP-1/edid"
 check test "$(wc -l < "$SILERE_TEST_LOG")" = "$before"
 printf disconnected > "$scratch/drm/card1-DP-1/status"
-if bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 50; then exit 1; fi
+if bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 50 80; then exit 1; fi
 checks=$((checks+1))
+
+# the NVIDIA connector has an EDID and status, while only ddcutil can match it to the bus
+mkdir -p "$scratch/drm/card2-DP-1"
+printf connected > "$scratch/drm/card2-DP-1/status"
+printf 'unlinked-edid' > "$scratch/drm/card2-DP-1/edid"
+unlinked_fp="$(sha256sum "$scratch/drm/card2-DP-1/edid" | cut -d' ' -f1)"
+cat > "$SILERE_TEST_DDC_DETECT" <<'EOF'
+Display 1
+   I2C bus:          /dev/i2c-3
+   DRM connector:    card2-DP-1
+   drm_connector_id: 774
+
+Invalid display
+   I2C bus:          /dev/i2c-6
+   DRM connector:    card1-eDP-2
+EOF
+unlinked="$(bash "$ROOT/scripts/display-brightness.sh" list)"
+check test "$unlinked" = "$(printf 'card2-DP-1\t3\t%s\t20\t80' "$unlinked_fp")"
+check bash "$ROOT/scripts/display-brightness.sh" write card2-DP-1 3 "$unlinked_fp" 75 80
+check grep -qx -- '--bus 3 setvcp 10 60' "$SILERE_TEST_LOG"
+before="$(wc -l < "$SILERE_TEST_LOG")"
+sed -i 's|/dev/i2c-3$|/dev/i2c-4|' "$SILERE_TEST_DDC_DETECT"
+if bash "$ROOT/scripts/display-brightness.sh" write card2-DP-1 3 "$unlinked_fp" 50 80; then
+    echo 'FAIL: wrote to a bus that moved to another connector after the scan' >&2
+    exit 1
+fi
+check test "$(wc -l < "$SILERE_TEST_LOG")" = "$before"
+# the moved bus now also answers for a second display
+cat >> "$SILERE_TEST_DDC_DETECT" <<'EOF'
+
+Display 2
+   I2C bus:          /dev/i2c-4
+   DRM connector:    card2-DP-2
+EOF
+ambiguous="$(bash "$ROOT/scripts/display-brightness.sh" list)"
+check test -z "$ambiguous"
+if bash "$ROOT/scripts/display-brightness.sh" write card2-DP-1 4 "$unlinked_fp" 50 80; then
+    echo 'FAIL: accepted an ambiguous connector-to-bus mapping' >&2
+    exit 1
+fi
+check test "$(wc -l < "$SILERE_TEST_LOG")" = "$before"
 
 bash "$ROOT/scripts/service.sh" install --dry-run > "$scratch/unit-preview"
 check test ! -d "$scratch/config/systemd"

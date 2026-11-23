@@ -68,8 +68,7 @@ Run and maintain
   reset                  Preview a reset to a fresh install
   reset --apply [--yes]  Reset settings, edited files and caches; --history clears history
   reset --undo [--yes]   Put back what the last reset replaced
-  version                Print the installed Silere version
-  -V, --version          Print the installed Silere version
+  version, -V, -v        Print the installed Silere version
   uninstall              Remove integrations created by the installer
   help                   Show this message
 EOF
@@ -301,6 +300,148 @@ ipc_shell() {
     cat "$IPC_ERR" >&2; rm -f "$IPC_ERR"
     printf '%s' "$out"
     return "$rc"
+}
+
+# A refused call still exits 0 with its reason as the reply: the shell's own "error:" line, or Quickshell's for a
+# target, function or argument it cannot match, and scripts need a failure. Leaves the reply in IPC_OUT
+IPC_OUT=""
+ipc_ask() { # target function [args...]
+    local rc=0 hint="; try \`list\`"
+    command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
+    # stop Quickshell's option parsing before passing positional arguments to QML
+    IPC_OUT="$(ipc_shell call -- "$@")" || rc=$?
+    # Quickshell's own refusals name neither the target nor where to look
+    case "$IPC_OUT" in
+        "Target not found.") die "no IPC target named $1; silere ipc lists them" ;;
+        "Function not found.") die "$1 has no call named $2; silere ipc $1 lists them" ;;
+        "Too few arguments provided"*|"Too many arguments provided"*|"Unable to parse argument"*)
+            die "${IPC_OUT%%$'\n'*}; silere ipc $1 shows what $2 takes" ;;
+        error:*) [ "$rc" -ne 0 ] || rc=1 ;;
+    esac
+    # the settings replies name their own list call, which a terminal reaches as silere settings
+    IPC_OUT="${IPC_OUT//"$hint"/; silere settings lists them}"
+    return "$rc"
+}
+
+# the reply on stdout, or on stderr with the call's failure as the exit status
+ipc_reply() { # status
+    if [ "$1" -ne 0 ]; then
+        [ -z "$IPC_OUT" ] || printf '%s\n' "$IPC_OUT" >&2
+        exit "$1"
+    fi
+    [ -z "$IPC_OUT" ] || printf '%s\n' "$IPC_OUT"
+}
+
+ipc_call() {
+    local rc=0
+    ipc_ask "$@" || rc=$?
+    ipc_reply "$rc"
+}
+
+# a short verb's wrong words name its own grammar, not the whole help
+bad_usage() {
+    printf '%ssilere:%s usage: silere %s\n' "$ERED" "$ER" "$*" >&2
+    exit 2
+}
+
+# the quick actions by the words people use for them; whatever else toggle is given is a setting's key
+quick_action() {
+    local w="${1,,}"
+    case "${w//[^a-z0-9]/}" in
+        dnd|donotdisturb) printf dnd ;;
+        wifi) printf wifi ;;
+        bluetooth) printf bluetooth ;;
+        airplane|airplanemode) printf airplane ;;
+        nightlight) printf nightLight ;;
+        keepawake) printf keepAwake ;;
+        presentation|presentationmode) printf presentation ;;
+        powermode) printf powerMode ;;
+        *) return 1 ;;
+    esac
+}
+
+# the level as the menu shows it. JSON escapes a quote inside a device name, so a name cannot fake these keys
+print_level() { # output|input
+    local part level rc=0
+    ipc_ask audio status || rc=$?
+    [ "$rc" -eq 0 ] || ipc_reply "$rc"
+    if [ "$1" = output ]; then part="${IPC_OUT%%\"input\":*}"; else part="${IPC_OUT#*\"input\":}"; fi
+    if [[ "$part" != *'"ready":true'* ]]; then
+        [ "$1" = output ] && die "no audio output is ready"
+        die "no microphone is ready"
+    fi
+    [[ "$part" =~ \"volume\":([0-9]+) ]] || die "the shell's audio status has no level: $IPC_OUT"
+    level="${BASH_REMATCH[1]}"
+    if [[ "$part" == *'"muted":true'* ]]; then
+        printf '%s%% (muted)\n' "$level"
+    else
+        printf '%s%%\n' "$level"
+    fi
+}
+
+# menu tabs by name; any other word is a Settings page, which the shell resolves and corrects
+menu_command() {
+    local w="${1:-}"
+    w="${w,,}"; w="${w//[^a-z0-9]/}"
+    if [ "$#" -gt 2 ] || { [ "$#" -eq 2 ] && [ "$w" != settings ]; }; then
+        bad_usage "menu [home|settings|notifications|playing|close|<settings page>]"
+    fi
+    case "$w" in
+        "") [ "$#" -eq 0 ] || bad_usage "menu [page]"
+            ipc_call menu toggle ;;
+        close) ipc_call menu close ;;
+        home) ipc_call menu tab 0 ;;
+        settings)
+            if [ "$#" -eq 2 ]; then menu_page "$2"; else ipc_call menu tab 1; fi ;;
+        notifications) ipc_call menu tab 2 ;;
+        playing|nowplaying) ipc_call menu tab 3 ;;
+        *) menu_page "$1" ;;
+    esac
+}
+
+menu_page() {
+    local rc=0
+    ipc_ask menu settings "$1" || rc=$?
+    # the shell opened Settings anyway; its list of pages leaves out the menu's own tabs
+    case "$IPC_OUT" in "unknown settings page"*) IPC_OUT="$IPC_OUT; menu tabs: home, notifications, playing" ;; esac
+    ipc_reply "$rc"
+}
+
+audio_command() { # volume|mic [word]
+    local verb="$1" side=output fns=(volumeUp volumeDown toggleMute cycleOutput setVolume) w
+    shift
+    [ "$verb" = volume ] || { side=input; fns=(micUp micDown toggleMicMute cycleInput setMicVolume); }
+    [ "$#" -le 1 ] || bad_usage "$verb [up|down|mute|next|0-100]"
+    w="${1:-}"
+    case "${w,,}" in
+        "") [ "$#" -eq 0 ] || bad_usage "$verb [up|down|mute|next|0-100]"
+            print_level "$side" ;;
+        up) ipc_call audio "${fns[0]}" ;;
+        down) ipc_call audio "${fns[1]}" ;;
+        mute) ipc_call audio "${fns[2]}" ;;
+        next) ipc_call audio "${fns[3]}" ;;
+        *) [[ "$w" =~ ^([0-9]{1,3})%?$ ]] || bad_usage "$verb [up|down|mute|next|0-100]"
+            ipc_call audio "${fns[4]}" "$((10#${BASH_REMATCH[1]}))" ;;
+    esac
+}
+
+toggle_command() {
+    local fn rc=0
+    if [ "$#" -eq 0 ]; then
+        printf '%s\n' dnd wifi bluetooth airplane night-light keep-awake presentation power-mode \
+            'and any true|false setting; silere settings lists them'
+        return 0
+    fi
+    [ "$#" -eq 1 ] || bad_usage "toggle <name>"
+    if fn="$(quick_action "$1")"; then
+        ipc_call quickActions "$fn"
+        return
+    fi
+    ipc_ask settings toggle "$1" || rc=$?
+    case "$IPC_OUT" in
+        "error: unknown setting"*) die "nothing to toggle named $1; silere toggle lists the names" ;;
+    esac
+    ipc_reply "$rc"
 }
 
 await_exit() {
@@ -635,13 +776,14 @@ fi
 
 command_name="${1:-help}"
 shift || true
+adopt_live_session
 
 case "$command_name" in
     help|-h|--help)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         usage
         ;;
-    version|-V|--version)
+    version|-V|-v|--version)
         [ "$#" -eq 0 ] || { usage >&2; exit 2; }
         human_version
         ;;
@@ -867,11 +1009,19 @@ case "$command_name" in
             || die "this installation is managed by $(package_manager); remove its package there"
         exec bash "$ROOT/scripts/uninstall.sh"
         ;;
+    install|--install)
+        printf '%ssilere:%s no install command. To start Silere at login: silere service install\n' "$ERED" "$ER" >&2
+        printf 'To install or reinstall it: bash scripts/install.sh from a checkout\n' >&2
+        exit 2
+        ;;
     *)
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
-        # within two edits of a real command is a typo, not a guess
-        near="$(printf '%s\n' try reset run stop restart use status log doctor ipc link update repair service version uninstall help \
+        # within two edits of a real command is a typo, not a guess; uninstall and reset only one edit away, or
+        # "-install" was answered with uninstall
+        near="$(printf '%s\n' menu calendar quick tray toggle volume mic dismiss get set settings ipc \
+            try reset run stop restart use status log doctor link update repair service version uninstall help \
             | awk -v w="$command_name" '
+                BEGIN { sub(/^-+/, "", w) }
                 function dist(a, b,   i, j, m, n, d, c) {
                     m = length(a); n = length(b)
                     for (i = 0; i <= m; i++) d[i, 0] = i
@@ -886,7 +1036,8 @@ case "$command_name" in
                     }
                     return d[m, n]
                 }
-                { x = dist(w, $0); if (best == "" || x < bestd) { best = $0; bestd = x } }
+                { x = dist(w, $0); if (($0 == "uninstall" || $0 == "reset") && x > 1) next
+                  if (best == "" || x < bestd) { best = $0; bestd = x } }
                 END { if (best != "" && bestd <= 2) print best }')"
         if [ -n "$near" ]; then
             printf 'Did you mean: silere %s\n' "$near" >&2

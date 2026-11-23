@@ -3735,6 +3735,16 @@ STUB
     case "$out" in *"Did you mean: silere restart"*) ;; *) fail "no suggestion for restrat: $out" ;; esac
     out="$(cli frobnicate 2>&1)" && fail "an unknown command succeeded"
     case "$out" in *"Did you mean"*) fail "a guess offered for frobnicate" ;; esac
+    # asking for install must never be steered to the command that removes Silere; a slip of that one still is
+    out="$(cli -install 2>&1)" && fail "-install succeeded"
+    case "$out" in *"Did you mean: silere uninstall"*) fail "-install was offered uninstall: $out" ;; esac
+    out="$(cli --install 2>&1)" && fail "--install succeeded"
+    case "$out" in *"silere service install"*) ;; *) fail "--install did not point at the service: $out" ;; esac
+    out="$(cli uninstal 2>&1)" && fail "a mistyped uninstall succeeded"
+    case "$out" in *"Did you mean: silere uninstall"*) ;; *) fail "no suggestion for uninstal: $out" ;; esac
+    out="$(cli --restrat 2>&1)" && fail "a dashed mistyped command succeeded"
+    case "$out" in *"Did you mean: silere restart"*) ;; *) fail "no suggestion for --restrat: $out" ;; esac
+    out="$(cli -v 2>&1)" || fail "-v did not print the version: $out"
     true
 )
 
