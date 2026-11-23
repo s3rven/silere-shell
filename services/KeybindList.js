@@ -56,7 +56,6 @@ var silereCalls = {
     "notifications dismiss": "Dismiss the newest notification",
     "notifications dismissAll": "Dismiss all notifications",
     "notifications invoke": "Open the newest notification",
-    "custom refresh": "Refresh the Command widget",
     "screenshot flash": "Flash the screenshot underline"
 }
 var silereGlobals = { "silere:menu": "menu toggle", "silere:tray": "tray toggle" }

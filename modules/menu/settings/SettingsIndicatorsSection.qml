@@ -89,47 +89,4 @@ Column {
             }
         }
     }
-
-    SectionLabel { label: "COMMAND" }
-    SettingsCard {
-        ToggleRow {
-            glyph: "󰆍"; label: "Command"
-            key: "barShowCustom"
-            // a stopped script says why here; with no command there is nothing to report
-            description: ShellSettings.barShowCustom && ShellSettings.customCommand.trim().length > 0
-                && CustomCommand.lastError.length > 0 ? "Hidden: it " + CustomCommand.lastError
-                : "A script's output on the bar"
-        }
-        CollapsibleSection {
-            expanded: ShellSettings.barShowCustom
-            CommandEditor {
-                settingKey: "customCommand"
-                label: "Command to run"
-                example: "~/.local/bin/status --json"
-                inputDescription: "Program and arguments, run without a shell"
-                savedHint: "Saved. Plain lines or waybar's JSON both work."
-                emptyHint: "A program and its arguments; empty hides the widget."
-            }
-            SelectRow {
-                key: "customInterval"
-                glyph: "󰔛"; label: "Every"
-                fallbackLabel: ShellSettings.customInterval + " s"
-                model: [
-                    { value: 5, label: "5 seconds" },
-                    { value: 30, label: "30 seconds" },
-                    { value: 60, label: "1 minute" },
-                    { value: 300, label: "5 minutes" },
-                    { value: 900, label: "15 minutes" },
-                    { value: 3600, label: "1 hour" }
-                ]
-            }
-            CommandEditor {
-                settingKey: "customClickCommand"
-                label: "On click"
-                example: "pavucontrol"
-                savedHint: "Saved. Runs when you click the widget."
-                emptyHint: "Empty: a click runs the command again."
-            }
-        }
-    }
 }

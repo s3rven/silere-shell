@@ -35,7 +35,7 @@ config, launcher, wallpaper tool and lock screen stay your own.
 
 | Feature | What you get |
 |---|---|
-| Bar | Workspaces with app icons, window title, media, system readings, tray, and a clock with a calendar and optional weather. A Command widget shows a script's output, Waybar custom modules included. Choose the widgets and their order. |
+| Bar | Workspaces with app icons, window title, media, system readings, tray, and a clock with a calendar and optional weather. Choose the widgets and their order. |
 | Quick settings | Output, microphone and per-app volume; brightness, external monitors included over DDC/CI; Wi-Fi, Bluetooth and VPN; power mode, Night Light and Keep Awake; battery health and charge limit. |
 | Notifications | Actions, inline replies, conversation grouping, searchable history, app muting and Do Not Disturb. |
 | Media | Album art, seeking, player switching and an optional Cava visualizer. |
@@ -93,7 +93,7 @@ Use **Tab** to move between controls, **Enter** to activate them, and **Esc** to
 The [usage guide](docs/usage.md#keyboard) lists the keyboard shortcuts. Bind commands like
 `silere menu`, `silere toggle dnd` or `silere volume up` in your compositor; on Hyprland,
 **Settings › System › Keybinds** lists your shortcuts and copies Silere's. See the
-[scripting guide](docs/scripting.md) for keybinds, IPC, hooks and the [Command widget](docs/scripting.md#command-widget).
+[scripting guide](docs/scripting.md) for keybinds, IPC and hooks.
 
 Settings apply as you change them. Saved overrides live in `~/.config/silere-shell/settings.json`
 by default. For multiple monitors, use **Settings › System › Devices** to choose which screens

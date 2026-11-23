@@ -125,8 +125,6 @@ Item {
         case "microphone": return "While in use"
         case "media": return "After playback starts"
         case "system": return SysInfo.monitorHasReadings ? "" : "No readings to show"
-        // on with no command, it would show nothing and say nothing
-        case "custom": return ShellSettings.customCommand.trim().length > 0 ? "" : "Needs a command"
         case "shellUpdate":
         case "updates": return "When pending"
         case "tray": {

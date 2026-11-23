@@ -17,7 +17,6 @@ settings file carries its own `__version` and migrates separately.
 - Home shows an Ethernet row when a cable carries the connection, even on a desktop without Wi-Fi or Bluetooth, and the bar's network widget opens Home at it.
 - In the calendar, Shift + Page Up and Shift + Page Down move by a year, and Home returns to today.
 - With weather on, the calendar shows the next twelve hours under today's reading, three hours apart.
-- A Command widget shows a script's output on the bar and reads waybar's custom-module output, plain lines or JSON, unchanged; a script that keeps running updates it with each line it prints. Turn it on under Settings › Widgets › Indicators.
 - Keybinds can dismiss the newest notification, dismiss them all or act on the newest, as with dunstctl and makoctl: `silere ipc notifications dismiss`, `dismissAll` and `invoke`.
 - Settings › System › Keybinds lists Hyprland's shortcuts with what each does, in your config's order, and filters them as you type. Binds without a description are named from what they run, and Silere's own actions can be copied as a line for your config, on keys still free.
 - On Hyprland, the installer offers Silere's window motion (default no): windows, workspaces and focus move at the shell's pace, with two Hyprland 0.57 animation faults worked around. Anything your config sets after its line still wins.
@@ -40,7 +39,6 @@ settings file carries its own `__version` and migrates separately.
 - Switching from another bar, the installer and `silere doctor` name each line of your Hyprland or niri config that still starts Waybar, mako, dunst or a similar bar or daemon at login, with its file and line number.
 - `silere doctor` names a notification daemon such as mako or dunst that D-Bus can start on its own, which takes notifications from Silere at a later login, and how to keep it off.
 - With notifications still on screen, the empty Notifications tab says they move there when they close, instead of All caught up.
-- The Command widget in Show & order says when it is on without a command to run.
 - At login the bar comes up about a second sooner: the launcher waits for the compositor's display socket instead of a fixed second, and asks Quickshell about its options once per version instead of at every start.
 - On narrow displays, Settings gives its controls more room and opens categories from the Sections button.
 - On narrow displays, History opens filters from the Apps button beside search and keeps the message list the same width when another app sends a notification.
@@ -82,9 +80,7 @@ settings file carries its own `__version` and migrates separately.
 - An external monitor still waking up, or just plugged in, is read again a few seconds later instead of losing its brightness control behind a warning.
 - `silere -v` prints the version. A mistyped command is offered `uninstall` or `reset` only when it is one letter off, so `-install` is no longer answered with `uninstall`, and `silere install` names the service and installer commands.
 - Menu pages wait for their controls to finish connecting before accepting input, so the Apps button in History can open its drawer on the first press.
-- The Command widget starts a fresh reading when re-enabled while its previous command is still shutting down.
 - IPC passes values beginning with a dash through to the shell, so `silere set` can save them.
-- The Command widget follows up on a refresh requested while a one-shot script is still running.
 - `silere doctor` finds compositor config paths locally even when the shell entry file is missing.
 - A tray icon an app names from the icon theme, where the theme has none by that name, shows the app's initial instead of a magenta and black pattern.
 - On Hyprland, a menu, calendar or Quick Actions opened from a keybind while the pointer rested on another open one no longer closes as it opens.

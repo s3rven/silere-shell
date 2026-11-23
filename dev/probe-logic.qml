@@ -500,7 +500,6 @@ ShellRoot {
     Component { id: rollingTextFactory; RollingText { visible: true; text: "one" } }
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
-    Component { id: customWidgetFactory; CustomWidget { screen: null } }
     Component { id: mediaWidgetFactory; MediaWidget { screen: null; height: 36 } }
     Component { id: volumePillFactory; Volume {} }
     Component { id: microphonePillFactory; MicWidget {} }
@@ -4784,7 +4783,6 @@ ShellRoot {
         root._checksPowerModeAndPresentation()
         root._checksKeyboardNavigationAndAlerts()
         root._checksNightLightAndSensors()
-        root._checksCustomCommand()
         root._checksKeybindList()
         root._checksBatteryAndHooks()
         root._checksDispatchAndNotificationOwner()
@@ -5461,7 +5459,7 @@ ShellRoot {
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
-                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,custom,clock",
+                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,clock",
             "the widget catalog derives the shipped default layout")
     }
 
@@ -13164,85 +13162,6 @@ ShellRoot {
                 && readsAs(odd + " toggle dnd") === "quickActions dnd" && readsAs("'/x y/silere' ipc menu toggle") === "menu toggle"
                 && offer(stock, true, false, '"/a\\b"/silere').find(s => s.call === "calendar toggle").line.indexOf('exec_cmd("\\"/a\\\\b\\"/silere calendar")') > 0,
             "a line names the launcher by its quoted path when it is not on PATH, and still reads back as Silere's")
-    }
-
-    function _checksCustomCommand(): void {
-        const plain = CustomCommand.parseOutput("  CPU 3%\nload 0.5\nwarning\n")
-        root._check(plain !== null && plain.text === "CPU 3%" && plain.tooltip === "load 0.5" && plain.level === 1,
-            "a command's plain output reads as waybar's: text, then tooltip, then class")
-        const json = CustomCommand.parseOutput('{"text":"<span color=\'#f00\'>12°</span>","tooltip":"Rain later\\nWind 3 m/s","class":["x","critical"]}')
-        root._check(json !== null && json.text === "12°" && json.tooltip === "Rain later · Wind 3 m/s" && json.level === 2,
-            "waybar's JSON output works unchanged, its markup dropped and its tooltip on one line")
-        root._check(CustomCommand.parseOutput('{"text":"a"}\n{"text":"b","class":"warning"}')?.text === "b"
-                && CustomCommand.parseOutput('{"text": 42}')?.text === "42"
-                && CustomCommand.parseOutput("a\u0007b")?.text === "a b"
-                && CustomCommand.parseOutput("x".repeat(200))?.text.length <= 81,
-            "a stream of JSON lines shows its last, numbers read as text, and controls and length are bounded")
-        root._check(["", "   \n  ", "{not json", '{"text":""}', '{"tooltip":"only"}'].every(o => CustomCommand.parseOutput(o) === null),
-            "empty or unreadable output hides the widget instead of showing junk")
-        root._check(JSON.stringify(CustomCommand.expandHome(["~/bin/status", "-j"], "/home/u")) === '["/home/u/bin/status","-j"]'
-                && CustomCommand.expandHome(["~other/x"], "/home/u")[0] === "~other/x"
-                && CustomCommand.expandHome(["status"], "/home/u")[0] === "status"
-                && CustomCommand.expandHome(["~/x"], "")[0] === "~/x",
-            "a command written with ~/ finds the home directory without a shell")
-        root._check(JSON.stringify(CustomCommand.expandHome(["$HOME/.config/waybar/x.sh", "${HOME}/a", "~", "$HOMEDIR/b",
-                    "a$HOME/c", "--path=~/d"], "/home/u"))
-                === '["/home/u/.config/waybar/x.sh","/home/u/a","/home/u","$HOMEDIR/b","a$HOME/c","--path=~/d"]'
-                && JSON.stringify(CustomCommand.expandHome(["python3", "$HOME/x.py"], "/home/u")) === '["python3","/home/u/x.py"]',
-            "a waybar exec line's $HOME, ${HOME} and ~ lead to the home directory in any word, as sh expands them")
-        const showWas = ShellSettings.barShowCustom, commandWas = ShellSettings.customCommand
-        const widget = customWidgetFactory.createObject(root)
-        ShellSettings.barShowCustom = false
-        ShellSettings.customCommand = "true"
-        const hiddenOff = widget !== null && !widget.show
-        ShellSettings.barShowCustom = true
-        ShellSettings.customCommand = ""
-        const hiddenEmpty = !widget.show
-        ShellSettings.customCommand = "true"
-        // a test copy never runs the user's command, so the reading is handed over here
-        root._check(hiddenOff && hiddenEmpty && !CustomCommand.wanted && !widget.show,
-            "the command widget stays hidden until it is on with a command, and a test copy runs nothing")
-        CustomCommand.text = "12°"
-        CustomCommand.tooltip = "Rain later"
-        CustomCommand.level = 2
-        root._check(widget.show && widget.text === "12°" && Qt.colorEqual(widget.textColor, Theme.barError)
-                && widget.accessibleName === "12°, Rain later",
-            "a reading shows on the bar in its class's colour and speaks its tooltip")
-        CustomCommand._clear("")
-        root._check(!widget.show, "a cleared reading hides the widget")
-        // a continuous script's line is a reading of its own, and an empty one hides the widget as waybar's does
-        CustomCommand._show(CustomCommand.parseOutput('{"text": "n7", "class": "warning"}'))
-        const followShown = widget.show && widget.text === "n7" && CustomCommand.level === 1
-        CustomCommand._show(CustomCommand.parseOutput(""))
-        const followHidden = !widget.show && CustomCommand.lastError === ""
-        // switched off or replaced, a line the script printed before the stop reached it is not a reading
-        CustomCommand._read("late")
-        root._check(followShown && followHidden && CustomCommand.text === "" && CustomCommand._lines.length === 0,
-            "each line of a continuous script shows as it comes, an empty one hides, and a line after a stop is dropped")
-        const keysWas = NotificationKeys.surface
-        NotificationKeys.surface = null
-        const noWindow = NotificationKeys.run("dismiss")
-        const keyCalls = []
-        NotificationKeys.surface = {
-            keyDismissNewest: () => { keyCalls.push("dismiss"); return true },
-            keyInvokeNewest: () => { keyCalls.push("invoke"); return true },
-            keyDismissAll: () => { keyCalls.push("all"); return false }
-        }
-        const keyReplies = [NotificationKeys.run("dismiss"), NotificationKeys.run("invoke"), NotificationKeys.run("dismissAll")]
-        NotificationKeys.surface = keysWas
-        const keyStatus = JSON.parse(NotificationKeys.statusText())
-        root._check(noWindow === "no notification on screen" && keyReplies.join(",") === "ok,ok,no notification on screen"
-                && keyCalls.join(",") === "dismiss,invoke,all" && typeof keyStatus.shown === "number"
-                && typeof keyStatus.dnd === "boolean" && NotificationKeys.armed,
-            "notification keybinds reach the popup window's verbs and say so when no popup is on screen")
-        const status = JSON.parse(CustomCommand.statusText())
-        root._check(status.on === false && status.text === "" && status.level === "normal" && status.error === ""
-                && status.continuous === false
-                && CustomCommand.armed === true && CustomCommand.refreshReply() === "a test copy runs no command",
-            "the command widget's IPC status reports its reading, and refresh says why nothing ran")
-        widget.destroy()
-        ShellSettings.customCommand = commandWas
-        ShellSettings.barShowCustom = showWas
     }
 
     function _checksNightLightAndSensors(): void {

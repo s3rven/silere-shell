@@ -3822,7 +3822,7 @@ shift 5
 # list takes its filter even when it is empty, which a bare echo would hide
 if [ "$1 $2" = "settings list" ] && [ "$#" -eq 3 ] && [ -z "$3" ]; then echo 'settings list ""'; exit 0; fi
 case "$1 $2 ${3-}" in
-    "settings set customClickCommand") [ "$#" -eq 4 ] || exit 2; printf '<%s>\n' "$4" ;;
+    "settings set lockCommandCustom") [ "$#" -eq 4 ] || exit 2; printf '<%s>\n' "$4" ;;
     "audio status "*) printf '%s\n' '{"output":{"ready":true,"name":"Desk \"volume\":99,\"muted\":true","volume":40,"muted":false},"input":{"ready":false,"name":"","volume":0,"muted":true}}' ;;
     "settings toggle frob") printf '%s\n' "error: unknown setting 'frob'; try \`list\`" ;;
     "settings get frob") printf '%s\n' "error: unknown setting 'frob'; try \`list\`" ;;
@@ -3865,10 +3865,10 @@ STUB
     verb "notifications dismissAll" dismiss all
     verb "settings get osdTimeout" get osdTimeout
     verb "settings set osdTimeout 3000" set osdTimeout 3000
-    verb "<--help>" set customClickCommand --help
-    verb "<-option with spaces>" set customClickCommand '-option with spaces'
-    verb "<-->" ipc settings set customClickCommand --
-    verb "<>" set customClickCommand ''
+    verb "<--help>" set lockCommandCustom --help
+    verb "<-option with spaces>" set lockCommandCustom '-option with spaces'
+    verb "<-->" ipc settings set lockCommandCustom --
+    verb "<>" set lockCommandCustom ''
     verb 'settings list ""' settings
     verb "settings list clock" settings clock
     verb "settings modified" settings --changed

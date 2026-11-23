@@ -61,11 +61,6 @@ Singleton {
     property bool   barShowBluetooth:   false
     property bool   barShowClock:        true
     property bool   barShowKeyboard:     false
-    // a script's output on the bar, as waybar's custom modules: off and empty until set
-    property bool   barShowCustom:       false
-    property string customCommand:       ""
-    property string customClickCommand:  ""
-    property int    customInterval:      30
     property bool   barShowSystem:       false
     property bool   systemShowCpu:       true
     property bool   systemShowMemory:    true
@@ -169,7 +164,6 @@ Singleton {
         microphone:  { glyph: "󰍬", label: "Microphone",      group: "status",      zone: "right",  setting: "barShowMic" },
         brightness:  { glyph: "󰃟", label: "Brightness",      group: "status",      zone: "right",  setting: "barShowBrightness" },
         battery:     { glyph: "󰂄", label: "Battery",         group: "status",      zone: "right",  setting: "barShowBattery" },
-        custom:      { glyph: "󰆍", label: "Command",         group: "custom",      zone: "right",  setting: "barShowCustom" },
         media:       { glyph: "󰝚", label: "Media",           group: "media",       zone: "left",   setting: "barShowMedia" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",       zone: "right",  setting: "barShowClock" }
     })
@@ -409,10 +403,6 @@ Singleton {
         { k: "systemShowMemory",    t: "bool", sec: "indicators", l: "Memory in use" },
         { k: "systemShowTemp",      t: "bool", sec: "indicators", l: "CPU temperature" },
         { k: "systemRings",         t: "bool", sec: "indicators", l: "Style" },
-        { k: "barShowCustom",       t: "bool", sec: "widgets,indicators", l: "Command" },
-        { k: "customCommand",       t: "re",   re: /^[^\u0000-\u001F\u007F]{0,256}$/, sec: "indicators", l: "Command to run" },
-        { k: "customClickCommand",  t: "re",   re: /^[^\u0000-\u001F\u007F]{0,256}$/, sec: "indicators", l: "On click" },
-        { k: "customInterval",      t: "int",  min: 5, max: 3600, sec: "indicators", l: "Every" },
         { k: "barShowShellUpdate",  t: "bool", sec: "widgets" },
         { k: "barShowVolume",       t: "bool", sec: "widgets" },
         { k: "barShowMic",          t: "bool", sec: "widgets" },
@@ -735,8 +725,7 @@ Singleton {
         indicators: [
             { master: "showWindowTitle", hides: ["showWindowTitleApp", "showWindowTitleIcon"] },
             { master: "networkTrafficStats", hides: ["networkSpeedInline"] },
-            { master: "barShowSystem", hides: ["systemShowCpu", "systemShowMemory", "systemShowTemp", "systemRings"] },
-            { master: "barShowCustom", hides: ["customCommand", "customClickCommand", "customInterval"] }
+            { master: "barShowSystem", hides: ["systemShowCpu", "systemShowMemory", "systemShowTemp", "systemRings"] }
         ],
         media: [
             { master: "mediaProgress", hides: ["mediaVisualizerPosition",

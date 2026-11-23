@@ -198,7 +198,6 @@ AnchoredPopupState {
         uiScale: "scaling",
         trayWidget: "systray",
         systemRings: "rings circles gauges",
-        barShowCustom: "custom script waybar module output",
         weatherUnit: "celsius fahrenheit"
     })
 
