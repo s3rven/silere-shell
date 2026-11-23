@@ -43,6 +43,15 @@ Singleton {
         if (SystemTools.hasXbps)         return "xbps"
         return ""
     }
+    readonly property bool canConfigureAur: SystemTools.ready && root.aurHelperAvailable
+        && (SystemTools.packageFamily === "pacman" || (SystemTools.packageFamily.length === 0
+            && (root._repoManager === "pacman" || root._repoManager.length === 0)))
+    // the helper is the only checker here: including AUR packages is what makes tracking possible at all
+    readonly property bool aurOnly: root.canConfigureAur && root._repoManager.length === 0
+    readonly property string manager: root._managerFor(ShellSettings.updatesIncludeAur)
+    function _managerFor(includeAur: bool): string {
+        return root._repoManager || (root.canConfigureAur && includeAur ? "aur" : "")
+    }
     readonly property bool   supported:  manager.length > 0
     readonly property bool   available:  enabled && supported && count > 0
     readonly property bool   checkBroken: enabled && supported && lastFailed && _failStreak >= 2

@@ -266,10 +266,17 @@ _apply() {
 
 _undo() {
     [ -e "$SAVED_SETTINGS" ] || [ -d "$SAVED_DIR" ] || _die "no reset to undo"
-    printf 'This puts back what the last reset replaced'
-    [ -e "$SAVED_SETTINGS" ] && printf ': settings'
-    [ -f "$SAVED_DIR/manifest" ] && printf ', edited files'
-    printf '.\n'
+    # what comes back, read the way the undo below reads the backup
+    local preview="" recorded=""
+    [ ! -f "$SAVED_DIR/manifest" ] || recorded="$(cat -- "$SAVED_DIR/manifest" 2>/dev/null || true)"
+    case "$recorded" in
+        stash=*)
+            [ ! -e "$SAVED_DIR/settings.json" ] || preview="settings"
+            [ "$recorded" = stash= ] || preview="${preview:+$preview, }edited files"
+            ;;
+        *) [ ! -e "$SAVED_SETTINGS" ] || preview="settings" ;;
+    esac
+    [ -z "$preview" ] || printf 'This puts back what the last reset replaced: %s.\n' "$preview"
     _confirm "Undo the reset?" || { printf 'Cancelled; nothing was changed.\n'; return 0; }
     _lock_reset
     [ -e "$SAVED_SETTINGS" ] || [ -d "$SAVED_DIR" ] || _die "no reset to undo"

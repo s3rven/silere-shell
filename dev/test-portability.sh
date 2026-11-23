@@ -2955,12 +2955,26 @@ test_reset_workflow() (
     reset_stash="$(<"$manifest")"
     printf 'stash=%040d\n' 0 > "$manifest"
     : > "$state.calls"
-    run_reset --undo --yes >/dev/null || fail "reset --undo failed"
+    if run_reset --undo --yes >/dev/null 2>&1; then fail "undo accepted a missing stash"; fi
+    assert_eq '' "$(cat "$state.calls")" "a missing stash leaves the shell running"
+    [ -f "$saved/reset-saved/settings.json" ] || fail "undo discarded the settings backup when its stash was missing"
+    printf '%s\n' "$reset_stash" > "$manifest"
+
+    : > "$state.calls"
+    out="$(run_reset --undo --yes)" || fail "reset --undo failed"
+    grep -qxF 'This puts back what the last reset replaced: settings, edited files.' <<< "$out" \
+        || fail "undo names the settings and edits it puts back"
     assert_eq $'{\n  "__version": 2,\n  "barHeight": 40,\n  "dnd": true\n}' "$(cat "$config/settings.json")" "undo restores the settings"
     assert_eq "edited" "$(cat "$repo/shell.qml")" "undo restores the edited file"
     [ -e "$repo/untracked.qml" ] || fail "undo left out a new file"
     [ -e "$config/calendar-marks.json" ] || fail "undo left out a file set aside"
     assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "undo restarts the shell too"
+    assert_eq "$newer_stash" "$(git -C "$repo" rev-parse refs/stash)" "reset undo keeps the later repair stash"
+    assert_eq '{"barHeight":48}' "$(cat "$saved/settings.pre-reset.json")" "reset undo keeps the GUI backup"
+    out="$(run_reset --undo --yes)" || fail "reset could not undo a settings-only GUI restore"
+    grep -qxF 'This puts back what the last reset replaced: settings.' <<< "$out" \
+        || fail "a settings-only undo names only the settings"
+    assert_eq '{"barHeight":48}' "$(cat "$config/settings.json")" "GUI backup is restored on its own"
     if run_reset --undo --yes >/dev/null 2>&1; then fail "a second undo found something to restore"; fi
 
     git -C "$repo" checkout -q -- shell.qml; rm -f "$repo/untracked.qml"

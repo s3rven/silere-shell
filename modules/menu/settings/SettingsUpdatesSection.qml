@@ -322,10 +322,9 @@ Column {
             available: !SystemTools.ready || Updates.supported
             dependsNote: Updates.canConfigureAur ? "Enable AUR packages below" : "No supported checker"
         }
+        // under tracking like any dependent row, except where it is the switch that makes tracking possible
         CollapsibleSection {
-            expanded: ShellSettings.updatesWidget
-                && SystemTools.packageFamily === "pacman"
-                && Updates.aurHelperAvailable
+            expanded: Updates.canConfigureAur && (ShellSettings.updatesWidget || Updates.aurOnly)
             ToggleRow {
                 glyph: "󰮯"; label: "Include AUR packages"
                 key: "updatesIncludeAur"

@@ -724,6 +724,7 @@ Singleton {
             { master: "mediaProgress", hides: ["mediaVisualizerPosition",
                 "mediaVisualizerPreset", "mediaVisualizerStyle"] }
         ],
+        // shown regardless where the helper is the only checker, so search finds it there directly
         updates: [
             { master: "updatesWidget", hides: ["updatesIncludeAur"] }
         ]
@@ -1034,6 +1035,8 @@ Singleton {
                     "— preserving unknown values")
             // assign only what differs, so a hand edit can't bounce every key through its default
             _applying = true
+            // a hand edit this release cannot use is dropped at the next save: say what, and what would work
+            const ignored = []
             try {
                 for (let i = 0; i < _schema.length; i++) {
                     const s = _schema[i]
@@ -1041,6 +1044,8 @@ Singleton {
                     if (parsed[s.k] !== undefined) {
                         const c = _coerced(s, parsed[s.k])
                         if (c.ok) value = c.value
+                        else ignored.push(s.k + " = " + String(JSON.stringify(parsed[s.k])).slice(0, 40)
+                            + " (" + root.constraintOf(s.k) + ")")
                     } else if (!_loaded) {
                         continue
                     }
@@ -1049,6 +1054,12 @@ Singleton {
             } finally {
                 _applying = false
             }
+            // a newer release's file keeps keys this one does not know; any other unknown key is a typo or a removed setting
+            if (!fromFuture)
+                for (const key in parsed)
+                    if (key !== "__version" && !root.schemaFor(key)) ignored.push(key + " (not a setting)")
+            if (ignored.length > 0)
+                console.warn("silere-shell: settings.json values left at their defaults:", ignored.join("; "))
             root._appliedText = raw
             // what is on disk now, so a later revert to the same values still writes
             _store.lastSavedText = raw
