@@ -54,6 +54,10 @@ Singleton {
             && time <= now - days * 86400000
     }
 
+    function _entryExpired(time: real, now: real): bool {
+        return root.historyExpiredAt(time, ShellSettings.notifHistoryDays, now, ShellSettings.ready)
+    }
+
     function _expireHistory(now: real): int {
         const days = ShellSettings.notifHistoryDays
         if (!ShellSettings.ready || days <= 0 || !isFinite(now)) return 0
@@ -222,6 +226,9 @@ Singleton {
 
     function _trimHistory(): void {
         if (_history.count <= root._historyCapacity) return
+        // expired rows must give way before per-app balancing considers any retained rows
+        root._expireHistory(Date.now())
+        if (_history.count <= root._historyCapacity) return
         const apps = []
         for (let i = 0; i < _history.count; i++) apps.push(_history.get(i).appName)
         const drop = root.historyEvictions(apps, root._historyCapacity)
@@ -286,10 +293,9 @@ Singleton {
     // by arrival, not by close: the popup stack shows the newest first, so a burst closes newest first
     function _prependHistory(entry): void {
         const e = root._normalizeEntry(entry)
-        if (!e) return
-        if (root.historyExpiredAt(e.time, ShellSettings.notifHistoryDays, Date.now(), ShellSettings.ready)) return
-        // a row dated after now came from a clock that went back; walking past it buries the new arrival
         const now = Date.now()
+        if (!e || root._entryExpired(e.time, now)) return
+        // a row dated after now came from a clock that went back; walking past it buries the new arrival
         let at = 0
         while (at < _history.count && _history.get(at).time > e.time && _history.get(at).time <= now) at++
         // repeats take one row; a different launcher or urgency is a distinct notification
@@ -495,9 +501,10 @@ Singleton {
         const savedTimes = root._parsePersistentJson(_persist.timesJson, Object.create(null))
         _history.clear()
         if (Array.isArray(savedHistory)) {
-            for (let i = 0; i < savedHistory.length && i < root._historyCapacity; i++) {
+            const now = Date.now()
+            for (let i = 0; i < savedHistory.length && _history.count < root._historyCapacity; i++) {
                 const e = root._normalizeEntry(savedHistory[i], true)
-                if (e) {
+                if (e && !root._entryExpired(e.time, now)) {
                     // ids restart with the server, so a saved one names nothing this session
                     e.sessionCurrent = false
                     _history.append(e)
@@ -697,11 +704,12 @@ Singleton {
                 present[String(h.id) + "\u0001" + String(h.time)] = true
             }
             if (ShellSettings.notifHistoryPersistent && Array.isArray(j.history)) {
-                // the cap is the most this session can hold, so a pathological file cannot freeze startup normalizing rows the trim would drop anyway
+                // merge at most another history's worth before balancing the combined rows
                 const limit = _history.count + root._historyCapacity
+                const now = Date.now()
                 for (let i = 0; i < j.history.length && _history.count < limit; i++) {
                     const e = root._normalizeEntry(j.history[i], true)
-                    if (!e) continue
+                    if (!e || root._entryExpired(e.time, now)) continue
                     const key = String(e.id) + "\u0001" + String(e.time)
                     if (present[key]) continue
                     present[key] = true

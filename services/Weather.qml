@@ -36,7 +36,7 @@ Singleton {
     property real _triedAt: 0
     property string _fetchedFor: ""
     property bool _readingFahrenheit: false
-    // the time zone's principal city, looked up again only when the zone offset moves
+    // the time zone's principal city, resolved again when a forecast needs refreshing
     property var _place: null
     property var _xhr: null
     property bool _discardLookup: false
@@ -142,13 +142,11 @@ Singleton {
         if (!force && !root.failed && root.cacheFresh(root._fetchedAt, root._fetchedFor, Date.now())) return
         root.loading = true
         root._triedAt = Date.now()
-        if (root._place) root._fetchForecast()
-        else root._startLookup()
+        root._startLookup()
     }
 
     function _startLookup(): void {
-        if (!root.enabled || !root.loading || root._place
-                || root._discardLookup || _zoneProc.running) return
+        if (!root.enabled || !root.loading || root._discardLookup || _zoneProc.running) return
         _zoneProc.running = true
     }
 
@@ -211,6 +209,15 @@ Singleton {
         }
     }
 
+    function _usePlace(found, offset: int): void {
+        // two cities can share an offset, including after a move that never changed the clock
+        const previous = root._place
+        if (previous && (previous.zone !== found.zone || previous.lat !== found.lat
+                || previous.lon !== found.lon)) root._fetchedAt = 0
+        root._place = { lat: found.lat, lon: found.lon, country: found.country,
+            name: TimeZonePlace.placeName(found.zone), zone: found.zone, offset: offset }
+    }
+
     readonly property BoundedProcess _zoneLookup: BoundedProcess {
         id: _zoneProc
         running: false
@@ -228,8 +235,7 @@ Singleton {
             const found = _zoneProc.completedSuccessfully(code)
                 ? TimeZonePlace.parseLine(_zoneOut.text) : null
             if (!found) { root._fail("Can't tell where you are from the time zone"); return }
-            root._place = { lat: found.lat, lon: found.lon, country: found.country,
-                name: TimeZonePlace.placeName(found.zone), offset: new Date().getTimezoneOffset() }
+            root._usePlace(found, new Date().getTimezoneOffset())
             root._fetchForecast()
         }
     }
@@ -247,7 +253,8 @@ Singleton {
     }
     // a failure waits as long as an answer would: a time zone with no city fails the same way every time
     function _barTick(): void {
-        if (!root.failed || Date.now() - root._triedAt >= root.maxAgeMs) root.request(false)
+        const age = Date.now() - root._triedAt
+        if (!root.failed || age < 0 || age >= root.maxAgeMs) root.request(false)
     }
     // offline is the common failure, and it ends with the connection or a sign-in page clearing, not on the next tick.
     // A wake from suspend reconnects too, holding a reading from before the sleep that the bar's monotonic timer would
@@ -256,7 +263,7 @@ Singleton {
         if (online) root._askIfWatched()
     }
     function _askIfWatched(): void {
-        if (_barRefresh.running || CalendarState.open) root.request(false)
+        if (_barRefresh.running || CalendarState.open || MenuState.homeActive) root.request(false)
     }
     onFahrenheitChanged: if (root.hasData) root._askIfWatched()
     Connections {

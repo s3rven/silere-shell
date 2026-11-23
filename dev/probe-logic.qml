@@ -3467,6 +3467,19 @@ ShellRoot {
             ShellSettings.weatherEnabled = true
             Weather.loading = false
             Weather.failed = true
+            Weather._triedAt = Date.now() + 3600000
+            Weather._barTick()
+            root._check(Weather.loading && lookup.running && Weather._triedAt <= Date.now(),
+                "a weather failure from before a clock rollback can retry on the next bar tick")
+            ShellSettings.weatherEnabled = false
+            const rollbackDeadline = Date.now() + 1000
+            while ((lookup.running || Weather._discardLookup) && Date.now() < rollbackDeadline) discoveryClock.wait(10)
+            lookup.command = ["sleep", "2"]
+            Weather._place = null
+            Weather.loading = true
+            ShellSettings.weatherEnabled = true
+            Weather.loading = false
+            Weather.failed = true
             Weather._triedAt = Date.now()
             ShellSettings.barShowClock = true
             ShellSettings.clockShowWeather = true

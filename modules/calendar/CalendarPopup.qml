@@ -89,8 +89,7 @@ FittedPopupWindow {
             return CalendarState.weekForRow(card.shownYear, card.shownMonth, r)
         }
 
-        function _snapToday(): void {
-            const t = new Date()
+        function _readToday(t: date): void {
             _todayY = t.getFullYear(); _todayM = t.getMonth(); _todayD = t.getDate()
             _todayWeek = DateTime.isoWeek(t)
             todayWeekday = Qt.formatDateTime(t, "dddd")
@@ -126,6 +125,13 @@ FittedPopupWindow {
             if (tgt === cur) return
             _go(t.getFullYear(), t.getMonth(), tgt > cur ? 1 : -1)
         }
+        function _syncToday(t: date): void {
+            const following = card.onTodayMonth
+            const previous = card._todayY * 12 + card._todayM
+            card._readToday(t)
+            if (following && !card.onTodayMonth) card._go(card._todayY, card._todayM,
+                card._todayY * 12 + card._todayM > previous ? 1 : -1)
+        }
         Connections {
             target: CalendarState
             function onOpenChanged() {
@@ -144,12 +150,12 @@ FittedPopupWindow {
         }
         Connections {
             target: DateTime
-            function onCachedDateCoreChanged() {
-                if (!CalendarState.open) return
-                const t = DateTime.currentDate
-                card._todayY = t.getFullYear(); card._todayM = t.getMonth(); card._todayD = t.getDate()
-                card._todayWeek = DateTime.isoWeek(t)
-                card.todayWeekday = Qt.formatDateTime(t, "dddd")
+            enabled: CalendarState.open
+            function onMinuteSampleChanged() {
+                const t = DateTime.minuteSample
+                if (card._todayY === t.getFullYear() && card._todayM === t.getMonth()
+                        && card._todayD === t.getDate()) return
+                card._syncToday(t)
                 card._requestWeather()
             }
         }

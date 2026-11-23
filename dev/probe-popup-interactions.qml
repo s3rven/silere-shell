@@ -125,7 +125,11 @@ Item {
             "adjacent dates follow the configured week start")
         card._activateDay(-1)
         card._activateDay(card._rowCount * 7)
+        Scroll._processDelta(60, "calendar", 120, 2, 0)
         CalendarState.open = false
+        root._check(Scroll._processDelta(60, "calendar", 120, 2, 0) === 0,
+            "closing the calendar drops the previous wheel remainder")
+        Scroll.resetControl("calendar")
         card._activateDay(card._lead)
         card._step(1)
         card._goToday()
