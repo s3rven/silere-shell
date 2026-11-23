@@ -45,6 +45,12 @@ Singleton {
     readonly property string keyboardLayout: _be && _be.keyboardLayout !== undefined ? _be.keyboardLayout : ""
     readonly property int keyboardLayoutCount: _be && _be.keyboardLayoutCount !== undefined ? _be.keyboardLayoutCount : 0
     readonly property bool sharingSupported: root.isHyprland || !!(_be && _be.sharingSupported)
+    // the keymap a Hyprland submap has switched to ("resize"), empty in the normal one; niri has none
+    readonly property string submap: _be && _be.submap !== undefined ? _be.submap : ""
+    function leaveSubmap(): void {
+        if (Quickshell.env("SILERE_SANDBOX") !== "1" && root._be && root._be.leaveSubmap)
+            root._be.leaveSubmap()
+    }
     function cycleKeyboardLayout(): void {
         if (Quickshell.env("SILERE_SANDBOX") !== "1" && root._be && root._be.cycleKeyboardLayout)
             root._be.cycleKeyboardLayout()

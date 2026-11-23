@@ -27,6 +27,8 @@ Singleton {
             return "hl.dsp.window.move({ workspace = " + root._value(args) + ", follow = false })"
         if (dispatcher === "focuswindow")
             return "hl.dsp.focus({ window = " + root._quote(args) + " })"
+        if (dispatcher === "submap")
+            return "hl.dsp.submap(" + root._quote(args) + ")"
         if (dispatcher === "exit")
             return "hl.dsp.exit()"
         if (dispatcher === "exec")
@@ -46,7 +48,7 @@ Singleton {
     function dispatch(dispatcher, args): void {
         if (!SystemTools.ready || !SystemTools.hasHyprctl) return
         if (root.useLua && (dispatcher === "focusmonitor" || dispatcher === "workspace"
-            || dispatcher === "movetoworkspacesilent" || dispatcher === "focuswindow")) {
+            || dispatcher === "movetoworkspacesilent" || dispatcher === "focuswindow" || dispatcher === "submap")) {
             const call = root._luaCall(dispatcher, args)
             if (call.length === 0) return
             Quickshell.execDetached(["hyprctl", "dispatch", call])

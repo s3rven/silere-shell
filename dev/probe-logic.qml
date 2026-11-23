@@ -5202,6 +5202,20 @@ ShellRoot {
                 && stripRow && stripRow.y === tallStrip._rowY && stripRow.height === tallStrip.btnH,
             "the workspace strip takes the bar's height and keeps its row centred in it")
         tallStrip.destroy()
+        const modeStrip = workspaceStripFactory.createObject(root)
+        const modeChip = root._findTrayNode(modeStrip, item => item.objectName === "workspace-submap")
+        const modeRow = root._findTrayNode(modeStrip, item => item.objectName === "workspace-row")
+        const modeRestW = modeStrip.implicitWidth
+        const modeRestHidden = modeChip && !modeChip.visible && modeChip.collapsed
+        modeStrip._mode = "resize"
+        const modeShown = !modeChip.collapsed && modeChip.visible && modeChip.text === "resize" && modeChip.interactive
+            && modeChip.accessibleName === "Keyboard mode resize, press to leave it"
+            && modeChip.parent === modeStrip && modeChip.height === modeStrip.height
+            && modeRow && Math.abs(modeChip.x - (modeRow.x + modeRow.implicitWidth + modeStrip._tickRoom)) < 0.01
+        modeStrip._mode = ""
+        root._check(modeRestHidden && modeShown && modeChip.collapsed && !modeChip.interactive && modeChip.text === "resize",
+            "a submap shows as a keyboard mode after the workspaces, and its name stays while the chip folds away")
+        modeStrip.destroy()
         {
             const keys = ["reduceMotion", "neutralTheme", "baseTone", "barOpacity", "highContrast", "wsUrgentPulse"]
             const saved = keys.map(key => ShellSettings[key])
@@ -12408,6 +12422,11 @@ ShellRoot {
         root._check(HyprDispatch._text("exec", "'q\"x' 'back\\slash'\n\r")
                 === "hl.dsp.exec_cmd(\"'q\\\"x' 'back\\\\slash'\\n\\r\")",
             "a Lua launch escapes quotes, backslashes and line breaks for the Lua string")
+        root._check(HyprDispatch._text("submap", "reset") === "hl.dsp.submap(\"reset\")",
+            "a Lua config leaves a submap with the Lua submap dispatcher")
+        HyprDispatch.useLua = false
+        root._check(HyprDispatch._text("submap", "reset") === "submap reset",
+            "a classic config leaves a submap with the submap dispatcher")
         HyprDispatch.useLua = luaWas
 
         const spacing = ShellSettings.schemaFor("barSpacing")

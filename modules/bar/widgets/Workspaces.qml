@@ -90,7 +90,7 @@ Item {
             Math.floor((btnW - _numberInkWidth(wsId)) / 2) - Metrics.pillPadFor(compact)))
     }
     property real _leadTrim: _displayIds.length > 0 ? _edgeTrim(_displayIds[0]) : 0
-    property real _tailTrim: _displayIds.length > 0 && urgentOffPage <= 0
+    property real _tailTrim: _displayIds.length > 0 && urgentOffPage <= 0 && !root._modeShown
         ? _edgeTrim(_displayIds[_displayIds.length - 1]) : 0
     MotionBehavior on _leadTrim {
         gate: root.barActive
@@ -100,7 +100,7 @@ Item {
         gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
     }
-    implicitWidth:  wsRow.implicitWidth + _tickRoom - _leadTrim - _tailTrim
+    implicitWidth:  wsRow.implicitWidth + _tickRoom + (root._modeShown ? modeChip.implicitWidth : 0) - _leadTrim - _tailTrim
     // the bar's full height, like the other widgets, so its edges reach the buttons; the strip itself stays a centred row
     implicitHeight: Metrics.barHeight
     readonly property real _rowY: Math.max(0, (height - btnH) / 2)
@@ -604,6 +604,7 @@ Item {
 
     Row {
         id: wsRow
+        objectName: "workspace-row"
         x: -root._leadTrim
         spacing: root.gap
         enabled: root._displayIdsKey === slotModel.visibleIdsKey

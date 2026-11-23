@@ -763,7 +763,7 @@ QtObject {
     }
 
     readonly property var _inertEvents: ({
-        "openlayer": true, "closelayer": true, "submap": true, "activelayout": true,
+        "openlayer": true, "closelayer": true, "activelayout": true,
         "screencastv2": true, "changefloatingmode": true, "bell": true, "pin": true,
         "minimized": true, "togglegroup": true, "moveintogroup": true,
         "moveoutofgroup": true, "ignoregrouplock": true, "lockgroups": true
