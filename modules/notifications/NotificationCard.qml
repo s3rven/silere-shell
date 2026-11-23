@@ -253,7 +253,7 @@ Item {
     }
 
     // invoke() closes a non-resident notification, and with reduced motion no exit holds it, so it is read first.
-    // the raise watch only snapshots the urgent windows, and the app cannot answer before this returns
+    // snapshot focus and urgency before invoking, since the app cannot answer before this returns
     function activatePrimary(): void {
         if (!card._canInteract) return
         const action = card._defaultAction

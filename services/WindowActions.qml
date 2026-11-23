@@ -198,7 +198,11 @@ Singleton {
         const identity = root._norm(name)
         if (identity.length === 0) return null
         // the optional lookup keeps this matching layer probeable without loading a desktop database; production callers continue to use the shared resolver
-        const de = lookup ? lookup(identity) : DesktopEntries.heuristicLookup(identity)
+        return root._windowForDesktopEntry(clients,
+            lookup ? lookup(identity) : DesktopEntries.heuristicLookup(identity))
+    }
+
+    function _windowForDesktopEntry(clients, de): var {
         const startupClass = de?.startupClass ? String(de.startupClass) : ""
         const desktopId    = de?.id ? String(de.id) : ""
         let best = null
@@ -209,32 +213,32 @@ Singleton {
         return best
     }
 
-    function _matchNotificationClient(notification, followPidParents: bool): var {
+    function _matchNotificationClient(notification, followPidParents: bool, clients, lookup): var {
         if (!notification) return null
-
-        const clients = root._clients()
+        clients = clients ?? root._clients()
         if (clients.length === 0) return null
 
         const pidHint = root._senderPid(notification)
-        const deHint  = root._norm(notification.desktopEntry || notification.hints?.["desktop-entry"] || "")
+        const desktopId = String(notification.desktopEntry || notification.hints?.["desktop-entry"] || "")
+            .slice(0, 512).trim().replace(/\.desktop$/i, "")
 
         const pidMatch = root._clientFromPidChain(clients, pidHint, followPidParents)
         if (pidMatch && pidMatch.wsId !== -1) return pidMatch
 
-        if (deHint.length > 0) {
-            const bestDesktop = root._chooseMatchingSource(clients, c => root._classMatches(c, deHint))
-            if (bestDesktop && bestDesktop.wsId !== -1) return bestDesktop
+        if (desktopId.length > 0) {
+            const direct = root._chooseMatchingSource(clients, c => root._classMatches(c, desktopId))
+            if (direct) return direct
+            const entry = lookup ? lookup(desktopId) : DesktopEntries.byId(desktopId)
+            const byLauncher = root._windowForDesktopEntry(clients, entry)
+            if (byLauncher) return byLauncher
         }
 
         const appName = root._norm(notification.appName)
         if (appName.length === 0) return null
 
-        let bestApp = root._chooseMatchingSource(clients, c => root._appMatches(c, appName))
-
-        if (!bestApp)
-            bestApp = root._resolveByDesktopEntry(clients, appName)
-
-        return (bestApp && bestApp.wsId !== -1) ? bestApp : null
+        return root._chooseMatchingSource(clients, c => root._classMatches(c, appName))
+            || root._chooseMatchingSource(clients, c => root._appMatches(c, appName))
+            || root._resolveByDesktopEntry(clients, appName)
     }
 
     function focusNotificationSource(notification): void {
@@ -260,12 +264,30 @@ Singleton {
     // only the default action stands for "show me the app": a button's click follows a raise and never guesses a window
     property bool _guessSource: false
     property var _urgentAtClick: []
+    property string _focusAtClick: ""
+
+    function _focusKey(): string {
+        const here = root._hereWorkspace()
+        // an empty workspace has no toplevel, and a named workspace may share another workspace's numeric ref
+        return JSON.stringify([Compositor.activeToplevel?.ref ?? null, Compositor.focusedMonitor,
+            here.ref, here.ref < 0 ? here.name : ""])
+    }
+
+    function _fallbackSource(source, clients, focusBefore: string, focusNow: string): var {
+        if (!source || focusBefore !== focusNow || root.focusIsSourceApp(source, clients)) return null
+        // resolve the saved handle again so a move or close while the action ran cannot focus stale data
+        return (clients || []).find(c => c && c.wsId !== -1 && c.ref === source.ref
+            && c.pid === source.pid && c.cls === source.cls) ?? null
+    }
+
     readonly property Timer _sourceFallback: Timer {
         interval: 250
         onTriggered: {
-            const c = root._pendingSource
+            const source = root._pendingSource
             root._pendingSource = null
-            if (root._guessSource && c && !root.focusIsSourceApp(c, Compositor.toplevels)) Compositor.focusToplevel(c)
+            if (!root._guessSource) return
+            const c = root._fallbackSource(source, Compositor.toplevels, root._focusAtClick, root._focusKey())
+            if (c) Compositor.focusToplevel(c)
         }
     }
 
@@ -285,6 +307,7 @@ Singleton {
         target: Compositor
         enabled: root._sourceFallback.running
         function onUrgentRefsChanged() {
+            if (root._focusAtClick !== root._focusKey()) return
             const t = root.raisedSource(Compositor.toplevels, Compositor.urgentRefs, root._urgentAtClick, root._pendingSource)
             if (!t) return
             root._sourceFallback.stop()
@@ -297,6 +320,7 @@ Singleton {
         root._pendingSource = source
         root._guessSource = guess
         root._urgentAtClick = Compositor.urgentRefs
+        root._focusAtClick = root._focusKey()
         root._sourceFallback.restart()
     }
 

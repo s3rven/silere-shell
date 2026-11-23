@@ -292,8 +292,9 @@ Singleton {
         const now = Date.now()
         let at = 0
         while (at < _history.count && _history.get(at).time > e.time && _history.get(at).time <= now) at++
-        // a sender repeating itself word for word takes one row, not a run of the same row out of a short history
-        const same = r => r.appName === e.appName && r.summary === e.summary && r.body === e.body
+        // repeats take one row; a different launcher or urgency is a distinct notification
+        const same = r => r.appName === e.appName && r.desktopEntry === e.desktopEntry
+            && r.urgency === e.urgency && r.summary === e.summary && r.body === e.body
         if (at > 0 && same(_history.get(at - 1))) return
         if (at < _history.count && same(_history.get(at))) {
             const repeated = String(_history.get(at).id)

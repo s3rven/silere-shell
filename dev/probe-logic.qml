@@ -4730,6 +4730,13 @@ ShellRoot {
                 && !WindowActions.focusIsSourceApp(kittyGuess, [])
                 && !WindowActions.focusIsSourceApp(null, [{ pid: 1, cls: "x", focused: true }]),
             "a notification click keeps the window the app raised itself instead of guessing another")
+        const movedSender = { pid: kittyGuess.pid, cls: kittyGuess.cls, ref: kittyGuess.ref, wsId: 6 }
+        root._check(WindowActions._fallbackSource(kittyGuess, [movedSender], "here", "here") === movedSender
+                && WindowActions._fallbackSource(kittyGuess, [movedSender], "here", "somewhere else") === null
+                && WindowActions._fallbackSource(kittyGuess, [], "here", "here") === null
+                && WindowActions._fallbackSource(kittyGuess, [{ pid: 900, cls: "zen",
+                    ref: kittyGuess.ref, wsId: 6 }], "here", "here") === null,
+            "the delayed notification fallback stops after focus changes and only uses the surviving source window")
         const raisedPool = [{ ref: "0xa", pid: 1638, cls: "kitty" }, { ref: "0xb", pid: 1638, cls: "kitty" }]
         root._check(WindowActions.raisedSource(raisedPool, ["0xb"], []).ref === "0xb"
                 && WindowActions.raisedSource(raisedPool, ["0xa", "0xb"], ["0xa"]).ref === "0xb"
@@ -4855,6 +4862,17 @@ ShellRoot {
                 && WindowActions._resolveByDesktopEntry(
                     matchingClients, "", function() { return ({}) }) === null,
             "desktop-entry matching tries startup class, desktop id and empty input safely")
+        root._check(WindowActions._matchNotificationClient({
+                    appName: "org.example.App", hints: { "desktop-entry": "Org.Example.Launcher.desktop" }
+                }, false, matchingClients, id => id === "Org.Example.Launcher"
+                    ? { startupClass: "org.example.Startup" } : null)?.ref === "elsewhere",
+            "an explicit desktop-entry hint uses the launcher's StartupWMClass ahead of the reported app name")
+        const browserWindows = [
+            { ref: "suffix", wsId: 1, wsRef: elsewhereRef, cls: "com.example.OtherFirefox", focusRank: 0 },
+            { ref: "exact", wsId: 2, wsRef: hereRef, cls: "firefox", focusRank: 8 }
+        ]
+        root._check(WindowActions._matchNotificationClient({ appName: "Firefox" }, false, browserWindows)?.ref === "exact",
+            "an exact notification app match outranks a class that merely ends with the same name")
 
         root._check(Motion.allowsMotion(false, false)
                 && !Motion.allowsMotion(true, false)
