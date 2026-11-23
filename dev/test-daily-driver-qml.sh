@@ -268,7 +268,11 @@ else
     printf 'write %s %s\n' "$2" "$3" >> "$fixtures/keyboard-calls"
     while [ -s "$fixtures/keyboard-set-hold" ]; do sleep 0.02; done
     sleep 0.1
-    [ ! -s "$fixtures/keyboard-set-fail" ] || exit 1
+    if [ -s "$fixtures/keyboard-set-fail" ]; then
+        case "$(cat "$fixtures/keyboard-set-fail")" in
+            fail|"$3") exit 1 ;;
+        esac
+    fi
     awk -F '\t' -v path="$2" -v level="$3" -v identity="$4" 'BEGIN { OFS="\t" }
         $1 == path && $4 == identity { $2=level } { print }' "$fixtures/keyboard-devices" > "$fixtures/keyboard-next"
     mv "$fixtures/keyboard-next" "$fixtures/keyboard-devices"

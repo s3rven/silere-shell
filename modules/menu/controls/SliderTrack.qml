@@ -61,6 +61,7 @@ Item {
 
     readonly property real shownValue: _shownValue
     readonly property bool dragging: root._gestureActive
+    readonly property bool previewing: root.dragging || root._stepPending
     property bool _gestureActive: false
     property bool _gestureChanged: false
     readonly property bool _canInteract: root.enabled && root.visible && root.interactive
@@ -92,6 +93,7 @@ Item {
         if (!root._stepPending || root._keyHeld) return
         root._stepPending = false
         root.changed(root._shownValue)
+        root._shownValue = root.value
     }
 
     onValueChanged: if (!root.dragging && !root._stepPending) _shownValue = value
@@ -187,13 +189,12 @@ Item {
     }
     function _release(): void {
         if (!root.dragging) return
-        const changed = root._gestureChanged
+        const commit = root._gestureChanged && root.commitOnRelease && root._canInteract
         root._gestureActive = false
         root._gestureChanged = false
-        // a stationary grab must catch up with live playback, not seek back to
-        // the position it had at press; pending keyboard steps still commit
-        if (!changed) { root._shownValue = root.value; return }
-        if (root.commitOnRelease && root._canInteract) root.changed(root._shownValue)
+        if (commit) root.changed(root._shownValue)
+        // the backing value can stay put after a rejected or clamped request, so there may be no change signal
+        root._shownValue = root.value
     }
     function nudge(dir: int, mult: int): void {
         if (!root._canInteract || root.dragging) return

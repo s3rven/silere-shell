@@ -586,6 +586,26 @@ Scope {
         root.waitFor(() => KeyboardBrightness._confirmedLevel === 2, "the keyboard fixture returns to its earlier level")
         input.wait(400)
 
+        root.write("keyboard-calls", "")
+        root.write("keyboard-set-hold", "hold")
+        root.write("keyboard-set-fail", "1")
+        const writeTo = "write " + KeyboardBrightness.selected.path + " "
+        KeyboardBrightness.setLevel(1)
+        root.waitFor(() => root.read("keyboard-calls").includes(writeTo + "1"),
+            "the keyboard write that will fail is in flight")
+        KeyboardBrightness.setLevel(0)
+        root.write("keyboard-set-hold", "")
+        const newerWrite = root.waitFor(() => root.read("keyboard-calls").includes(writeTo + "0"),
+            "an earlier keyboard failure keeps the newer adjustment queued", 2000)
+        if (newerWrite) {
+            root.check(KeyboardBrightness.currentLevel === 0 && !KeyboardBrightness.lastError,
+                "a superseded keyboard failure leaves the current slider and error state alone")
+            root.waitFor(() => KeyboardBrightness._confirmedLevel === 0,
+                "the newer keyboard level reaches the light after the earlier write fails")
+        }
+        KeyboardBrightness.setLevel(2)
+        root.waitFor(() => KeyboardBrightness._confirmedLevel === 2, "restore the keyboard level for the next write")
+
         root.write("keyboard-set-fail", "fail")
         KeyboardBrightness.setLevel(1)
         root.waitFor(() => KeyboardBrightness.lastError.length > 0 && KeyboardBrightness.currentLevel === 2,
@@ -638,15 +658,23 @@ Scope {
     }
     function limitChecks(): void {
         const bat1 = "/org/freedesktop/UPower/devices/battery_BAT1"
-        root.write("limit-devices", root.limitLine("BAT1", true) + root.limitLine("BAT0", false, 80))
-        root.write("limit-calls", "")
-        root.write("limit-set-fail", "")
+        root.write("limit-devices", "")
+        root.write("limit-list-fail", "fail")
         SystemTools.hasBusctl = true
         MenuState.open = true
         MenuState.homeActive = true
+        root.waitFor(() => !BatteryLimit._list.running && BatteryLimit.lastError.length > 0,
+            "a failed first battery read appears in Home")
+        MenuState.open = false
+        root.write("limit-list-fail", "")
+        root.write("limit-devices", root.limitLine("BAT1", true) + root.limitLine("BAT0", false, 80))
+        root.write("limit-calls", "")
+        root.write("limit-set-fail", "")
+        MenuState.open = true
         root.waitFor(() => BatteryLimit.devices.length === 2 && BatteryLimit.forNative("BAT1")?.on === true
             && BatteryLimit.forNative("BAT0")?.on === false && BatteryLimit.forNative("BAT0")?.stopsAt === 80,
-            "Home reads each battery's charge limit as it first opens")
+            "Home retries discovery and reads each battery's charge limit")
+        root.check(BatteryLimit.lastError === "", "a successful battery read clears the error from an earlier read")
         MenuState.open = false
         root.write("limit-calls", "")
         MenuState.open = true

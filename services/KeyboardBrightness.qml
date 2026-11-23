@@ -168,10 +168,9 @@ Singleton {
                     root._writeError = ""
                     root._confirmedLevel = level
                 }
-                else {
+                // only the final failure rolls back the slider, since a queued level belongs to a newer adjustment
+                else if (!root._queued) {
                     root._writeError = "Keyboard light could not be changed. Check UPower permissions."
-                    root._queued = false
-                    _apply.stop()
                     root.currentLevel = root._confirmedLevel
                 }
             }

@@ -9320,6 +9320,32 @@ ShellRoot {
             "pressing the slider handle off centre holds its value, and a press on the rail still jumps")
         track._release()
         track.nudge(-1, 10)
+        const limited = sliderTrackFactory.createObject(root, { width: 100, value: 0.01 })
+        let requestedLevel = -1
+        limited.changed.connect(value => {
+            requestedLevel = value
+            limited.value = Math.max(0.01, value)
+        })
+        limited._press(limited.width / 2)
+        limited._drag(0)
+        limited._release()
+        root._check(requestedLevel === 0 && limited.value === 0.01 && limited.shownValue === 0.01,
+            "releasing a live slider settles the thumb at the backing device's actual floor")
+        limited.commitOnRelease = true
+        requestedLevel = -1
+        limited._press(limited.width / 2)
+        limited._drag(0)
+        limited._release()
+        root._check(requestedLevel === 0 && limited.shownValue === limited.value && !limited.previewing,
+            "releasing a deferred slider shows the actual level when the device keeps its old value")
+        limited.value = 0.02
+        limited.value = 0.01
+        requestedLevel = -1
+        limited.nudge(-1, 1)
+        limited._settleSteps()
+        root._check(requestedLevel === 0 && limited.shownValue === limited.value && !limited.previewing,
+            "settling a deferred slider step shows the actual level when the device keeps its old value")
+        limited.destroy()
         track.min = 0.5; track.max = 3; track.step = 0.05
         root._check(track.minimumValue === 0.5 && track.maximumValue === 3
                 && track.stepSize === 0.05,
