@@ -1396,9 +1396,22 @@ test_interrupted_update_recovery() (
     local stub_dir="$TMP/update-rollback-stub"
     local calls="$TMP/update-rollback-calls"
     mkdir -p "$stub_dir"
-    printf '#!/bin/sh\ncase "$*" in *" show "*) echo "{ path=%s/scripts/silere ; argv[]=%s/scripts/silere run ; }" ;; esac\nexit 0\n' \
-        "$repo" "$repo" > "$stub_dir/systemctl"
-    chmod +x "$stub_dir/systemctl"
+    cat > "$stub_dir/systemctl" <<EOF
+#!/bin/sh
+case "\$*" in
+    *" show "*" -p MainPID "*) printf '%s\n' "\${SILERE_TEST_MAIN_PID:-4242}" ;;
+    *" show "*) printf '{ path=%s/scripts/silere ; argv[]=%s/scripts/silere run ; }\n' "$repo" "$repo" ;;
+esac
+EOF
+    cat > "$stub_dir/qs" <<'EOF'
+#!/bin/sh
+[ "$#" = 7 ] && [ "$1" = ipc ] && [ "$2" = --any-display ] &&
+    [ "$3" = "$SILERE_TEST_INSTANCE_FLAG" ] && [ "$4" = "$SILERE_TEST_INSTANCE" ] &&
+    [ "$5" = call ] && [ "$6" = runtime ] && [ "$7" = launchRevision ] || exit 1
+printf '%s\n' "${SILERE_TEST_LAUNCH_REVISION:-}"
+EOF
+    chmod +x "$stub_dir/systemctl" "$stub_dir/qs"
+    local -x SILERE_TEST_INSTANCE_FLAG=--pid SILERE_TEST_INSTANCE=4242
     _start_apply_transaction "$old_rev" "$new_rev" v1.0.1
     git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
         || fail "an apply transaction did not pin its release tag"
@@ -2853,7 +2866,17 @@ test_plain_copy_is_not_package_managed() (
 
     mkdir -p "$home/stubs"
     printf '#!/bin/sh\nexit 1\n' > "$home/stubs/qs"
-    chmod +x "$home/stubs/qs"
+    export SILERE_TEST_CLONE_ATTEMPT="$home/clone-attempt" SILERE_TEST_REAL_GIT
+    SILERE_TEST_REAL_GIT="$(command -v git)"
+    cat > "$home/stubs/git" <<'STUB'
+#!/bin/sh
+if [ "${1:-}" = clone ]; then
+    : > "$SILERE_TEST_CLONE_ATTEMPT"
+    exit 1
+fi
+exec "$SILERE_TEST_REAL_GIT" "$@"
+STUB
+    chmod +x "$home/stubs/qs" "$home/stubs/git"
     cli() {
         HOME="$home" XDG_STATE_HOME="$home/state" XDG_CONFIG_HOME="$home/config" XDG_CACHE_HOME="$home/cache" \
             XDG_DATA_HOME="$home/data" PATH="$home/stubs:$PATH" bash "$copy/scripts/silere" "$@" </dev/null 2>&1
@@ -2883,6 +2906,7 @@ test_plain_copy_is_not_package_managed() (
 
     printf '9.9.9\n' > "$copy/package-version"
     case "$(doctor)" in *"package-managed at $copy") ;; *) fail "silere doctor on a packaged copy said: $(doctor)" ;; esac
+    [ ! -e "$SILERE_TEST_CLONE_ATTEMPT" ] || fail "silere doctor bootstrapped an installer to find compositor paths"
     out="$(cli version)" || fail "silere version failed on a packaged copy"
     case "$out" in *"9.9.9 (managed by "*) ;; *) fail "silere version on a packaged copy said: $out" ;; esac
     rm -f "$home/.local/bin/silere"
@@ -3649,7 +3673,7 @@ case "$1" in
               echo "No running instances for \"$3\""; echo "Dead instances:"; echo " - abc"; exit 255; }
           case "$4" in
               show) printf 'target menu\n  function toggle(): string\ntarget calendar\n  function close(): void\n' ;;
-              call) [ "$6" = toggle ] && echo opened || echo "Function not found." ;;
+              call) [ "$5 $7" = "-- toggle" ] && echo opened || echo "Function not found." ;;
           esac ;;
     log)  echo "log $*" ;;
 esac
@@ -3684,6 +3708,102 @@ STUB
     out="$(cli frobnicate 2>&1)" && fail "an unknown command succeeded"
     case "$out" in *"Did you mean"*) fail "a guess offered for frobnicate" ;; esac
     true
+)
+
+# the short verbs make one call each, the one silere ipc would; the Keybinds page offers some of them to paste
+test_cli_short_verbs() (
+    local stubs="$TMP/verb-stubs" out call short
+    mkdir -p "$stubs"
+    printf '#!/bin/sh\nexit 1\n' > "$stubs/systemctl"
+    # answers as this checkout's shell: a call echoes back as "target function args"
+    cat > "$stubs/qs" <<'STUB'
+#!/bin/sh
+[ "$1" = ipc ] && [ "$4 $5" = "call --" ] || exit 2
+shift 5
+# list takes its filter even when it is empty, which a bare echo would hide
+if [ "$1 $2" = "settings list" ] && [ "$#" -eq 3 ] && [ -z "$3" ]; then echo 'settings list ""'; exit 0; fi
+case "$1 $2 ${3-}" in
+    "settings set customClickCommand") [ "$#" -eq 4 ] || exit 2; printf '<%s>\n' "$4" ;;
+    "audio status "*) printf '%s\n' '{"output":{"ready":true,"name":"Desk \"volume\":99,\"muted\":true","volume":40,"muted":false},"input":{"ready":false,"name":"","volume":0,"muted":true}}' ;;
+    "settings toggle frob") printf '%s\n' "error: unknown setting 'frob'; try \`list\`" ;;
+    "settings get frob") printf '%s\n' "error: unknown setting 'frob'; try \`list\`" ;;
+    "menu settings frob") printf '%s\n' "unknown settings page 'frob'; opened theme instead. valid: theme" ;;
+    *) echo "$*" ;;
+esac
+STUB
+    chmod +x "$stubs/qs" "$stubs/systemctl"
+    cli() { env -u LC_ALL PATH="$stubs:$PATH" bash "$ROOT/scripts/silere" "$@"; }
+    verb() { # expected call, then the verb's words
+        local want="$1" got; shift
+        got="$(cli "$@" 2>&1)" || fail "silere $* failed: $got"
+        assert_eq "$want" "$got" "silere $*"
+    }
+    verb "menu toggle" menu
+    verb "menu tab 0" menu home
+    verb "menu tab 1" menu settings
+    verb "menu tab 2" menu notifications
+    verb "menu tab 3" menu Now-Playing
+    verb "menu settings clock" menu clock
+    verb "menu settings popups" menu settings popups
+    verb "menu close" menu close
+    verb "calendar toggle" calendar
+    verb "quickActions toggle" quick
+    verb "quickActions close" quick close
+    verb "tray toggle" tray
+    verb "quickActions dnd" toggle dnd
+    verb "quickActions nightLight" toggle Night-Light
+    verb "quickActions keepAwake" toggle keep_awake
+    verb "quickActions powerMode" toggle power-mode
+    verb "settings toggle reduceMotion" toggle reduceMotion
+    verb "audio volumeUp" volume up
+    verb "audio toggleMute" volume MUTE
+    verb "audio cycleOutput" volume next
+    verb "audio setVolume 40" volume 40%
+    verb "audio setVolume 7" volume 007
+    verb "audio micDown" mic down
+    verb "audio setMicVolume 100" mic 100
+    verb "notifications dismiss" dismiss
+    verb "notifications dismissAll" dismiss all
+    verb "settings get osdTimeout" get osdTimeout
+    verb "settings set osdTimeout 3000" set osdTimeout 3000
+    verb "<--help>" set customClickCommand --help
+    verb "<-option with spaces>" set customClickCommand '-option with spaces'
+    verb "<-->" ipc settings set customClickCommand --
+    verb "<>" set customClickCommand ''
+    verb 'settings list ""' settings
+    verb "settings list clock" settings clock
+    verb "settings modified" settings --changed
+    # a device name is JSON text, so its quotes cannot pass for the level or mute keys
+    verb "40%" volume
+    if out="$(cli mic 2>&1)"; then fail "mic printed a level with no microphone ready: $out"; fi
+    case "$out" in *"no microphone is ready"*) ;; *) fail "mic without a microphone said: $out" ;; esac
+
+    # wrong words name the verb's own grammar and exit 2, the way bad arguments to other commands do
+    local bad
+    for bad in "volume -5" "volume loud" "mic up down" "tray x" "dismiss x" "menu a b" "get" "set osdTimeout" \
+            "settings --x" "toggle a b"; do
+        # shellcheck disable=SC2086 # each case is its own word list
+        out="$(cli $bad 2>&1)" && fail "silere $bad succeeded"
+        case "$out" in *"usage: silere ${bad%% *}"*) ;; *) fail "silere $bad did not name its usage: $out" ;; esac
+    done
+    if out="$(cli toggle frob 2>&1)"; then fail "toggling an unknown name succeeded"; fi
+    case "$out" in *"nothing to toggle named frob; silere toggle lists the names"*) ;;
+        *) fail "an unknown toggle did not say where to look: $out" ;; esac
+    if out="$(cli get frob 2>&1)"; then fail "reading an unknown setting succeeded"; fi
+    assert_eq "error: unknown setting 'frob'; silere settings lists them" "$out" "an unknown setting points at silere settings"
+    out="$(cli menu frob 2>&1)" || fail "an unknown menu page failed rather than opening Settings"
+    case "$out" in *"menu tabs: home, notifications, playing"*) ;; *) fail "an unknown menu page left out the tabs: $out" ;; esac
+    grep -qx "night-light" <<<"$(cli toggle)" || fail "silere toggle alone does not list the quick actions"
+
+    # every short form the Keybinds page pastes into a config makes the call the page names it by
+    while IFS=$'\t' read -r call short; do
+        [ -n "$call" ] || continue
+        # shellcheck disable=SC2086 # a short form is words
+        assert_eq "$call" "$(cli $short 2>&1)" "the Keybinds page's silere $short"
+    done < <(sed -n '/^var shortForms = {/,/^}/p' "$ROOT/services/KeybindList.js" \
+        | sed -nE 's/^ +"([A-Za-z]+ [A-Za-z]+)": "([^"]+)",?$/\1\t\2/p')
+    [ "$(sed -n '/^var shortForms = {/,/^}/p' "$ROOT/services/KeybindList.js" | grep -c '": "')" -ge 5 ] \
+        || fail "found no short forms in KeybindList.js"
 )
 
 # status answers the two questions people ask it: how much memory, and whether update checks still run
