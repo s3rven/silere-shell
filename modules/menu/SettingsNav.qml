@@ -495,6 +495,7 @@ Item {
                                     id: _leaf
 
                                     required property var modelData
+                                    objectName: "settings-section"
                                     readonly property bool active: MenuState.settingsSection === modelData.section
                                     readonly property string glyph: modelData.glyph ?? ""
                                     readonly property bool showDot: ShellSettings.modifiedSections[modelData.section] === true

@@ -16,6 +16,7 @@ Singleton {
     property bool ready: false
     property bool lastFailed: false
     property string lastError: ""
+    // retries and timeouts leave the timestamp of the displayed results intact
     property real lastCheckMs: 0
     property bool backgroundDeferred: false
     property bool _automaticCheck: false
@@ -327,11 +328,17 @@ Singleton {
         } else {
             root._discardResult = false
         }
+        root._clearResult()
+        root.backgroundDeferred = false
+    }
+
+    function _clearResult(): void {
         root.count = 0
         root.repoCount = 0
         root.aurCount = 0
         root.packages = []
-        root.ready = true
+        root.ready = false
+        root.lastCheckMs = 0
         root.lastFailed = false
         root.lastError = ""
         root._failStreak = 0
@@ -372,16 +379,7 @@ Singleton {
         root._discardResult = wasRunning
         if (wasRunning) _proc.running = false
 
-        root.count = 0
-        root.repoCount = 0
-        root.aurCount = 0
-        root.packages = []
-        root.lastFailed = false
-        root.lastError = ""
-        root.lastCheckMs = 0
-        root._touchNow()
-        root._failStreak = 0
-        root.ready = !root.enabled || !root.supported
+        root._clearResult()
 
         if (root.enabled && root.supported && !wasRunning)
             _sourceRefresh.restart()
@@ -393,7 +391,7 @@ Singleton {
         root._sourceKey = next
 
         // the startup grace stands; a later backend change replaces stale data at once
-        if (root.lastCheckMs <= 0 && root.count === 0 && !_proc.running
+        if (root.lastCheckMs <= 0 && !root.lastFailed && !_proc.running
                 && root.enabled && root.supported) {
             root.ready = false
             _initDelay.restart()
@@ -403,19 +401,24 @@ Singleton {
     }
 
     function _acceptCheckResult(code: int, text: string): void {
-        root.lastCheckMs = Date.now()
-        root._touchNow()
         if (!ShellSettings.updatesWidget) {
             root._resetDisabledState()
             return
         }
         const t = text.trim()
+        if (root._automaticCheck) {
+            root.backgroundDeferred = code === 0 && t === "DEFER metered"
+            if (root.backgroundDeferred) return
+        }
+        root._touchNow()
         const n = root._countFrom(t)
         if (code === 0 && !t.startsWith("ERR") && n >= 0) {
             root.count = n
             root._parseDetail(t)
             root.lastFailed = false
             root.lastError = ""
+            root.lastCheckMs = root._nowMs
+            root.ready = true
             root._failStreak = 0
             _retry.stop()
             _reconnect.stop()
@@ -428,7 +431,6 @@ Singleton {
                 : "Package check returned an invalid count"
             _retry.restart()
         }
-        root.ready = true
     }
 
     BoundedProcess {
@@ -437,12 +439,11 @@ Singleton {
         environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _out }
         onTimeoutReached: {
-            root.lastCheckMs = Date.now()
+            if (root._discardResult || !ShellSettings.updatesWidget) return
             root._touchNow()
             root.lastFailed = true
             root._failStreak++
             root.lastError = "Package check timed out"
-            root.ready = true
             _retry.restart()
         }
         onExited: code => {
@@ -485,9 +486,9 @@ Singleton {
 
     // wake can precede the network returning; either edge must catch up an overdue check
     function _resumeBackgroundCheck(): void {
-        if (Idle.isIdle || !root.enabled || !root.supported
-                || (Network.toolAvailable && !Network.connected)
-                || !root.backgroundCheckDue(root.lastCheckMs, root.lastFailed, Date.now())) return
+        if (Idle.isIdle || !root.enabled || !root.supported || !root._online
+                || (root.ready && !root.backgroundDeferred
+                    && !root.backgroundCheckDue(root.lastCheckMs, root.lastFailed, Date.now()))) return
         _initDelay.stop()
         _reconnect.restart()
     }
@@ -507,8 +508,7 @@ Singleton {
         interval: 0
         onTriggered: {
             root._discardResult = false
-            if (root.supported) root.refresh()
-            else root.ready = true
+            root._refreshBackground()
         }
     }
     Connections {

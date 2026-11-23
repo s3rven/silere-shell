@@ -64,7 +64,7 @@ Column {
     readonly property bool _releaseNotesAvailable: ShellUpdate.pending
         && ShellUpdate.releaseNotes.length > 0
     readonly property bool _packagesAvailable: Updates.count > 0
-        && !Updates.lastFailed && Updates.packages.length > 0
+        && Updates.packages.length > 0
 
     on_ChangesAvailableChanged: if (!_changesAvailable) {
         _changesOpen = false
@@ -273,6 +273,7 @@ Column {
                 status: Updates.statusText
                 meta: Updates.managerLabel
                 detail: Updates.lastFailed ? Updates.lastError
+                    + (Updates.lastCheckedText.length > 0 ? " · Last successful check " + Updates.lastCheckedText : "")
                     : Updates.aurCount > 0
                         ? Updates.repoCount + " from repos, " + Updates.aurCount + " from the AUR"
                             + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
@@ -295,7 +296,7 @@ Column {
             }
             ControlRow {
                 glyph: "󰏗"
-                title: "Pending packages"
+                title: Updates.lastFailed || !Updates.ready ? "Last known updates" : "Pending packages"
                 valueText: Updates.packages.length < Updates.count
                     ? Updates.packages.length + " of " + Updates.count : String(Updates.count)
                 visible: root._packagesAvailable

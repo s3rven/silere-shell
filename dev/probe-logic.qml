@@ -10362,11 +10362,33 @@ ShellRoot {
         root._check(Updates.count === 3 && Updates.packages.length === 1
                 && !Updates.lastFailed && Updates._failStreak === 0,
             "a successful package checker publishes its count and details")
+        const lastPackageCheck = Updates.lastCheckMs
+        const wasAutomatic = Updates._automaticCheck
+        Updates._automaticCheck = true
+        Updates._acceptCheckResult(0, "DEFER metered\n")
+        root._check(Updates.backgroundDeferred && Updates.lastCheckMs === lastPackageCheck
+                && Updates.packages === lastGoodPackages && !Updates.lastFailed && Updates._failStreak === 0,
+            "a deferred automatic check preserves the package list, timestamp, and failure state")
+        Updates._acceptCheckResult(0, "3\none 1 -> 2\n")
+        root._check(!Updates.backgroundDeferred && Updates.count === 3,
+            "a completed automatic check clears the metered pause")
+        Updates._automaticCheck = wasAutomatic
+        const resumedPackages = Updates.packages
+        const successfulCheckAt = Date.now() - 60000
+        Updates.lastCheckMs = successfulCheckAt
         Updates._acceptCheckResult(9, "0\n")
         root._check(Updates.count === 3 && Updates.packages === resumedPackages
                 && Updates.lastFailed && Updates._failStreak === 1
-                && Updates.lastError === "Package check failed (exit 9)",
-            "a failed package checker cannot replace good results with partial output")
+                && Updates.lastError === "Package check failed (exit 9)"
+                && Updates.lastCheckMs === successfulCheckAt,
+            "a failed package checker keeps the last successful results and timestamp")
+        const resultsSection = sectionType.createObject(barFixtureHost, { width: 420 })
+        const packageCard = root._findTrayNode(resultsSection, item => item.title === "Packages")
+        const cachedList = root._findTrayNode(resultsSection, item => item.title === "Last known updates")
+        root._check(resultsSection?._packagesAvailable && cachedList !== null
+                && packageCard?.detail.includes("Last successful check"),
+            "Overview offers the cached package details and dates them after a failed refresh")
+        if (resultsSection) resultsSection.destroy()
         Updates._acceptCheckResult(127, "")
         root._check(Updates.count === 3 && Updates._failStreak === 2
                 && Updates.lastError === "Package check failed (exit 127)",
@@ -10386,7 +10408,7 @@ ShellRoot {
             "a completed package check recovers from previous failures")
         ShellSettings.updatesWidget = false
         Updates._acceptCheckResult(0, "8\n")
-        root._check(Updates.count === 0 && !Updates.lastFailed,
+        root._check(Updates.count === 0 && !Updates.lastFailed && !Updates.ready && Updates.lastCheckMs === 0,
             "a late package result cannot repopulate a disabled widget")
         const reconnect = Updates._reconnectTimer
         root._check(reconnect !== null, "the internet recovery fixture finds the package retry timer")
@@ -10397,6 +10419,13 @@ ShellRoot {
             SystemTools.packageFamily = "pacman"
             SystemTools._tools = { checkupdates: true }
             SystemTools.ready = true
+            Updates._automaticCheck = true
+            Updates._acceptCheckResult(0, "DEFER metered\n")
+            root._check(Updates.statusText === "Paused on metered connection" && !Updates.ready,
+                "tracking resumed on a metered connection waits for its first result")
+            Updates._automaticCheck = wasAutomatic
+            Updates.backgroundDeferred = false
+            Updates.ready = true
             Updates.lastFailed = true
             Updates.lastCheckMs = Date.now()
             for (const issue of ["portal", "limited"]) {
@@ -10414,6 +10443,11 @@ ShellRoot {
             Network.connectivityIssue = ""
             root._check(!reconnect.running,
                 "internet recovery keeps a recent successful package result")
+            Updates.ready = false
+            Network.connectivityIssue = "limited"
+            Network.connectivityIssue = ""
+            root._check(reconnect.running === (Network.connected && !Idle.isIdle),
+                "internet recovery queues a check when its package sources changed since the last success")
             Network.connectivityIssue = issueWas
             ShellSettings.updatesWidget = false
             SystemTools.ready = false
