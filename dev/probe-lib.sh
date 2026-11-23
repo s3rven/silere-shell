@@ -54,14 +54,10 @@ _probe_require_qs() {
     fi
 }
 
-# quickshell makes the entry file's directory the project root, so a probe needs
-# its own tree with the shell's import roots beside it.
+# Quickshell resolves imports from the entry file's directory and watches them.
+# Copy the import roots so edits to the checkout cannot reload an in-flight probe.
 _probe_project() { # $1 = repo root, $2 = probe source, $3 = destination dir
-    cp "$2" "$3/${2##*/}"
-    ln -s "$1/config" "$3/config"
-    ln -s "$1/services" "$3/services"
-    ln -s "$1/modules" "$3/modules"
-    ln -s "$1/scripts" "$3/scripts"
+    cp -R -- "$2" "$1/config" "$1/services" "$1/modules" "$1/scripts" "$3/"
 }
 
 # A root-level required property is the one thing a probe cannot supply, so it is

@@ -66,8 +66,9 @@ modules/menu/SettingsNav.qml|160
 dev/probe-responsive-layouts.qml"
 
 scratch="$(mktemp -d)"
-mkdir -p "$scratch/project"
+mkdir -p "$scratch/project/dev"
 _probe_project "$ROOT" "$PROBE" "$scratch/project"
+cp dev/probe-responsive-layouts.qml "$scratch/project/dev/"
 probe_pid=""
 declare -A scale_pid=()
 cleanup() {
@@ -96,7 +97,7 @@ for scale in "${scales[@]}"; do
     # Capture to a regular file, not command substitution. A component may launch
     # a detached helper which inherits stdout; that helper can keep a capture pipe
     # open forever even after the probe itself has reached FIT-DONE.
-    FIT_ROOT="$ROOT" FIT_LIST="$list" FIT_W="$CONTENT_WIDTH" \
+    FIT_ROOT="$scratch/project" FIT_LIST="$list" FIT_W="$CONTENT_WIDTH" \
         XDG_CONFIG_HOME="$conf" XDG_CACHE_HOME="$conf/cache" \
         XDG_STATE_HOME="$conf/state" XDG_RUNTIME_DIR="$runtime" \
         QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
@@ -165,7 +166,7 @@ ln -s "$(command -v bash)" "$bare_bin/bash"
 bare_list="modules/menu/settings/SettingsMaintenanceSection.qml
 modules/menu/settings/SettingsUpdatesSection.qml"
 
-FIT_ROOT="$ROOT" FIT_LIST="$bare_list" FIT_W="$CONTENT_WIDTH" \
+FIT_ROOT="$scratch/project" FIT_LIST="$bare_list" FIT_W="$CONTENT_WIDTH" \
     PATH="$bare_bin" \
     XDG_CONFIG_HOME="$bare_conf" XDG_CACHE_HOME="$bare_conf/cache" \
     XDG_STATE_HOME="$bare_conf/state" XDG_RUNTIME_DIR="$bare_conf/runtime" \
