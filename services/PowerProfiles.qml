@@ -147,6 +147,9 @@ Singleton {
         target: Battery
         function onOnBatteryChanged() { _sourceSettle.restart() }
     }
+    // the daemon restores its last mode at boot, which can be the other source's, and no charger edge follows
+    readonly property bool _sourceKnown: root.available && Battery.available
+    on_SourceKnownChanged: if (root._sourceKnown) _sourceSettle.restart()
     // a test shell shares the system bus with the desktop it runs on, and a charger edge reaches both
     property bool _sandboxed: Quickshell.env("SILERE_SANDBOX") === "1"
     property Timer _sourceSettleTimer: Timer {
@@ -155,8 +158,9 @@ Singleton {
         onTriggered: {
             if (!ShellSettings.powerProfileRemember || !root.available) return
             // a charger edge can land during a slow write. Keep the restore queued,
-            // then read the current source and preferences once the writer is free
-            if (_set.running) { restart(); return }
+            // then read the current source and preferences once the writer is free;
+            // at start, UPower's first read is a default until the live mode arrives
+            if (_set.running || _startSettle.running) { restart(); return }
             if (!Battery.available || root._sandboxed) return
             const want = root.profileForSource(Battery.onBattery, ShellSettings.powerProfileAc,
                 ShellSettings.powerProfileBattery, root.profile)

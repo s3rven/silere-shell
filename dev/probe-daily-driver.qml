@@ -296,6 +296,20 @@ Scope {
         PowerProfiles._sandboxed = false
         ShellSettings.powerProfileAc = restoreWas
 
+        // at boot the daemon restores its last mode, maybe the other source's, and no charger edge follows
+        PowerProfiles._startSettleTimer.stop()
+        PowerProfiles._sourceSettleTimer.stop()
+        Battery.available = false
+        Battery.available = true
+        root.check(PowerProfiles._sourceSettleTimer.running,
+            "the current source's mode is restored once the battery and the power daemon answer")
+        PowerProfiles._startSettleTimer.restart()
+        PowerProfiles._sourceSettleTimer.triggered()
+        root.check(PowerProfiles._sourceSettleTimer.running && !PowerProfiles._setter.running,
+            "a restore at start waits out UPower's first default read")
+        PowerProfiles._startSettleTimer.stop()
+        PowerProfiles._sourceSettleTimer.stop()
+
         // a mode key changes the mode outside the menu; it is the latest choice for the source it lands on
         PowerProfiles._startSettleTimer.stop()
         ShellSettings.powerProfileAc = "balanced"
