@@ -148,8 +148,8 @@ table names the packages.
 
 ## Under the hood
 
-Animations and system readings pause when the session goes idle. The 1.8.0 release measured
-107 MB PSS after startup and 108 MB after opening and closing the menu once on the Ryzen 7
+Animations and system readings pause when the session goes idle. The 1.9.0 release measured
+96 MB PSS after startup and 105 MB after opening and closing the menu once on the Ryzen 7
 8845HS reference laptop. See the [performance guide](docs/performance.md) for the conditions and
 how to measure your setup.
 
