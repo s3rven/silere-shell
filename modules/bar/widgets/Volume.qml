@@ -49,7 +49,7 @@ Pill {
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.muted ? Theme.barSubtext : Theme.barAccentMark
 
-    wheelKey: "audio:" + (Audio.sink ? String(Audio.sink.id) : "")
+    wheelKey: "audio:" + root + ":" + (Audio.sink ? String(Audio.sink.id) : "")
 
     WheelHandler {
         enabled: Audio.ready && root.hoverEnabled

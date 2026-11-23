@@ -371,12 +371,14 @@ set -euo pipefail
 fixtures="$SILERE_DAILY_FIXTURES"
 if [ "$1" = status ]; then
     snapshot="$(cat "$fixtures/session-state")"
+    session="$(cat "$fixtures/session-id" 2>/dev/null || printf fixture)"
     printf 'status\n' >> "$fixtures/session-calls"
     while [ -s "$fixtures/session-status-hold" ]; do sleep 0.02; done
     sleep 0.1
-    printf 'session=fixture\nlocked=%s\n' "$snapshot"
+    printf 'session=%s\nlocked=%s\n' "$session" "$snapshot"
 else
-    printf 'wait\n' >> "$fixtures/session-calls"
+    session="${2:-$(cat "$fixtures/session-id" 2>/dev/null || printf fixture)}"
+    printf 'wait %s\n' "$session" >> "$fixtures/session-calls"
     while [ -s "$fixtures/session-wait-hold" ]; do sleep 0.02; done
     sleep 0.1
     [ ! -s "$fixtures/session-wait-fail" ]

@@ -537,11 +537,18 @@ Singleton {
         function onNotifHistoryDaysChanged() { root._syncHistoryRetention() }
         function onReadyChanged() { root._syncHistoryRetention() }
         function onNotifHistoryPersistentChanged() {
-            // privacy-first: turning persistence off removes text restored from an earlier session. New entries still form an in-memory history
+            // keep this session's history in memory when removing text restored from earlier sessions
             if (!ShellSettings.notifHistoryPersistent) {
-                _history.clear()
-                root.historyRevision++
-                root._pruneOrphanState()
+                let changed = false
+                for (let i = _history.count - 1; i >= 0; i--) {
+                    if (_history.get(i).sessionCurrent) continue
+                    _history.remove(i)
+                    changed = true
+                }
+                if (changed) {
+                    root.historyRevision++
+                    root._pruneOrphanState()
+                }
             }
             root._saveHistory()
         }

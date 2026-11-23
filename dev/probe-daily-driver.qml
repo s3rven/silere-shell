@@ -1079,9 +1079,15 @@ Scope {
         root.write("session-state", "no")
         Compositor.commands = []
 
+        root.write("session-id", "fixture-a")
+        const switchSession = () => root.write("session-id", "fixture-b")
+        Compositor.commandsChanged.connect(switchSession)
         root.check(Session.lockAndSleep(), "a ready session starts its fixture lock request")
         root.waitFor(() => !Session.busy && SystemTools.commands.length === 1,
             "a confirmed fixture lock reaches the mocked suspend action")
+        Compositor.commandsChanged.disconnect(switchSession)
+        root.check(/^wait fixture-a$/m.test(root.read("session-calls")) && root.read("session-id") === "fixture-b",
+            "lock confirmation stays with the session whose initial lock state was checked")
         root.check(Compositor.commands.length === 1 && Compositor.commands[0][0] === "fixture-lock",
             "lock and sleep always requests its configured locker")
 

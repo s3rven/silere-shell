@@ -53,7 +53,7 @@ Pill {
         && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.micMuted ? Theme.barSubtext : Theme.barError
 
-    wheelKey: "microphone:" + (Audio.source ? String(Audio.source.id) : "")
+    wheelKey: "microphone:" + root + ":" + (Audio.source ? String(Audio.source.id) : "")
 
     WheelHandler {
         enabled: Audio.micReady && root.hoverEnabled

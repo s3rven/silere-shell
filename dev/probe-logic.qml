@@ -471,6 +471,9 @@ ShellRoot {
     Component { id: collapsingTextFactory; CollapsingText { animate: false; tabularDigits: true; reserveText: ":00" } }
     Component { id: clockFactory; Clock { screen: null } }
     Component { id: mediaWidgetFactory; MediaWidget { screen: null; height: 36 } }
+    Component { id: volumePillFactory; Volume {} }
+    Component { id: microphonePillFactory; MicWidget {} }
+    Component { id: brightnessPillFactory; BrightnessWidget {} }
     Component { id: updatesWidgetFactory; UpdatesWidget { screen: null } }
     Component { id: shellUpdateWidgetFactory; ShellUpdateWidget { screen: null } }
     Component {
@@ -7250,6 +7253,16 @@ ShellRoot {
         root._check([265, 264, 263, 262].every((id, i) => Notifications.historyModel.get(i).id === id),
             "a repeat with another body, another sender or a row between them keeps its own row")
         Notifications.clearHistory()
+        Notifications._prependHistory({ id: 275, appName: "Agent", desktopEntry: "agent.one",
+            summary: "Approval requested", urgency: 1, time: 20 })
+        Notifications._prependHistory({ id: 276, appName: "Agent", desktopEntry: "agent.one",
+            summary: "Approval requested", urgency: 2, time: 10 })
+        Notifications._prependHistory({ id: 277, appName: "Agent", desktopEntry: "agent.two",
+            summary: "Approval requested", urgency: 1, time: 30 })
+        root._check(Notifications.historyCount === 3
+                && [277, 275, 276].every((id, i) => Notifications.historyModel.get(i).id === id),
+            "history keeps changes in urgency or desktop entry even when notification text and app name match")
+        Notifications.clearHistory()
         Notifications._prependHistory({ id: 201, appName: "Alpha", summary: "a1", time: 1 })
         Notifications._prependHistory({ id: 202, appName: "Beta",  summary: "b1", time: 1 })
         Notifications._prependHistory({ id: 203, appName: "Alpha", summary: "a2", time: 1 })
@@ -7713,7 +7726,7 @@ ShellRoot {
         const historyPersistentWas = ShellSettings.notifHistoryPersistent
         ShellSettings.notifHistoryPersistent = false
         Notifications._prependHistory({ id: 9901, appName: "Probe",
-            summary: "Memory only", time: 9901 })
+            summary: "Memory only", time: 9901, sessionCurrent: true })
         Notifications._saveHistory()
         root._check(Notifications.historyCount === 1
                 && JSON.parse(Notifications._serializeDisk()).history.length === 0,
@@ -7726,14 +7739,18 @@ ShellRoot {
         root._check(Notifications._serializeDisk() === historyPayload,
             "saving an unchanged history keeps the same payload")
         Notifications._prependHistory({ id: 9902, appName: "Probe",
-            summary: "New revision", time: 9902 })
+            summary: "New revision", time: 9902, sessionCurrent: true })
         Notifications._saveHistory()
         root._check(JSON.parse(Notifications._serializeDisk()).history[0].summary === "New revision",
             "a changed history refreshes the serialized payload")
+        Notifications._prependHistory({ id: 9903, appName: "Probe", summary: "Restored", time: 9900 })
         ShellSettings.notifHistoryPersistent = false
-        root._check(Notifications.historyCount === 0
+        root._check(Notifications.historyCount === 2
+                && Notifications.historyModel.get(0).summary === "New revision"
+                && Notifications.historyModel.get(1).summary === "Memory only"
                 && JSON.parse(Notifications._serializeDisk()).history.length === 0,
-            "disabling history persistence clears the previously serialized text")
+            "disabling history persistence clears restored history and the disk payload but keeps this session's rows")
+        Notifications.clearHistory()
         ShellSettings.notifHistoryPersistent = historyPersistentWas
 
         const savedDnd = ShellSettings.dndSchedule
@@ -13441,6 +13458,25 @@ ShellRoot {
         root._check(Notifications.historyCount === 1 && Notifications.historyModel.get(0).id === 6217
                 && JSON.parse(Notifications._serializeDisk()).history.length === 1,
             "history restored after a restart is pruned and persisted against the active retention policy")
+        const limitWas = ShellSettings.notifHistoryLimit
+        ShellSettings.notifHistoryLimit = 5
+        Notifications.clearHistory()
+        const expired = Array.from({ length: 5 }, (_, i) => ({ id: 6240 + i,
+            appName: "Expired", time: now - day * 2 - i, summary: "Expired " + i }))
+        const retained = Array.from({ length: 5 }, (_, i) => ({ id: 6250 + i,
+            appName: "Current", time: now - i, summary: "Current " + i }))
+        Notifications._restoreFromDisk(JSON.stringify({ __version: 1, history: expired.concat(retained) }))
+        root._check(Notifications.historyCount === 5
+                && retained.every((entry, i) => Notifications.historyModel.get(i).id === entry.id),
+            "expired disk entries never take places away from retained history")
+        Notifications.clearHistory()
+        expired.slice(0, 2).forEach(entry => Notifications.historyModel.append(Notifications._normalizeEntry(entry)))
+        retained.slice(0, 3).forEach(entry => Notifications._prependHistory(entry))
+        Notifications._prependHistory({ id: 6260, appName: "Arrival", time: now, summary: "Newest" })
+        root._check(Notifications.historyCount === 4
+                && JSON.parse(Notifications._serializeDisk()).history.every(entry => entry.id >= 6250),
+            "capacity trimming expires old rows before it evicts recent rows from a busy app")
+        ShellSettings.notifHistoryLimit = limitWas
         // The earlier settings-file tests still have external-read callbacks queued.
         // Let those settle before testing a deadline across event-loop turns.
         _historyRetentionSettle.restart()
@@ -16081,6 +16117,20 @@ ShellRoot {
             f.pill.collapsed = true
             root._check(Scroll._accums[f.pill.wheelKey] === undefined,
                 "a collapsing pill discards its unfinished scroll gesture")
+            const controls = [[volumePillFactory, "volume"], [microphonePillFactory, "microphone"],
+                [brightnessPillFactory, "brightness"]]
+            for (const [factory, name] of controls) {
+                const first = factory.createObject(f.contentItem)
+                const second = factory.createObject(f.contentItem)
+                const firstPartial = Scroll._processDelta(60, first.wheelKey, 120, 2, 0)
+                const secondPartial = Scroll._processDelta(60, second.wheelKey, 120, 2, 0)
+                second._resetWheel()
+                const firstNotch = Scroll._processDelta(60, first.wheelKey, 120, 2, 0)
+                root._check(firstPartial === 0 && secondPartial === 0 && firstNotch === 1,
+                    "each " + name + " pill has a separate wheel gesture even when both control the same device")
+                first.destroy()
+                second.destroy()
+            }
             const barWas = { tray: ShellSettings.trayWidget, hidden: ShellSettings.trayHidden,
                 scale: ShellSettings.uiScale, reduce: ShellSettings.reduceMotion,
                 hover: ShellSettings.valuesOnHover, media: ShellSettings.barShowMedia, shown: Media.shown }

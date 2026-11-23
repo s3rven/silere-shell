@@ -86,9 +86,11 @@ Singleton {
             }
             // a cached hint may predate an unlock, so request the lock on every action
             Compositor.launch(Settings.lockCommand)
-            const state = _before.completedSuccessfully(code)
-                ? (/(^|\n)locked=(yes|no)(\n|$)/.exec(_beforeOut.text) || [])[2] : undefined
-            if (state === "no") _wait.running = true
+            const status = _before.completedSuccessfully(code) ? _beforeOut.text : ""
+            const state = /(?:^|\n)locked=(yes|no)(?:\n|$)/.exec(status)?.[1]
+            const session = /(?:^|\n)session=([a-zA-Z0-9_.-]+)(?:\n|$)/.exec(status)?.[1]
+            if (state === "no" && session)
+                _wait.exec(["bash", Quickshell.shellDir + "/scripts/session.sh", "wait-locked", session])
             else root._cancelSleep(state === "yes" ? "The session was already marked locked, so the new lock could not be confirmed. Sleep was cancelled."
                 : "Could not confirm screen lock. Sleep was cancelled.")
         }
@@ -113,7 +115,6 @@ Singleton {
     BoundedProcess {
         id: _wait
         timeoutMs: 15000
-        command: ["bash", Quickshell.shellDir + "/scripts/session.sh", "wait-locked"]
         onExited: code => {
             const current = root._waitGeneration === root._generation && root.canLockSleep
             if (!_wait.completedSuccessfully(code) || !current) {

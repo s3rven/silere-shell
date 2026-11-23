@@ -30,12 +30,16 @@ case "${1:-}" in
     tool-stop) session_tools stop "${2:?}"; exit $? ;;
 esac
 
-session_id="${XDG_SESSION_ID:-}"
-if [ -z "$session_id" ]; then
-    session_id="$(timeout 2 loginctl show-session self -p Id --value 2>/dev/null || true)"
+if [ "${1:-}" = wait-locked ] && [ "$#" -gt 1 ]; then
+    session_id="$2"
+else
+    session_id="${XDG_SESSION_ID:-self}"
+    case "$session_id" in
+        self|auto) session_id="$(timeout 2 loginctl show-session "$session_id" -p Id --value 2>/dev/null || true)" ;;
+    esac
 fi
 case "$session_id" in
-    ''|*[!a-zA-Z0-9_.-]*) echo 'No local login session could be identified.' >&2; exit 1 ;;
+    ''|self|auto|-*|*[!a-zA-Z0-9_.-]*) echo 'No local login session could be identified.' >&2; exit 1 ;;
 esac
 
 locked_state() {
@@ -56,5 +60,5 @@ case "${1:-status}" in
         echo 'The session did not confirm a secure lock; sleep was cancelled.' >&2
         exit 1
         ;;
-    *) echo 'Usage: session.sh status|wait-locked|tool-find NAME|tool-stop NAME' >&2; exit 2 ;;
+    *) echo 'Usage: session.sh status|wait-locked [SESSION_ID]|tool-find NAME|tool-stop NAME' >&2; exit 2 ;;
 esac
