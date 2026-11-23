@@ -605,6 +605,9 @@ Singleton {
     readonly property bool cavaReady: cavaAvailable && ShellSettings.mediaProgress
     readonly property bool cavaHasFrame: _cavaProc.running && _cavaHasFrame
     property bool _cavaHasFrame: false
+    // cava 1.0 exits 1 both when it cannot start and when PipeWire restarts under it; one frame rules out the first
+    property bool _cavaWorked: false
+    readonly property var _cavaGiveUpCodes: _cavaWorked ? [] : [1]
     readonly property string visualizerError: !root.cavaReady ? ""
         : root._cavaConfigFailed ? "Could not save the Cava profile"
         : _cavaProc.gaveUp ? "Cava failed. Check PipeWire."
@@ -828,7 +831,10 @@ Singleton {
         for (let i = 0; !changed && i < result.length; i++)
             if (Math.abs(result[i] - prev[i]) > 0.02) changed = true
         if (changed) root.barHeights = result
-        if (!root._cavaHasFrame) root._cavaHasFrame = true
+        if (!root._cavaHasFrame) {
+            root._cavaHasFrame = true
+            root._cavaWorked = true
+        }
     }
 
     property bool _fsBlocked: false
@@ -862,9 +868,9 @@ Singleton {
         restartDelay: 1000
         maxRestartDelay: 30000
         stableAfter: 20000
-        // a clean exit 1 is cava refusing to start - an input method this build lacks,
+        // a clean exit 1 before any frame is cava refusing to start - an input method this build lacks,
         // which respawning cannot fix; the playback gate retries when it next cycles
-        giveUpCodes: [1]
+        giveUpCodes: root._cavaGiveUpCodes
         stdout: SplitParser {
             onRead: line => root._consumeCavaFrame(line)
         }

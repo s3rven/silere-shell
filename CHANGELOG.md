@@ -165,6 +165,7 @@ settings file carries its own `__version` and migrates separately.
 - A notification Silere closes on its own, when a screen share starts, popups are switched off or a newer one replaces it, tells the app it expired, not that you dismissed it.
 - Muting while the OSD names the output, as in "Speakers · 45%", no longer moves its icon and level. A muted microphone reads "Microphone · Muted".
 - The Center and Underline visualizers keep showing track progress with the media widget off the bar.
+- The audio visualizer comes back after PipeWire restarts during playback.
 - Now Playing no longer keeps the last track's cover beside a track whose cover can't be read.
 - When the control you are on with the keyboard turns off or goes busy, as Check in Settings › System › Overview does while it runs, the keys keep working on that panel and the focus comes back to it after. A Wi-Fi network, Bluetooth device or VPN you press Enter on keeps the focus while it connects, and the Bluetooth picker keeps it on its device while others appear or re-sort.
 - A screen reader names the power action waiting for its second press, as in "Press again to reboot".

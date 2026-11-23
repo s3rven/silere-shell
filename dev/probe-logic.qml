@@ -9997,8 +9997,12 @@ ShellRoot {
             "media service emits a valid bounded Cava raw-output profile")
         const previousBars = Media.barHeights
         const previousFrame = Media._cavaHasFrame
+        const previousWorked = Media._cavaWorked
         Media.barHeights = []
         Media._cavaHasFrame = false
+        Media._cavaWorked = false
+        root._check(Media._cavaGiveUpCodes.indexOf(1) >= 0,
+            "a cava that exits 1 before its first frame is given up on")
         const silence = "0;".repeat(Media._cavaBars)
         Media._consumeCavaFrame(silence + "invalid;")
         Media._consumeCavaFrame("Infinity;" + silence.slice(2))
@@ -10009,8 +10013,11 @@ ShellRoot {
         root._check(Media._cavaHasFrame && Media.barHeights.length === Media._cavaBars
                 && Media.barHeights.every(level => level === 0),
             "an intact silent Cava frame counts as ready")
+        root._check(Media._cavaGiveUpCodes.indexOf(1) < 0,
+            "after a frame, cava's exit 1 is PipeWire restarting under it and respawns")
         Media.barHeights = previousBars
         Media._cavaHasFrame = previousFrame
+        Media._cavaWorked = previousWorked
         root._check(Media.vizLevel(0, 64) === 0 && Media.vizLevel(64, 64) === 1
                 && Media.vizLevel(99, 64) === 1 && Media.vizLevel(-3, 64) === 0
                 && Media.vizLevel(NaN, 64) === 0 && Media.vizLevel(10, 0) === 0,
