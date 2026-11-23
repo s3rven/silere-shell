@@ -1694,6 +1694,14 @@ else
 fi
 fi
 
+# switching from another bar: its start line stays, and it comes back beside Silere at the next login
+while IFS=$'\t' read -r other_start other_where; do
+    [ -n "$other_start" ] || continue
+    _warn "$(_tilde "$other_where") still starts $other_start at login, beside Silere: remove that line"
+done < <(_silere_config_autostarts \
+    "$CONFIG_HOME/hypr" "$CONFIG_HOME/niri" ${HYPR_CONFIG:+"$(dirname -- "$HYPR_CONFIG")"} \
+    ${NIRI_CONFIG:+"$(dirname -- "$NIRI_CONFIG")"} | sort -u)
+
 # ── menu keybind ────────────────────────────────────────────────────────────────
 _section "menu keybind"
 

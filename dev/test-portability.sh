@@ -3351,6 +3351,24 @@ test_notification_autostarters_are_named() (
     assert_eq "" "$out" "no D-Bus file, nothing to say"
 )
 
+test_config_autostarts_are_named() (
+    local cfg="$TMP/starts" out
+    mkdir -p "$cfg/hypr/conf" "$cfg/niri"
+    printf '%s\n' 'exec-once = waybar' '# exec-once = mako' 'exec-once=uwsm app -- /usr/bin/dunst -conf x' \
+        'bind = SUPER, N, exec, makoctl dismiss' 'exec-once = swaync-client -t' \
+        'exec-once = ~/.config/silere-shell/scripts/silere run --startup' > "$cfg/hypr/hyprland.conf"
+    printf '%s\n' 'hl.exec_cmd("mako")' '  -- hl.exec_cmd("waybar")' \
+        'hl.bind("SUPER + N", hl.dsp.exec_cmd("swaync-client -t"))' > "$cfg/hypr/conf/execs.lua"
+    printf '%s\n' 'spawn-at-startup "ironbar"' '// spawn-at-startup "waybar"' 'binds { Mod+N { spawn "fnott"; } }' \
+        > "$cfg/niri/config.kdl"
+    source "$ROOT/scripts/lib/ui.sh"
+    out="$(_silere_config_autostarts "$cfg/hypr" "$cfg/niri" | sort)"
+    assert_eq $'dunst\t'"$cfg/hypr/hyprland.conf:3"$'\nironbar\t'"$cfg/niri/config.kdl:1"$'\nmako\t'"$cfg/hypr/conf/execs.lua:1"$'\nwaybar\t'"$cfg/hypr/hyprland.conf:1" \
+        "$out" "a bar or notification daemon a compositor config starts is named with its line; comments, binds and helpers are not"
+    out="$(_silere_config_autostarts "$TMP/starts-none")"
+    assert_eq "" "$out" "no config folder, nothing to say"
+)
+
 test_launcher_uses_real_name() (
     local stubs="$TMP/name-stubs" calls="$TMP/name-calls"
     mkdir -p "$stubs"
@@ -4552,6 +4570,7 @@ test_motion_block
 test_cpu_sensor_choice
 test_other_bars_are_named
 test_notification_autostarters_are_named
+test_config_autostarts_are_named
 test_launcher_uses_real_name
 test_startup_failure_report
 test_startup_waits_for_wayland

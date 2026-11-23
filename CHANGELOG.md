@@ -33,6 +33,7 @@ settings file carries its own `__version` and migrates separately.
 - On niri, focusing a window and cycling the keyboard layout use the compositor socket directly, avoiding a new process for each action.
 - `silere help` lists the commands that control the shell apart from the ones that run and maintain it, and `silere set` takes `on` and `off` for a true/false setting.
 - `silere use` moves the shell completions to the checkout it switches to, as it does the command.
+- Switching from another bar, the installer and `silere doctor` name each line of your Hyprland or niri config that still starts Waybar, mako, dunst or a similar bar or daemon at login, with its file and line number.
 - `silere doctor` names a notification daemon such as mako or dunst that D-Bus can start on its own, which takes notifications from Silere at a later login, and how to keep it off.
 - With notifications still on screen, the empty Notifications tab says they move there when they close, instead of All caught up.
 - The Command widget in Show & order says when it is on without a command to run.

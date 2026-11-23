@@ -85,6 +85,23 @@ _silere_other_bars() {
 # a notification daemon D-Bus starts on its own (mako, dunst, swaync ship such a file) takes the name whenever an app
 # notifies before Silere is up, at any later login. One "program<TAB>systemd unit" line each; the unit may be empty.
 # Plasma's file only waits for the name, and Silere's own never comes from a D-Bus file
+# stopped now, a bar or notification daemon the compositor config starts is back at the next login, beside Silere and
+# holding the notification name. Prints "name<TAB>file:line" for each start line in the given folders: Hyprland's
+# exec-once/exec and hl.exec_cmd (not a bind's hl.dsp.exec_cmd), niri's spawn-at-startup; comments are skipped
+_silere_config_autostarts() {
+    local hit where names='waybar|hyprpanel|ashell|ironbar|yambar|nwg-panel|mako|dunst|swaync|fnott|deadd-notification-center'
+    [ "$#" -gt 0 ] || return 0
+    grep -rnE --include='*.conf' --include='*.lua' --include='*.kdl' \
+        "^[[:space:]]*(exec(-once)?[[:space:]]*=|hl\.exec_cmd[[:space:]]*\(|spawn(-sh)?-at-startup[[:space:]]).*(^|[^A-Za-z0-9_.-])($names)([^A-Za-z0-9_-]|$)" \
+        "$@" 2>/dev/null | while IFS= read -r hit; do
+            [[ "$hit" =~ ^([^:]+:[0-9]+):(.*)$ ]] || continue
+            where="${BASH_REMATCH[1]}"
+            [[ "${BASH_REMATCH[2]}" =~ (^|[^A-Za-z0-9_.-])($names)([^A-Za-z0-9_-]|$) ]] || continue
+            printf '%s\t%s\n' "${BASH_REMATCH[2]}" "$where"
+        done
+    return 0
+}
+
 _silere_notification_autostarters() {
     local data_home dir file cmd unit name seen=" "
     local -a dirs=() data_dirs=()

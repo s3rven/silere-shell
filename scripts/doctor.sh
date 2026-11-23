@@ -322,6 +322,14 @@ while IFS=$'\t' read -r notif_daemon notif_unit; do
         warn "notification daemon" "$notif_daemon can start itself before Silere; uninstall it to keep Silere's notifications"
     fi
 done < <(_silere_notification_autostarters)
+# the running check above misses one stopped for now; the compositor config starts it again at the next login
+doctor_config_home="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config 2>/dev/null || true)"
+if [ -n "$doctor_config_home" ]; then
+    while IFS=$'\t' read -r started where; do
+        [ -n "$started" ] || continue
+        warn "at login" "$started starts from ${where/#"$HOME"/\~}, beside Silere; remove that line"
+    done < <(_silere_config_autostarts "$doctor_config_home/hypr" "$doctor_config_home/niri")
+fi
 
 section "Audio"
 optional_tool pipewire "audio service"
