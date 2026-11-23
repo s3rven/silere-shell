@@ -230,6 +230,10 @@ silere reset --apply --history  # also clear notification history (can't be undo
 silere reset --undo             # put back what the last reset replaced
 ```
 
+A terminal reset saves its settings and edited files together. If you also restored defaults
+from Settings, the terminal undo restores its own backup first. A second undo can restore the
+saved settings from the GUI. Git keeps the terminal reset's stash as a recovery copy.
+
 A settings file that won't parse is saved, not discarded. Hooks, the Matugen palette, autostart
 and the service are left alone. To reset by hand, stop Silere, back up `settings.json`, replace
 its contents with `{ "__version": 5 }` and start Silere again.

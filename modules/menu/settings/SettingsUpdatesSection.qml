@@ -320,7 +320,7 @@ Column {
             glyph: "󰚰"; label: "Track package updates"
             key: "updatesWidget"
             available: !SystemTools.ready || Updates.supported
-            dependsNote: "No package manager"
+            dependsNote: Updates.canConfigureAur ? "Enable AUR packages below" : "No supported checker"
         }
         CollapsibleSection {
             expanded: ShellSettings.updatesWidget

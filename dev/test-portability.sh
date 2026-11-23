@@ -2932,6 +2932,16 @@ test_reset_workflow() (
     assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "reset stops the shell first and starts it again"
     assert_eq "777" "$(cat "$state")" "the shell is running again"
 
+    # A GUI restore and an ordinary repair each produce a newer backup of their own.
+    printf '{"barHeight":48}\n' > "$saved/settings.pre-reset.json"
+    printf 'later repair\n' > "$repo/shell.qml"
+    bash "$repo/scripts/repair.sh" --apply --yes >/dev/null
+    local newer_stash
+    newer_stash="$(git -C "$repo" rev-parse refs/stash)"
+
+    local manifest="$saved/reset-saved/manifest" reset_stash
+    reset_stash="$(<"$manifest")"
+    printf 'stash=%040d\n' 0 > "$manifest"
     : > "$state.calls"
     run_reset --undo --yes >/dev/null || fail "reset --undo failed"
     assert_eq $'{\n  "__version": 2,\n  "barHeight": 40,\n  "dnd": true\n}' "$(cat "$config/settings.json")" "undo restores the settings"
@@ -2941,8 +2951,16 @@ test_reset_workflow() (
     assert_eq $'kill\nlaunch' "$(cat "$state.calls")" "undo restarts the shell too"
     if run_reset --undo --yes >/dev/null 2>&1; then fail "a second undo found something to restore"; fi
 
-    # a file that will not parse is reported, replaced and still saved
     git -C "$repo" checkout -q -- shell.qml; rm -f "$repo/untracked.qml"
+    mkdir "$saved/reset-saved"
+    printf 'repaired=1\n' > "$saved/reset-saved/manifest"
+    printf '{"barHeight":52}\n' > "$saved/settings.pre-reset.json"
+    run_reset --undo --yes >/dev/null 2>"$TMP/reset-legacy.log" || fail "reset could not read its legacy backup"
+    assert_eq '{"barHeight":52}' "$(cat "$config/settings.json")" "legacy reset still restores settings"
+    assert_eq "shipped" "$(cat "$repo/shell.qml")" "ambiguous legacy reset leaves the later repair in Git"
+    grep -q 'did not record a stash ID' "$TMP/reset-legacy.log" || fail "legacy reset left out the stash recovery hint"
+
+    # a file that will not parse is reported, replaced and still saved
     printf '{ "barHeight": 40,' > "$config/settings.json"
     out="$(run_reset)"
     case "$out" in
@@ -2972,7 +2990,7 @@ test_reset_workflow() (
     # a reset with no settings file drops the copy an earlier one kept, or its undo would bring that back
     rm -f "$config/settings.json"; printf 'cover\n' > "$cache/art-stale"
     run_reset --apply --yes >/dev/null || fail "reset failed with no settings file"
-    [ ! -e "$saved/settings.pre-reset.json" ] || fail "a reset kept an earlier reset's copy of the settings"
+    [ ! -e "$saved/reset-saved/settings.json" ] || fail "a reset kept an earlier reset's copy of the settings"
 
     # a clean install has nothing to do, and the shell stays as it is
     : > "$state.calls"

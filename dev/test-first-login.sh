@@ -46,7 +46,7 @@ if [ "${1:-}" = --inner ]; then
     # The release step needs the network and has suites of its own, so this copy's updater answers that all is current
     installed="$home/.config/silere-shell"
     mkdir -p "$installed"
-    (cd "$ROOT" && tar --exclude=.git --exclude=TODO.md -cf - .) | tar -x -C "$installed"
+    (cd "$ROOT" && tar --exclude=.git --exclude=./TODO --exclude=TODO.md -cf - .) | tar -x -C "$installed"
     printf '#!/bin/sh\nexit 0\n' > "$installed/scripts/update.sh"
     git -C "$installed" init -q
     git -C "$installed" add -A

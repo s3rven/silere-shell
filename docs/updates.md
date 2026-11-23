@@ -70,6 +70,8 @@ match the timer's actual state.
 
 The bar's package update badge counts distribution and AUR packages separately
 from Silere releases. Use your package manager to install those updates.
+On Arch with `paru` or `yay` as the only available checker, enable **Include AUR packages**
+in **Settings › System › Overview** before switching on **Track package updates**.
 
 ## Interrupted updates
 

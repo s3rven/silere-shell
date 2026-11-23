@@ -103,6 +103,13 @@ _shell_is_up() {
     _silere_shell_running "$ROOT/shell.qml"
 }
 
+_lock_reset() {
+    (umask 077 && mkdir -p -- "$STATE_DIR") || _die "could not create the reset backup directory"
+    command -v flock >/dev/null 2>&1 || return 0
+    exec 8>>"$STATE_DIR/reset.lock"
+    flock -n 8 || _die "another reset or undo is in progress"
+}
+
 # stopped first: a shell left running could write its old settings over the reset. Refused before anything changes
 # if the shell could not be brought back afterwards, as from a text console
 _stop_shell() {
@@ -127,10 +134,10 @@ _stop_shell() {
 _start_shell() {
     trap - EXIT
     if [ "$SUPERVISED" = 1 ]; then
-        systemctl --user start silere-shell.service \
+        systemctl --user start silere-shell.service 8>&- \
             || _die "systemd could not start silere-shell.service again; silere doctor shows what is wrong"
     elif [ "$RESTART" = 1 ]; then
-        bash "$ROOT/scripts/silere" restart \
+        bash "$ROOT/scripts/silere" restart 8>&- \
             || _die "the shell did not come back; silere doctor shows what is wrong"
     else
         printf 'Silere is not running; silere run starts it.\n'
@@ -190,8 +197,17 @@ _undo_hint() {
     printf 'The last reset can be put back with silere reset --undo.\n'
 }
 
+_stash_for_reset() {
+    local label="$1"
+    git -C "$ROOT" stash push --include-untracked -m "$label" >/dev/null || return 1
+    # the stash position can change while other Git commands run; match this reset's unique label
+    git -C "$ROOT" stash list --format='%H%x09%gs' | awk -F '\t' -v suffix=": $label" '
+        !found && substr($2, length($2) - length(suffix) + 1) == suffix { print $1; found = 1 }
+        END { if (!found) exit 1 }'
+}
+
 _apply() {
-    local keys edited old caches name
+    local keys edited old caches name pending stash label
     keys="$(_changed_settings)"
     edited="$(_edited_files)"
     old="$(_leftovers)"
@@ -206,6 +222,7 @@ _apply() {
     [ "$history_there" = 0 ] || printf 'Notification history will be deleted. This part cannot be undone.\n\n'
     _confirm "Reset Silere?" || { printf 'Cancelled; nothing was changed.\n'; return 0; }
 
+    _lock_reset
     _stop_shell
     (umask 077 && mkdir -p -- "$STATE_DIR")
     # only one reset is kept; a second has to replace the first or an undo would mix the two
@@ -216,6 +233,8 @@ _apply() {
         cp -- "$SETTINGS" "$SAVED_SETTINGS" || _die "could not save a copy of the settings; nothing was reset"
         chmod 0600 -- "$SAVED_SETTINGS"
     fi
+    rm -rf -- "$SAVED_DIR"
+    mv -T -- "$pending" "$SAVED_DIR"
     _write_settings || _die "could not write the default settings"
 
     while IFS= read -r name; do
@@ -232,10 +251,13 @@ _apply() {
 
     if [ -n "$edited" ]; then
         # last before the restart: it can replace this very file, and the restart then runs the restored shell
-        if bash "$ROOT/scripts/repair.sh" --apply --yes >/dev/null; then
-            printf 'repaired=1\n' > "$SAVED_DIR/manifest"
+        label="silere-reset ${pending##*.}"
+        if stash="$(_stash_for_reset "$label" 8>&-)"; then
+            printf 'stash=%s\n' "$stash" > "$SAVED_DIR/stash.new" \
+                && mv -Tf -- "$SAVED_DIR/stash.new" "$SAVED_DIR/manifest" \
+                || _die "settings were reset and edits saved in stash $stash; could not link them in the reset backup"
         else
-            printf 'Settings were reset, but the edited files could not be restored; silere repair shows them.\n' >&2
+            printf 'Settings were reset. Could not record the edited files; check the worktree and Git stash list for %s.\n' "$label" >&2
         fi
     fi
     printf 'Silere was reset. silere reset --undo puts it back.\n'
@@ -249,29 +271,49 @@ _undo() {
     [ -f "$SAVED_DIR/manifest" ] && printf ', edited files'
     printf '.\n'
     _confirm "Undo the reset?" || { printf 'Cancelled; nothing was changed.\n'; return 0; }
+    _lock_reset
+    [ -e "$SAVED_SETTINGS" ] || [ -d "$SAVED_DIR" ] || _die "no reset to undo"
 
-    if [ -f "$SAVED_DIR/manifest" ] && [ -n "$(_edited_files)" ]; then
-        _die "the checkout has new local changes; save or remove them before restoring older ones"
+    local saved_settings="$SAVED_SETTINGS" manifest="" stash="" item
+    if [ -f "$SAVED_DIR/manifest" ]; then
+        manifest="$(cat -- "$SAVED_DIR/manifest")"
+    fi
+    case "$manifest" in
+        stash=*) saved_settings="$SAVED_DIR/settings.json"; stash="${manifest#stash=}" ;;
+        repaired=1|'') ;;
+        *) _die "could not read the reset manifest in $SAVED_DIR" ;;
+    esac
+
+    if [ -n "$stash" ]; then
+        if ! [[ "$stash" =~ ^([0-9a-f]{40}|[0-9a-f]{64})$ ]] || ! _is_checkout \
+            || ! git -C "$ROOT" cat-file -e "$stash^{commit}" 2>/dev/null \
+            || ! git -C "$ROOT" stash show --stat "$stash" >/dev/null 2>&1; then
+            _die "could not find the reset's saved edits in this checkout; the reset backup was kept"
+        fi
+        [ -z "$(_edited_files)" ] \
+            || _die "the checkout has new local changes; save or remove them before restoring older ones"
     fi
     _stop_shell
-    if [ -e "$SAVED_SETTINGS" ]; then
+    if [ -e "$saved_settings" ]; then
         (umask 077 && mkdir -p -- "$CONFIG_DIR")
         # through a link when it is one, as the reset wrote it
-        cat -- "$SAVED_SETTINGS" > "$SETTINGS" || _die "could not restore the settings"
-        rm -f -- "$SAVED_SETTINGS"
+        cat -- "$saved_settings" > "$SETTINGS" || _die "could not restore the settings"
     fi
-    local item
     if [ -d "$SAVED_DIR" ]; then
         for item in "$SAVED_DIR"/*; do
-            [ -e "$item" ] && [ "$(basename -- "$item")" != manifest ] || continue
+            [ -e "$item" ] || continue
+            case "${item##*/}" in manifest|settings.json|stash.new) continue ;; esac
             # a newer file of that name wins; the older one is not worth losing it for
-            [ -e "$CONFIG_DIR/$(basename -- "$item")" ] || mv -- "$item" "$CONFIG_DIR/"
+            [ -e "$CONFIG_DIR/${item##*/}" ] || mv -- "$item" "$CONFIG_DIR/"
         done
     fi
-    if [ -f "$SAVED_DIR/manifest" ]; then
-        bash "$ROOT/scripts/repair.sh" --undo --yes >/dev/null \
-            || printf 'The settings came back, but the edited files did not; silere repair --undo tries again.\n' >&2
+    if [ -n "$stash" ]; then
+        git -C "$ROOT" stash apply --quiet "$stash" 8>&- \
+            || _die "could not restore edits from stash $stash; the reset backup and stash were kept"
+    elif [ "$manifest" = repaired=1 ]; then
+        printf 'This older reset did not record a stash ID. Find its edited files in git stash list.\n' >&2
     fi
+    rm -f -- "$saved_settings"
     rm -rf -- "$SAVED_DIR"
     printf 'The last reset was undone.\n'
     _start_shell

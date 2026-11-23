@@ -27,20 +27,16 @@ Singleton {
     readonly property bool _online: !Network.toolAvailable || Network.connected
     readonly property bool aurHelperAvailable: SystemTools.hasParu || SystemTools.hasYay
 
-    readonly property string manager: {
+    readonly property string _repoManager: {
         if (!SystemTools.ready) return ""
         switch (SystemTools.packageFamily) {
-        case "pacman":
-            if (SystemTools.hasCheckupdates) return "pacman"
-            if (ShellSettings.updatesIncludeAur && root.aurHelperAvailable) return "aur"
-            return ""
+        case "pacman": return SystemTools.hasCheckupdates ? "pacman" : ""
         case "apt":    return SystemTools.hasApt ? "apt" : ""
         case "dnf":    return SystemTools.hasDnf ? "dnf" : ""
         case "zypper": return SystemTools.hasZypper ? "zypper" : ""
         case "xbps":   return SystemTools.hasXbps ? "xbps" : ""
         }
         if (SystemTools.hasCheckupdates) return "pacman"
-        if (SystemTools.hasParu || SystemTools.hasYay) return "aur"
         if (SystemTools.hasApt)          return "apt"
         if (SystemTools.hasDnf)          return "dnf"
         if (SystemTools.hasZypper)       return "zypper"
@@ -131,7 +127,8 @@ Singleton {
     }
 
     function _sourceIdentity(): string {
-        return root.sourceIdentity(root.manager, ShellSettings.updatesIncludeAur,
+        const includeAur = ShellSettings.updatesIncludeAur
+        return root.sourceIdentity(root._managerFor(includeAur), includeAur,
             SystemTools.hasParu, SystemTools.hasYay)
     }
 
@@ -318,7 +315,14 @@ Singleton {
     }
 
     function _sourcePreferenceChanged(): void {
-        root._sourceKey = root._sourceIdentity()
+        const next = root._sourceIdentity()
+        if (next === root._sourceKey) return
+        root._sourceKey = next
+        // inside the settings signal, its dependent manager binding can still hold the old source
+        if (!root._managerFor(ShellSettings.updatesIncludeAur)) {
+            root._backendChanged()
+            return
+        }
         _retry.stop()
         _reconnect.stop()
         const wasRunning = _proc.running
