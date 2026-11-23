@@ -183,6 +183,7 @@ cat > "$scratch/services/ShellSettings.qml" <<'EOF'
 pragma Singleton
 import Quickshell
 Singleton {
+    property bool barShowBrightness: false
     property bool ddcBrightnessEnabled: false
     property string ddcDisabledDisplays: ""
     property bool powerProfileRemember: true

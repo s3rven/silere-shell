@@ -8,7 +8,12 @@ Pill {
 
     property var screen: null
 
-    readonly property bool canControl: Brightness.controllable
+    readonly property var _externalDisplay: DisplayBrightness.available
+        ? (DisplayBrightness.controllableDisplays[0] ?? null) : null
+    readonly property bool canControl: Brightness.controllable || root._externalDisplay !== null
+    readonly property int _percent: Brightness.controllable ? Brightness.percent
+        : root._externalDisplay ? DisplayBrightness.levelFor(root._externalDisplay.key) : 0
+    readonly property string _label: root._percent + "%"
     readonly property bool show: ShellSettings.barShowBrightness && canControl
 
     property real _baseOpacity: show ? 1.0 : 0.0
@@ -20,11 +25,12 @@ Pill {
     // the sun's rays fill its whole em, a quarter more ink than the bar's other glyphs at the same size
     glyphPixelSize:  Settings.iconSize
     accessibleName: root.canControl
-        ? "Brightness " + Brightness.label : "Brightness unavailable"
+        ? "Brightness " + root._label + (!Brightness.controllable && root._externalDisplay ? ", " + root._externalDisplay.label : "")
+        : "Brightness unavailable"
     glyphColor:      canControl ? Theme.barText : Theme.barSubtext
     reserveText: "00%"
     text:        (ShellSettings.valuesOnHover && !expanded) ? ""
-                 : (canControl ? Brightness.label : "—")
+                 : (canControl ? root._label : "—")
     textColor:   Theme.barSubtext
     interactive: root.show
     adjustable: canControl
@@ -36,13 +42,19 @@ Pill {
         enabled: root.canActivate
         onTapped: root.activated()
     }
-    levelValue: canControl ? Brightness.pct : -1
+    levelValue: Brightness.controllable ? Brightness.pct : (canControl ? root._percent / 100 : -1)
     levelVisible: canControl && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Theme.barAccentMark
 
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
-    wheelKey: "brightness:" + (Brightness.deviceName)
+    wheelKey: "brightness:" + root + ":" + (Brightness.controllable ? Brightness.deviceName : (root._externalDisplay?.key ?? ""))
+
+    function scrollBy(notches: int): void {
+        const delta = notches * Brightness.stepPct
+        Brightness.bumpBy(delta)
+        DisplayBrightness.bumpAllBy(delta, Brightness.controllable ? Brightness.deviceName : "")
+    }
 
     WheelHandler {
         enabled: root.canControl && root.hoverEnabled
@@ -51,7 +63,7 @@ Pill {
             event.accepted = true
             if (!root.canControl || !root.hoverEnabled) return
             const n = Scroll.processLevelWheel(event, root.wheelKey)
-            if (n !== 0) Brightness.bumpBy(n * Brightness.stepPct)
+            if (n !== 0) root.scrollBy(n)
         }
     }
 }

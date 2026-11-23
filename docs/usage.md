@@ -25,12 +25,12 @@ and prints the line to add on niri. Any keybind can run `silere menu`; on Hyprla
 | Window title | | | | | Scroll a title that is cut short |
 | System monitor | Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |
 | Media | Play or pause | Now Playing | Jump to the player | Change track | |
-| Network | Wi-Fi list | nm-connection-editor, or nmtui | | | Network, signal, VPN, problems, traffic |
+| Network | Ethernet status or Wi-Fi list | nm-connection-editor, or nmtui | | | Network, signal, VPN, problems, traffic |
 | Bluetooth | Bluetooth list | blueman-manager | | | Connected device and its battery |
 | Keyboard layout | Next layout on every keyboard | | | | Full layout name |
-| Volume | Mute | pwvucontrol or pavucontrol | Next output | Volume | Active output |
-| Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | |
-| Brightness | Its slider in Home | | | Brightness | |
+| Volume | Mute | pwvucontrol or pavucontrol | Next output | Volume | Volume level and low Bluetooth battery |
+| Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | Input level and listening apps |
+| Brightness | Brightness sliders in Home | | | Step all controllable displays | |
 | Battery | Power Mode in Home | | | | Time left or charging state |
 | Updates | Package details | Check again | | | Status, and the error of a failed check |
 | Shell update | Settings › System › Overview | | | | |

@@ -9660,6 +9660,8 @@ ShellRoot {
             const displayHidden = !home._displayShown
             const ddcOffWas = ShellSettings.ddcDisabledDisplays
             const ddcKey = "card1-DP-1:" + "a".repeat(64)
+            SystemTools._tools = Object.assign({}, toolsWas, { ddcutil: true, timeout: true })
+            ShellSettings.ddcBrightnessEnabled = true
             DisplayBrightness.displays = [{ key: ddcKey, connector: "card1-DP-1", label: "DP-1", bus: "7",
                 identity: "a".repeat(64), unreadable: false, percent: 50 }]
             const ddcShown = home._displayShown

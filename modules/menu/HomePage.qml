@@ -27,13 +27,13 @@ PageShell {
     // a light or display that stopped answering keeps its place, or its error has nowhere to show; one switched off has no row
     readonly property bool _displayShown: _brightnessAvailable || KeyboardBrightness.ready
         || KeyboardBrightness.lastError.length > 0
-        || DisplayBrightness.displays.some(d => !d.unreadable && !DisplayBrightness.disabled(d.key))
+        || DisplayBrightness.controllableDisplays.length > 0
         || (ShellSettings.ddcBrightnessEnabled && DisplayBrightness.lastError.length > 0)
     readonly property bool _avShown: Audio.ready || root._displayShown
     // nothing to pick without a saved profile, so the row waits for one; a failed read leaves none, and the picker shows that error
     readonly property bool _vpnShown: Network.hasVpn
         || (Vpn.available && (Vpn.profiles.length > 0 || Vpn.lastError.length > 0))
-    readonly property bool _connShown: _wifiAvailable || _btAvailable || _signInShown || _vpnShown
+    readonly property bool _connShown: _wiredShown || _wifiAvailable || _btAvailable || _signInShown || _vpnShown
     function _bottom(item, shown: bool): real {
         return item.y + (shown ? item.height : 0)
     }
@@ -81,12 +81,10 @@ PageShell {
         const want = MenuState.homePicker
         if (want.length === 0) return
         MenuState.homePicker = ""
-        if (want === "brightness") {
-            if (!root._brightnessAvailable) return
-            root._closePicker()
-            _volumeRow.closeInline()
-            _brightnessRow.open = Brightness.devices.length > 1
-            root.controlRequested(_brightnessRow, null)
+        if (want === "wired") {
+            if (!root._wiredShown) return
+            root.dismissInline()
+            root.controlRequested(_wiredRow, null)
             return
         }
         const allowed = want === "wifi" ? root._wifiAvailable && Network.wifiEnabled
@@ -235,12 +233,11 @@ PageShell {
                     model: DisplayBrightness.displays
                     SliderRow {
                         required property var modelData
-                        visible: !DisplayBrightness.disabled(modelData.key) && !modelData.unreadable
                         glyph: "󰍹"
                         label: modelData.label + " brightness"
                         min: 1; max: 100; step: 1
                         value: DisplayBrightness.levelFor(modelData.key)
-                        displayValue: Math.round(value) + "%"
+                        displayValue: Math.round(shownValue) + "%"
                         interactionKey: modelData.key
                         commitOnRelease: true
                         onChanged: value => DisplayBrightness.setPercent(modelData.key, value)

@@ -9,9 +9,11 @@ Singleton {
 
     readonly property bool supported: SystemTools.hasDdcutil && SystemTools.hasTimeout && !SystemTools.preview
     readonly property bool available: ShellSettings.ddcBrightnessEnabled && root.supported
-    readonly property bool _wanted: root.available && !Idle.isIdle && MenuState.open
+    readonly property bool _menuWanted: MenuState.open
         && (MenuState.homeActive || (MenuState.settingsActive
             && (MenuState.settingsSection === "devices" || MenuState.settingsSection === "updates")))
+    readonly property bool _wanted: root.available && !Idle.isIdle
+        && (ShellSettings.barShowBrightness || root._menuWanted)
     property var displays: []
     property var values: ({})
     property string _scanError: ""
@@ -89,9 +91,9 @@ Singleton {
     }
     function levelFor(key: string): real { return Number(root.values[key] ?? 50) }
     function setPercent(key: string, percent: real): void {
-        if (!root.available || root.disabled(key) || !isFinite(percent)
+        if (!root.available || !isFinite(percent)
                 || Quickshell.env("SILERE_SANDBOX") === "1") return
-        if (!root.displays.some(d => d.key === key && !d.unreadable)) return
+        if (!root.controllableDisplays.some(d => d.key === key)) return
         const next = Math.max(1, Math.min(100, Math.round(percent)))
         root.values = Object.assign({}, root.values, { [key]: next })
         root._queued = Object.assign({}, root._queued, { [key]: next })
@@ -105,8 +107,8 @@ Singleton {
         const queued = Object.assign({}, root._queued)
         delete queued[key]
         root._queued = queued
-        const display = root.displays.find(d => d.key === key)
-        if (!display || root.disabled(key)) { Qt.callLater(root._applyNext); return }
+        const display = root.controllableDisplays.find(d => d.key === key)
+        if (!display) { Qt.callLater(root._applyNext); return }
         root._writingKey = key
         root._writeGeneration = root._generation
         _write.command = ["bash", Quickshell.shellDir + "/scripts/display-brightness.sh", "write",
