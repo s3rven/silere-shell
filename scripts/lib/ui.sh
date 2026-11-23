@@ -57,6 +57,32 @@ _silere_same_text() {
     [ "$(cat -- "$1"; printf x)" = "$(cat -- "$2"; printf x)" ]
 }
 
+_silere_package_family() {
+    local id="" like=""
+    if [ -r /etc/os-release ]; then
+        # os-release is shell syntax by specification. Read only the two fields
+        # used here, in a subshell so a distro cannot change this script's state.
+        read -r id like < <(sh -c '. /etc/os-release 2>/dev/null; printf "%s %s\n" "${ID:-}" "${ID_LIKE:-}"')
+    fi
+    case " $id $like " in
+        *' arch '*|*' cachyos '*|*' manjaro '*) printf 'pacman\n' ;;
+        *' fedora '*|*' rhel '*|*' centos '*)   printf 'dnf\n' ;;
+        *' debian '*|*' ubuntu '*)              printf 'apt\n' ;;
+        *' opensuse '*|*' suse '*)              printf 'zypper\n' ;;
+        *' void '*)                             printf 'xbps\n' ;;
+        *)                                      printf 'unknown\n' ;;
+    esac
+}
+
+# the one command that gets Quickshell on this system, as its own install guide gives it
+_silere_quickshell_install_hint() {
+    case "$(_silere_package_family)" in
+        pacman) printf 'sudo pacman -S --needed quickshell\n' ;;
+        dnf)    printf 'sudo dnf copr enable errornointernet/quickshell && sudo dnf install quickshell\n' ;;
+        *)      printf 'see https://quickshell.org/docs/v0.3.1/guide/install-setup/\n' ;;
+    esac
+}
+
 # another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
 _silere_other_bars() {
     local bar line config="" qs_bin

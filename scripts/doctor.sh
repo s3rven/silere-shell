@@ -39,24 +39,7 @@ info() { printf '     %-20s %s\n' "$1" "$2"; }
 warn() { printf '%swarn%s %-20s %s\n' "$YELLOW" "$R" "$1" "$2"; }
 fail() { printf '%sfail%s %-20s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
 
-_package_family() {
-    local id="" like=""
-    if [ -r /etc/os-release ]; then
-        # os-release is shell syntax by specification. Read only the two fields
-        # used here, in a subshell so a distro cannot change this script's state.
-        read -r id like < <(sh -c '. /etc/os-release 2>/dev/null; printf "%s %s\n" "${ID:-}" "${ID_LIKE:-}"')
-    fi
-    case " $id $like " in
-        *' arch '*|*' cachyos '*|*' manjaro '*) printf 'pacman\n' ;;
-        *' fedora '*|*' rhel '*|*' centos '*)   printf 'dnf\n' ;;
-        *' debian '*|*' ubuntu '*)              printf 'apt\n' ;;
-        *' opensuse '*|*' suse '*)              printf 'zypper\n' ;;
-        *' void '*)                             printf 'xbps\n' ;;
-        *)                                      printf 'unknown\n' ;;
-    esac
-}
-
-package_family="$(_package_family)"
+package_family="$(_silere_package_family)"
 
 _package_for() {
     local tool="$1"

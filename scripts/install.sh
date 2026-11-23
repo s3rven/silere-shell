@@ -1013,7 +1013,7 @@ if command -v qs >/dev/null 2>&1; then
         _ok "quickshell${qs_version:+ $qs_version}"
     fi
 else
-    _warn "quickshell not found — install it before launching silere"
+    _warn "quickshell not found — install it before launching silere: $(_silere_quickshell_install_hint)"
     has_qs=false
 fi
 
@@ -1941,7 +1941,7 @@ fi
 # separately — chaining them tells a user to restart into a shell nothing launches
 printf '\n'
 if ! $has_qs; then
-    printf "  ${YELLOW}install Quickshell${R}\n"
+    printf "  ${YELLOW}install Quickshell${R}: %s\n" "$(_silere_quickshell_install_hint)"
 elif ! $qs_modules_ok; then
     printf "  ${YELLOW}install a complete current Quickshell build${R}\n"
 fi
