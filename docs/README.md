@@ -9,6 +9,8 @@ Start with [installation](install.md) if Silere is new to your desktop, or
 |---|---|
 | Install, preview changes or enable crash recovery | [Installation](install.md) |
 | Learn the controls and customise the bar | [Everyday use](usage.md) |
+| Choose where the bar and popups appear | [Display settings](usage.md#displays) |
+| Set up brightness for external monitors | [External brightness](troubleshooting.md#external-monitor-brightness-is-missing-or-does-not-respond) |
 | Update Silere or restore the previous version | [Updates and recovery](updates.md) |
 | Fix startup, notifications, fonts or graphics | [Troubleshooting](troubleshooting.md) |
 | Add a keybind, change a setting from a script or use hooks | [Scripting](scripting.md) |

@@ -11,7 +11,7 @@ These are the 1.8.0 release measurements on reference machine A in
 | State | PSS | What it is |
 |---|---|---|
 | cold | ~107 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~108 MB | The same session after the menu has been opened once. |
+| warm | ~108 MB | The same session after opening and closing the menu once. |
 
 Popups and the menu's large pages compile the first time they are wanted, off the GUI thread,
 which starts the bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles
@@ -32,8 +32,8 @@ animations.
 Underline event animations stop during quiet idle; a critical temperature warning
 stays lit but still.
 
-Read PSS, not RSS. `top` and `htop` show RSS, which counts shared Qt, Mesa and font pages in
-full and reads about 170 to 180 MB for the same session.
+Use PSS to compare Silere's memory use. RSS, shown by `top` and `htop`, counts shared Qt,
+Mesa and font pages in full. The same 1.8.0 runs reported 228 MB cold and 230 MB warm RSS.
 
 Results vary with hardware, drivers, fonts and which widgets you enable. To measure your own
 setup, close other heavy programs first:

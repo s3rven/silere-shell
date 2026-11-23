@@ -28,7 +28,10 @@ Rectangle {
     property bool secondaryShown: false
     readonly property bool layoutPresent: visible
 
-    readonly property bool _compactActions: width < 300
+    readonly property int _textLeft: 14 + Metrics.glyphSlotWidth + 10
+    // leave room for the status to read as a sentence before putting actions beside it
+    readonly property bool _stackActions: width - _textLeft - 24 - _actions.preferredWidth
+        < Settings.fontSize * 10
 
     signal primaryTriggered()
     signal secondaryTriggered()
@@ -48,8 +51,11 @@ Rectangle {
 
         Item {
             id: _main
+            readonly property real summaryHeight: Math.max(Metrics.rowHeightFor(56),
+                Metrics.snap4Up(_txt.implicitHeight + 20))
+
             width: parent.width
-            height: Math.max(Metrics.rowHeightFor(56), Metrics.snap4Up(_txt.implicitHeight + 20))
+            height: summaryHeight + (root._stackActions ? _actions.height + 8 : 0)
 
             ShellText {
                 id: _g
@@ -81,23 +87,23 @@ Rectangle {
 
             Column {
                 id: _txt
-                anchors.left: _g.right
-                anchors.leftMargin: 10
-                anchors.right: _actions.left
-                anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
+                x: root._textLeft
+                y: (_main.summaryHeight - height) / 2
+                width: Math.max(0, (root._stackActions ? _main.width : _actions.x) - x - 12)
                 spacing: 3
 
                 Item {
+                    id: _heading
+                    readonly property bool hasMeta: root.meta.length > 0
+                    readonly property bool inlineMeta: hasMeta
+                        && _title.implicitWidth + 8 + _sub.implicitWidth <= width
+
                     width: parent.width
-                    height: Math.max(_title.implicitHeight, _sub.implicitHeight)
+                    height: hasMeta ? Math.max(_title.height, _sub.y + _sub.height) : _title.height
 
                     ShellText {
                         id: _title
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(implicitWidth, Math.max(40, parent.width
-                            - (_sub.visible ? _sub.width + 8 : 0)))
+                        width: parent.width
                         text: root.title
                         wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         color: Theme.text
@@ -106,14 +112,12 @@ Rectangle {
                     }
                     ShellText {
                         id: _sub
-                        visible: root.meta.length > 0
-                        anchors.left: _title.right
-                        anchors.leftMargin: 8
-                        anchors.baseline: _title.baseline
-                        // caps on the parent alone: reading _title.width here closed a binding loop, since the title already sizes itself off this one
-                        width: Math.min(implicitWidth, Math.max(0, parent.width * 0.46 - 8))
+                        visible: _heading.hasMeta
+                        x: _heading.inlineMeta ? _title.implicitWidth + 8 : 0
+                        y: _heading.inlineMeta ? _title.baselineOffset - baselineOffset : _title.height + 2
+                        width: Math.max(0, parent.width - x)
                         text: root.meta
-                        elide: Text.ElideRight
+                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         color: Theme.menuTextQuiet
                         font.pixelSize: Settings.fontCaption
                     }
@@ -130,14 +134,19 @@ Rectangle {
                 }
             }
 
-            Row {
+            Flow {
                 id: _actions
+                readonly property real preferredWidth: _primary.width
+                    + (root.secondaryShown ? _refresh.width + spacing : 0)
+
                 anchors.right: parent.right
                 anchors.rightMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
+                y: root._stackActions ? _main.summaryHeight : (_main.summaryHeight - height) / 2
+                width: Math.max(0, Math.min(preferredWidth, _main.width - 24))
                 spacing: 8
 
                 ActionButton {
+                    id: _refresh
                     visible: root.secondaryShown
                     height: Metrics.rowHeightFor(28)
                     glyph: root.secondaryGlyph
@@ -147,8 +156,9 @@ Rectangle {
                 }
 
                 ActionButton {
+                    id: _primary
                     height: Metrics.rowHeightFor(28)
-                    label: root._compactActions ? "" : root.primaryLabel
+                    label: root.primaryLabel
                     accessibleName: root.primaryLabel
                     glyph: root.primaryGlyph
                     enabled: root.primaryEnabled
@@ -172,7 +182,7 @@ Rectangle {
 
             ShellText {
                 id: _detailText
-                x: 14 + Metrics.glyphSlotWidth + 10
+                x: root._textLeft
                 y: 3
                 width: parent.width - x - 12
                 text: root.detail

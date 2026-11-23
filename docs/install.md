@@ -17,7 +17,7 @@ bash silere-shell/scripts/silere try
 ```
 
 This opens Hyprland or niri in a window, on a private session bus with private settings, state,
-cache and runtime directories, and runs the shell in there. Alt+1 to Alt+5 change workspace,
+cache and runtime directories. It needs `dbus-run-session` and `setsid`. Alt+1 to Alt+5 change workspace,
 Alt+Return opens a terminal and Alt+/ opens the menu. Sound, network and Bluetooth are your real
 ones, so their controls work. It can't lock or suspend your session, and it leaves keyboard
 lighting, external display brightness and the battery's charge limit alone. Closing the window ends it
@@ -46,9 +46,16 @@ The installer:
 - checks every QML module Silere imports and names any that are missing
 - puts a checkout in your XDG config directory, or another path you choose
 - backs up files before editing them, and asks before touching compositor autostart
-- offers a key that opens the menu in a Hyprland `.conf`, and leaves a combination already in use alone;
-  a Hyprland Lua config gets autostart and a shortcut at its end, checked with `Hyprland --verify-config` and
-  put back if rejected. For niri, or a Lua config ending in a `return`, it prints the line to add
+- offers autostart and a menu shortcut for Hyprland. It preserves combinations already in use
+  and checks Lua edits with `Hyprland --verify-config`, restoring the backup if verification fails.
+  A Lua config ending in `return` gets instructions for adding the lines yourself
+- offers to add `spawn-at-startup` to an existing niri config, or prints the line if that
+  config is missing. It also prints a menu shortcut to add inside your `binds` block
+- offers to turn off Hyprland's layer fade for Silere's popups, which animate themselves, the same way,
+  unless your config already has a layer rule that sets how Silere's layers animate
+- with a Lua config, offers Silere's window motion (asked, default no): `hyprland/silere-motion.lua` sets
+  Hyprland's window, workspace and focus animations to the shell's pace and works around two 0.57 animation
+  faults. It sets nothing else, and anything your config sets after its line wins
 - offers to leave the checkout on the latest signed release
 - prints the final install path when it's done
 - offers to start Silere right away in a Wayland session

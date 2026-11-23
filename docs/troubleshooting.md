@@ -25,6 +25,7 @@ answer a property read; `QT_LOGGING_RULES=` (empty) before `silere run` brings t
 | No notifications | [Notification daemon conflict](#notifications-never-appear) |
 | Missing icons or the wrong font | [Fonts](#icons-or-text-use-the-wrong-font) |
 | Blank tray icons | [Tray image cache](#tray-icons-disappear-when-shown-again) |
+| External monitor brightness is missing | [DDC/CI setup](#external-monitor-brightness-is-missing-or-does-not-respond) |
 | A failed Silere update | [Rollback](#the-shell-does-not-come-back-after-an-update) |
 | An update refuses local changes | [Repair](#a-shell-update-is-blocked-by-local-edits) |
 

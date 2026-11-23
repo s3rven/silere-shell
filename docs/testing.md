@@ -146,7 +146,7 @@ part of `dev/check.sh`.
 | Validate | Current Arch packages; structural checks, installer and updater fixtures, QML types, logic, UI stress, live settings and layout fit. |
 | UI compatibility | Logic, UI stress and layout fit at 125% and 150% display scaling. Both variants finish independently if one fails. |
 | Minimum Quickshell | Quickshell 0.3.1 on a pinned Arch snapshot with Qt 6.10.2; QML types, logic and settings surfaces. |
-| Compositor integration | Private KWin and niri sessions, plus output removal and tray menus under KWin. The runners have no GPU, so niri checks panels and popups only and Hyprland skips; `dev/check.sh` runs both in full where a render node exists. |
+| Compositor integration | Private KWin, Hyprland and niri sessions. KWin also checks output removal, tray keyboard navigation and audio changes. On runners without a GPU render node, niri checks panels and popups and Hyprland skips. See [compositor checks](#compositor-checks) to run the full probes locally. |
 
 The same workflow gates releases and runs weekly against current Arch packages.
 The pinned minimum job checks the supported floor; the rolling jobs help detect

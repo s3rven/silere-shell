@@ -17,6 +17,13 @@
 </p>
 
 <p align="center">
+  <a href="#getting-started">Install or try</a> ·
+  <a href="docs/usage.md">Everyday use</a> ·
+  <a href="docs/troubleshooting.md">Troubleshooting</a> ·
+  <a href="docs/README.md">All docs</a>
+</p>
+
+<p align="center">
   <img src="assets/shot-hero.webp" alt="Silere's floating bar with the menu open on Home and a notification beside it" width="100%"/>
 </p>
 
@@ -36,23 +43,6 @@ config, launcher, wallpaper tool and lock screen stay your own.
 | Appearance | Wallpaper colours through Matugen, dark and light modes, a custom accent and adjustable interface size. |
 | Updates | Signed releases from the menu, validation before installation and rollback to the previous version. |
 
-## A closer look
-
-<p align="center">
-  <img src="assets/shot-themes.webp" alt="The same desktop under four wallpapers, each in the colours Matugen draws from it, the last in light mode" width="100%"/>
-  <br/><sub>Colours follow your wallpaper through Matugen, in dark or light mode.</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar and a notification with actions" width="88%"/>
-  <br/><sub>Now Playing with cover art and seeking, the calendar with week numbers, and a notification with actions.</sub>
-</p>
-
-<p align="center">
-  <img src="assets/shot-settings.webp" alt="Theme settings for colour source, accent, base tone and bar surfaces" width="72%"/>
-  <br/><sub>Settings apply as you change them, and Ctrl+F finds any option.</sub>
-</p>
-
 ## Getting started
 
 You need **Hyprland or niri** and **Quickshell 0.3.1 or newer** built against **at least Qt 6.10**.
@@ -67,8 +57,8 @@ sudo pacman -S --needed quickshell git curl ttf-jetbrains-mono-nerd
 Other distributions follow [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 Icons need a Nerd Font, which the installer can download ([fonts](docs/install.md#fonts)).
 
-**Try it in a window first.** The preview uses its own session and temporary settings, and needs
-`dbus-run-session` and `setsid`. Its audio, network and Bluetooth controls act on your real devices.
+**Try it in a window.** The preview uses its own session and temporary settings. It needs
+`dbus-run-session` and `setsid`. Audio, network and Bluetooth controls act on your real devices.
 
 ```bash
 git clone --depth 1 https://github.com/s3rven/silere-shell
@@ -76,53 +66,65 @@ cd silere-shell
 bash scripts/silere try    # Alt + / opens the preview's menu; close the window to end it
 ```
 
-**Then install** as your normal user, after stopping your current bar and notification daemon:
+**Install as your normal user.** Run `bash scripts/install.sh` from the clone, or use the
+one-line installer:
 
 ```bash
-bash scripts/install.sh    # from the clone, or without one:
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
 ```
 
-The installer checks dependencies, installs to `~/.config/silere-shell`, and offers autostart and a
-`silere` command. It asks before editing your compositor config and backs up what it changes. The
-[installation guide](docs/install.md) covers dry runs, custom directories and crash recovery.
+The installer checks dependencies, installs to `~/.config/silere-shell` by default, and offers
+autostart and a `silere` command. It asks before editing your compositor config and backs up what it
+changes. Stop your current bar and notification daemon before starting Silere with `silere run`.
+See the [installation guide](docs/install.md) for first start, custom paths and crash recovery.
 
 ## Getting around
 
 | To open | Do this |
 |---|---|
-| Menu | Click the active workspace, or press **Super + /** once the installer adds it |
+| Menu | Click the active workspace, or use **Super + /** if you accepted the Hyprland shortcut |
 | Quick actions | Right-click the active workspace |
 | Calendar | Click the clock |
 | Now Playing | Right-click the media widget |
-| Settings | Open the menu and choose **Settings**; **Ctrl+F** finds any option |
+| Settings | Open the menu and choose **Settings**. Press **Ctrl+F** to search. |
 
 Tab, Enter and the arrow keys work in every panel, and Escape steps back, then closes the panel.
 Any keybind can run `silere ipc menu toggle`. The [usage guide](docs/usage.md) lists every click,
 scroll and shortcut, and the [scripting guide](docs/scripting.md) covers IPC and hooks.
 
-Settings apply as you change them. Only values that differ from the defaults are saved, in
-`~/.config/silere-shell/settings.json`. Colours can follow your wallpaper through
-[Matugen](docs/install.md#matugen). [Settings and resets](docs/usage.md#settings) has the details.
+Settings apply as you change them. Saved overrides live in `~/.config/silere-shell/settings.json`
+by default. For multiple monitors, use **Settings › System › Devices** to choose which screens
+show the bar, where popups appear and which monitors join the bar's brightness scroll.
+[Display settings](docs/usage.md#displays) · [External brightness setup](docs/troubleshooting.md#external-monitor-brightness-is-missing-or-does-not-respond)
 
 ## Useful commands
 
 | Command | What it does |
 |---|---|
 | `silere run` | Start the shell |
-| `silere stop` | Stop the shell, including its optional user service |
-| `silere restart` | Restart the shell |
+| `silere stop` / `silere restart` | Stop or restart the shell |
 | `silere status` | Show the running checkout and update state |
 | `silere doctor` | Check the setup without changing it |
 | `silere log --follow` | Follow the running shell's log |
 | `silere update` | Check for a signed release |
-| `silere update --apply` | Validate and install the release |
-| `silere update --rollback` | Restore the version an update replaced |
-| `silere reset` | Preview a reset of settings, local edits and caches |
-| `silere uninstall` | Remove the installer's integrations and keep your settings |
 
-`silere help` lists the rest. [Updates and recovery](docs/updates.md) covers automatic checks and
-local edits.
+`silere help` lists the rest. [Updates and recovery](docs/updates.md) covers installing and rolling
+back releases. The [installation guide](docs/install.md#maintenance-command) covers resets and
+uninstalling.
+
+## A closer look
+
+<p align="center">
+  <img src="assets/shot-surfaces.webp" alt="Now Playing with cover art and seeking, beside the calendar and a notification with actions" width="100%"/>
+</p>
+
+<p align="center">
+  <img src="assets/shot-settings.webp" alt="Theme settings for colour source, accent, base tone and bar surfaces" width="72%"/>
+</p>
+
+<p align="center">
+  <img src="assets/shot-themes.webp" alt="The same desktop under four wallpapers, each in the colours Matugen draws from it, the last in light mode" width="100%"/>
+</p>
 
 ## Other desktop tools
 
@@ -143,24 +145,14 @@ table names the packages.
 
 ## Under the hood
 
-Animations and system readings pause when the session goes idle, and the visualizer, network
-speed, clock seconds and underline effects start switched off. Measured with
-[`scripts/bench.sh`](docs/performance.md) on 1.7.0, visualizer off, with one
-[allocator pool](docs/performance.md#memory-allocator) as `silere run` starts it:
+Animations and system readings pause when the session goes idle. The 1.8.0 release measured
+107 MB PSS after startup and 108 MB after opening and closing the menu once on the Ryzen 7
+8845HS reference laptop. See the [performance guide](docs/performance.md) for the conditions and
+how to measure your setup.
 
-| Machine | Memory after startup | After one menu open | Idle CPU |
-|---|---|---|---|
-| Ryzen 7 8845HS laptop, 2560x1600 | 106 MB | 115 MB | under 1% of one core |
-| 2015 laptop: Core i5-6200U, Intel HD 520, 1920x1080 | 106 MB | 121 MB | under 1% of one core |
-
-Memory is PSS and depends on the machine, fonts, widgets and allocator tuning. The
-[performance guide](docs/performance.md) explains the numbers and how to measure your own.
-
-Tests cover service logic, keyboard and pointer input, layout fit and display scaling, plus hung
-tools and malformed notifications, media and tray items. CI runs them on every push in KWin and
-niri sessions, at 125% and 150% scale, against Quickshell 0.3.1 and the current release. CI
-runners have no GPU, so the Hyprland session tests run on my machine with every change. See the
-[testing guide](docs/testing.md).
+CI checks the minimum Quickshell runtime, runs layout and input probes at 125% and 150% scale,
+and exercises nested compositor sessions where the runner supports them. The
+[testing guide](docs/testing.md#what-ci-runs) lists the jobs and GPU requirements.
 
 ## When something's wrong
 

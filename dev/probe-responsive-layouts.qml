@@ -202,7 +202,46 @@ Item {
         else if (blockedSetting.height < dependency.height + 24)
             failures.push("the unavailable setting does not grow to fit its explanation: row "
                 + blockedSetting.height + ", detail " + dependency.height)
+        for (const loader of [narrowUpdate, wideUpdate]) {
+            const card = loader.item
+            if (!card) { failures.push("update card fixture did not load"); continue }
+            const status = root.descendants(card, item => item.text === card.status)[0]
+            const version = root.descendants(card, item => item.text === card.meta)[0]
+            const primary = root.descendants(card, item => item.accessibleName === card.primaryLabel)[0]
+            const refresh = root.descendants(card, item => item.accessibleName === card.secondaryLabel)[0]
+            if (!status || !version || !primary || !refresh) {
+                failures.push("update card fixture lacks its status, version or actions")
+                continue
+            }
+            if (!root.descendants(primary, item => item.visible && item.text === card.primaryLabel).length)
+                failures.push("update card hides the install label at " + card.width + "px")
+            if (version.truncated || version.contentWidth > version.width + 0.5)
+                failures.push("update card clips the version at " + card.width + "px")
+            const statusPos = status.mapToItem(card, 0, 0)
+            const refreshPos = refresh.mapToItem(card, 0, 0)
+            const primaryPos = primary.mapToItem(card, 0, 0)
+            if (loader === narrowUpdate && refreshPos.y < statusPos.y + status.height - 0.5)
+                failures.push("narrow update card crowds the status with its actions")
+            if (loader === wideUpdate && refreshPos.x < statusPos.x + status.width - 0.5)
+                failures.push("wide update card moved its actions below the status")
+            if (refreshPos.x < -0.5 || primaryPos.x + primary.width > card.width + 0.5)
+                failures.push("update actions escape the card at " + card.width + "px")
+        }
         return failures
+    }
+
+    Component {
+        id: updateCard
+        UpdateStatusCard {
+            title: "Silere Shell"
+            meta: "v1.8.0 → v1.9.0"
+            status: "A signed update is ready to install"
+            primaryLabel: "Install"
+            primaryGlyph: "󰅢"
+            secondaryShown: true
+            detail: "Release notes could not be read from /home/user/" + "a".repeat(80) + "/settings.json"
+            detailError: true
+        }
     }
 
     Column {
@@ -227,10 +266,12 @@ Item {
             width: 232
             Component.onCompleted: setSource("../modules/menu/BatteryDetails.qml", {
                 // two, so the per-battery header a single battery hides still meets the width check
-                width: 232, readings: [{ name: "Battery 1", model: "Laptop battery", state: "Discharging",
-                    charge: "100%", health: "95%", energy: "100.5 / 120.7 Wh", power: "32.5 W", powerLabel: "Power use" },
-                    { name: "UPS 2", model: "Desk UPS", state: "Charging", charge: "64%", health: "", energy: "",
-                    power: "12.5 W", powerLabel: "Charging power" }]
+                width: 232, devices: [
+                    { type: Up.UPowerDeviceType.Battery, model: "Laptop battery", state: Up.UPowerDeviceState.Discharging,
+                        percentage: 1, healthSupported: true, healthPercentage: 95,
+                        energy: 100.5, energyCapacity: 120.7, changeRate: 32.5 },
+                    { type: Up.UPowerDeviceType.Ups, model: "Desk UPS", state: Up.UPowerDeviceState.Charging,
+                        percentage: 0.64, changeRate: 12.5 }]
             })
         }
         GradientSliderRow {
@@ -314,12 +355,8 @@ Item {
             width: 232
             text: "Could not read /home/user/" + "a".repeat(80) + "/settings.json"
         }
-        UpdateStatusCard {
-            width: 232
-            title: "Update failed"
-            detail: "Could not read /home/user/" + "a".repeat(80) + "/settings.json"
-            detailError: true
-        }
+        Loader { id: narrowUpdate; width: 232; sourceComponent: updateCard }
+        Loader { id: wideUpdate; width: 456; sourceComponent: updateCard }
         Loader {
             id: narrowHeader
             width: 188; source: "../modules/menu/HomeHeader.qml"
