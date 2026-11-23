@@ -451,7 +451,7 @@ QtObject {
     }
     readonly property var specialOutputs: Object.keys(root._specialOn)
 
-    // quickshell #1268: a j/clients reply still in flight when a window closes brings it back for good, so an address hyprland closed stays out until it opens one again
+    // quickshell#1268: a j/clients reply still in flight when a window closes brings it back for good, so an address hyprland closed stays out until it opens one again
     property var _closedAddrs: ({})
     function _setClosed(data, closed: bool): void {
         const addr = root._titleEventAddress(data)
@@ -501,7 +501,7 @@ QtObject {
     // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
     property string _workspaceRefreshKey: ""
     property int _workspaceRefreshTries: 0
-    // a plain copy: a lastIpcObject kept in a variable makes Qt watch the toplevel, and Qt can free that watch mid-update
+    // a plain copy: a lastIpcObject kept in a variable makes Qt watch the toplevel, and Qt can free that watch mid-update (quickshell#1535)
     function _ipcOf(t): var { return t && t.lastIpcObject ? JSON.parse(JSON.stringify(t.lastIpcObject)) : null }
     // copied once per reply: inside the models, every reply re-ran them once per window and a switch made window-count-squared copies
     property var _ipcCopies: ({})

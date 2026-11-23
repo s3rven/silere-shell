@@ -29,7 +29,7 @@ IconImage {
                 root.source, root.backer.implicitWidth, root.side, root.dpr, root.iconScale))
             root.themeScaled = false
     }
-    // quickshell reads tray and notification pixmaps from an unlocked map on qt's image thread (#1534), so those load here: flag before source, as a swap's size change loads too
+    // quickshell reads tray and notification pixmaps from an unlocked map on qt's image thread (quickshell#1534), so those load here: flag before source, as a swap's size change loads too
     property string asyncSource: ""
     onAsyncSourceChanged: root._showAsync()
     function _showAsync(): void {
