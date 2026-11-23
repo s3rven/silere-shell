@@ -9,51 +9,55 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    property var readings: Battery.details
+    property var devices: Battery.detailDevices
 
     // built as the details open: a limit changed meanwhile, by the firmware too, shows as it is now
     Component.onCompleted: BatteryLimit.refresh()
 
     Repeater {
-        model: root.readings
+        // sensor updates rebind the labels in place, keeping interactive rows and their focus
+        model: root.devices
 
         Column {
             id: device
             required property var modelData
             width: root.width
-            readonly property var limit: BatteryLimit.forNative(device.modelData.nativePath)
+            visible: !!modelData
+            readonly property var reading: Battery.detailFor(modelData, root.devices)
+            readonly property string nativePath: String(modelData?.nativePath || "")
+            readonly property var limit: BatteryLimit.forNative(device.nativePath)
             readonly property bool _writing: BatteryLimit.pendingNative.length > 0
-                && BatteryLimit.pendingNative === device.modelData.nativePath
+                && BatteryLimit.pendingNative === device.nativePath
 
             ControlRow {
                 // one battery is the Battery reading right above: same name, charge and state
-                visible: root.readings.length > 1
+                visible: root.devices.length > 1
                 glyph: "󰁹"
-                title: device.modelData.name
-                status: [device.modelData.model, device.modelData.state].filter(s => s.length > 0).join(" · ")
-                valueText: device.modelData.charge
+                title: device.reading.name
+                status: [device.reading.model, device.reading.state].filter(s => s.length > 0).join(" · ")
+                valueText: device.reading.charge
                 passive: true
             }
             ControlRow {
-                visible: device.modelData.health.length > 0
+                visible: device.reading.health.length > 0
                 glyph: "󰣐"
                 title: "Battery health"
                 status: "Compared with original capacity"
-                valueText: device.modelData.health
+                valueText: device.reading.health
                 passive: true
             }
             ControlRow {
-                visible: device.modelData.energy.length > 0
+                visible: device.reading.energy.length > 0
                 glyph: "󱊣"
                 title: "Energy"
-                status: "Stored / full: " + device.modelData.energy
+                status: "Stored / full: " + device.reading.energy
                 passive: true
             }
             ControlRow {
-                visible: device.modelData.power.length > 0
+                visible: device.reading.power.length > 0
                 glyph: "󱐋"
-                title: device.modelData.powerLabel
-                valueText: device.modelData.power
+                title: device.reading.powerLabel
+                valueText: device.reading.power
                 passive: true
             }
             ToggleRow {
@@ -63,11 +67,11 @@ Column {
                 label: "Charge limit"
                 description: BatteryLimit.describe(device.limit)
                 checked: device._writing ? BatteryLimit.pendingOn : device.limit !== null && device.limit.on
-                onToggled: nextChecked => BatteryLimit.setEnabled(device.modelData.nativePath, nextChecked)
+                onToggled: nextChecked => BatteryLimit.setEnabled(device.nativePath, nextChecked)
             }
             HintText {
                 visible: _limitRow.visible && BatteryLimit.lastError.length > 0
-                    && BatteryLimit.errorNative === device.modelData.nativePath
+                    && BatteryLimit.errorNative === device.nativePath
                 text: BatteryLimit.lastError
                 textColor: Theme.menuTextWarning
             }
