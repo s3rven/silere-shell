@@ -20,7 +20,7 @@ and prints the line to add on niri. Any keybind can run `silere ipc menu toggle`
 
 | Widget | Click | Right-click | Middle-click | Scroll | Hover |
 |---|---|---|---|---|---|
-| Workspaces | Switch; on the active one, open the menu | Active one: quick actions | Send the focused window there | Switch (turn on in Widgets › Workspaces) | |
+| Workspaces | Switch; on the active one, open the menu | Open Quick Actions on the marked workspace | Send the focused window there | Switch (turn on in Widgets › Workspaces) | |
 | Clock | Calendar | | Add seconds, the date, or both | | The date, while it is off |
 | Window title | | | | | Scroll a title that is cut short |
 | System monitor | Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |

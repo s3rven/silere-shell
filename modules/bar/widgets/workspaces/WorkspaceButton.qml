@@ -23,6 +23,7 @@ Item {
     required property bool initialized
     required property bool paging
     required property bool markerCovers
+    property bool markerHere: root.active
     property int hiddenAppCount: 0
     property string workspaceName: ""
     // the bar above and below the row, and half the gap on each side: a click at a docked bar's screen edge or between two cells still lands
@@ -44,7 +45,7 @@ Item {
     readonly property bool present: wsId >= 0
     readonly property bool canActivate: root.enabled && root.visible && root.present && root.barActive && !Idle.isIdle
     // an underline marker leaves the cell centre free, so the active workspace keeps its own content
-    readonly property bool _blanked: active && markerCovers
+    readonly property bool _blanked: root.markerHere && root.markerCovers
     readonly property bool _iconCell: ShellSettings.wsShowAppIcons && apps.length > 0
     readonly property bool _showIcons: _iconCell && !_blanked
     readonly property bool _inlineNumber: ShellSettings.wsShowNumbers && root._iconCell
@@ -170,7 +171,7 @@ Item {
                     return
                 }
                 if (button === Qt.RightButton) {
-                    if (root.active) {
+                    if (root.markerHere) {
                         root.markerPulseRequested()
                         root.quickActionsRequested()
                     }
@@ -187,7 +188,7 @@ Item {
         if (_blanked) _dotFadeOut.restart()
         else          _dotFadeIn.restart()
     }
-    onActiveChanged: if (root.active) root.clearMarkerPass()
+    onMarkerHereChanged: if (root.markerHere) root.clearMarkerPass()
     onPagingChanged: if (root.paging) root.clearMarkerPass()
     onBarActiveChanged: if (!root.barActive) root._settleMotion()
     onVisibleChanged: if (!root.visible) root._settleMotion()
@@ -221,7 +222,7 @@ Item {
     property bool _notifPulseCritical: false
 
     function playMarkerPass(delayMs: int): void {
-        if (!root._motionAllowed() || root.active || root.paging || !root.markerCovers
+        if (!root._motionAllowed() || root.markerHere || root.paging || !root.markerCovers
                 || !ShellSettings.workspaceShift) return
         // restart from full opacity; a second jump must not resume the first one's fade
         _markerPassAnim.stop()

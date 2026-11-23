@@ -2821,6 +2821,25 @@ ShellRoot {
         cell.hiddenAppCount = 20
         root._check(overflow && overflow.text === "9+",
             "large app overflow counts stay within their reserved cell")
+        cell.active = true
+        root._check(number && number.opacity === 0 && !cell._showIcons,
+            "the Gem and Dot markers cover the active workspace number and icons")
+        cell.markerCovers = false
+        root._check(number && number.opacity === 1 && cell._showIcons,
+            "the Line marker keeps the active workspace number and icons visible")
+        const lineIcon = findIcon()
+        root._check(lineIcon && lineIcon.mapToItem(cell, 0, lineIcon.height).y + 1
+                < cell.rowHeight - Metrics.workspaceLineInset,
+            "the active Line marker leaves room under the workspace app icons and their badges")
+        cell.active = false
+        cell.markerHere = true
+        cell.markerCovers = true
+        let returnedToNumber = false
+        cell.activateRequested.connect(() => { returnedToNumber = true })
+        cell._activate()
+        root._check(number.opacity === 0 && !cell._showIcons && !cell.Accessible.selected && returnedToNumber,
+            "a marker on a named workspace hides the underlying number and icons while a primary click returns to that number")
+        cell.markerHere = false
         cell.apps = cell.apps.concat([{ icon: "", fallback: "T", name: "Terminal", count: 1 }])
         cell.compact = true
         root._check(cell.Accessible.description.indexOf("Firefox") >= 0
@@ -7564,9 +7583,8 @@ ShellRoot {
         const reachable = (sec, key, hops) => rowsFor(sec, key).length > 0
             || (hops > 0 && revealPage.revealRowFor(sec, key).length > 0
                 && reachable(sec, revealPage.revealRowFor(sec, key), hops - 1))
-        // Show & order rows, the muted apps list and the glow half of an alert chip are not yet keyed
-        const unkeyed = ["showWindowTitle@widgets", "updatesWidget@widgets", "barShowSystem@widgets",
-            "notifMutedApps@history", "underlineBattGlow@warnings", "underlineTempGlow@warnings"]
+        // the glow half of an alert chip has no independent row
+        const unkeyed = ["underlineBattGlow@warnings", "underlineTempGlow@warnings"]
         const unreachable = []
         for (const e of ShellSettings._schema.filter(e => e.l))
             for (const sec of e.sec.split(","))
@@ -7576,6 +7594,11 @@ ShellRoot {
         root._check(revealPage._keyRow(sectionFor("media"), "mediaWidgetFormat")?.label === "Artist"
                 && revealPage._keyRow(sectionFor("clock"), "clock12h")?.label === "Format",
             "search reveals a row that writes its setting through its own handler")
+        const widgets = sectionFor("widgets")
+        root._check(Object.keys(ShellSettings.barWidgetMeta).every(id => {
+            const setting = ShellSettings.barWidgetMeta[id].setting
+            return !setting || revealPage._keyRow(widgets, setting)?.key === id
+        }), "settings search can reveal every widget toggle directly in Show & order")
         const battRows = rowsFor("warnings", "osdBatteryWarn")
         if (battRows.length === 2) {
             battRows[0].parent.parent.visible = false
@@ -7584,8 +7607,12 @@ ShellRoot {
         root._check(battRows.length === 2 && revealPage._keyRow(sectionFor("warnings"), "osdBatteryWarn") === battRows[1],
             "search reveals the shown row when a setting has one per hardware case")
         const savedMuted = ShellSettings.notifMutedApps
+        ShellSettings.notifMutedApps = ""
+        const history = sectionFor("history")
+        root._check(revealPage._keyRow(history, "notifMutedApps")?.title === "No muted apps",
+            "search for muted apps reveals the empty state when no apps are muted")
         ShellSettings.setNotifAppMuted("Discord", true)
-        const mutedRow = root._findTrayNode(sectionFor("history"), it => it.label === "Discord")
+        const mutedRow = revealPage._keyRow(history, "notifMutedApps")
         root._check(mutedRow?.Accessible.name === "Mute popups from Discord" && mutedRow.Accessible.checked,
             "a muted app's row says what its check box does")
         ShellSettings.notifMutedApps = savedMuted
@@ -15566,6 +15593,14 @@ ShellRoot {
             f.input.mouseMove(f.contentItem, 260, 80)
             root._check(f.cell._reportedHoverId === -1,
                 "leaving a reassigned workspace clears its hover identity")
+            let quickActions = 0
+            f.cell.quickActionsRequested.connect(() => { quickActions++ })
+            f.input.mouseClick(f.cell, 12, 12, Qt.RightButton)
+            f.cell.markerHere = true
+            f.input.mouseClick(f.cell, 12, 12, Qt.RightButton)
+            root._check(quickActions === 1 && !f.cell.active,
+                "right-click opens Quick Actions from the named workspace marker even though its numbered cell is inactive")
+            f.cell.markerHere = false
             f.input.mouseMove(f.pill, 12, 12)
             f.input.wait(100)
             root._check(f.pill.hovered && f.pill.expanded,

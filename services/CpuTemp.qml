@@ -9,6 +9,9 @@ Singleton {
     id: root
 
     property real temp: 0
+    // the Tctl reading swings 5-10° under a steady load: average the last three for display and use raw values for alerts
+    property real reading: 0
+    property var _recent: []
     readonly property bool available: temp > 0
     property bool _started: false
     readonly property bool needed: MenuState.homeActive
@@ -70,6 +73,9 @@ Singleton {
 
     function _sample(t: real): void {
         temp = t
+        const recent = root._recent.concat([t]).slice(-3)
+        root._recent = recent
+        root.reading = recent.reduce((sum, v) => sum + v, 0) / recent.length
         const hotEnter      = ShellSettings.tempHotThreshold
         const hotExit       = hotEnter - 5
         const criticalEnter = hotEnter + 8
@@ -98,6 +104,8 @@ Singleton {
 
     function _clearSampleState(): void {
         root.temp = 0
+        root.reading = 0
+        root._recent = []
         root._hotCount = 0
         root._criticalCount = 0
         root.hot = false

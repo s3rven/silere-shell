@@ -44,6 +44,7 @@ Column {
     SettingsCard {
         ControlRow {
             visible: ShellSettings.notifMutedAppNames.length === 0
+            searchKey: "notifMutedApps"
             glyph: "󰂜"
             title: "No muted apps"
             status: "Mute one from its page in history"
@@ -54,6 +55,7 @@ Column {
             model: ShellSettings.notifMutedAppNames
             delegate: ToggleRow {
                 required property string modelData
+                searchKey: "notifMutedApps"
                 glyph: "󰪑"
                 label: Notifications.appLabel(modelData)
                 checked: true

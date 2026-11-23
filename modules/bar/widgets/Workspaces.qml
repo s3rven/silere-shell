@@ -60,7 +60,7 @@ Item {
     }
 
     readonly property int effectiveWsCount: Math.max(1, minVisible)
-    property int _lastNormalActiveId: 1
+    property int _lastNormalActiveId: 0
     property bool _initialized: false
 
     // the cells ease their own widths; a Behavior on their sum restarts every frame and stalls until they settle
@@ -107,14 +107,20 @@ Item {
     readonly property real _rowBelow: Math.max(0, height - btnH - _rowY)
 
     readonly property string monitorName: Compositor.monitorName(root.screen)
-    readonly property bool monitorReady: monitorName.length > 0 && Compositor.activeWorkspaceId(monitorName) > 0
+    readonly property bool monitorReady: monitorName.length > 0 && rawActiveId > 0
     // a named hyprland workspace has an id below -1337; only -1 means no data yet
     readonly property bool monitorLive: monitorName.length > 0 && rawActiveId !== -1
     // no number to mark, so the marker holds the last one and rings it, as it does for a special workspace
     readonly property bool onNamedWorkspace: monitorName.length > 0 && rawActiveId < -1
     readonly property bool show: true
     readonly property int  rawActiveId:  Compositor.activeWorkspaceId(root.monitorName)
-    readonly property int  activeId:     rawActiveId > 0 ? rawActiveId : _lastNormalActiveId
+    readonly property int activeId: {
+        if (root.rawActiveId > 0) return root.rawActiveId
+        if (root.onNamedWorkspace && (root._lastNormalActiveId < 1
+                || slotModel.knownOnOtherMonitor(root._lastNormalActiveId)))
+            return slotModel.workspaceIndex.first || 1
+        return Math.max(1, root._lastNormalActiveId)
+    }
     property int _previousActiveId: 0
     property int _handoffFromId: 0
     property int _handoffToId: 0
@@ -232,6 +238,10 @@ Item {
 
     readonly property bool markerCovers: ShellSettings.wsActiveMarker !== "bar"
 
+    function _contentVisible(wsId: int): bool {
+        return !(root._markerShown && wsId === root._markedId && root.markerCovers)
+    }
+
     function _btnW(wsId: int): int {
         if (wsId < 0) return 0
         if (!root._contentVisible(wsId)) return btnW
@@ -259,10 +269,14 @@ Item {
         return 0
     }
     function _markerX(markerW: real): real {
-        return root._cellCenterX(root._displayActiveId) - markerW / 2
+        return root._cellCenterX(root._markedId) - markerW / 2
     }
 
-    readonly property int activeIndex: root._displayIds.indexOf(root._displayActiveId)
+    // a bar can start on a named workspace with no numbered one on its output yet
+    readonly property int _markedId: root.onNamedWorkspace && !root._displayIds.includes(root._displayActiveId)
+        ? (root._displayIds[0] ?? 0) : root._displayActiveId
+    readonly property int activeIndex: root._displayIds.indexOf(root._markedId)
+    readonly property bool _markerShown: (root.monitorReady || root.onNamedWorkspace) && root.activeIndex >= 0
     readonly property int pageKey: visibleIds.length > 0
         ? visibleIds[0] : _monitorAnchorId
 
@@ -312,7 +326,7 @@ Item {
     Component.onCompleted: {
         _displayIds = visibleIds.slice()
         _displayActiveId = activeId
-        _lastNormalActiveId = activeId
+        if (monitorReady) _lastNormalActiveId = rawActiveId
         _previousActiveId = activeId
         _prevPageKey = pageKey
         _initialized = monitorReady
@@ -573,19 +587,19 @@ Item {
     WorkspaceMarker {
         id: marker
         style: ShellSettings.wsActiveMarker
-        workspaceId: root._displayActiveId
+        workspaceId: root._markedId
         rowHeight: root.btnH
-        cellWidth: root._btnW(root._displayActiveId)
+        cellWidth: root._btnW(root._markedId)
         targetX: root.activeIndex >= 0 ? root._markerX(marker.markerWidth) : 0
         layoutOffsetX: -root._leadTrim
-        shown: (root.monitorReady || root.onNamedWorkspace) && root.activeIndex >= 0
+        shown: root._markerShown
         inSpecial: root.inSpecial || root.onNamedWorkspace
-        urgent: root.urgent(root._displayActiveId)
+        urgent: root.urgent(root._markedId)
         barActive: root.barActive
         paging: root._paging
         monitorReady: root.monitorReady
         shiftEnabled: ShellSettings.workspaceShift
-        hovered: root._hoveredWsId === root._displayActiveId && ShellSettings.barHoverHighlight
+        hovered: root._hoveredWsId === root._markedId && ShellSettings.barHoverHighlight
     }
 
     Row {
@@ -605,6 +619,7 @@ Item {
                 wsId:         root._displayIds[index] ?? -1
                 monitorReady: root.monitorLive
                 active:       root.monitorReady && root._displayActiveId === wsId
+                markerHere:   root._markerShown && root._markedId === wsId
                 occupied:     root.occupied(wsId)
                 urgent:       root.urgent(wsId)
                 apps:         root.appsFor(wsId)

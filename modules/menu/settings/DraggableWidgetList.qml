@@ -493,6 +493,10 @@ Item {
 
             readonly property string key: modelData
             readonly property var meta: ShellSettings.barWidgetMeta[key]
+            readonly property string searchKey: meta.setting
+            readonly property real topRadius: Theme.radiusControl
+            readonly property real bottomRadius: Theme.radiusControl
+            readonly property real cardInset: 0
             readonly property var loc: root._locate(key)
             readonly property string zone: loc.zone
             readonly property int zoneIndex: loc.index
@@ -542,9 +546,9 @@ Item {
             }
             RowHoverBg {
                 anchors.fill: parent
-                cardInset: 0
-                topRadius: Theme.radiusControl
-                bottomRadius: Theme.radiusControl
+                cardInset: _row.cardInset
+                topRadius: _row.topRadius
+                bottomRadius: _row.bottomRadius
                 active: _row.dragging || _rowHover.hovered
                 fillColor: _row.dragging ? Theme.accent : Theme.text
                 fillOpacity: _row.dragging ? 0.11 : 0.04
