@@ -6,6 +6,7 @@ trap 'rm -rf -- "$scratch"' EXIT
 mkdir -p "$scratch/bin" "$scratch/config" "$scratch/drm/card1-DP-1/ddc/i2c-dev/i2c-7"
 export SILERE_SANDBOX=1 SILERE_TEST_DRM_ROOT="$scratch/drm" SILERE_TEST_LOG="$scratch/actions"
 export SILERE_TEST_COUNT="$scratch/count" SILERE_TEST_ROOT="$ROOT"
+export SILERE_TEST_DDC_DETECT="$scratch/ddc-detect"
 export PATH="$scratch/bin:$PATH" XDG_CONFIG_HOME="$scratch/config" XDG_SESSION_ID=fixture
 
 cat > "$scratch/bin/loginctl" <<'EOF'
@@ -22,6 +23,7 @@ EOF
 cat > "$scratch/bin/ddcutil" <<'EOF'
 #!/usr/bin/env bash
 case " $* " in
+    *' detect '*) cat "$SILERE_TEST_DDC_DETECT" ;;
     *' getvcp '*)
         case " $* " in *' --bus 9 '*) exit 1 ;; esac
         [ "${SILERE_TEST_REPLACE:-0}" != 1 ] || printf changed > "$SILERE_TEST_DRM_ROOT/card1-DP-1/edid"

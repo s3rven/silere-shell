@@ -19,6 +19,8 @@ case "${1:-}" in
     list)
         disabled=",${2:-},"
         failed=0
+        detected=0
+        declare -A detected_for=()
         for connector in "$drm_root"/card*-*; do
             [ -r "$connector/status" ] && [ "$(cat "$connector/status")" = connected ] || continue
             name="${connector##*/}"
@@ -26,11 +28,23 @@ case "${1:-}" in
             [ -r "$connector/edid" ] || continue
             fingerprint="$(identity "$connector")" || continue
             [ "$fingerprint" != e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 ] || continue
+            mapfile -t buses < <(direct_buses "$connector")
+            if [ "${#buses[@]}" -eq 0 ]; then
+                if [ "$detected" -eq 0 ]; then
+                    detected=1
+                    if mapping="$(detect_buses)"; then
+                        while IFS=$'\t' read -r mapped_name mapped_bus; do
+                            [ -z "$mapped_name" ] || detected_for[$mapped_name]="$mapped_bus"
+                        done <<< "$mapping"
+                    else
+                        failed=1
+                    fi
+                fi
+                bus="${detected_for[$name]-}"
+                [ -z "$bus" ] || buses=("$bus")
+            fi
             asked=""; answered=0
-            for device in "$connector"/ddc/i2c-dev/i2c-*; do
-                [ -d "$device" ] || continue
-                bus="${device##*i2c-}"
-                case "$bus" in ''|*[!0-9]*) continue ;; esac
+            for bus in "${buses[@]}"; do
                 [ -n "$asked" ] || asked="$bus"
                 current=-1; maximum=100
                 case "$disabled" in
@@ -58,9 +72,8 @@ case "${1:-}" in
         percent=$((10#$percent))
         [ "$percent" -ge 1 ] && [ "$percent" -le 100 ] || exit 2
         connector="$drm_root/$name"
-        check_target() {
+        target_present() {
             [ -r "$connector/status" ] && [ "$(cat "$connector/status")" = connected ] \
-                && [ -d "$connector/ddc/i2c-dev/i2c-$bus" ] \
                 && [ "$(identity "$connector")" = "$fingerprint" ]
         }
         check_target || exit 3
