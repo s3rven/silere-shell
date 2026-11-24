@@ -1129,7 +1129,7 @@ _optdep_any "terminal" "terminal tools such as nmtui" xdg-terminal-exec kitty fo
 _optdep ddcutil       "optional external monitor brightness"
 _optdep cava          "audio visualizer (auto-configured at runtime)"
 _optdep_any "updates" "update count" checkupdates apt dnf zypper xbps-install
-_optdep_any "AUR helper" "AUR update count" paru yay
+[ "$(_silere_package_family)" != pacman ] || _optdep_any "AUR helper" "AUR update count" paru yay
 _optdep busctl        "notification daemon check"
 _optdep upower        "battery percentage + warnings"
 _optdep_any "night light" "night light toggle" hyprsunset wlsunset

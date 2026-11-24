@@ -50,6 +50,7 @@ settings file carries its own `__version` and migrates separately.
   `quickshell` package leaves out and Silere cannot load without, instead of telling you to reinstall Quickshell.
 - `silere try` stops with the reason when Quickshell is too old or a QML module is missing, instead of opening a
   preview with no bar in it, and its Quickshell and font hints no longer assume Arch.
+- The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
 
 ## Releases
 

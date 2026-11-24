@@ -1712,8 +1712,9 @@ section "installer optional tools"
 # match the table, not the whole file: fc-list drifted out of the table while the
 # font check still named it, so a plain file-wide grep passes on the broken tree.
 # Strip the quoted label and description; the bare words left are the binaries.
-optdep_tools="$(grep -E '^_optdep(_any)? ' scripts/install.sh \
-    | sed -E 's/^_optdep(_any)? //; s/"[^"]*"//g' | tr -s ' ' '\n' | sed '/^$/d' | sort -u)"
+# a row may be gated to the systems its tools exist on, as the AUR helpers are to the pacman family
+optdep_tools="$(grep -E '^(\[ [^]]* \] \|\| )?_optdep(_any)? ' scripts/install.sh \
+    | sed -E 's/^\[ [^]]* \] \|\| //; s/^_optdep(_any)? //; s/"[^"]*"//g' | tr -s ' ' '\n' | sed '/^$/d' | sort -u)"
 unlisted_tools=""
 while read -r _tool; do
     [ -z "$_tool" ] && continue
