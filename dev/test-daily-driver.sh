@@ -23,6 +23,7 @@ EOF
 cat > "$scratch/bin/ddcutil" <<'EOF'
 #!/usr/bin/env bash
 case " $* " in
+    ' --help ') [ "${SILERE_TEST_DDC_SYSLOG:-0}" = 1 ] && echo '  --syslog=DEBUG, NEVER  system log level' ;;
     *' detect '*) cat "$SILERE_TEST_DDC_DETECT" ;;
     *' getvcp '*)
         printf '%s\n' "$*" >> "$SILERE_TEST_LOG.reads"
@@ -119,6 +120,9 @@ rm -rf -- "$scratch/drm/card1-DP-2"
 rm -f -- "$SILERE_TEST_LOG.reads"
 check bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75 80
 check grep -qx -- '--bus 7 setvcp 10 60' "$SILERE_TEST_LOG"
+# a ddcutil that logs to syslog is told not to, or its notes land in the journal as the shell's warnings
+check env SILERE_TEST_DDC_SYSLOG=1 bash "$ROOT/scripts/display-brightness.sh" write card1-DP-1 7 "$fingerprint" 75 80
+check grep -qx -- '--syslog NEVER --bus 7 setvcp 10 60' "$SILERE_TEST_LOG"
 # the scan's maximum stands in for a read: a step asks the display nothing before it writes
 check test ! -e "$SILERE_TEST_LOG.reads"
 before="$(wc -l < "$SILERE_TEST_LOG")"

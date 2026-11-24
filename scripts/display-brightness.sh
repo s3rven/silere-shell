@@ -9,6 +9,10 @@ if [ "${SILERE_SANDBOX:-0}" = 1 ]; then
     drm_root="$SILERE_TEST_DRM_ROOT"
 fi
 
+# ddcutil 2 and later also send their own diagnostics to syslog, which files them as warnings under the shell's unit
+ddc_quiet=()
+case "$(ddcutil --help 2>/dev/null || true)" in *--syslog*) ddc_quiet=(--syslog NEVER) ;; esac
+
 identity() { sha256sum "$1/edid" | cut -d' ' -f1; }
 direct_buses() {
     local device bus
@@ -22,7 +26,7 @@ direct_buses() {
 
 # some drivers omit the connector's ddc symlink even when ddcutil can identify its bus
 detect_buses() {
-    timeout 4 ddcutil detect --brief 2>/dev/null | awk '
+    timeout 4 ddcutil "${ddc_quiet[@]}" detect --brief 2>/dev/null | awk '
         function remember() {
             if (name != "" && bus != "") {
                 by_name[name]++
@@ -44,7 +48,7 @@ detect_buses() {
         }'
 }
 levels() {
-    timeout 4 ddcutil --bus "$1" getvcp 10 --brief 2>/dev/null \
+    timeout 4 ddcutil "${ddc_quiet[@]}" --bus "$1" getvcp 10 --brief 2>/dev/null \
         | awk '$1=="VCP" && $2=="10" && $3=="C" && $4 ~ /^[0-9]+$/ && $5 ~ /^[0-9]+$/ && $5>0 && $5<=65535 && $4<=$5 {print $4, $5; found=1; exit} END {if (!found) exit 1}'
 }
 
@@ -121,7 +125,7 @@ case "${1:-}" in
         value=$(((percent * maximum + 50) / 100))
         [ "$value" -gt 0 ] || value=1
         check_target || exit 3
-        timeout 8 ddcutil --bus "$bus" setvcp 10 "$value" >/dev/null 2>&1
+        timeout 8 ddcutil "${ddc_quiet[@]}" --bus "$bus" setvcp 10 "$value" >/dev/null 2>&1
         ;;
     *) echo 'Usage: display-brightness.sh list [disabled]|write connector bus identity percent maximum' >&2; exit 2 ;;
 esac

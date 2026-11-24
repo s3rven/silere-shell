@@ -51,6 +51,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere try` stops with the reason when Quickshell is too old or a QML module is missing, instead of opening a
   preview with no bar in it, and its Quickshell and font hints no longer assume Arch.
 - The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
+- External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
+  warnings from Silere (about 90 a week here).
 
 ## Releases
 
