@@ -174,7 +174,18 @@ if [ "${1:-}" = --inner ]; then
 fi
 
 [ "$#" -eq 0 ] || { printf 'Usage: silere try\n' >&2; exit 2; }
-command -v qs >/dev/null 2>&1 || _die "Quickshell is not installed. On Arch: sudo pacman -S quickshell"
+command -v qs >/dev/null 2>&1 || _die "Quickshell is not installed: $(_silere_quickshell_install_hint)"
+# the preview window would open with no bar in it, and the reason only in a log the preview deletes
+source "$ROOT/scripts/lib/qml-modules.sh"
+qs_version="$(_silere_quickshell_version || true)"
+[ -z "$qs_version" ] || _silere_version_at_least "$qs_version" "$SILERE_MIN_QUICKSHELL" \
+    || _die "Quickshell $qs_version is older than the $SILERE_MIN_QUICKSHELL Silere needs: $(_silere_quickshell_install_hint)"
+for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
+    _qml_module_available "$module" && continue
+    package="$(_silere_qml_module_package "$module")" || package=""
+    _die "the QML module $module is missing${package:+; install it: sudo apt install $package}"
+done
+_qt_floor_met || [ "$?" -ne 1 ] || _die "Qt is older than the $SILERE_MIN_QT Silere needs"
 for tool in dbus-run-session setsid; do
     command -v "$tool" >/dev/null 2>&1 || _die "the preview needs $tool"
 done
@@ -193,7 +204,9 @@ if command -v fc-list >/dev/null 2>&1; then
     fonts="$(fc-list : family 2>/dev/null || true)"
     case "${fonts,,}" in
         *nerd*) ;;
-        *) printf '%snote:%s no Nerd Font found, so icons will show as boxes. On Arch: sudo pacman -S ttf-jetbrains-mono-nerd\n' "$YELLOW" "$R" ;;
+        *)  font_hint="On Arch: sudo pacman -S ttf-jetbrains-mono-nerd"
+            [ "$(_silere_package_family)" = pacman ] || font_hint="The installer can download JetBrainsMono Nerd Font"
+            printf '%snote:%s no Nerd Font found, so icons will show as boxes. %s\n' "$YELLOW" "$R" "$font_hint" ;;
     esac
 fi
 

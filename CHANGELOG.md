@@ -48,6 +48,8 @@ settings file carries its own `__version` and migrates separately.
   config that only the installer wrote.
 - On Debian and Ubuntu, the installer, `silere doctor` and `silere try` name `qml6-module-qtquick-effects`, which their
   `quickshell` package leaves out and Silere cannot load without, instead of telling you to reinstall Quickshell.
+- `silere try` stops with the reason when Quickshell is too old or a QML module is missing, instead of opening a
+  preview with no bar in it, and its Quickshell and font hints no longer assume Arch.
 
 ## Releases
 
