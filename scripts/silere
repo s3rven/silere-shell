@@ -40,6 +40,7 @@ Control the running shell
   volume <0-100|next>    Set the output level, or move to the next output
   mic [...]              The microphone, with the same words as volume
   dismiss [all]          Dismiss the newest notification popup, or all of them
+  osd <glyph> <text> [0-100]  Show a script's own message in the OSD, with a level bar if given
   get <setting>          Print a setting
   set <setting> <value>  Change a setting
   settings [filter]      List settings and the values each takes; --changed lists yours
@@ -925,6 +926,14 @@ case "$command_name" in
             0:) ipc_call notifications dismiss ;;
             1:all) ipc_call notifications dismissAll ;;
             *) bad_usage "dismiss [all]" ;;
+        esac
+        ;;
+    osd)
+        case "$#:${3:-}" in
+            2:) ipc_call osd show "$1" "$2" -1 ;;
+            3:*) [[ "$3" =~ ^[0-9]{1,3}%?$ ]] && [ "$((10#${3%\%}))" -le 100 ] || bad_usage "osd <glyph> <text> [0-100]"
+                ipc_call osd show "$1" "$2" "$((10#${3%\%}))" ;;
+            *) bad_usage "osd <glyph> <text> [0-100]" ;;
         esac
         ;;
     get)

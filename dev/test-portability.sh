@@ -3544,8 +3544,9 @@ test_fish_completion_scope() (
         case "$command" in service|ipc|use) continue ;; esac
         offered="$(fish_complete "silere $command ")"
         for word in $top; do
-            # the menu's Settings tab is a word of its own
-            [ "$command $word" != "menu settings" ] || continue
+            # the menu's Settings tab is a word of its own, and the OSD's Settings page, offered by menu and by
+            # settings' filter, shares the osd command's name
+            case "$command $word" in "menu settings"|"menu osd"|"settings osd") continue ;; esac
             ! grep -qx -- "$word" <<<"$offered" || fail "fish offers silere $command $word"
         done
     done
@@ -3867,6 +3868,9 @@ STUB
     verb "audio setMicVolume 100" mic 100
     verb "notifications dismiss" dismiss
     verb "notifications dismissAll" dismiss all
+    verb "osd show x Copied -1" osd x Copied
+    verb "osd show x Fan 40" osd x Fan 40%
+    verb "osd show x Fan 7" osd x Fan 007
     verb "settings get osdTimeout" get osdTimeout
     verb "settings set osdTimeout 3000" set osdTimeout 3000
     verb "<--help>" set lockCommandCustom --help
@@ -3884,7 +3888,7 @@ STUB
     # wrong words name the verb's own grammar and exit 2, the way bad arguments to other commands do
     local bad
     for bad in "volume -5" "volume loud" "mic up down" "tray x" "dismiss x" "menu a b" "get" "set osdTimeout" \
-            "settings --x" "toggle a b"; do
+            "settings --x" "toggle a b" "osd x" "osd x y 101" "osd x y loud" "osd x y 5 6"; do
         # shellcheck disable=SC2086 # each case is its own word list
         out="$(cli $bad 2>&1)" && fail "silere $bad succeeded"
         case "$out" in *"usage: silere ${bad%% *}"*) ;; *) fail "silere $bad did not name its usage: $out" ;; esac

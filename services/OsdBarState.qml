@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "../config"
 
 Singleton {
@@ -72,7 +73,27 @@ Singleton {
     }
 
     function _hasBarKind(kind: string): bool {
-        return kind !== "battery" && kind !== "temp" && kind !== "notif" && kind !== "power"
+        return kind !== "battery" && kind !== "temp" && kind !== "notif" && kind !== "power" && kind !== "script-note"
+    }
+
+    // a script's own key or toggle answers in the shell's OSD: a level draws the bar volume uses, none holds a note
+    // as long as a battery alert. The text comes from any local process, so it is one bounded line
+    function scriptOsd(icon: string, label: string, level: int): string {
+        const glyph = SafeText.singleLineText(icon, 4)
+        const text = SafeText.singleLineText(label, 80)
+        if (glyph.length === 0 && text.length === 0) return "error: give a glyph or a text"
+        if (level > 100) return "error: the level is 0 to 100, or -1 for none"
+        if (!ShellSettings.osdEnabled) return "the OSD is turned off in Settings"
+        if (Idle.isIdle) return "not shown while the session is idle"
+        if (level < 0) root.showAlert("script-note", glyph, 0, text, Theme.accent)
+        else root.showAlert("script", glyph, level / 100, text, Theme.accent)
+        return "ok"
+    }
+
+    readonly property bool armed: true
+    IpcHandler {
+        target: "osd"
+        function show(icon: string, label: string, level: int): string { return root.scriptOsd(icon, label, level) }
     }
 
     function _presentationAllowed(idle: bool, enabled: bool): bool {

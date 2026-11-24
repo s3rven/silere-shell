@@ -118,6 +118,8 @@ ShellRoot {
         void Hooks.armed
         // the notification keybinds answer before the first popup ever builds its window
         void NotificationKeys.armed
+        // `silere osd` answers before anything has shown on the OSD
+        void OsdBarState.armed
         root.armNightLightIfNeeded()
         root.armSystemAlertsIfNeeded()
     }

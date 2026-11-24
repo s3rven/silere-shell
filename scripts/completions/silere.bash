@@ -10,7 +10,7 @@ _silere() {
     COMPREPLY=()
     if [ "$COMP_CWORD" -eq 1 ]; then
         words=(try reset run stop restart use status log doctor ipc link update repair service version uninstall help
-            menu calendar quick tray toggle volume mic dismiss get set settings)
+            menu calendar quick tray toggle volume mic dismiss osd get set settings)
     else
         case "${COMP_WORDS[1]}" in
             menu)

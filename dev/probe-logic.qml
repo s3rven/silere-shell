@@ -13923,6 +13923,10 @@ ShellRoot {
                 && Hooks._stateNow("media-changed")[1].length === 3
                 && Hooks._stateNow("network-changed")[1].length === 2,
             "power-source-changed stays quiet without a battery; media and network hooks get their documented arguments")
+        root._check(OsdBarState.scriptOsd("", " ", -1).startsWith("error")
+                && OsdBarState.scriptOsd("x", "Fan", 101).startsWith("error")
+                && OsdBarState._hasBarKind("script") && !OsdBarState._hasBarKind("script-note"),
+            "silere osd refuses an empty message and a level past 100; with a level it draws a bar, without one it holds a note")
         Hooks._present = hookPresentWas
         Hooks._runTimes = hookRunTimesWas
         Hooks._criticalTimes = hookCriticalTimesWas

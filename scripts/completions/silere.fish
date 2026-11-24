@@ -70,7 +70,7 @@ function __silere_setting_values --argument-names at
 end
 
 set -l commands try reset run stop restart use status log doctor ipc link update repair service version uninstall help \
-    menu calendar quick tray toggle volume mic dismiss get set settings
+    menu calendar quick tray toggle volume mic dismiss osd get set settings
 # Settings pages are MenuState's ids, which ci-lint holds this list to
 set -l pages clock devices history indicators interface keybinds media osd popups separators surface theme underline \
     updates warnings widgets workspaces
@@ -84,6 +84,7 @@ complete -c silere -n "not __fish_seen_subcommand_from $commands" -a toggle -d '
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a volume -d 'Output volume'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a mic -d 'Microphone volume'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a dismiss -d 'Dismiss the newest notification popup'
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a osd -d "Show a script's message in the OSD"
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a get -d 'Print a setting'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a set -d 'Change a setting'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a settings -d 'List settings and their values'
