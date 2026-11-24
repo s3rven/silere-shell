@@ -249,10 +249,19 @@ Silere runs a command of your own when something happens. Drop an executable fil
 | hook | arguments |
 | --- | --- |
 | `battery-critical` | percentage |
+| `dnd-changed` | `on` or `off` |
+| `idle-changed` | `idle` after ten minutes without input (an app holding the screen awake pauses it), `active` on return |
+| `media-changed` | `playing`, `paused` or `stopped`, then the title and artist |
+| `network-changed` | `connected` or `disconnected`, then the connection's name |
 | `notification` | app name, summary, `critical` or `normal` |
+| `power-source-changed` | `battery` or `ac`, then the percentage |
 | `theme-changed` | accent colour, passed when the applied palette settles |
 | `update-available` | count |
 | `workspace-changed` | workspace number, or the name of a named workspace |
+
+The `-changed` hooks run when that state changes, never for the state Silere finds when it starts or rescans.
+`media-changed` runs once for a new track's title and artist together; `network-changed` also runs on a switch
+from one network to another.
 
 `update-available` fires when the count rises, and only while Settings › System › Overview tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by

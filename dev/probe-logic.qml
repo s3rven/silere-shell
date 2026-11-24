@@ -13904,6 +13904,25 @@ ShellRoot {
         root._check(Hooks._runTimes.length === 3
                 && Hooks._workspaceArgument(threeWs) === "3" && Hooks._workspaceArgument(chatWs) === "chat",
             "the workspace-changed hook hears a switch between two named workspaces, gets the number or the name, and stays quiet for a lost workspace")
+
+        Hooks._runTimes = []
+        Hooks._present = { "dnd-changed": true, "power-source-changed": true }
+        root._check(Hooks._stateSeen["dnd-changed"] === (Notifications.dnd ? "on" : "off")
+                && !("media-changed" in Hooks._stateSeen) && !("network-changed" in Hooks._stateSeen),
+            "a state hook found by a rescan starts from the state showing, and an event with no hook reads nothing")
+        Hooks._stateChanged("dnd-changed")
+        const dndUnchangedRuns = Hooks._runTimes.length
+        Hooks._stateSeen = Object.assign({}, Hooks._stateSeen, { "dnd-changed": "stale" })
+        Hooks._stateChanged("dnd-changed")
+        Hooks._stateChanged("dnd-changed")
+        Hooks._stateChanged("media-changed")
+        root._check(dndUnchangedRuns === 0 && Hooks._runTimes.length === 1
+                && Hooks._stateSeen["dnd-changed"] === (Notifications.dnd ? "on" : "off"),
+            "a state hook runs once per change, not again for the same state, and never for an event with no hook")
+        root._check((Hooks._stateNow("power-source-changed")[0].length > 0) === Battery.available
+                && Hooks._stateNow("media-changed")[1].length === 3
+                && Hooks._stateNow("network-changed")[1].length === 2,
+            "power-source-changed stays quiet without a battery; media and network hooks get their documented arguments")
         Hooks._present = hookPresentWas
         Hooks._runTimes = hookRunTimesWas
         Hooks._criticalTimes = hookCriticalTimesWas

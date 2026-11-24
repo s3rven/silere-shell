@@ -15,7 +15,12 @@ Singleton {
     // the scan probes these names rather than listing the directory, so a file dropped there under any other name is never a path this can execute
     readonly property var events: [
         "battery-critical",
+        "dnd-changed",
+        "idle-changed",
+        "media-changed",
+        "network-changed",
         "notification",
+        "power-source-changed",
         "theme-changed",
         "update-available",
         "workspace-changed"
@@ -284,6 +289,86 @@ Singleton {
     }
     function _fireWorkspaceChanged(): void {
         root._workspaceSeen(Compositor.focusedWorkspaceRef, Compositor.activeWorkspace(Compositor.focusedMonitor))
+    }
+
+    // state hooks fire when a state changes after the hook was found: a rescan records what is showing and fires
+    // nothing, and only the services with a hook present are read, so an unused event builds none of them
+    readonly property var _stateEvents: ["dnd-changed", "idle-changed", "media-changed", "network-changed",
+        "power-source-changed"]
+    property var _stateSeen: ({})
+    on_PresentChanged: {
+        const seen = {}
+        for (const event of root._stateEvents)
+            if (root._present[event] === true) seen[event] = root._stateNow(event)[0]
+        root._stateSeen = seen
+    }
+    // [key, arguments]; an empty key is a state with nothing to report, such as no battery
+    function _stateNow(event: string): var {
+        switch (event) {
+        case "dnd-changed": {
+            const dnd = Notifications.dnd ? "on" : "off"
+            return [dnd, [dnd]]
+        }
+        case "idle-changed": {
+            const idle = Idle.isIdle ? "idle" : "active"
+            return [idle, [idle]]
+        }
+        case "media-changed": {
+            const state = Media.playing ? "playing" : Media.title.length > 0 ? "paused" : "stopped"
+            return [state + "\n" + Media.title + "\n" + Media.artist, [state, Media.title, Media.artist]]
+        }
+        case "network-changed": {
+            const state = Network.connected ? "connected" : "disconnected"
+            const name = Network.connected ? Network.connectionName : ""
+            return [state + "\n" + name, [state, name]]
+        }
+        case "power-source-changed": {
+            if (!Battery.available) return ["", []]
+            const source = Battery.onBattery ? "battery" : "ac"
+            return [source, [source, Math.round(Battery.pct)]]
+        }
+        }
+        return ["", []]
+    }
+    function _stateChanged(event: string): void {
+        if (root._present[event] !== true) return
+        const now = root._stateNow(event)
+        if (now[0].length === 0 || now[0] === root._stateSeen[event]) return
+        const seen = Object.assign({}, root._stateSeen)
+        seen[event] = now[0]
+        root._stateSeen = seen
+        root.fire(event, now[1])
+    }
+    function _dndChanged(): void { root._stateChanged("dnd-changed") }
+    function _idleChanged(): void { root._stateChanged("idle-changed") }
+    function _mediaChanged(): void { root._stateChanged("media-changed") }
+    function _networkChanged(): void { root._stateChanged("network-changed") }
+    function _powerChanged(): void { root._stateChanged("power-source-changed") }
+
+    Connections {
+        target: root._present["dnd-changed"] === true ? Notifications : null
+        function onDndChanged() { root._dndChanged() }
+    }
+    Connections {
+        target: root._present["idle-changed"] === true ? Idle : null
+        function onIsIdleChanged() { root._idleChanged() }
+    }
+    // a new track changes title and artist one after the other: one run for the pair, read a tick later
+    Connections {
+        target: root._present["media-changed"] === true ? Media : null
+        function onPlayingChanged() { Qt.callLater(root._mediaChanged) }
+        function onTitleChanged() { Qt.callLater(root._mediaChanged) }
+        function onArtistChanged() { Qt.callLater(root._mediaChanged) }
+    }
+    Connections {
+        target: root._present["network-changed"] === true ? Network : null
+        function onConnectedChanged() { Qt.callLater(root._networkChanged) }
+        function onConnectionNameChanged() { Qt.callLater(root._networkChanged) }
+    }
+    Connections {
+        target: root._present["power-source-changed"] === true ? Battery : null
+        function onOnBatteryChanged() { root._powerChanged() }
+        function onAvailableChanged() { root._powerChanged() }
     }
 
     Component.onCompleted: if (ConfigStore.ready) root.rescan()

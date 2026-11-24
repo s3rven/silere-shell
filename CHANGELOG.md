@@ -11,6 +11,10 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+### Added
+
+- Hooks for `dnd-changed`, `idle-changed`, `media-changed`, `network-changed` and `power-source-changed`, each run
+  when that state changes. An event with no hook file still costs nothing.
 ### Changed
 
 - The installer ends its list of missing optional tools with the one command that installs them on your system, the

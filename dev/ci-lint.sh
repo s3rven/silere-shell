@@ -262,6 +262,18 @@ else
   ok "modules" "inventory covers every unconditional external import"
 fi
 
+section "hook events"
+# the scan probes exactly these names, so a hook the docs promise but the list lacks would never run
+code_hooks="$(awk '/readonly property var events: \[/{on=1; next} on && /\]/{exit} on' services/Hooks.qml \
+  | grep -oE '"[a-z-]+"' | tr -d '"' | sort)"
+doc_hooks="$(awk '/^\| hook \| arguments \|/{on=1; next} on && !/^\|/{exit} on' docs/scripting.md \
+  | grep -oE '^\| `[a-z-]+`' | tr -d '|` ' | sort)"
+if [ -z "$code_hooks" ] || [ "$code_hooks" != "$doc_hooks" ]; then
+  fail "hook events in services/Hooks.qml and docs/scripting.md differ: $(comm -3 <(printf '%s\n' "$code_hooks") <(printf '%s\n' "$doc_hooks") | tr -s '\t\n' '  ')"
+else
+  ok "hooks" "$(printf '%s\n' "$code_hooks" | wc -l) events, documented one for one"
+fi
+
 section "local singleton imports"
 missing_singleton_import=0
 singleton_consumer_count=0
