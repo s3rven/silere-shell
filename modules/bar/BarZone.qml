@@ -59,6 +59,7 @@ Row {
         if (key === "system" && !SysInfo.monitorHasReadings) return false
         if (key === "brightness" && !Brightness.controllable && !DisplayBrightness.hasControl) return false
         if (key === "media" && !Media.shown) return false
+        if (key === "indicators" && Indicators.items.length === 0) return false
         if (key === "shellUpdate"
                 && !ShellUpdate.pending && !ShellUpdate.checking && !ShellUpdate.applying) return false
         return true

@@ -215,6 +215,7 @@ Item {
     Component { id: _cBrightness;  BrightnessWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cBattery;     BatteryWidget    { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cMedia;       MediaWidget      { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; textBudget: root.mediaTextBudget; compact: root.effectiveCompact; barActive: root.barActive } }
+    Component { id: _cIndicators;  IndicatorsWidget { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
     Component { id: _cClock;       Clock            { anchors.verticalCenter: parent.verticalCenter; height: root.height; screen: root.screen; compact: root.effectiveCompact; barActive: root.barActive } }
 
     Component { id: _cWindowTitle; WindowTitle { anchors.verticalCenter: parent.verticalCenter; screen: root.screen; widthBudget: root.titleWidthBudget; compact: root.effectiveCompact; barActive: root.barActive } }
@@ -225,7 +226,7 @@ Item {
         network: _cNetwork, bluetooth: _cBluetooth, volume: _cVolume, microphone: _cMic,
         keyboard: _cKeyboard, system: _cSystem,
         brightness: _cBrightness, battery: _cBattery,
-        media: _cMedia, clock: _cClock
+        media: _cMedia, indicators: _cIndicators, clock: _cClock
     })
 
     BarZone {

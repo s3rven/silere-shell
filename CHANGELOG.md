@@ -26,6 +26,8 @@ settings file carries its own `__version` and migrates separately.
 - Overview and the power menu's Reboot say when an update replaced the running kernel and a restart is needed.
 - After a crash, the restarted shell says so once, and `silere doctor` names the last crash and where its report is.
 - `silere theme <image>` takes the accent from a picture on the neutral theme, for a desktop without matugen.
+- `silere indicator set <name> <glyph> [text]` shows a mark of your own in the bar until `silere indicator clear`;
+  scripts push it, nothing polls.
 
 ### Changed
 

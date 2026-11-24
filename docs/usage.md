@@ -34,6 +34,7 @@ other keybind can run `silere menu`.
 | Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | Input level and listening apps |
 | Brightness | Brightness sliders in Home | | | Step all controllable displays | |
 | Battery | Power Mode in Home | | | | Time left or charging state; on a desktop it shows only while a receiver battery is low |
+| Script indicators | | | | | Shown only while a script has set one with `silere indicator set` |
 | Updates | Package details | Check again | | | Status, and the error of a failed check |
 | Shell update | Settings › System › Overview | | | | |
 | Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name, unless widgets are compact |

@@ -3576,7 +3576,7 @@ test_fish_completion_scope() (
         for word in $top; do
             # the menu's Settings tab is a word of its own, and the OSD and Theme Settings pages, offered by menu and
             # by settings' filter, share the osd and theme commands' names
-            case "$command $word" in "menu settings"|"menu osd"|"settings osd"|"menu theme"|"settings theme") continue ;; esac
+            case "$command $word" in "menu settings"|"menu osd"|"settings osd"|"menu theme"|"settings theme"|"indicator set") continue ;; esac
             ! grep -qx -- "$word" <<<"$offered" || fail "fish offers silere $command $word"
         done
     done

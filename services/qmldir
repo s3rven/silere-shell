@@ -37,6 +37,7 @@ singleton DateTime      1.0 DateTime.qml
 singleton DeviceDiagnostics 1.0 DeviceDiagnostics.qml
 singleton FontScan      1.0 FontScan.qml
 singleton FullscreenState 1.0 FullscreenState.qml
+singleton Indicators    1.0 Indicators.qml
 singleton Hooks         1.0 Hooks.qml
 singleton Idle          1.0 Idle.qml
 singleton InputState    1.0 InputState.qml

@@ -166,6 +166,8 @@ Singleton {
         brightness:  { glyph: "󰃟", label: "Brightness",      group: "status",      zone: "right",  setting: "barShowBrightness" },
         battery:     { glyph: "󰂄", label: "Battery",         group: "status",      zone: "right",  setting: "barShowBattery" },
         media:       { glyph: "󰝚", label: "Media",           group: "media",       zone: "left",   setting: "barShowMedia" },
+        // no setting either: it is empty until a script sets an indicator
+        indicators:  { glyph: "󰈽", label: "Script indicators", group: "indicators", zone: "right", setting: "" },
         clock:       { glyph: "󰅐", label: "Clock",           group: "clock",       zone: "right",  setting: "barShowClock" }
     })
 

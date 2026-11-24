@@ -10,7 +10,7 @@ _silere() {
     COMPREPLY=()
     if [ "$COMP_CWORD" -eq 1 ]; then
         words=(try reset run stop restart use status log doctor ipc link update repair service version uninstall help
-            menu calendar quick tray toggle volume mic dismiss osd theme get set settings)
+            menu calendar quick tray toggle volume mic dismiss osd theme indicator get set settings)
     else
         case "${COMP_WORDS[1]}" in
             menu)
@@ -19,6 +19,7 @@ _silere() {
                 fi ;;
             calendar|quick|tray) [ "$COMP_CWORD" -eq 2 ] && words=(close) ;;
             theme) [ "$COMP_CWORD" -eq 2 ] && { mapfile -t COMPREPLY < <(compgen -f -- "$cur"); return; } ;;
+            indicator) [ "$COMP_CWORD" -eq 2 ] && words=(set clear list) ;;
             volume|mic) [ "$COMP_CWORD" -eq 2 ] && words=(up down mute next) ;;
             dismiss) [ "$COMP_CWORD" -eq 2 ] && words=(all) ;;
             settings) [ "$COMP_CWORD" -eq 2 ] && words=(--changed "${_silere_pages[@]}") ;;

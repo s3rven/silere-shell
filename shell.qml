@@ -117,6 +117,7 @@ ShellRoot {
         void NotificationKeys.armed
         // `silere osd` answers before anything has shown on the OSD
         void OsdBarState.armed
+        void Indicators.armed
         // the welcome, the low-disk and crash checks run whatever the battery and temperature switches say
         void SystemAlerts.armed
         root.armNightLightIfNeeded()

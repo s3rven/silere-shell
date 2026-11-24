@@ -5527,7 +5527,7 @@ ShellRoot {
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
-                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,clock",
+                    === "shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery,indicators,clock",
             "the widget catalog derives the shipped default layout")
     }
 
@@ -13146,6 +13146,19 @@ ShellRoot {
                 && !Audio.twoWay([app("easyeffects", "EasyEffects")], [app("easyeffects", "EasyEffects")])
                 && !Audio.twoWay([{}], [{}]) && !Audio.twoWay([], [app("firefox", "Firefox")]),
             "a call is one app recording and playing at once; a recorder alone or an effects processor is not")
+        const indicatorsWas = Indicators.items
+        Indicators.items = []
+        const indicatorSet = Indicators.set("vpn-work", "󰦝", "office") === "ok" && Indicators.set("build", "󰔟", "") === "ok"
+            && Indicators.set("vpn-work", "󰦝", "home") === "ok"
+        const indicatorOrder = Indicators.items.map(i => i.name + ":" + i.label).join(",") === "vpn-work:home,build:"
+        const indicatorRefused = Indicators.set("Bad Name", "x", "") !== "ok" && Indicators.set("empty", "", "") !== "ok"
+            && Indicators.clear("missing") !== "ok"
+        for (let i = 0; i < 4; i++) Indicators.set("n" + i, "x", "")
+        const indicatorCapped = Indicators.set("seventh", "x", "") !== "ok" && Indicators.items.length === Indicators.maxItems
+        root._check(indicatorSet && indicatorOrder && indicatorRefused && indicatorCapped && Indicators.clear("build") === "ok"
+                && Indicators.items.every(i => i.name !== "build"),
+            "script indicators keep their place when updated, refuse bad names and empty glyphs, and stop at six")
+        Indicators.items = indicatorsWas
         const crashAt = new Date(2026, 10, 16, 14, 23)
         root._check(SystemAlerts.crashText(Math.floor(crashAt.getTime() / 1000) + "\t/c/report.txt\t0.3.2\tSegmentation fault (11)\n")
                     === "Quickshell 0.3.2 stopped (Segmentation fault (11)) at " + DateTime.clockText(crashAt) + ". silere doctor names the report."
