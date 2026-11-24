@@ -1059,6 +1059,15 @@ else
   fail "shell.qml must not set a LazyLoader's loading to false; finish the load with active = true, then drop it"
 fi
 
+section "icon fallbacks"
+# an icon's first decode is Loading for a frame or two: a fallback shown for "not Ready" flashes in before the icon
+if fallback_hits="$(grep -rnE 'visible:[^/]*status[[:space:]]*!==?[[:space:]]*Image\.Ready' --include='*.qml' \
+    services modules config shell.qml </dev/null)"; then
+  fail "show an icon's fallback for Image.Null or Image.Error, not while it loads: $fallback_hits"
+else
+  ok "icon fallbacks" "no letter or glyph stands in for an icon that is still loading"
+fi
+
 section "reference watch"
 # Qt watches a map property that JS keeps in a variable, and can free that watch inside a grouped update (11-06 cores)
 mapfile -t ref_files < <(find services modules config -name '*.qml'; printf '%s\n' shell.qml)
