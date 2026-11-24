@@ -23,6 +23,8 @@ settings file carries its own `__version` and migrates separately.
 
 - `silere status` no longer calls an update check older than two days up to date; it says when it last found none.
 - A notification that names no app shows its initial instead of an unrelated app's icon.
+- `silere doctor` suggests a package for a missing screen locker, Git, curl or xdg-open too, and names more of them on
+  openSUSE and Void.
 
 ## Releases
 

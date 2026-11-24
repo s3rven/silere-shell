@@ -1737,6 +1737,25 @@ else
     ok "doctor" "every optional tool the installer names is checked by the doctor"
 fi
 
+# a tool the doctor reports missing goes into its install suggestions only through _package_for; systemd's own
+# tools have no package to name on a system without it
+doctor_unnamed=""
+while read -r _tool; do
+    [ -z "$_tool" ] && continue
+    case "$_tool" in busctl|systemctl|loginctl|paru|yay) continue ;; esac
+    bash -c 'package_family=pacman; eval "$1"; _package_for "$2" >/dev/null' bash \
+        "$(sed -n '/^_package_for() {/,/^}/p' scripts/doctor.sh)" "$_tool" || doctor_unnamed="$doctor_unnamed $_tool"
+done < <({
+    grep -oE '^ *(else )?(optional_tool|required_tool) [a-z0-9-]+' scripts/doctor.sh | awk '{print $NF}'
+    grep -oE '^ *(else |\|\| )?optional_any "[^"]*" "[^"]*" [a-z0-9-]+' scripts/doctor.sh | awk '{print $NF}'
+    grep -oE '_remember_package [a-z0-9-]+' scripts/doctor.sh | awk '{print $2}'
+} | sort -u)
+if [ -n "$doctor_unnamed" ]; then
+    fail "silere doctor reports these missing with no Arch package to suggest:$doctor_unnamed"
+else
+    ok "doctor" "every tool the doctor reports missing has an Arch package in its install suggestions"
+fi
+
 xdg_path_bypass="$(grep -RInE --include='*.qml' \
   'Quickshell\.env\("(XDG_(CONFIG|CACHE|STATE)_HOME|XDG_RUNTIME_DIR)"\)' \
   shell.qml modules services config \

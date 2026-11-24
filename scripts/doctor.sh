@@ -44,9 +44,9 @@ package_family="$(_silere_package_family)"
 _package_for() {
     local tool="$1"
     case "$package_family:$tool" in
-        pacman:notify-send) printf 'libnotify' ;;
+        pacman:notify-send|dnf:notify-send|xbps:notify-send) printf 'libnotify' ;;
         apt:notify-send)    printf 'libnotify-bin' ;;
-        dnf:notify-send)    printf 'libnotify' ;;
+        zypper:notify-send) printf 'libnotify-tools' ;;
         *:fc-list|*:fc-match|*:fc-cache) printf 'fontconfig' ;;
         pacman:checkupdates) printf 'pacman-contrib' ;;
         apt:checkupdates|dnf:checkupdates|zypper:checkupdates|xbps:checkupdates) return 1 ;;
@@ -57,15 +57,18 @@ _package_for() {
         dnf:ssh-keygen)     printf 'openssh-clients' ;;
         pacman:nmcli|pacman:nmtui) printf 'networkmanager' ;;
         apt:nmcli)          printf 'network-manager' ;;
-        dnf:nmcli|zypper:nmcli) printf 'NetworkManager' ;;
+        dnf:nmcli|zypper:nmcli|xbps:nmcli) printf 'NetworkManager' ;;
         *:pwvucontrol) printf 'pavucontrol' ;;
         *:wpctl)       printf 'wireplumber' ;;
         pacman:pw-dump) printf 'pipewire' ;;
-        pacman:hyprsunset|pacman:matugen|pacman:xdg-terminal-exec|pacman:fakeroot) printf '%s' "$tool" ;;
+        # an apt or dnf line stops at the first name its release lacks, so hyprlock is named only where it is packaged
+        pacman:hyprsunset|pacman:matugen|pacman:xdg-terminal-exec|pacman:fakeroot|pacman:hyprlock|zypper:hyprlock|zypper:hyprsunset|xbps:matugen)
+            printf '%s' "$tool" ;;
+        *:xdg-open) printf 'xdg-utils' ;;
         pacman:nm-connection-editor|dnf:nm-connection-editor) printf '%s' "$tool" ;;
         apt:nm-connection-editor) printf 'network-manager-gnome' ;;
         *:blueman-manager) printf 'blueman' ;;
-        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset|*:ddcutil)
+        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset|*:ddcutil|*:swaylock|*:curl|*:git)
             printf '%s' "$tool" ;;
         *) return 1 ;;
     esac
