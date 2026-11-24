@@ -3080,6 +3080,12 @@ ShellRoot {
         cell.apps = [{ icon: "", fallback: "F", name: "Firefox", count: 2 }]
         root._check(icon && icon === findIcon(),
             "a second window of the same app keeps the workspace icon delegate")
+        const letter = root._findTrayNode(cell, item => item.objectName === "workspace-app-fallback")
+        root._check(letter && letter.visible, "a workspace app with no icon shows its letter")
+        cell.apps = [{ icon: "file:///nonexistent/silere-workspace-probe.svg", fallback: "F", name: "Firefox", count: 2 }]
+        root._check(icon.status === Image.Loading && letter && !letter.visible,
+            "a workspace app icon that is still loading shows no letter in its place")
+        cell.apps = [{ icon: "", fallback: "F", name: "Firefox", count: 2 }]
         ShellSettings.wsShowNumbers = true
         const number = root._findTrayNode(cell, item => item.objectName === "workspace-number")
         root._check(number && number.opacity === 1 && icon

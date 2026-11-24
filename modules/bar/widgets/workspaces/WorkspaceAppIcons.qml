@@ -39,10 +39,12 @@ Row {
             }
 
             Rectangle {
+                objectName: "workspace-app-fallback"
                 anchors.fill: parent
                 radius: width / 2
                 color: Theme.withAlpha(Theme.barSubtext, 0.12)
-                visible: _iconSrc.status !== Image.Ready
+                // not while loading: a first decode is a frame or two, and the letter flashed in before the icon
+                visible: _iconSrc.status === Image.Null || _iconSrc.status === Image.Error
 
                 ShellText {
                     anchors.centerIn: parent

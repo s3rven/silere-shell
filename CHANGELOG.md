@@ -25,6 +25,7 @@ settings file carries its own `__version` and migrates separately.
 
 - `silere status` and Settings › System › Overview no longer call an update check older than two days up to date; they
   say when it last found none.
+- A workspace app icon no longer flashes its letter while it loads.
 - A notification that names no app shows its initial instead of an unrelated app's icon.
 - `silere doctor` suggests a package for a missing screen locker, Git, curl or xdg-open too, and names more of them on
   openSUSE and Void.
