@@ -276,9 +276,8 @@ Column {
                 meta: Updates.managerLabel
                 detail: Updates.lastFailed ? Updates.lastError
                     + (Updates.lastCheckedText.length > 0 ? " · Last successful check " + Updates.lastCheckedText : "")
-                    : Updates.aurCount > 0
-                        ? Updates.repoCount + " from repos, " + Updates.aurCount + " from the AUR"
-                            + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
+                    : Updates.sourcesText.length > 0
+                        ? Updates.sourcesText + (Updates.lastCheckLabel.length > 0 ? " · " + Updates.lastCheckLabel : "")
                         : Updates.lastCheckLabel
                 detailError: Updates.lastFailed
                 statusColor: Updates.lastFailed ? Theme.warning

@@ -10,6 +10,14 @@ Singleton {
     property int  count: 0
     property int  repoCount: 0
     property int  aurCount: 0
+    // kept between its own checks: flathub's summary is megabytes, so it is fetched every few hours, not every hour
+    property int  flatpakCount: 0
+    property var  _flatpakRows: []
+    property real _flatpakCheckedMs: 0
+    readonly property real _flatpakEveryMs: 6 * 3600000
+    readonly property string sourcesText: root.aurCount <= 0 && root.flatpakCount <= 0 ? ""
+        : [root.repoCount + " from repos"].concat(root.aurCount > 0 ? [root.aurCount + " from the AUR"] : [],
+            root.flatpakCount > 0 ? [root.flatpakCount + " from Flatpak"] : []).join(", ")
     // rebuilt only on a completed check, never bound per frame; capped so a long-neglected system can't build a huge model
     property var  packages: []
     readonly property int _maxDetail: 80
@@ -304,11 +312,35 @@ Singleton {
         _proc.exec(root._checkCommand(automatic))
     }
 
+    // apps only, as `flatpak update` would list them; a tab marks a result row, so a terminal escape is never counted
+    function _flatpakPart(): string {
+        return "\nif [ -n \"$(flatpak list --app --columns=application 2>/dev/null | head -n 1)\" ]; then "
+            + "fp=$(" + root._limit(90, "flatpak remote-ls --updates --columns=name,version") + " </dev/null 2>/dev/null) && "
+            + "{ echo \"FLATPAK $(printf '%s\\n' \"$fp\" | grep -c \"$(printf '\\t')\")\"; "
+            + "printf '%s\\n' \"$fp\" | grep \"$(printf '\\t')\" | " + root._head(root._maxDetail) + "; }; fi"
+    }
+
     function _checkCommand(automatic: bool): var {
-        if (!automatic) return ["bash", "-c", root._cmd()]
+        // without flatpak, or without an app from it, the part finds nothing and adds nothing
+        const flatpak = !automatic || Date.now() - root._flatpakCheckedMs >= root._flatpakEveryMs ? root._flatpakPart() : ""
+        if (!automatic) return ["bash", "-c", root._cmd() + flatpak]
         return ["bash", "-c",
-            'if . "$1" && _silere_network_metered; then printf "DEFER metered\\n"; exit 0; fi\n' + root._cmd(),
+            'if . "$1" && _silere_network_metered; then printf "DEFER metered\\n"; exit 0; fi\n' + root._cmd() + flatpak,
             "silere-package-check", Quickshell.shellDir + "/scripts/lib/network.sh"]
+    }
+
+    function _acceptFlatpak(text: string): void {
+        const lines = text.split("\n")
+        const m = /^FLATPAK ([0-9]{1,5})$/.exec(lines[0].trim())
+        if (!m) return
+        const rows = []
+        for (let i = 1; i < lines.length && rows.length < root._maxDetail; i++) {
+            const cols = lines[i].split("\t")
+            if (cols.length >= 2) root._detail(rows, cols[0].trim(), "", cols[1].trim() || "update", false)
+        }
+        root.flatpakCount = Number(m[1])
+        root._flatpakRows = rows
+        root._flatpakCheckedMs = Date.now()
     }
 
     function _refreshBackground(): void {
@@ -342,6 +374,9 @@ Singleton {
         root.lastFailed = false
         root.lastError = ""
         root._failStreak = 0
+        root.flatpakCount = 0
+        root._flatpakRows = []
+        root._flatpakCheckedMs = 0
     }
 
     function _sourcePreferenceChanged(): void {
@@ -361,7 +396,7 @@ Singleton {
             _proc.running = false
         }
         if (!ShellSettings.updatesIncludeAur) {
-            root.count = Math.max(0, root.repoCount)
+            root.count = Math.max(0, root.repoCount) + root.flatpakCount
             root.aurCount = 0
             root.packages = root.packages.filter(p => !p.aur)
         }
@@ -411,10 +446,15 @@ Singleton {
             if (root.backgroundDeferred) return
         }
         root._touchNow()
-        const n = root._countFrom(t)
-        if (code === 0 && !t.startsWith("ERR") && n >= 0) {
+        const cut = t.indexOf("\nFLATPAK ")
+        const main = cut >= 0 ? t.substring(0, cut) : t
+        const n = root._countFrom(main)
+        if (code === 0 && !main.startsWith("ERR") && n >= 0) {
+            if (cut >= 0) root._acceptFlatpak(t.substring(cut + 1))
             root.count = n
-            root._parseDetail(t)
+            root._parseDetail(main)
+            root.count = n + root.flatpakCount
+            root.packages = root.packages.concat(root._flatpakRows).slice(0, root._maxDetail)
             root.lastFailed = false
             root.lastError = ""
             root.lastCheckMs = root._nowMs

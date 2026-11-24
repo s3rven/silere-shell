@@ -11297,6 +11297,17 @@ ShellRoot {
         root._check(Updates.count === 3 && Updates.lastFailed
                 && Updates.lastError === "Package check returned an invalid count",
             "a successful package process still needs a valid count")
+        Updates._acceptCheckResult(0, "2\nSPLIT 2 0\none 1 -> 2\ntwo 1 -> 2\nFLATPAK 2\nFirefox\t130.0\nMesa\t25.1\n")
+        const flatpakCounted = Updates.count === 4 && Updates.repoCount === 2 && Updates.flatpakCount === 2
+            && Updates.packages.length === 4 && Updates.packages[3].name === "Mesa" && Updates.packages[3].to === "25.1"
+            && Updates.sourcesText === "2 from repos, 2 from Flatpak"
+        Updates._acceptCheckResult(0, "1\none 1 -> 2\n")
+        root._check(flatpakCounted && Updates.count === 3 && Updates.flatpakCount === 2 && Updates.packages.length === 3,
+            "Flatpak updates add to the package count and list, and stand between their own slower checks")
+        Updates._acceptCheckResult(0, "0\nFLATPAK 1\n\u001b[?25h\nFirefox\t131.0\n")
+        root._check(Updates.count === 1 && Updates.packages.length === 1 && Updates.packages[0].name === "Firefox",
+            "a Flatpak row needs its tab, so a terminal escape is never listed")
+        Updates._acceptCheckResult(0, "0\nFLATPAK 0\n")
         Updates._acceptCheckResult(0, "0\n")
         root._check(Updates.count === 0 && Updates.packages.length === 0
                 && !Updates.lastFailed && Updates.lastError === ""
