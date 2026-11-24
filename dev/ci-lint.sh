@@ -274,6 +274,16 @@ else
   ok "hooks" "$(printf '%s\n' "$code_hooks" | wc -l) events, documented one for one"
 fi
 
+# docs/scripting.md promises these through 2.x, so a command or call it names that the shell stops answering is a break
+if ! command -v python3 >/dev/null 2>&1; then
+  structural_skip "scripting" "python3 missing"
+elif scripting_surface="$(python3 dev/check-scripting-surface.py)"; then
+  ok "scripting" "$scripting_surface"
+else
+  fail "the docs name commands or IPC calls the shell does not answer:"
+  printf '%s\n' "$scripting_surface"
+fi
+
 section "local singleton imports"
 missing_singleton_import=0
 singleton_consumer_count=0

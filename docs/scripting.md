@@ -29,6 +29,9 @@ shell answers, and alone it lists them. The shell must already be running.
 When this copy is not the one running, such as a checkout beside an installed copy, these commands
 use the single other Silere that is running and say so on stderr. With none running they exit 1.
 
+From 2.0, no 2.x release removes or renames a command, an `ipc` call or a hook on this page, or changes what
+their arguments mean; new ones can be added.
+
 To target a specific checkout directly with Quickshell, set `SILERE_DIR` to its path:
 
 ```bash
