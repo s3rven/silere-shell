@@ -453,7 +453,7 @@ if [ "$compositor" = Hyprland ] && [ -n "$config_home" ] \
         bind_where="${BASH_REMATCH[1]}" bind_line="${BASH_REMATCH[2]}"
         bind_new="a bind to global, silere:menu"
         if [[ "$bind_line" =~ ^[[:space:]]*(hl\.bind\([^,]*,) ]]; then
-            bind_new="${BASH_REMATCH[1]} hl.dsp.global(\"silere:menu\"))"
+            bind_new="${BASH_REMATCH[1]} hl.dsp.global(\"silere:menu\"), { description = \"Open or close the Silere menu\" })"
         elif [[ "$bind_line" =~ ^[[:space:]]*(bind[a-ce-z]*[[:space:]]*=[^,]*,[^,]*,)[[:space:]]*exec[[:space:]]*, ]]; then
             bind_new="${BASH_REMATCH[1]} global, silere:menu"
         fi

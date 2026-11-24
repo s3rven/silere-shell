@@ -2812,7 +2812,7 @@ test_menu_keybind_plan() (
         bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
         || fail "keybind dry run with a Lua config exited non-zero"
     case "$out" in
-        *"append to $dir/hyprland.lua: "'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))'*) ;;
+        *"append to $dir/hyprland.lua: "'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"), { description = "Open or close the Silere menu" })'*) ;;
         *) fail "a stock Lua config was not offered the bind: $out" ;;
     esac
     case "$out" in

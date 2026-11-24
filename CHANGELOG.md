@@ -13,8 +13,9 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
-- On Hyprland the installer binds the menu key to the `silere:menu` global shortcut, which starts no process per press.
-  `silere doctor` names an older `qs ipc` menu bind and the line that replaces it.
+- On Hyprland the installer binds the menu key to the `silere:menu` global shortcut, which starts no process per press,
+  and Settings › System › Keybinds names that bind on any key. `silere doctor` names an older `qs ipc` menu bind and
+  the line that replaces it.
 
 ### Fixed
 

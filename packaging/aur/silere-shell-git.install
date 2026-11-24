@@ -12,7 +12,7 @@ post_install() {
 
   click the active workspace to open the menu and settings,
   or bind it in hyprland.lua:
-    hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))
+    hl.bind("SUPER + slash", hl.dsp.global("silere:menu"), { description = "Open or close the Silere menu" })
   on niri: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
   Hyprland fades layers on top of Silere's own popup animations. to

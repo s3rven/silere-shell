@@ -44,11 +44,12 @@ On Hyprland the shell also answers two global shortcuts, which a bind reaches wi
 anything:
 
 ```lua
-hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))   -- open or close the menu
-hl.bind("SUPER + SHIFT + slash", hl.dsp.global("silere:tray"))  -- the first tray app's menu
+hl.bind("SUPER + slash", hl.dsp.global("silere:menu"), { description = "Open or close the Silere menu" })
+hl.bind("SUPER + SHIFT + slash", hl.dsp.global("silere:tray"), { description = "Open the first tray app's menu" })
 ```
 
-In a `.conf` config the first is `bind = SUPER, slash, global, silere:menu`. Super + period is the emoji
+Hyprland lists a Lua bind without its arguments, so the description is how Settings › System › Keybinds tells
+which shortcut a bind reaches. In a `.conf` config the first is `bind = SUPER, slash, global, silere:menu`. Super + period is the emoji
 picker in many setups, so the tray stays off it. Only the shell `silere run` starts answers them, so a preview
 or a test copy never takes them over.
 

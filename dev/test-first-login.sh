@@ -125,7 +125,8 @@ if [ "${1:-}" = --inner ]; then
         *"key: slash"*) ;;
         *) printf '%s\n' "$binds" | head -n 12 >&2; fail "the installed menu shortcut is not bound" ;;
     esac
-    grep -qF 'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))' "$home/.config/hypr/hyprland.lua" \
+    grep -qF 'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"), { description = "Open or close the Silere menu" })' \
+        "$home/.config/hypr/hyprland.lua" \
         || fail "the installed shortcut is not the silere:menu global shortcut"
     hyprctl dispatch 'hl.dsp.global("silere:menu")' > /dev/null 2>&1 || true
     opened=0

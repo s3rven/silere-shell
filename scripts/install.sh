@@ -1757,7 +1757,8 @@ MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
 MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
 # the shell silere run starts answers this global shortcut, so a press starts no qs process; niri has none
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, global, silere:menu"
-LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.global(\"silere:menu\"))"
+# a Lua bind lists no arguments in hyprctl, so only its description names it on the Keybinds page
+LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.global(\"silere:menu\"), { description = \"Open or close the Silere menu\" })"
 NIRI_BIND_SHOWN="$(_niri_combo "$MENU_BIND_MODS" "$MENU_BIND_KEY") { spawn \"sh\" \"-c\" $(_lua_string "$MENU_BIND_SHOWN"); }"
 
 if [ "$receipt_compositor" = niri ]; then
