@@ -1047,11 +1047,14 @@ else
 fi
 
 qs_modules_ok=true
+module_packages=""
 if $has_qs; then
     for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
         if ! _qml_module_available "$module"; then
             _warn "required QML module missing: $module"
             qs_modules_ok=false
+            package="$(_silere_qml_module_package "$module")" || continue
+            [[ " $module_packages " == *" $package "* ]] || module_packages+="${module_packages:+ }$package"
         fi
     done
     qt_floor=0
@@ -1060,7 +1063,10 @@ if $has_qs; then
         _warn "Qt is older than $SILERE_MIN_QT — the menu, notifications and popups cannot load"
         qs_modules_ok=false
     fi
-    $qs_modules_ok || _warn "this Quickshell build cannot load Silere; install the full current package"
+    if $qs_modules_ok; then :
+    elif [ -n "$module_packages" ] && [ "$qt_floor" -ne 1 ]; then _warn "install them: sudo apt install $module_packages"
+    else _warn "this Quickshell build cannot load Silere; install the full current package"
+    fi
 fi
 
 has_matugen=true

@@ -87,7 +87,7 @@ _silere_quickshell_install_hint() {
                 | awk '$1 == "Candidate:" && !seen { print $2; seen = 1 }')" || candidate=""
             if [ -n "$candidate" ] && [ "$candidate" != "(none)" ] \
                     && dpkg --compare-versions "$candidate" ge 0.3.1 2>/dev/null; then
-                printf 'sudo apt install quickshell\n'
+                printf 'sudo apt install quickshell %s\n' "$(_silere_qml_module_package QtQuick.Effects)"
                 return
             fi ;;
     esac
@@ -140,6 +140,17 @@ _silere_install_command() { # $1 = package family, $2... = packages
         apt)    printf 'sudo apt install %s\n' "$*" ;;
         zypper) printf 'sudo zypper install %s\n' "$*" ;;
         xbps)   printf 'sudo xbps-install %s\n' "$*" ;;
+        *) return 1 ;;
+    esac
+}
+
+# the package holding a QML module, where the distro ships Qt's modules one per package. Debian and Ubuntu's
+# quickshell pulls in QtQuick, Layouts and Controls (Shapes with it), never Effects
+_silere_qml_module_package() {
+    local module="${1,,}"
+    case "$(_silere_package_family):$module" in
+        apt:quickshell*) printf 'quickshell\n' ;;
+        apt:qtquick*)    printf 'qml6-module-%s\n' "${module//./-}" ;;
         *) return 1 ;;
     esac
 }

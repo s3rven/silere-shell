@@ -4223,11 +4223,17 @@ test_quickshell_install_hint() (
             '. "$1/scripts/lib/ui.sh"; family="$2"; _silere_package_family() { printf "%s\n" "$family"; }; _silere_quickshell_install_hint' \
             bash "$ROOT" "$1"
     }
-    assert_eq "sudo apt install quickshell" "$(hint apt 0.3.2-1)" "Debian 14 is offered its package"
+    assert_eq "sudo apt install quickshell qml6-module-qtquick-effects" "$(hint apt 0.3.2-1)" \
+        "Debian 14 is offered its package and the Effects module it does not pull in"
     case "$(hint apt 0.3.0-1)" in "see https://"*) ;; *) fail "a 0.3.0 apt package was offered" ;; esac
     case "$(hint apt '(none)')" in "see https://"*) ;; *) fail "apt was offered a package it does not have" ;; esac
     assert_eq "sudo xbps-install -S quickshell" "$(hint xbps)" "Void is offered its package"
     case "$(hint unknown)" in "see https://"*) ;; *) fail "an unknown system was offered a package" ;; esac
+    module() { bash -c '. "$1/scripts/lib/ui.sh"; family="$2"; _silere_package_family() { printf "%s\n" "$family"; }; _silere_qml_module_package "$3"' \
+        bash "$ROOT" "$1" "$2"; }
+    assert_eq "qml6-module-qtquick-effects" "$(module apt QtQuick.Effects)" "a missing Qt module is named by its Debian package"
+    assert_eq "quickshell" "$(module apt Quickshell.Services.Pipewire)" "a missing Quickshell module is named by its package"
+    assert_eq "" "$(module pacman QtQuick.Effects)" "no module package is guessed where Qt ships whole"
 )
 
 # under sudo or doas the scripts would use root's home and user services: refused. Plain root, as a CI container runs

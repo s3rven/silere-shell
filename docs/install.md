@@ -7,8 +7,9 @@
 You need Hyprland or niri, `git`, and Quickshell 0.3.1 or newer, built against at least
 Qt 6.10. The one-line installer below also needs `curl`; installing from a clone does not.
 On Arch and its derivatives, use `sudo pacman -S --needed quickshell git curl`.
-Debian 14 and unstable, Ubuntu 27.04 and Void package a recent enough one as `quickshell`; Fedora's own package is
-older, so use the `errornointernet/quickshell` COPR there.
+Debian 14 and unstable, Ubuntu 27.04 and Void package a recent enough one as `quickshell`; on Debian and Ubuntu, add
+`qml6-module-qtquick-effects`, which it does not pull in. Fedora's own package is older, so use the
+`errornointernet/quickshell` COPR there.
 For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
 
 ## Try it without installing

@@ -188,6 +188,7 @@ for module in "${SILERE_REQUIRED_QML_MODULES[@]}"; do
     if ! _qml_module_available "$module"; then
         fail "QML module" "$module is missing"
         missing_modules=$((missing_modules + 1))
+        _remember_package "$module"
     fi
 done
 [ "$missing_modules" -gt 0 ] || ok "QML modules" "all ${#SILERE_REQUIRED_QML_MODULES[@]} required imports found"
