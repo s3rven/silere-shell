@@ -2062,6 +2062,18 @@ if bash dev/release-notes.sh Unreleased >/dev/null 2>&1 \
   fail "release notes must reject Unreleased and unknown versions"
   release_archive_failed=1
 fi
+# GitHub turns a release body's single newlines into line breaks: wrapped paragraphs and bullets must arrive joined
+notes_fixture="$(mktemp -d)"
+printf '# Silere Shell 9.9.9\n\nOne paragraph\nwrapped here.\n\n## Fixed\n\n- A bullet\n  wrapped here.\n- Another.\n' \
+  > "$notes_fixture/9.9.9.md"
+printf '## [Unreleased]\n' > "$notes_fixture/CHANGELOG.md"
+notes_joined="$(SILERE_CHANGELOG="$notes_fixture/CHANGELOG.md" SILERE_RELEASE_DIR="$notes_fixture" \
+  bash dev/release-notes.sh 9.9.9 2>/dev/null || true)"
+rm -rf -- "$notes_fixture"
+if [ "$notes_joined" != "$(printf 'One paragraph wrapped here.\n\n## Fixed\n\n- A bullet wrapped here.\n- Another.')" ]; then
+  fail "release notes must join wrapped lines, or the release page breaks them mid-sentence"
+  release_archive_failed=1
+fi
 [ "$release_archive_failed" -ne 0 ] \
   || ok "release notes" "$release_count indexed archives are publishable"
 

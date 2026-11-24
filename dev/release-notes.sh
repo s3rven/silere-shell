@@ -58,6 +58,19 @@ fi
 section="$(printf '%s\n' "$section" | sed -e '/./,$!d')"
 section="$(printf '%s\n' "$section" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')"
 
+# GitHub renders a release body's single newlines as line breaks, so a paragraph or bullet wrapped in the file came out
+# ragged on the release page: join each one's lines. Blank lines, headings, list items, tables and fences start anew
+section="$(printf '%s\n' "$section" | awk '
+    function flush() { if (buf != "") print buf; buf = "" }
+    /^```/ { flush(); print; fence = !fence; next }
+    fence { print; next }
+    /^[[:space:]]*$/ { flush(); print; next }
+    /^(#|\|)/ { flush(); print; next }
+    /^[[:space:]]*([-*+]|[0-9]+\.)[[:space:]]/ { flush(); buf = $0; next }
+    { line = $0; if (buf == "") buf = line; else { sub(/^[[:space:]]+/, "", line); buf = buf " " line } }
+    END { flush() }
+')"
+
 if [ -z "$section" ]; then
     echo "release-notes: no notes found for $version" >&2
     echo "release-notes: add $RELEASE_DIR/$version.md before tagging" >&2
