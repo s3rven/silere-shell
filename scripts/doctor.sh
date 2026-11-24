@@ -41,38 +41,7 @@ fail() { printf '%sfail%s %-20s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
 
 package_family="$(_silere_package_family)"
 
-_package_for() {
-    local tool="$1"
-    case "$package_family:$tool" in
-        pacman:notify-send|dnf:notify-send|xbps:notify-send) printf 'libnotify' ;;
-        apt:notify-send)    printf 'libnotify-bin' ;;
-        zypper:notify-send) printf 'libnotify-tools' ;;
-        *:fc-list|*:fc-match|*:fc-cache) printf 'fontconfig' ;;
-        pacman:checkupdates) printf 'pacman-contrib' ;;
-        apt:checkupdates|dnf:checkupdates|zypper:checkupdates|xbps:checkupdates) return 1 ;;
-        *:powerprofilesctl) printf 'power-profiles-daemon' ;;
-        *:inotifywait)      printf 'inotify-tools' ;;
-        pacman:ssh-keygen|zypper:ssh-keygen|xbps:ssh-keygen) printf 'openssh' ;;
-        apt:ssh-keygen)     printf 'openssh-client' ;;
-        dnf:ssh-keygen)     printf 'openssh-clients' ;;
-        pacman:nmcli|pacman:nmtui) printf 'networkmanager' ;;
-        apt:nmcli)          printf 'network-manager' ;;
-        dnf:nmcli|zypper:nmcli|xbps:nmcli) printf 'NetworkManager' ;;
-        *:pwvucontrol) printf 'pavucontrol' ;;
-        *:wpctl)       printf 'wireplumber' ;;
-        pacman:pw-dump) printf 'pipewire' ;;
-        # an apt or dnf line stops at the first name its release lacks, so hyprlock is named only where it is packaged
-        pacman:hyprsunset|pacman:matugen|pacman:xdg-terminal-exec|pacman:fakeroot|pacman:hyprlock|zypper:hyprlock|zypper:hyprsunset|xbps:matugen)
-            printf '%s' "$tool" ;;
-        *:xdg-open) printf 'xdg-utils' ;;
-        pacman:nm-connection-editor|dnf:nm-connection-editor) printf '%s' "$tool" ;;
-        apt:nm-connection-editor) printf 'network-manager-gnome' ;;
-        *:blueman-manager) printf 'blueman' ;;
-        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset|*:ddcutil|*:swaylock|*:curl|*:git)
-            printf '%s' "$tool" ;;
-        *) return 1 ;;
-    esac
-}
+_package_for() { _silere_package_for "$package_family" "$1"; }
 
 _remember_package() {
     local package existing
@@ -479,14 +448,10 @@ fi
 
 if [ "${#missing_packages[@]}" -gt 0 ]; then
     section "Install suggestions"
-    case "$package_family" in
-        pacman) printf '     sudo pacman -S %s\n' "${missing_packages[*]}" ;;
-        dnf)    printf '     sudo dnf install %s\n' "${missing_packages[*]}" ;;
-        apt)    printf '     sudo apt install %s\n' "${missing_packages[*]}" ;;
-        zypper) printf '     sudo zypper install %s\n' "${missing_packages[*]}" ;;
-        xbps)   printf '     sudo xbps-install %s\n' "${missing_packages[*]}" ;;
-        *)      info "packages" "install the missing commands with your package manager" ;;
-    esac
+    if install_line="$(_silere_install_command "$package_family" "${missing_packages[@]}")"; then
+        printf '     %s\n' "$install_line"
+    else info "packages" "install the missing commands with your package manager"
+    fi
     info "note" "Silere never runs these commands or elevates privileges"
 fi
 

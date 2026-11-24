@@ -886,7 +886,7 @@ _backup() {
         if [ ! -f "${file}.bak" ]; then
             _txn_before_file "${file}.bak" || _die "could not journal ${file}.bak"
             cp -p "$file" "${file}.bak"
-            _skip "backed up existing → ${file##*/}.bak"
+            _ok "backed up ${file##*/} → ${file##*/}.bak"
         fi
     fi
 }
@@ -1077,6 +1077,8 @@ _section "optional tools"
 
 _optdeps_found=0
 _optdeps_missing=0
+# the command each missing row names first, for one line that installs them all
+_optdeps_missing_tools=()
 _optdep_result() {
     if [ "$1" = found ]; then
         _optdeps_found=$((_optdeps_found + 1))
@@ -1088,7 +1090,7 @@ _optdep_result() {
 
 _optdep() {
     if command -v "$1" >/dev/null 2>&1; then _optdep_result found "$1" "$2"
-    else _optdep_result missing "$1" "$2"
+    else _optdeps_missing_tools+=("$1"); _optdep_result missing "$1" "$2"
     fi
 }
 
@@ -1101,6 +1103,7 @@ _optdep_any() {
             return 0
         fi
     done
+    _optdeps_missing_tools+=("$1")
     _optdep_result missing "$label" "$desc"
 }
 
@@ -1140,6 +1143,17 @@ if [ "$_optdeps_missing" -eq 0 ]; then
     printf "    ${GREEN}ok${R}      all %d found\n" "$_optdeps_found"
 else
     printf "    ${GREEN}ok${R}      %d others found; each missing tool only hides its feature\n" "$_optdeps_found"
+    # the doctor's package names: a row of eighteen dashes on a fresh system told no one what to type
+    _optdeps_family="$(_silere_package_family)" _optdeps_packages=""
+    for _optdeps_tool in "${_optdeps_missing_tools[@]}"; do
+        _optdeps_package="$(_silere_package_for "$_optdeps_family" "$_optdeps_tool")" || continue
+        [ -n "$_optdeps_package" ] || continue
+        [[ " $_optdeps_packages " == *" $_optdeps_package "* ]] || _optdeps_packages+="${_optdeps_packages:+ }$_optdeps_package"
+    done
+    # shellcheck disable=SC2086 # one word per package
+    if [ -n "$_optdeps_packages" ] && _optdeps_line="$(_silere_install_command "$_optdeps_family" $_optdeps_packages)"; then
+        printf "    ${DIM}add${R}     %s\n" "$_optdeps_line"
+    fi
 fi
 
 # ── compositor ───────────────────────────────────────────────────────────────────
@@ -1467,11 +1481,12 @@ if { $did_cli || $had_cli || $cli_planned; } && ! $cli_on_path; then
 fi
 
 # ── matugen template ─────────────────────────────────────────────────────────────
-_section "matugen template"
+# without matugen both matugen steps stay quiet: the dependency check already said so, and the summary lists them
+! $has_matugen || _section "matugen template"
 TMPL_SRC="$ROOT/assets/matugen-theme.json"
 TMPL_DST="$CONFIG_HOME/matugen/templates/silere-shell/Theme.json"
 if ! $has_matugen; then
-    _skip "matugen not installed"
+    :
 else
     tmpl_rc=0
     _install_file "matugen template" "$TMPL_SRC" "$TMPL_DST" || tmpl_rc=$?
@@ -1479,11 +1494,11 @@ else
 fi
 
 # ── matugen config.toml ──────────────────────────────────────────────────────────
-_section "matugen config.toml"
+! $has_matugen || _section "matugen config.toml"
 MATUGEN_CFG="$CONFIG_HOME/matugen/config.toml"
 
 if ! $has_matugen; then
-    _skip "matugen not installed"
+    :
 elif [ -f "$MATUGEN_CFG" ] && grep -q '# silere-shell begin' "$MATUGEN_CFG"; then
     if grep -qF "input_path  = $MATUGEN_INPUT_TOML" "$MATUGEN_CFG" \
             && grep -qF "output_path = $MATUGEN_OUTPUT_TOML" "$MATUGEN_CFG"; then

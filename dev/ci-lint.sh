@@ -1754,14 +1754,14 @@ else
     ok "doctor" "every optional tool the installer names is checked by the doctor"
 fi
 
-# a tool the doctor reports missing goes into its install suggestions only through _package_for; systemd's own
-# tools have no package to name on a system without it
+# a tool the doctor or the installer reports missing goes into the install suggestion only through
+# _silere_package_for; systemd's own tools have no package to name on a system without it
 doctor_unnamed=""
 while read -r _tool; do
     [ -z "$_tool" ] && continue
     case "$_tool" in busctl|systemctl|loginctl|paru|yay) continue ;; esac
-    bash -c 'package_family=pacman; eval "$1"; _package_for "$2" >/dev/null' bash \
-        "$(sed -n '/^_package_for() {/,/^}/p' scripts/doctor.sh)" "$_tool" || doctor_unnamed="$doctor_unnamed $_tool"
+    bash -c '. "$1"; _silere_package_for pacman "$2" >/dev/null' bash \
+        scripts/lib/ui.sh "$_tool" || doctor_unnamed="$doctor_unnamed $_tool"
 done < <({
     grep -oE '^ *(else )?(optional_tool|required_tool) [a-z0-9-]+' scripts/doctor.sh | awk '{print $NF}'
     grep -oE '^ *(else |\|\| )?optional_any "[^"]*" "[^"]*" [a-z0-9-]+' scripts/doctor.sh | awk '{print $NF}'

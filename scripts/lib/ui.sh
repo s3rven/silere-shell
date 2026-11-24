@@ -94,6 +94,56 @@ _silere_quickshell_install_hint() {
     printf 'see https://quickshell.org/docs/v0.3.1/guide/install-setup/\n'
 }
 
+# the package that provides a command on a package family, as the doctor and the installer suggest it; nothing
+# where that family has none or its name is unknown
+_silere_package_for() { # $1 = package family, $2 = command
+    local tool="$2"
+    case "$1:$tool" in
+        pacman:notify-send|dnf:notify-send|xbps:notify-send) printf 'libnotify' ;;
+        apt:notify-send)    printf 'libnotify-bin' ;;
+        zypper:notify-send) printf 'libnotify-tools' ;;
+        *:fc-list|*:fc-match|*:fc-cache) printf 'fontconfig' ;;
+        pacman:checkupdates) printf 'pacman-contrib' ;;
+        apt:checkupdates|dnf:checkupdates|zypper:checkupdates|xbps:checkupdates) return 1 ;;
+        *:powerprofilesctl) printf 'power-profiles-daemon' ;;
+        *:inotifywait)      printf 'inotify-tools' ;;
+        pacman:ssh-keygen|zypper:ssh-keygen|xbps:ssh-keygen) printf 'openssh' ;;
+        apt:ssh-keygen)     printf 'openssh-client' ;;
+        dnf:ssh-keygen)     printf 'openssh-clients' ;;
+        pacman:nmcli|pacman:nmtui) printf 'networkmanager' ;;
+        apt:nmcli)          printf 'network-manager' ;;
+        dnf:nmcli|zypper:nmcli|xbps:nmcli) printf 'NetworkManager' ;;
+        *:pwvucontrol) printf 'pavucontrol' ;;
+        *:wpctl)       printf 'wireplumber' ;;
+        pacman:pw-dump) printf 'pipewire' ;;
+        # an apt or dnf line stops at the first name its release lacks, so hyprlock is named only where it is packaged
+        pacman:hyprsunset|pacman:matugen|pacman:xdg-terminal-exec|pacman:fakeroot|pacman:hyprlock|zypper:hyprlock|zypper:hyprsunset|xbps:matugen)
+            printf '%s' "$tool" ;;
+        *:xdg-open) printf 'xdg-utils' ;;
+        pacman:nm-connection-editor|dnf:nm-connection-editor) printf '%s' "$tool" ;;
+        apt:nm-connection-editor) printf 'network-manager-gnome' ;;
+        *:blueman-manager) printf 'blueman' ;;
+        *:wireplumber|*:pipewire|*:upower|*:brightnessctl|*:cava|*:pavucontrol|*:wlsunset|*:ddcutil|*:swaylock|*:curl|*:git)
+            printf '%s' "$tool" ;;
+        *:Quickshell*|*:QtQuick*) _silere_qml_module_package "$tool" ;;
+        *) return 1 ;;
+    esac
+}
+
+# the one command that installs these packages on a family; fails for a family it does not know
+_silere_install_command() { # $1 = package family, $2... = packages
+    local family="$1"
+    shift
+    case "$family" in
+        pacman) printf 'sudo pacman -S %s\n' "$*" ;;
+        dnf)    printf 'sudo dnf install %s\n' "$*" ;;
+        apt)    printf 'sudo apt install %s\n' "$*" ;;
+        zypper) printf 'sudo zypper install %s\n' "$*" ;;
+        xbps)   printf 'sudo xbps-install %s\n' "$*" ;;
+        *) return 1 ;;
+    esac
+}
+
 # another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
 _silere_other_bars() {
     local bar line config="" qs_bin
