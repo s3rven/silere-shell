@@ -6,7 +6,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 logs="$(mktemp -d)"
 trap 'rm -rf -- "$logs"' EXIT
 status=0
-for suite in scripts/test-qml-headless.sh dev/test-logic.sh dev/test-daily-driver-qml.sh dev/test-layout-fit.sh dev/ci-lint.sh; do
+# ci-lint runs the daily-driver probe through its helper fixtures, so it is not listed on its own
+for suite in scripts/test-qml-headless.sh dev/test-logic.sh dev/test-layout-fit.sh dev/ci-lint.sh; do
     name="${suite##*/}"
     name="${name%.sh}"
     start=$SECONDS
