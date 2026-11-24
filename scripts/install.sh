@@ -1441,8 +1441,9 @@ elif _ask "Install the silere command (menu, toggle, volume, status, update and 
 else
     _skip "run it directly, or add it later with: $CLI_TARGET link"
 fi
-if [ -L "$CLI_LINK" ] \
-        && [ "$(readlink -f -- "$CLI_LINK" 2>/dev/null || true)" = "$CLI_TARGET" ]; then
+# a dry run only plans the command link, and the completions follow it
+if $cli_planned || { [ -L "$CLI_LINK" ] \
+        && [ "$(readlink -f -- "$CLI_LINK" 2>/dev/null || true)" = "$CLI_TARGET" ]; }; then
     while IFS=$'\t' read -r comp_src comp_dest; do
         if [ -L "$comp_dest" ] \
                 && [ "$(readlink -f -- "$comp_dest" 2>/dev/null || true)" = "$comp_src" ]; then

@@ -621,6 +621,10 @@ test_dry_run_writes_nothing() (
         *) fail "dry run did not report the autostart line it would add" ;;
     esac
     case "$out" in
+        *"create $home/.local/bin/silere → "*"create $home/.local/share/bash-completion/completions/silere → "*) ;;
+        *) fail "dry run did not report the command and completion links it would create" ;;
+    esac
+    case "$out" in
         *"nothing was written"*) ;;
         *) fail "dry run did not report that it wrote nothing" ;;
     esac

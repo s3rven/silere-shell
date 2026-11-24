@@ -34,6 +34,7 @@ settings file carries its own `__version` and migrates separately.
 - The menu's Now Playing label keeps an emoji or flag whole where it shortens a long track title.
 - `bash scripts/uninstall.sh --help` explains the uninstaller instead of starting it, and it and `scripts/update.sh` stop
   at an option they don't know instead of carrying on without it.
+- `bash scripts/install.sh --dry-run` also lists the shell completion links the install creates.
 
 ## Releases
 
