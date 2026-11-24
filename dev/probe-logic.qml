@@ -1058,6 +1058,31 @@ ShellRoot {
             "notifications status answers JSON with the shown and missed counts and both quiet states")
     }
 
+    // what the silere:menu and silere:tray global shortcuts call: Home unanchored, a second press closes it
+    function _checkShortcutSurfaces(): void {
+        const was = { open: MenuState.open, tab: MenuState.activeTab, tray: ShellSettings.trayWidget }
+        MenuState.close()
+        MenuState.selectTab(MenuState.settingsTab)
+        const opened = ControlSurfaces.keybindToggle("menu")
+        const onHome = MenuState.open && MenuState.activeTab === MenuState.homeTab
+            && MenuState.anchorSource === null && MenuState.triggerScreen === null
+        const closed = ControlSurfaces.keybindToggle("menu")
+        const shut = !MenuState.open
+        TrayMenuState.close()
+        ShellSettings.trayWidget = false
+        const trayHidden = ControlSurfaces.keybindToggle("tray")
+        const trayShut = !TrayMenuState.open
+        ShellSettings.trayWidget = was.tray
+        const unknown = ControlSurfaces.keybindToggle("launcher")
+        MenuState.selectTab(was.tab)
+        if (was.open) MenuState.openUnanchored()
+        root._check(opened === "ok" && onHome && closed === "ok" && shut,
+            "the menu shortcut opens Home with no anchor and a second press closes it")
+        root._check(trayHidden.startsWith("error: the system tray is hidden") && trayShut
+                && unknown === "error: no shortcut surface named launcher" && MenuState.open === was.open,
+            "the tray shortcut says when the tray is hidden, and an unknown shortcut name opens nothing")
+    }
+
     function _checkNotificationKeyboard(): void {
         const motionWas = ShellSettings.reduceMotion
         ShellSettings.reduceMotion = true
@@ -5086,6 +5111,7 @@ ShellRoot {
         root._checkAccessibleControls()
         root._checkNotificationKeyboard()
         root._checkNotificationKeyVerbs()
+        root._checkShortcutSurfaces()
         root._checkHiddenBarControls()
         root._checkWifiScanners()
         root._checkDiscoveryRequests()
@@ -8598,6 +8624,17 @@ ShellRoot {
         ShellSettings.dndTo = 9
         root._check(!Notifications._quietActive,
             "a quiet-hours range starting and ending on one hour silences nothing")
+        const hourWas = DateTime.hour24
+        const quietAt = hours => hours.map(h => { DateTime.hour24 = h; return Notifications._quietActive ? 1 : 0 }).join("")
+        ShellSettings.dndFrom = 22
+        ShellSettings.dndTo = 7
+        const overnight = quietAt([21, 22, 23, 0, 6, 7, 12])
+        ShellSettings.dndFrom = 9
+        ShellSettings.dndTo = 17
+        const daytime = quietAt([8, 9, 16, 17, 23])
+        DateTime.hour24 = hourWas
+        root._check(overnight === "0111100" && daytime === "01100",
+            "quiet hours run from their first hour up to their last, also across midnight (" + overnight + " " + daytime + ")")
         ShellSettings.dndFrom = savedFrom
         ShellSettings.dndTo = savedTo
         ShellSettings.dndSchedule = savedDnd
