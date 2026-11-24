@@ -327,6 +327,7 @@ ShellRoot {
     Component { id: mediaVisualizerFactory; MediaVisualizer { presentationActive: false } }
     Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
     Component { id: boundedProcessFactory; BoundedProcess {} }
+    ClockDemand {}
     Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
     Component { id: niriBackendFactory; CompositorNiri {} }
     Component {
@@ -3754,9 +3755,9 @@ ShellRoot {
         MenuState.selectTab(MenuState.settingsTab)
         MenuState.setSettingsSection("clock")
         MenuState.open = true
-        root._check(DateTime._clockNeeded, "the Clock settings page keeps its preview ticking with the bar clock hidden")
+        root._check(DateTime.wanted, "the Clock settings page keeps its preview ticking with the bar clock hidden")
         MenuState.setSettingsSection("theme")
-        root._check(!DateTime._clockNeeded, "leaving Clock settings releases its clock tick")
+        root._check(!DateTime.wanted, "leaving Clock settings releases its clock tick")
         // ISO weeks at the year's edges: a Thursday decides which year a week belongs to (checked against Python's
         // isocalendar for every day 2000-2040 in seven time zones, DST and Samoa's skipped day included)
         root._check([[2020, 11, 31, 53], [2021, 0, 3, 53], [2021, 0, 4, 1], [2024, 11, 30, 1], [2026, 11, 31, 53],
@@ -10035,10 +10036,10 @@ ShellRoot {
         const alertTitle = "-Probe's tool failed"
         const launchToolsWas = SystemTools._tools
         SystemTools._tools = Object.assign({}, launchToolsWas, { "notify-send": true })
-        const fastFailure = SystemTools.launchArgv(["false"], alertTitle)
-        const lateFailure = SystemTools.launchArgv(["sh", "-c", "sleep 6; exit 1"], alertTitle)
+        const fastFailure = SystemAlerts.launchArgv(["false"], alertTitle)
+        const lateFailure = SystemAlerts.launchArgv(["sh", "-c", "sleep 6; exit 1"], alertTitle)
         SystemTools._tools = Object.assign({}, launchToolsWas, { "notify-send": false, busctl: true })
-        const busFailure = SystemTools.launchArgv(["false"], alertTitle)
+        const busFailure = SystemAlerts.launchArgv(["false"], alertTitle)
         SystemTools._tools = launchToolsWas
         const captureAlert = "#!/bin/sh\nprintf '%s\\n' \"$@\" >> \"$SILERE_PROBE_ALERTS\"\n"
         const launchRun = processFactory.createObject(root, { command: ["bash", "-c",

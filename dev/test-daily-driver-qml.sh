@@ -16,8 +16,12 @@ cp "$ROOT/scripts/bluetooth-unblock.sh" "$scratch/scripts/"
 cp "$ROOT/services/Vpn.qml" "$ROOT/services/DisplayBrightness.qml" "$ROOT/services/FontScan.qml" \
     "$ROOT/services/Session.qml" "$ROOT/services/BoundedProcess.qml" "$ROOT/services/RequestSet.qml" \
     "$ROOT/services/PowerProfiles.qml" "$ROOT/services/KeyboardBrightness.qml" "$ROOT/services/BatteryLimit.qml" \
-    "$ROOT/services/SafeText.qml" "$ROOT/services/Grapheme.js" "$ROOT/services/SystemAlerts.qml" \
+    "$ROOT/services/SafeText.qml" "$ROOT/services/Grapheme.js" \
     "$scratch/services/"
+# launches record into the SystemTools stub instead of reaching the session
+sed 's/^    function runOrNotify(command, failTitle: string): void {$/&\n        SystemTools.commands = SystemTools.commands.concat([command]); return/' \
+    "$ROOT/services/SystemAlerts.qml" > "$scratch/services/SystemAlerts.qml"
+grep -qF 'SystemTools.commands = SystemTools.commands.concat([command]); return' "$scratch/services/SystemAlerts.qml"
 # Exercise the Bluetooth service with injectable adapters, keeping every radio
 # action on fixture objects rather than the machine's real Bluetooth backend.
 sed -e '/^pragma Singleton$/d' \
@@ -120,7 +124,6 @@ Singleton {
     property bool hasPwDump: true
     property bool hasNotifySend: false
     property var commands: []
-    function runOrNotify(command, title) { commands = commands.concat([command]) }
 }
 EOF
 cat > "$scratch/services/Compositor.qml" <<'EOF'

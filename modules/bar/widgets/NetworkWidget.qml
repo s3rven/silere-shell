@@ -68,7 +68,7 @@ Pill {
     onActivated: if (root.canActivate)
         MenuState.showHomeAt(Network.deviceType === "ethernet" ? "wired" : "wifi", root, root.screen)
     hasSecondary: Settings.networkSettingsCommand.length > 0
-    onSecondaryActivated: SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+    onSecondaryActivated: SystemAlerts.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
 
     TapHandler {
         id: _tap

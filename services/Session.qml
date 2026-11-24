@@ -123,7 +123,7 @@ Singleton {
                 return
             }
             root.busy = false
-            SystemTools.runOrNotify(Settings.suspendCommand, "Sleep failed")
+            SystemAlerts.runOrNotify(Settings.suspendCommand, "Sleep failed")
             root.refresh()
         }
     }

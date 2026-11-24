@@ -322,7 +322,7 @@ PageShell {
                     passive: Settings.networkSettingsCommand.length === 0
                     onActivated: {
                         MenuState.close()
-                        SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+                        SystemAlerts.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
                     }
                 }
 

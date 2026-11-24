@@ -96,7 +96,7 @@ Item {
             interactive: Settings.bluetoothSettingsCommand.length > 0
             onTriggered: {
                 MenuState.close()
-                SystemTools.runOrNotify(Settings.bluetoothSettingsCommand, "Bluetooth manager failed")
+                SystemAlerts.runOrNotify(Settings.bluetoothSettingsCommand, "Bluetooth manager failed")
             }
         }
 

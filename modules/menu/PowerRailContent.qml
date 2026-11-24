@@ -37,7 +37,7 @@ Item {
 
     function _runAction(command, title: string): void {
         MenuState.close()
-        SystemTools.runOrNotify(command, title)
+        SystemAlerts.runOrNotify(command, title)
     }
 
     Column {

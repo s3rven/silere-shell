@@ -90,10 +90,6 @@ Singleton {
         Component.onDestruction: running = false
     }
 
-    function _shellQuote(s: string): string {
-        return "'" + String(s).replace(/'/g, "'\\''") + "'"
-    }
-
     // the power commands are already derived from these flags; this is the guard for a tool that went away between derivation and the click
     function commandAvailable(command): bool {
         if (!command || command.length === 0) return false
@@ -109,27 +105,6 @@ Singleton {
         if (tool === "pwvucontrol") return root.hasPwvucontrol
         if (tool === "pavucontrol") return root.hasPavucontrol
         return true
-    }
-
-    function runOrNotify(command, failTitle: string): void {
-        if (!command || command.length === 0) return
-        // a test copy must never lock, suspend or end the real session
-        if (Quickshell.env("SILERE_SANDBOX") === "1") {
-            console.info("silere-shell: sandboxed power action skipped:", command.join(" "))
-            return
-        }
-        Compositor.launch(SystemAlerts.canAlert ? root.launchArgv(command, failTitle) : command)
-    }
-
-    // only a failure to start is reported: a lock that ran an hour, or a terminal passing on the hangup its
-    // monitor got when the window closed, exits nonzero too, and alerting then calls a normal close a failure
-    function launchArgv(command, failTitle: string): var {
-        const alert = SystemAlerts.notificationCommand(failTitle,
-            "It may require authorization or be blocked by a running task.", "critical", "dialog-error", -1)
-        const note = alert.map(word => root._shellQuote(word)).join(" ")
-        const argv = ["bash", "-c", '"$@" || [ "$SECONDS" -ge 5 ] || ' + note + " >/dev/null", "bash"]
-        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
-        return argv
     }
 
     readonly property int _minRetryDelayMs: 5000

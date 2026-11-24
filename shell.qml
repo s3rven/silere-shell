@@ -67,6 +67,8 @@ ShellRoot {
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
     }
 
+    ClockDemand {}
+
     // the bar's layer sits under a fullscreen window and only the overlay surfaces named here draw above it
     Binding {
         target: Motion

@@ -11,20 +11,18 @@ Singleton {
         return (barClock && !overview) || scheduled || menuClock || calendarOpen
     }
 
-    readonly property bool _clockNeeded: root.clockNeeded(
-        ShellSettings.barShowClock, OverviewState.active,
-        ShellSettings.dndSchedule || Notifications.dndUntil > 0 || Idle.keepAwakeUntil > 0,
-        MenuState.homeActive || (MenuState.settingsActive && MenuState.settingsSection === "clock"),
-        CalendarState.open)
+    // set by ClockDemand: what shows the time sits above this service, so it is told, never read from here
+    property bool wanted: true
+    property bool overviewOpen: false
 
     // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake
     property bool _resync: false
 
     SystemClock {
         id: clock
-        enabled: root._clockNeeded && !root._resync
+        enabled: root.wanted && !root._resync
         precision: ShellSettings.barShowClock && ShellSettings.showSeconds
-            && !Idle.isIdle && !OverviewState.active
+            && !Idle.isIdle && !root.overviewOpen
             ? SystemClock.Seconds : SystemClock.Minutes
     }
 
@@ -111,22 +109,6 @@ Singleton {
         }
     }
 
-    // NetworkManager parks every device for sleep and brings them back within seconds of wake
-    Connections {
-        target: Network
-        function onConnectedChanged() { root.catchUp() }
-    }
-
-    Connections {
-        target: CalendarState
-        function onOpenChanged() { if (CalendarState.open) root.catchUp() }
-    }
-
-    Connections {
-        target: MenuState
-        function onOpenChanged() { if (MenuState.open) root.catchUp() }
-    }
-
     function catchUp(): void {
         if (!clock.enabled
                 || Qt.formatDateTime(new Date(), "yyyyMMddHHmm") === root._lastMinute) return
@@ -134,10 +116,7 @@ Singleton {
         root._resync = false
     }
 
-    Connections {
-        target: OverviewState
-        function onActiveChanged() { if (!OverviewState.active) root._update() }
-    }
+    onOverviewOpenChanged: if (!root.overviewOpen) root._update()
 
     function _refreshMinute(): void {
         root._lastMinute = ""

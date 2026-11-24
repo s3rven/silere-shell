@@ -1067,6 +1067,16 @@ else
   ok "start-up size" "${start_now%% *} bytes in ${start_now##* } files; $last_tag ${start_tag%% *}"
 fi
 
+section "service layers"
+if ! command -v python3 >/dev/null 2>&1; then
+  structural_skip "layers" "python3 missing"
+elif service_layers="$(python3 dev/check-layers.py)"; then
+  ok "layers" "$service_layers"
+else
+  fail "a base service reads one above it:"
+  printf '%s\n' "$service_layers"
+fi
+
 section "private members"
 if ! command -v python3 >/dev/null 2>&1; then
   structural_skip "private reads" "python3 missing"

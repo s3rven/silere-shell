@@ -62,6 +62,31 @@ Singleton {
         return true
     }
 
+    function _shellQuote(s: string): string {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'"
+    }
+
+    function runOrNotify(command, failTitle: string): void {
+        if (!command || command.length === 0) return
+        // a test copy must never lock, suspend or end the real session
+        if (Quickshell.env("SILERE_SANDBOX") === "1") {
+            console.info("silere-shell: sandboxed power action skipped:", command.join(" "))
+            return
+        }
+        Compositor.launch(root.canAlert ? root.launchArgv(command, failTitle) : command)
+    }
+
+    // only a failure to start is reported: a lock that ran an hour, or a terminal passing on the hangup its
+    // monitor got when the window closed, exits nonzero too, and alerting then calls a normal close a failure
+    function launchArgv(command, failTitle: string): var {
+        const alert = root.notificationCommand(failTitle,
+            "It may require authorization or be blocked by a running task.", "critical", "dialog-error", -1)
+        const note = alert.map(word => root._shellQuote(word)).join(" ")
+        const argv = ["bash", "-c", '"$@" || [ "$SECONDS" -ge 5 ] || ' + note + " >/dev/null", "bash"]
+        for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
+        return argv
+    }
+
     // for a service whose failure happens after the surface that started it has closed
     function send(summary: string, body: string, urgency: string, icon: string, click = ""): bool {
         return root._send(summary, body, urgency, icon, click)

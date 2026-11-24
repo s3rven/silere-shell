@@ -272,7 +272,7 @@ SettingsCard {
 
     function openMonitor(): void {
         if (Settings.systemMonitorCommand.length === 0) return
-        SystemTools.runOrNotify(Settings.systemMonitorCommand, "System monitor failed to start")
+        SystemAlerts.runOrNotify(Settings.systemMonitorCommand, "System monitor failed to start")
         MenuState.close()
     }
 

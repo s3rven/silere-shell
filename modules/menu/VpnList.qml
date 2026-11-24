@@ -66,7 +66,7 @@ Column {
         interactive: Settings.networkSettingsCommand.length > 0
         onTriggered: {
             MenuState.close()
-            SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+            SystemAlerts.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
         }
     }
 }

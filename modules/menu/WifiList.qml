@@ -32,7 +32,7 @@ Item {
     function _openNetworkSettings(): void {
         if (!root._canSetUp) return
         MenuState.close()
-        SystemTools.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
+        SystemAlerts.runOrNotify(Settings.networkSettingsCommand, "Network settings failed")
     }
 
     function _syncNetworks(): void {
