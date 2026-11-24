@@ -118,6 +118,36 @@ drawing a dead one.
 **Less shell.** Surfaces don't import each other, so you can delete a `modules/`
 folder along with its `import` and loader in `shell.qml` and the rest keeps working.
 
+## Another compositor
+
+Every widget reads the compositor through `services/Compositor.qml`, which loads one backend file
+(`CompositorHyprland.qml` or `CompositorNiri.qml`) by its path when the session's socket variable is set. A new
+compositor is a third file plus two lines in the facade: its socket variable in `backend`, and its file in the
+`Loader`. Loaded by path, it costs nothing at start on the other compositors.
+
+A backend provides these. Lists are plain JavaScript arrays rebuilt on a change, never mutated in place:
+
+| Member | Holds |
+|---|---|
+| `workspaces` | `{ wsId, name, output, active, urgent, occupied, ref }`: `wsId` the number the bar shows, `ref` the compositor's own id |
+| `toplevels` | `{ appId, title, cls, initialClass, pid, ref, wsRef, wsId, output, focused, focusRank }`; a lower `focusRank` was focused more recently |
+| `workspaceToplevels` | `{ appId, wsId, output }`, without titles, so a title changing every frame wakes no workspace icon |
+| `activeToplevel` | the focused entry of `toplevels`, or `null` |
+| `focusedMonitor`, `focusedWorkspaceRef` | the focused output's name and its workspace's `ref` |
+| `overviewActive` | whether the compositor's own overview is open |
+| `specialOutputs` | outputs showing a scratchpad or special workspace; `[]` where there is none |
+| `popupGrab` | a `Component` that grabs focus for a popup, or `null` |
+| `monitorName(screen)` | the compositor's name for a Quickshell screen |
+| `focusWorkspace(wsId, output)`, `moveActiveToWorkspace(wsId, output)`, `focusToplevel(entry)`, `refreshToplevels()` | the actions the bar and menu take |
+
+Optional, read only when present: `urgentRefs`, `monitorSerials` (output name to EDID serial), `keyboardLayout`,
+`keyboardLayoutCount` and `cycleKeyboardLayout()`, `submap` and `leaveSubmap()`, `sharingSupported`,
+`activeFullscreen`, `blurBlocker` and `checkBlur()`, and the signals `workspaceActivated(output)`,
+`overviewRaw(open)`, `screencast(started)`, `sharingState(active)`, `screenshotTaken(path)` and
+`configReloaded()`. A backend without one simply lacks that feature: no layout pill, no submap mark, no
+screen-share detection. `CompositorNiri.qml` is the smaller of the two to start from; the pure model helpers it
+uses are in `services/NiriEvents.js`.
+
 ## Renaming your fork
 
 The name appears a few hundred times, nearly all of it cosmetic. Four matter:

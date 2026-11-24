@@ -22,6 +22,7 @@ Start with [installation](install.md) if Silere is new to your desktop, or
 | I want to… | Read |
 |---|---|
 | Change the code or build a fork | [Code guide](forking.md) and [contributing](../CONTRIBUTING.md) |
+| Add another compositor | [Backend contract](forking.md#another-compositor) |
 | Check layouts, display scaling or compositor compatibility | [Testing and CI](testing.md) |
 | Prepare a release | [Release process](releasing.md) |
 
