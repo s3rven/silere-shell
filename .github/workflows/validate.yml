@@ -25,10 +25,22 @@ jobs:
     container: archlinux:base
     timeout-minutes: 30
     steps:
+      # the snapshot never changes, so keep its packages and databases: the archive is a single server
+      # that can time out for hours
+      - name: Restore the snapshot's packages
+        id: snapshot
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /var/cache/pacman/pkg
+            /var/lib/pacman/sync
+          key: arch-archive-2026-02-15
       - name: Install build and probe dependencies
         # The minimum runtime needs a compatible Qt too; 0.3.1 does not build on Qt 6.12.
         # This snapshot supplies Qt 6.10.2 and checks the documented Qt 6.10 floor; 6.10.0 itself
         # crashes in QColor reading a value type, inside Qt.
+        env:
+          SNAPSHOT_CACHED: ${{ steps.snapshot.outputs.cache-hit }}
         run: |
           # shellcheck disable=SC2016
           printf 'Server = https://archive.archlinux.org/repos/2026/02/15/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist
@@ -45,13 +57,24 @@ jobs:
           # the snapshot's own. Only this one package skips the check; the rest are verified
           cp /etc/pacman.conf /tmp/pacman.conf.verified
           sed -i 's/^SigLevel.*/SigLevel = Never/' /etc/pacman.conf
-          retry pacman -Syy --noconfirm archlinux-keyring
+          # with the databases restored nothing needs the archive, unless the package list grew
+          sync=yy
+          [ "$SNAPSHOT_CACHED" != true ] || sync=
+          retry pacman "-S$sync" --noconfirm archlinux-keyring
           cp /tmp/pacman.conf.verified /etc/pacman.conf
           rm -rf /etc/pacman.d/gnupg
           pacman-key --init
           pacman-key --populate archlinux
-          retry pacman -Syyuu --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
+          retry pacman "-S${sync}uu" --noconfirm --overwrite '*' --ignore archlinux-keyring gdb git cmake ninja gcc pkgconf cli11 qt6-declarative qt6-shadertools qt6-wayland qt6-svg libdrm pipewire wayland wayland-protocols vulkan-headers fontconfig ttf-jetbrains-mono-nerd
           pacman -Q qt6-base | grep '^qt6-base 6\.10\.'
+      - name: Keep the snapshot's packages
+        if: steps.snapshot.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            /var/cache/pacman/pkg
+            /var/lib/pacman/sync
+          key: ${{ steps.snapshot.outputs.cache-primary-key }}
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
