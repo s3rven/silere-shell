@@ -3122,6 +3122,24 @@ ShellRoot {
         root._check(urgent && !urgent.visible,
             "the persistent urgent indicator clears when the workspace no longer needs attention")
         cell.destroy()
+        // the first window on an empty workspace: the ring hands over to the icon over a fade, not in one frame
+        ShellSettings.reduceMotion = false
+        ShellSettings.wsShowNumbers = false
+        ShellSettings.wsShowAppIcons = true
+        const fadeCell = workspaceButtonFactory.createObject(barFixtureHost, {
+            wsId: 13, monitorReady: true, active: false, occupied: false,
+            urgent: false, apps: [], compact: false, iconSize: 14,
+            cellWidth: 100, rowHeight: 24, barActive: true,
+            initialized: true, paging: false, markerCovers: true, workspaceName: ""
+        })
+        const fadeDot = root._findTrayNode(fadeCell, item => item.objectName === "workspace-dot")
+        const ringShown = fadeDot && fadeDot.visible && fadeCell._iconsIn === 0
+        fadeCell.occupied = true
+        fadeCell.apps = [{ icon: "", fallback: "K", name: "Kitty", count: 1 }]
+        root._check(ringShown && fadeDot.visible && fadeCell._iconsIn < 0.5,
+            "a workspace's first app icon fades in over its ring instead of replacing it in one frame")
+        fadeCell.destroy()
+        ShellSettings.reduceMotion = true
         const strip = workspaceStripFactory.createObject(barFixtureHost)
         ShellSettings.wsShowNumbers = true
         for (const scale of [1, 1.5]) {

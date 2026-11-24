@@ -49,6 +49,9 @@ Item {
     readonly property bool _iconCell: ShellSettings.wsShowAppIcons && apps.length > 0
     readonly property bool _showIcons: _iconCell && !_blanked
     readonly property bool _inlineNumber: ShellSettings.wsShowNumbers && root._iconCell
+    // the first window on an empty workspace swaps its ring for the app's icon: crossfaded, a cut read as a flicker
+    property real _iconsIn: _iconCell ? 1 : 0
+    MotionBehavior on _iconsIn {NumberAnimation { duration: Motion.fast; easing.type: Easing.OutCubic } }
 
     width:  present ? cellWidth : 0
     height: rowHeight
@@ -344,8 +347,8 @@ Item {
             height: width
             radius: width / 2
             antialiasing: true
-            visible: !ShellSettings.wsShowNumbers && !root._iconCell
-            opacity: (1 - root._revealAmt) * root._dotFade
+            visible: !ShellSettings.wsShowNumbers && root._iconsIn < 0.999
+            opacity: (1 - root._revealAmt) * root._dotFade * (1 - root._iconsIn)
                 * (root._hoverFx && !root.urgent ? Math.min(1, root._dotAlpha + 0.18)
                     : root._dotAlpha)
                 * root._pulseOpacity
@@ -371,7 +374,7 @@ Item {
             y: Math.min((parent.height - height) / 2,
                 parent.height - height - (root.markerCovers ? 0 : Metrics.workspaceLineInset + 2))
             transform: Translate { x: root._shakeX }
-            opacity: (1 - root._revealAmt) * root._dotFade
+            opacity: (1 - root._revealAmt) * root._dotFade * root._iconsIn
             active: root._showIcons || (root._iconCell && root._dotFade > 0.01)
             sourceComponent: Component {
                 WorkspaceAppIcons {
