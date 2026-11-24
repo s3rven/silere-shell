@@ -58,6 +58,10 @@ trap cleanup EXIT
 # settings.json — these surfaces write through the same singletons the shell does.
 mkdir -p "$probe_cfg/silere-shell"
 
+# a login session's compositor is the desktop in use: with its backend the popup checks map their cards there and take
+# the keyboard. test-compositors.sh runs this nested without a session, so those runs keep their compositor
+if [ -n "${XDG_SESSION_ID:-}" ]; then unset HYPRLAND_INSTANCE_SIGNATURE NIRI_SOCKET; fi
+
 # XDG_RUNTIME_DIR is deliberately inherited: it is where the Wayland socket lives.
 # Never pkill — a name match would take down the user's shell.
 XDG_CONFIG_HOME="$probe_cfg" XDG_STATE_HOME="$probe_cfg" XDG_CACHE_HOME="$probe_cfg/cache" \

@@ -686,6 +686,8 @@ Item {
     // an unclaimed right press at a window's origin segfaults inside Qt, so reaching the
     // check at all is the result: without the guard this probe never prints its sentinel
     function _checkOriginRightClick(): void {
+        // a login session's display is the desktop in use, where mapping the bar squeezes its windows; nested runs cover this
+        if (String(Quickshell.env("XDG_SESSION_ID") || "").length > 0) return
         let clicked = 0
         for (const surface of [bar, notificationPopups, calendar.cardWindow]) {
             if (!surface) continue
