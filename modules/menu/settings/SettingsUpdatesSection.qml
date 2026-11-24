@@ -323,6 +323,13 @@ Column {
                 text: "Automatic checks paused on metered connection"
             }
         }
+        ControlRow {
+            visible: Updates.restartNeeded
+            glyph: "󰑐"
+            title: "Restart to finish updating"
+            status: "The running kernel was replaced"
+            passive: true
+        }
         ToggleRow {
             glyph: "󰚰"; label: "Track package updates"
             key: "updatesWidget"

@@ -159,6 +159,7 @@ Item {
                 width: parent.width
                 label: "Reboot"
                 glyph: "󰑐"
+                value: Updates.restartNeeded ? "Needed" : ""
                 enabled: SystemTools.commandAvailable(Settings.rebootCommand)
                 confirm: true
                 dangerous: true

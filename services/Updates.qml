@@ -497,6 +497,37 @@ Singleton {
         }
     }
 
+    // a kernel replaced under the running one: a module not loaded yet, a USB stick's filesystem say, fails until a
+    // reboot. Arch removes the old modules with the package; Debian and Ubuntu leave a marker of their own
+    property bool restartNeeded: false
+    readonly property string _restartScript: 'r=$(cat /proc/sys/kernel/osrelease) || exit 0\n'
+        + 'if [ -e /run/reboot-required ]; then echo restart\n'
+        + 'elif [ -d "$1" ] && [ ! -d "$1/$r" ] && [ -n "$(ls -A "$1")" ]; then echo restart; fi'
+    BoundedProcess {
+        id: _restartCheck
+        timeoutMs: 5000
+        command: ["sh", "-c", root._restartScript, "silere-restart-check", "/usr/lib/modules"]
+        stdout: StdioCollector { id: _restartOut }
+        onExited: code => {
+            if (_restartCheck.completedSuccessfully(code)) root.restartNeeded = _restartOut.text.trim() === "restart"
+        }
+    }
+    function checkRestart(): void {
+        if (!_restartCheck.running) _restartCheck.running = true
+    }
+    Timer {
+        interval: 3600000
+        repeat: true
+        triggeredOnStart: true
+        running: !Idle.isIdle
+        onTriggered: root.checkRestart()
+    }
+    property int _countBefore: 0
+    onCountChanged: {
+        if (root.count < root._countBefore) root.checkRestart()
+        root._countBefore = root.count
+    }
+
     Timer {
         id: _poll
         interval: 3600000
