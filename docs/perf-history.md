@@ -149,6 +149,23 @@ boundary, with the visualizer stopped and no second Quickshell instance running.
 Raw reports: [cold](perf/1.7.0-cold.json) · [warm](perf/1.7.0-warm.json). They were collected
 from runtime commit `de39889` while the release metadata and notes were being prepared.
 
+The 1.8.0 runs use reference-A hardware with kernel `7.3.4-1-cachyos` and Arch's Quickshell 0.3.2.
+Both samples come from one restart and were steady, with a per-second CPU median of 0.0% of one
+core, and both descriptor counts stayed flat; the visualizer was stopped and no second Quickshell
+instance was running.
+
+Raw reports: [cold](perf/1.8.0-cold.json) · [warm](perf/1.8.0-warm.json). They were collected
+from runtime commit `d25ef9f` while the release metadata and notes were being prepared.
+
+The 1.9.0 runs use reference-A hardware with kernel `7.3.5-2-cachyos` and Arch's Quickshell 0.3.2,
+under the same conditions as 1.8.0: one restart, both samples steady, a per-second CPU median of
+0.0%, flat descriptor counts, the visualizer stopped and no second instance. Cold read 96 MB
+against 1.8.0's 107 MB with the same Quickshell and allocator setting; this pair alone does not
+say which change made the difference.
+
+Raw reports: [cold](perf/1.9.0-cold.json) · [warm](perf/1.9.0-warm.json). They were collected
+from runtime commit `44d19770` with uncommitted release preparation in the tree.
+
 ## Reference B
 
 A 2015 laptop, run the way the installer set it up: started by Hyprland, KDE platform theme
