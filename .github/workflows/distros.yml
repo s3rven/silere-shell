@@ -1,0 +1,83 @@
+name: Distros
+
+# Debian and Fedora as a new user meets them: Quickshell installed the way docs/install.md says, then the installer's
+# plan, the doctor and the QML type-check. Its own workflow: a sid or COPR breakage should not block a release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/**"
+      - "docs/install.md"
+      - ".github/workflows/distros.yml"
+  schedule:
+    - cron: "41 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: distros-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  distro:
+    name: Distro (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["debian:sid", "fedora:43"]
+    steps:
+      - name: Install Quickshell as the install guide says
+        shell: bash
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          case "$IMAGE" in
+            debian:*)
+              apt-get update
+              DEBIAN_FRONTEND=noninteractive apt-get install -y git ca-certificates fontconfig \
+                quickshell qml6-module-qtquick-effects qt6-declarative-dev qt6-declarative-dev-tools ;;
+            fedora:*)
+              dnf install -y dnf-plugins-core git fontconfig util-linux shadow-utils qt6-qtdeclarative-devel
+              dnf copr enable -y errornointernet/quickshell
+              dnf install -y quickshell ;;
+          esac
+          useradd --create-home silere-test
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # a clone of the user's own, as the one-line install leaves it, instead of the runner-owned workspace
+      - name: Copy the checkout into the user's home
+        run: |
+          cp -a "$GITHUB_WORKSPACE" /home/silere-test/silere-shell
+          chown -R silere-test: /home/silere-test/silere-shell
+
+      - name: Installer plan, doctor and type-check as that user
+        shell: bash
+        run: |
+          set -o pipefail
+          cd /home/silere-test/silere-shell
+          as_user() { runuser -u silere-test -- env HOME=/home/silere-test "$@"; }
+          { qs --version; cat /etc/os-release; } 2>&1 | tee /tmp/distro-runtime.log
+          as_user bash scripts/install.sh --dry-run --yes 2>&1 | tee /tmp/distro-install.log
+          # no compositor runs here, so the doctor fails on the session; the runtime lines are what this job checks
+          as_user bash scripts/doctor.sh 2>&1 | tee /tmp/distro-doctor.log || true
+          grep -E '^ok +Quickshell ' /tmp/distro-doctor.log
+          grep -E '^ok +QML modules ' /tmp/distro-doctor.log
+          as_user env SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh 2>&1 | tee /tmp/distro-types.log
+
+      - name: Save distro logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: distro-${{ strategy.job-index }}-${{ github.run_attempt }}
+          path: /tmp/distro-*.log
+          if-no-files-found: ignore
+          retention-days: 7

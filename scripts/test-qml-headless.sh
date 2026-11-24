@@ -50,6 +50,7 @@ find_qmlcachegen() {
     find_qt6_tool qmlcachegen \
         /usr/lib/qt6/qmlcachegen \
         /usr/lib64/qt6/qmlcachegen \
+        /usr/lib64/qt6/libexec/qmlcachegen \
         /usr/lib/x86_64-linux-gnu/qt6/libexec/qmlcachegen \
         /usr/lib/qt6/libexec/qmlcachegen \
         /usr/local/lib/qt6/qmlcachegen
