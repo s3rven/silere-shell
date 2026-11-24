@@ -30,6 +30,32 @@ Singleton {
     // a minute sample keeps the format previews from updating on every second tick
     property date minuteSample: new Date()
 
+    // english keeps its own formats; elsewhere names come from the locale, as in the calendar, and so does the order
+    readonly property var locale: Qt.locale()
+    readonly property bool englishDates: root.locale.name === "C" || root.locale.name.startsWith("en")
+    function formatDate(d, format: string): string {
+        return root.englishDates ? Qt.formatDateTime(d, format) : root.locale.toString(d, format)
+    }
+    // the day and month, with the year when asked, cut from the locale's long date format: "d. MMMM" in German,
+    // "M月d日" in Japanese. A suffix glued to the last field stays ("24." in Hungarian, "24日"); a comma does not
+    function localDateFormat(longFormat: string, withYear: bool): string {
+        const tokens = String(longFormat).match(/'(?:[^']|'')*'|d+|M+|y+|[^'dMy]+/g) || []
+        let first = -1, last = -1
+        for (let i = 0; i < tokens.length; i++) {
+            if (!/^(d{1,2}|M+)$/.test(tokens[i]) && !(withYear && /^y+$/.test(tokens[i]))) continue
+            if (first < 0) first = i
+            last = i
+        }
+        if (first < 0) return withYear ? "d MMMM yyyy" : "d MMMM"
+        const glued = /^[^\s,'dMy]+/.exec(tokens[last + 1] ?? "")
+        return tokens.slice(first, last + 1).join("") + (glued ? glued[0].replace(/,.*$/, "") : "")
+    }
+    readonly property string monthDayFormat: root.englishDates ? "MMMM d"
+        : root.localDateFormat(root.locale.dateFormat(Locale.LongFormat), false)
+    readonly property string monthDayShortFormat: root.englishDates ? "MMM dd" : root.monthDayFormat.replace("MMMM", "MMM")
+    readonly property string fullDateShortFormat: root.englishDates ? "MMM d, yyyy"
+        : root.localDateFormat(root.locale.dateFormat(Locale.LongFormat), true).replace("MMMM", "MMM")
+
     property string _lastDay:       ""
     property string _lastMinute:    ""
     property string cachedDayName:  ""
@@ -131,10 +157,10 @@ Singleton {
             const day = minute.slice(0, 8)
             if (day !== _lastDay) {
                 _lastDay        = day
-                cachedDayName   = Qt.formatDateTime(current, "ddd ")
-                cachedDateCore  = Qt.formatDateTime(current, "MMM dd")
-                cachedWeekday   = Qt.formatDateTime(current, "dddd")
-                cachedMonthDay  = Qt.formatDateTime(current, "MMMM d")
+                cachedDayName   = root.formatDate(current, "ddd") + " "
+                cachedDateCore  = root.formatDate(current, root.monthDayShortFormat)
+                cachedWeekday   = root.formatDate(current, "dddd")
+                cachedMonthDay  = root.formatDate(current, root.monthDayFormat)
                 cachedWeek      = String(isoWeek(current))
             }
             cachedMinute = Qt.formatDateTime(current, "mm")

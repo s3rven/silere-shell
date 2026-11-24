@@ -48,12 +48,13 @@ Column {
                 QtObject {
                     id: _dateNormal
                     readonly property string value: "normal"
-                    readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "ddd MMM dd")
+                    readonly property string label: DateTime.formatDate(DateTime.minuteSample, "ddd") + " "
+                        + DateTime.formatDate(DateTime.minuteSample, DateTime.monthDayShortFormat)
                 }
                 QtObject {
                     id: _dateCompact
                     readonly property string value: "compact"
-                    readonly property string label: Qt.formatDateTime(DateTime.minuteSample, "MMM dd")
+                    readonly property string label: DateTime.formatDate(DateTime.minuteSample, DateTime.monthDayShortFormat)
                 }
                 onChosen: (v) => ShellSettings.compactDate = v === "compact"
             }

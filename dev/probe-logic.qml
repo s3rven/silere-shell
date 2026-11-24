@@ -13119,6 +13119,18 @@ ShellRoot {
                 && PowerProfiles.profileForSource(false, "balanced", "power-saver", "balanced") === "",
             "a power source restores the mode last picked on it, and leaves an unpicked source alone")
 
+        const longFormats = {
+            "dddd, MMMM d, yyyy": ["MMMM d", "MMMM d, yyyy"], "dddd, d. MMMM yyyy": ["d. MMMM", "d. MMMM yyyy"],
+            "dddd d MMMM yyyy": ["d MMMM", "d MMMM yyyy"], "dddd, d 'de' MMMM 'de' yyyy": ["d 'de' MMMM", "d 'de' MMMM 'de' yyyy"],
+            "dddd, d MMMM yyyy 'г'.": ["d MMMM", "d MMMM yyyy"], "d MMMM yyyy dddd": ["d MMMM", "d MMMM yyyy"],
+            "yyyy年M月d日dddd": ["M月d日", "yyyy年M月d日"], "yyyy년 MMMM d일 dddd": ["MMMM d일", "yyyy년 MMMM d일"],
+            "yyyy. MMMM d., dddd": ["MMMM d.", "yyyy. MMMM d."], "dddd, yyyy. 'gada' d. MMMM": ["d. MMMM", "yyyy. 'gada' d. MMMM"],
+            "": ["d MMMM", "d MMMM yyyy"]
+        }
+        const badFormats = Object.keys(longFormats).filter(f => DateTime.localDateFormat(f, false) !== longFormats[f][0]
+            || DateTime.localDateFormat(f, true) !== longFormats[f][1])
+        root._check(badFormats.length === 0,
+            "dates outside English take the locale's own day and month order from its long format: " + badFormats.join(" | "))
         const app = (binary, name) => ({ "application.process.binary": binary, "application.name": name })
         root._check(Audio.twoWay([app("firefox", "Firefox")], [app("firefox", "Firefox")])
                 && Audio.twoWay([app("", "Discord")], [app("", "discord")])

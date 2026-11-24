@@ -213,8 +213,8 @@ PageShell {
         const days = Math.round((today - day) / 86400000)
         if (days <= 0) return "Today"
         if (days === 1) return "Yesterday"
-        if (days < 7) return Qt.formatDateTime(d, "dddd")
-        return Qt.formatDateTime(d, "MMM d, yyyy")
+        if (days < 7) return DateTime.formatDate(d, "dddd")
+        return DateTime.formatDate(d, DateTime.fullDateShortFormat)
     }
 
     function clearAll(): void {
