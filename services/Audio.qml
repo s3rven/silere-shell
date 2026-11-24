@@ -325,6 +325,22 @@ Singleton {
         }
         return out
     }
+    // a call is two-way: one app recording the microphone and playing at once. A voice note or a screen recorder
+    // only records, and an effects processor records all day, so neither holds notifications back
+    function appKey(props): string {
+        const p = props || ({})
+        return String(p["application.process.binary"] || p["application.name"] || "").toLowerCase()
+    }
+    function twoWay(captureProps, playbackProps): bool {
+        const playing = {}
+        for (let i = 0; i < playbackProps.length; i++) playing[root.appKey(playbackProps[i])] = true
+        return captureProps.some(p => {
+            const key = root.appKey(p)
+            return key.length > 0 && playing[key] === true && !/^(easyeffects|pulseeffects|noisetorch)$/.test(key)
+        })
+    }
+    readonly property bool callActive: root.captureStreams.length > 0 && root.twoWay(
+        root.captureStreams.map(n => n ? n.properties : null), root.playbackStreams.map(n => n ? n.properties : null))
     readonly property int playbackCount: playbackStreams.length
     readonly property int captureCount: captureStreams.length
     readonly property bool micActive: captureCount > 0

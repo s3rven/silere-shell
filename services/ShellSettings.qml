@@ -423,7 +423,7 @@ Singleton {
         { k: "uiScale",             t: "real", min: 0.8, max: 1.5, sec: "interface", l: "UI scale" },
         { k: "fontFamily",          t: "re",   re: /^[^\u0000-\u001F\u007F]{0,128}$/, sec: "interface", l: "Font" },
         { k: "notifPopupEnabled",   t: "bool", sec: "popups", l: "Popup notifications" },
-        { k: "notifFullscreenSilence", t: "bool", sec: "popups", l: "Hide in fullscreen" },
+        { k: "notifFullscreenSilence", t: "bool", sec: "popups", l: "Hide in fullscreen and calls" },
         { k: "notifScreenShareSilence", t: "bool", sec: "popups", l: "Hide while sharing screen" },
         { k: "notifGroupThreads",   t: "bool", sec: "popups", l: "Group conversations" },
         { k: "notifMutedApps",      t: "re",   re: /^[A-Za-z0-9%._~!*'()-]*(,[A-Za-z0-9%._~!*'()-]+)*$/, sec: "history", l: "Muted apps" },

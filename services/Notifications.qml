@@ -755,6 +755,7 @@ Singleton {
 
     readonly property bool fullscreenSilenced: ShellSettings.notifFullscreenSilence
         && FullscreenState.active
+    readonly property bool callSilenced: ShellSettings.notifFullscreenSilence && Audio.callActive
     // presentation mode is session-only: restarting never leaves a hidden preference behind
     property bool presentationMode: false
     readonly property bool automaticShareDetection: Compositor.sharingSupported
@@ -820,7 +821,7 @@ Singleton {
         return from < to ? (h >= from && h < to) : (h >= from || h < to)
     }
     readonly property bool effectiveDnd: dnd || _quietActive
-    readonly property bool silencingActive: effectiveDnd || fullscreenSilenced || screenShareSilenced
+    readonly property bool silencingActive: effectiveDnd || fullscreenSilenced || callSilenced || screenShareSilenced
     function markSeen(id: int): void {
         root._ensurePersistentState()
         const key = String(id)
@@ -1297,7 +1298,7 @@ Singleton {
             }
             // expired, not dismissed: a sender may read a dismissal as the user having seen it
             if (!root.allowsPopup(n.urgency === NotificationUrgency.Critical,
-                    root.effectiveDnd, root.fullscreenSilenced,
+                    root.effectiveDnd, root.fullscreenSilenced || root.callSilenced,
                     root.screenShareSilenced, ShellSettings.notifCriticalBypass)) {
                 if (root.missedOnArrival(root._archiveNotification(n, n.id, Date.now()), n.transient, n.appName))
                     root.missedCount++

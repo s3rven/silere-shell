@@ -18,7 +18,7 @@ Column {
         CollapsibleSection {
             expanded: ShellSettings.notifPopupEnabled
             ToggleRow {
-                glyph: "󰊓"; label: "Hide in fullscreen"
+                glyph: "󰊓"; label: "Hide in fullscreen and calls"
                 key: "notifFullscreenSilence"
             }
             ToggleRow {

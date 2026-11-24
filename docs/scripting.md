@@ -266,7 +266,7 @@ from one network to another.
 
 `update-available` fires when the count rises, and only while Settings › System › Overview tracks package updates.
 `notification` fires only for notifications that show a popup, not for ones silenced by
-Do Not Disturb, a fullscreen window or turned-off popups.
+Do Not Disturb, a fullscreen window, a call or turned-off popups.
 
 ```bash
 mkdir -p ~/.config/silere-shell/hooks

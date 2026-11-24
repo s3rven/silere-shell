@@ -269,6 +269,7 @@ FittedPopupWindow {
                     : Notifications.dnd ? "On"
                     : Notifications.effectiveDnd ? "Quiet hours"
                     : Notifications.fullscreenSilenced ? "Fullscreen"
+                    : Notifications.callSilenced ? "In a call"
                     : Notifications.presentationMode ? "Presenting"
                     : Notifications.screenShareSilenced ? "Sharing screen" : "Off"
                 onTriggered: Notifications.toggleDnd()

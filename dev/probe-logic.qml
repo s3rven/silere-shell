@@ -13119,6 +13119,13 @@ ShellRoot {
                 && PowerProfiles.profileForSource(false, "balanced", "power-saver", "balanced") === "",
             "a power source restores the mode last picked on it, and leaves an unpicked source alone")
 
+        const app = (binary, name) => ({ "application.process.binary": binary, "application.name": name })
+        root._check(Audio.twoWay([app("firefox", "Firefox")], [app("firefox", "Firefox")])
+                && Audio.twoWay([app("", "Discord")], [app("", "discord")])
+                && !Audio.twoWay([app("gnome-sound-recorder", "Recorder")], [app("firefox", "Firefox")])
+                && !Audio.twoWay([app("easyeffects", "EasyEffects")], [app("easyeffects", "EasyEffects")])
+                && !Audio.twoWay([{}], [{}]) && !Audio.twoWay([], [app("firefox", "Firefox")]),
+            "a call is one app recording and playing at once; a recorder alone or an effects processor is not")
         const dfHead = "Filesystem 1024-blocks Used Available Capacity Mounted on\n"
         const dfRow = (dev, sizeGb, freeGb, mount) => dev + " " + Math.round(sizeGb * 1048576) + " 0 "
             + Math.round(freeGb * 1048576) + " 99% " + mount + "\n"

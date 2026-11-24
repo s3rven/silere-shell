@@ -528,6 +528,7 @@ PageShell {
                     status: Notifications.dndUntil > 0 ? Notifications.dndUntilText
                         : Notifications.effectiveDnd && !Notifications.dnd ? "Quiet hours"
                         : Notifications.fullscreenSilenced ? "Fullscreen"
+                        : Notifications.callSilenced ? "In a call"
                         : Notifications.presentationMode ? "Presentation Mode"
                         : Notifications.screenShareSilenced ? "Sharing screen"
                         : ""

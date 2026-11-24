@@ -436,6 +436,7 @@ PageShell {
             readonly property string reason: Notifications.dnd ? "Do Not Disturb"
                 : Notifications.effectiveDnd ? "Quiet hours"
                 : Notifications.fullscreenSilenced ? "Fullscreen"
+                : Notifications.callSilenced ? "In a call"
                 : Notifications.presentationMode ? "Presentation Mode"
                 : Notifications.screenShareSilenced ? "Sharing screen" : ""
             // the text stays put while the band folds away
