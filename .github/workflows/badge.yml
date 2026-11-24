@@ -36,7 +36,8 @@ jobs:
           message=failing
           if [ "$CONCLUSION" = success ]; then
             count=""
-            for job in $(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" --jq '.jobs[].id'); do
+            # a rerun copies passed jobs into the new attempt without their annotations
+            for job in $(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?filter=all" --jq '.jobs | sort_by(-.run_attempt) | .[].id'); do
               count="$(gh api "repos/$REPO/check-runs/$job/annotations" \
                 --jq '.[] | select(.title == "Check count") | .message' | head -n1)"
               [ -n "$count" ] && break
