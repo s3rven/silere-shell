@@ -62,8 +62,11 @@ Item {
     // wherever the level stops; a constant one broke off at whatever height the length happened to end on
     readonly property string _path: {
         const len = root._len
-        if (len <= 0) return ""
-        const x0 = root.thickness / 2, mid = root.height / 2, amp = root._amp * root.swellFactor()
+        const x0 = root.thickness / 2, mid = root.height / 2
+        // a level too short for a line still shows as its dot: without it the track's gap opened on nothing, and a 1% bar
+        // started 4 px right of the bars above and below it. Under a slider's handle the start is covered, so there it stays empty
+        if (len <= 0) return root._level > 0 && root.endInset <= 0 ? "M " + x0 + " " + mid + " H " + (x0 + 0.5) : ""
+        const amp = root._amp * root.swellFactor()
         const k = 2 * Math.PI / root._waveLength
         const shift = root._phase * 2 * Math.PI
         if (Math.abs(amp) < 0.001) return "M " + x0 + " " + mid + " H " + root._endX

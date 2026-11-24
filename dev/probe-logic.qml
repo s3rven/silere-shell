@@ -10491,6 +10491,19 @@ ShellRoot {
         }
         if (shortWave) shortWave.destroy()
         if (longWave) longWave.destroy()
+        // a 1% reading: too short for a line, so it shows its dot where every other bar starts; under a handle, nothing
+        const dotWave = waveComponent.status === Component.Ready
+            ? waveComponent.createObject(root, { width: 60, height: 8, thickness: 3, value: 0.01 }) : null
+        if (dotWave) {
+            const dotStart = dotWave._path
+            dotWave.endInset = 11
+            const underHandle = dotWave._path
+            dotWave.endInset = 0
+            dotWave.value = 0
+            root._check(dotStart.startsWith("M 1.5 ") && dotWave._len === 0 && underHandle === "" && dotWave._path === "",
+                "a level too short for a line draws its dot at the bar's start, but not under a handle or at zero")
+            dotWave.destroy()
+        }
         const swellWave = waveComponent.status === Component.Ready
             ? waveComponent.createObject(root, { width: 160, height: 12, value: 0.9, amplitude: 2.5 }) : null
         if (swellWave) {
