@@ -14,6 +14,17 @@ outside, whatever the diff actually says.
 Run `bash dev/test-faults.sh` on a machine with a render node. CI has none, so nothing else
 covers broken tools and hostile input.
 
+Then, after `silere restart`, ten minutes by hand on the daily paths no probe sees (Lock & sleep
+under hyprlock was broken from 1.5.0 to 1.8.0 and every check passed):
+
+- Lock & sleep with hyprlock, then suspend and resume
+- volume and brightness keys, with the OSD
+- a notification click raising its window; Do Not Disturb on and off
+- a notification arriving over a fullscreen window
+- a tray menu; Wi-Fi off and on
+- plug in a second monitor
+- `silere update` (check only)
+
 ## Tags
 
 Release tags must be annotated `vMAJOR.MINOR.PATCH` tags signed by a key in
