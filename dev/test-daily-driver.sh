@@ -44,6 +44,10 @@ case " $* " in
     *) printf '%s\n' "$*" >> "$SILERE_TEST_LOG" ;;
 esac
 EOF
+cat > "$scratch/bin/busctl" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in *' CanHibernate'*) printf 's "%s"\n' "${SILERE_TEST_HIBERNATE:-na}" ;; *) exit 1 ;; esac
+EOF
 cat > "$scratch/bin/sleep" <<'EOF'
 #!/usr/bin/env bash
 exit 0
@@ -58,6 +62,10 @@ chmod +x "$scratch/bin/"*
 checks=0
 check() { "$@" || { printf 'FAIL: daily-driver fixture: %s\n' "$*" >&2; exit 1; }; checks=$((checks+1)); }
 check bash "$ROOT/scripts/session.sh" status
+# Hibernate is offered on logind's yes only: "na" (no resume swap) and "challenge" leave it out
+check grep -qx 'hibernate=no' <(bash "$ROOT/scripts/session.sh" status)
+check grep -qx 'hibernate=yes' <(SILERE_TEST_HIBERNATE=yes bash "$ROOT/scripts/session.sh" status)
+check grep -qx 'hibernate=no' <(SILERE_TEST_HIBERNATE=challenge bash "$ROOT/scripts/session.sh" status)
 SILERE_TEST_LOCK_MODE=delayed bash "$ROOT/scripts/session.sh" wait-locked
 check test "$(cat "$SILERE_TEST_COUNT")" -ge 3
 if SILERE_TEST_LOCK_MODE=no bash "$ROOT/scripts/session.sh" wait-locked 2>/dev/null; then exit 1; fi

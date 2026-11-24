@@ -10,6 +10,7 @@ Singleton {
 
     property bool lockStateKnown: false
     property bool locked: false
+    property bool canHibernate: false
     property bool busy: false
     property string lastError: ""
     readonly property bool _probeAvailable: SystemTools.ready && SystemTools.hasLoginctl && SystemTools.hasTimeout
@@ -46,6 +47,7 @@ Singleton {
             root._refreshPending = false
             root.lockStateKnown = false
             root.locked = false
+            root.canHibernate = false
             if (_status.running) _status.running = false
             if (_before.running) _before.running = false
             if (_wait.running) _wait.running = false
@@ -106,6 +108,7 @@ Singleton {
                 root.lockStateKnown = _status.completedSuccessfully(code)
                     && /(^|\n)locked=(yes|no)(\n|$)/.test(_statusOut.text)
                 root.locked = root.lockStateKnown && /(^|\n)locked=yes(\n|$)/.test(_statusOut.text)
+                root.canHibernate = root.lockStateKnown && /(^|\n)hibernate=yes(\n|$)/.test(_statusOut.text)
             }
             const refreshAgain = root._refreshPending || !current
             root._refreshPending = false

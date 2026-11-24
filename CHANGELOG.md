@@ -17,6 +17,7 @@ settings file carries its own `__version` and migrates separately.
   when that state changes. An event with no hook file still costs nothing.
 - `silere osd <glyph> <text> [0-100]` shows a message of your own in the OSD, with a level bar when you give one, so a
   script's key or toggle answers the way volume and brightness do.
+- Hibernate in the power menu, where the system can resume from it.
 
 ### Changed
 

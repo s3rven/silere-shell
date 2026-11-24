@@ -134,6 +134,15 @@ Item {
             }
 
             PowerRailRow {
+                width: parent.width
+                visible: Session.canHibernate
+                label: "Hibernate"
+                glyph: "󰜗"
+                enabled: SystemTools.commandAvailable(Settings.hibernateCommand)
+                onTriggered: root._runAction(Settings.hibernateCommand, "Hibernate failed")
+            }
+
+            PowerRailRow {
                 id: _powOut
                 width: parent.width
                 label: "Log out"

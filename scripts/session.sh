@@ -55,11 +55,26 @@ hyprland_locked() {
     [[ "$reply" =~ \"locked\":[[:space:]]*true ]]
 }
 
+# logind's own answer, so a swap too small or no resume device leaves Hibernate out instead of failing when pressed
+can_hibernate() {
+    local reply=""
+    if command -v busctl >/dev/null 2>&1; then
+        reply="$(timeout 2 busctl --system --no-pager call org.freedesktop.login1 /org/freedesktop/login1 \
+            org.freedesktop.login1.Manager CanHibernate 2>/dev/null)" || return 1
+    elif command -v dbus-send >/dev/null 2>&1; then
+        reply="$(timeout 2 dbus-send --system --print-reply=literal --dest=org.freedesktop.login1 /org/freedesktop/login1 \
+            org.freedesktop.login1.Manager.CanHibernate 2>/dev/null)" || return 1
+    fi
+    [[ "$reply" =~ (^|[[:space:]\"])yes(\"|[[:space:]]|$) ]]
+}
+
 case "${1:-status}" in
     status)
         locked="$(locked_state)" || exit 1
         case "$locked" in yes|no) ;; *) exit 1 ;; esac
-        printf 'session=%s\nlocked=%s\n' "$session_id" "$locked"
+        hibernate=no
+        ! can_hibernate || hibernate=yes
+        printf 'session=%s\nlocked=%s\nhibernate=%s\n' "$session_id" "$locked" "$hibernate"
         ;;
     wait-locked)
         for ((attempt=0; attempt<100; attempt++)); do

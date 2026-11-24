@@ -190,6 +190,8 @@ Singleton {
     }
     readonly property list<string> suspendCommand: SystemTools.hasSystemctl ? ["systemctl", "suspend"]
         : SystemTools.hasLoginctl ? ["loginctl", "suspend"] : []
+    readonly property list<string> hibernateCommand: SystemTools.hasSystemctl ? ["systemctl", "hibernate"]
+        : SystemTools.hasLoginctl ? ["loginctl", "hibernate"] : []
     readonly property list<string> rebootCommand: SystemTools.hasSystemctl ? ["systemctl", "reboot"]
         : SystemTools.hasLoginctl ? ["loginctl", "reboot"] : []
     readonly property list<string> poweroffCommand: SystemTools.hasSystemctl ? ["systemctl", "poweroff"]
