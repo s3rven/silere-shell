@@ -7,8 +7,8 @@ if [ "${1:-}" = --inner ]; then
     scratch="$2"; backend="$3"; benchmark="${4:-}"
     [[ "$XDG_CONFIG_HOME" = "$scratch/"* && -z "${XDG_SESSION_ID:-}" ]] || exit 1
     case "${DBUS_SESSION_BUS_ADDRESS:-}" in ''|*/run/user/*/bus*) exit 1 ;; esac
-    parent_pid=""; child_pid=""; shell_pid=""; monitors_pid=""; window_pid=""
-    trap '_probe_stop "$window_pid"; _probe_stop "$monitors_pid"; _probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
+    parent_pid=""; child_pid=""; shell_pid=""; monitors_pid=""; window_pid=""; signals_pid=""; lock_pid=""
+    trap '_probe_stop "$lock_pid"; _probe_stop "$signals_pid"; _probe_stop "$window_pid"; _probe_stop "$monitors_pid"; _probe_stop "$shell_pid"; _probe_stop "$child_pid"; _probe_stop "$parent_pid"' EXIT
     kwin_wayland --virtual --no-lockscreen --no-global-shortcuts --width 1280 --height 900 \
         --socket silere-test-parent > "$scratch/parent.log" 2>&1 &
     parent_pid=$!
@@ -39,12 +39,16 @@ EOF
 hl.monitor({ output = "", mode = "1280x900@60", position = "auto", scale = 1 })
 hl.config({ misc = { disable_hyprland_logo = true, disable_splash_rendering = true } })
 hl.workspace_rule({ workspace = "2", default_name = "two" })
+hl.define_submap("resize", function() hl.bind("escape", hl.dsp.submap("reset")) end)
 EOF
         else
             hypr_config="$scratch/hyprland.conf"
             cat > "$hypr_config" <<'EOF'
 monitor = ,1280x900@60,auto,1
 workspace = 2, defaultName:two
+submap = resize
+bind = , escape, submap, reset
+submap = reset
 misc {
     disable_hyprland_logo = true
     disable_splash_rendering = true
@@ -97,6 +101,10 @@ EOF
         printf 'SKIP: full niri startup needs a GPU render node\n'
         exit 0
     fi
+    # a hand-edited file: a value of the wrong type and a misspelt key are named, read as defaults and left on disk
+    mkdir -p "$XDG_CONFIG_HOME/silere-shell"
+    printf '{"__version": 5, "notifDefaultTimeout": "soon", "notifMaxVisbile": 2}\n' > "$XDG_CONFIG_HOME/silere-shell/settings.json"
+    cp "$XDG_CONFIG_HOME/silere-shell/settings.json" "$scratch/settings.hand"
     ${SILERE_PROBE_WRAP:-} qs -p "$ROOT/shell.qml" --no-duplicate --no-color > "$scratch/shell.log" 2>&1 &
     shell_pid=$!
     ready=0
@@ -114,6 +122,11 @@ EOF
         mkdir -p "$benchmark"
         bash "$ROOT/scripts/bench.sh" 10 --json --label "$backend-development-cold" > "$benchmark/$backend-cold.json"
     fi
+    grep -qE 'values left at their defaults: notifDefaultTimeout = "soon" .*; notifMaxVisbile \(not a setting\)' "$scratch/shell.log" \
+        || { printf 'FAIL: a hand-edited settings file was not named in the log\n' >&2; exit 1; }
+    test "$(qs ipc -p "$ROOT/shell.qml" call settings get notifDefaultTimeout)" = 5000
+    cmp -s "$scratch/settings.hand" "$XDG_CONFIG_HOME/silere-shell/settings.json" \
+        || { printf 'FAIL: starting rewrote a hand-edited settings file\n' >&2; exit 1; }
     # Read-only and rejected calls verify the audio target without touching host audio.
     audio_status="$(qs ipc -p "$ROOT/shell.qml" call audio status)"
     case "$audio_status" in
@@ -150,7 +163,49 @@ EOF
         sleep 2
         bash "$ROOT/scripts/bench.sh" 10 --json --label "$backend-after-30-menu-cycles" > "$benchmark/$backend-cycles.json"
     fi
-    checked="panels, popup interactions, startup, menu/audio IPC"
+    # notifications on a real compositor: a burst, a replacement, a sender's close, then the keyboard verbs, each
+    # read back from the signal the server sends, so a verb that acts on any card but the newest fails here
+    notify() { # $1 = id to replace or 0, $2 = summary, $3 = actions; prints the id the server answers with
+        gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications \
+            --method org.freedesktop.Notifications.Notify lab "$1" "" "$2" body "$3" '{}' 60000 \
+            | sed -n 's/^(uint32 \([0-9]*\),)$/\1/p'
+    }
+    notifications() { qs ipc -p "$ROOT/shell.qml" call notifications "$1"; }
+    shown() { # $1 = count, $2 = what led to it
+        for _ in $(seq 1 50); do
+            [[ "$(notifications status)" == *"\"shown\":$1,"* ]] && return 0
+            sleep 0.1
+        done
+        printf 'FAIL: after %s the shell shows %s, not %s\n' "$2" "$(notifications status)" "$1" >&2
+        exit 1
+    }
+    signal() { # $1 = the signal line gdbus monitor prints
+        for _ in $(seq 1 30); do grep -qF -- "$1" "$scratch/signals.log" && return 0; sleep 0.1; done
+        printf 'FAIL: the server never sent %s\n' "$1" >&2
+        exit 1
+    }
+    gdbus monitor --session --dest org.freedesktop.Notifications > "$scratch/signals.log" 2>&1 &
+    signals_pid=$!
+    sleep 0.3
+    first="$(notify 0 'burst 1' '[]')"
+    for n in $(seq 2 50); do notify 0 "burst $n" '[]' > /dev/null; done
+    shown 50 "a burst of 50"
+    test "$(notify "$first" 'burst 1 again' '[]')" = "$first"
+    shown 50 "a replacement by id"
+    gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications \
+        --method org.freedesktop.Notifications.CloseNotification "$first" > /dev/null
+    shown 49 "its sender closing one"
+    acted="$(notify 0 'with an action' "['default', 'Open']")"
+    shown 50 "one with an action"
+    test "$(notifications invoke)" = ok
+    signal "ActionInvoked (uint32 $acted, 'default')"
+    newest="$(notify 0 'newest' '[]')"
+    test "$(notifications dismiss)" = ok
+    signal "NotificationClosed (uint32 $newest, uint32 2)"
+    test "$(notifications dismissAll)" = ok
+    shown 0 "dismissAll"
+    test "$(notifications dismiss)" = "no notification on screen"
+    checked="panels, popup interactions, startup, menu/audio IPC, a hand-edited settings file, a notification burst and the notification verbs"
     if [ "$backend" = hyprland ]; then
         # a special workspace shown before the shell starts is still marked, and a second output showing a
         # named numbered workspace keeps it active as focus moves there and back (dev/probe-hypr-monitors.qml);
@@ -234,9 +289,71 @@ EOF
             hyprctl -j clients >&2
             exit 1
         }
+        # unplugging the second monitor while it holds a workspace takes its bar with it, plugging it back brings one
+        # back, and a config reload leaves the shell following focus
+        layer_on() { # $1 = namespace, $2 = output, $3 = how many, $4 = what led to it
+            local n=""
+            for _ in $(seq 1 50); do
+                n="$(hyprctl layers | awk -v m="Monitor $2:" -v ns="namespace: $1," \
+                    '/^Monitor /{on = ($0 == m)} on && index($0, ns){n++} END{print n+0}')"
+                [ "$n" = "$3" ] && return 0
+                sleep 0.1
+            done
+            printf 'FAIL: %s carries %s %s layers, not %s, after %s\n' "$2" "$n" "$1" "$3" "$4" >&2
+            exit 1
+        }
+        layer_on silere-bar SILERE-2 1 "a second monitor was added"
+        hyprctl output remove SILERE-2 > /dev/null
+        layer_on silere-bar "$first_output" 1 "the second monitor was unplugged"
+        qs ipc -p "$ROOT/shell.qml" show | grep -q 'target menu' \
+            || { printf 'FAIL: the shell stopped answering after a monitor was unplugged\n' >&2; exit 1; }
+        hyprctl output create headless SILERE-2 > /dev/null
+        layer_on silere-bar SILERE-2 1 "the second monitor was plugged back in"
+        hyprctl reload > /dev/null
+        focus SILERE-2 3; step after-reload
+        grep -q "PROBE-MONITORS after-reload .*SILERE-2=3" "$scratch/monitors.log" || {
+            printf 'FAIL: after a config reload the shell no longer follows focus\n' >&2
+            grep 'PROBE-MONITORS' "$scratch/monitors.log" >&2
+            exit 1
+        }
+        # a submap's name reaches the shell as Hyprland sends it, and leaving it clears it
+        submap() {
+            if [[ "$hypr_config" = *.lua ]]; then hyprctl dispatch "hl.dsp.submap(\"$1\")" > /dev/null
+            else hyprctl dispatch submap "$1" > /dev/null
+            fi
+        }
+        submap resize; step submap-entered
+        submap reset; step submap-left
+        grep -q 'PROBE-MONITORS submap-entered .* submap=resize ' "$scratch/monitors.log" \
+            && grep -q 'PROBE-MONITORS submap-left .* submap= ' "$scratch/monitors.log" || {
+            printf 'FAIL: the shell did not follow entering and leaving a submap\n' >&2
+            grep 'PROBE-MONITORS submap' "$scratch/monitors.log" >&2
+            exit 1
+        }
+        # a keybind opens the menu on the monitor with focus
+        for output in SILERE-2 "$first_output"; do
+            focus "$output"; sleep 0.3
+            test "$(qs ipc -p "$ROOT/shell.qml" call menu tab 0)" = ok
+            layer_on silere-menu "$output" 1 "opening the menu with $output focused"
+            qs ipc -p "$ROOT/shell.qml" call menu close > /dev/null
+            layer_on silere-menu "$output" 0 "closing the menu"
+        done
         errors="$(_probe_errors "$scratch/monitors.log")"
         [ -z "$errors" ] || { printf '%s\n' "$errors" >&2; exit 1; }
-        checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy, numeric workspace names"
+        checked="$checked, a special workspace open at start, a second monitor's named workspace, a window opened while busy, numeric workspace names, a monitor unplugged and plugged back, a config reload, a submap, the menu on each monitor"
+        # last, as it locks this session: hyprlock never sets LockedHint, so Lock & sleep waits on Hyprland's own word
+        # (broken from 1.5.0 to 1.8.0); a session id logind does not know leaves Hyprland the only one to answer
+        if command -v hyprlock >/dev/null 2>&1; then
+            : > "$scratch/hyprlock.conf"
+            hyprlock --config "$scratch/hyprlock.conf" --no-fade-in > "$scratch/hyprlock.log" 2>&1 &
+            lock_pid=$!
+            bash "$ROOT/scripts/session.sh" wait-locked nested-test 2>/dev/null || {
+                printf 'FAIL: under hyprlock the session never confirmed its lock, so Lock & sleep would cancel\n' >&2
+                hyprctl -j locked >&2; tail -n 20 "$scratch/hyprlock.log" >&2
+                exit 1
+            }
+            checked="$checked, a hyprlock lock confirmed"
+        fi
     elif [ "$backend" = niri ]; then
         niri msg action focus-workspace silere-source >/dev/null
         mkdir -p "$scratch/workspaces"

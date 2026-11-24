@@ -9,8 +9,8 @@ import "services"
 // (quickshell#1427), so a monitor showing a named numbered workspace loses its active one when focus
 // moves to it. A special workspace shown before the shell starts sends no event the shell can hear.
 // test-compositors.sh sets up each case and writes the step's name to the phase file; every write
-// prints the active workspace per output, the focused window's title and the outputs showing a special
-// one, as the bar reads them. A "busy" step holds this probe's thread while a window opens, so
+// prints the active workspace per output, the submap, the focused window's title and the outputs showing
+// a special one, as the bar reads them. A "busy" step holds this probe's thread while a window opens, so
 // Hyprland's openwindow and activewindowv2 reach it in one read, as they do a shell busy animating
 ShellRoot {
     FileView {
@@ -26,6 +26,7 @@ ShellRoot {
             const focused = Compositor.activeToplevel
             const outputs = Compositor.toplevels.map(t => t.title + "@" + t.output).sort().join("|")
             console.log("PROBE-MONITORS " + phase + " " + active.join(" ")
+                + " submap=" + Compositor.submap
                 + " outputs=" + outputs
                 + " window=" + (focused ? focused.title : "")
                 + " special=" + Compositor.specialOutputs.slice().sort().join(","))
