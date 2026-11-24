@@ -6,12 +6,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
-  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
-</p>
-
-<p align="center">
   <b>Quiet by default. Visible when it matters.</b><br/>
   Your desktop should be the last thing you have to debug.
 </p>
@@ -24,10 +18,9 @@
 </p>
 
 <p align="center">
-  <a href="#getting-started">Install or try</a> ·
-  <a href="docs/usage.md">Everyday use</a> ·
-  <a href="docs/troubleshooting.md">Troubleshooting</a> ·
-  <a href="docs/README.md">All docs</a>
+  <a href="https://github.com/s3rven/silere-shell/releases"><img src="https://img.shields.io/github/v/release/s3rven/silere-shell?style=flat-square&labelColor=0f1013&color=2a2d33&logo=github&logoColor=9a9ca1" alt="latest release"/></a>
+  <a href="https://github.com/s3rven/silere-shell/actions/workflows/validate.yml"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fs3rven%2Fsilere-shell%2Fbadges%2Fchecks.json&style=flat-square" alt="checks passed on main"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2a2d33?style=flat-square&labelColor=0f1013" alt="license: MIT"/></a>
 </p>
 
 <p align="center">
@@ -36,8 +29,8 @@
 
 Silere isn't trying to replace your desktop. It's trying to make the parts you interact with every
 day feel effortless: the bar, notifications, tray and quick settings, in one process that replaces
-Waybar and a notification daemon such as mako or dunst. It's what I run on my own desktop. Your
-compositor config, launcher, wallpaper tool and lock screen stay your own.
+Waybar and a notification daemon such as mako or dunst. Your compositor config, launcher, wallpaper
+tool and lock screen stay your own. It's what I run on my own desktop.
 
 ## What's included
 
@@ -150,7 +143,7 @@ table names the packages.
 Run `silere doctor`, then check the [troubleshooting guide](docs/troubleshooting.md). For a bug
 report, include the output of `silere version` and the steps to reproduce it.
 
-[Ask a question](https://github.com/s3rven/silere-shell/discussions) · [Report a bug](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml)
+[All docs](docs/README.md) · [Ask a question](https://github.com/s3rven/silere-shell/discussions) · [Report a bug](https://github.com/s3rven/silere-shell/issues/new?template=bug_report.yml)
 
 ## Contributing
 
