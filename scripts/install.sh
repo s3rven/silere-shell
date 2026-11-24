@@ -25,6 +25,7 @@ if [ ! -f "$SCRIPT_DIR/lib/xdg.sh" ] || [ ! -f "$SCRIPT_DIR/../shell.qml" ]; the
     esac
 fi
 source "$SCRIPT_DIR/lib/xdg.sh"
+_silere_refuse_elevated silere
 source "$SCRIPT_DIR/lib/completions.sh"
 CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
     printf 'silere: HOME must be an absolute path\n' >&2

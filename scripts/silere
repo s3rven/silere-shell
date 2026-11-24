@@ -9,6 +9,7 @@ source_path="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || true)"
 SCRIPT_DIR="$(cd "$(dirname "$source_path")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
+_silere_refuse_elevated silere
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/completions.sh"
 source "$ROOT/scripts/lib/ui.sh"

@@ -4,6 +4,7 @@ export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT/scripts/lib/xdg.sh"
+_silere_refuse_elevated silere-update
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/instances.sh"

@@ -4225,6 +4225,28 @@ test_quickshell_install_hint() (
     assert_eq "sudo xbps-install -S quickshell" "$(hint xbps)" "Void is offered its package"
     case "$(hint unknown)" in "see https://"*) ;; *) fail "an unknown system was offered a package" ;; esac
 )
+
+# under sudo or doas the scripts would use root's home and user services: refused. Plain root, as a CI container runs
+# them, and sudo from root itself still run
+test_refuse_sudo() (
+    local fake="$TMP/sudo-root" home="$TMP/sudo-home" script out rc
+    mkdir -p "$fake" "$home"
+    printf '#!/bin/sh\n[ "$*" = -u ] && { echo 0; exit 0; }\nexec /usr/bin/id "$@"\n' > "$fake/id"
+    chmod +x "$fake/id"
+    run() { env HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" XDG_DATA_HOME="$home/data" \
+        PATH="$fake:$PATH" "$@" </dev/null 2>&1; }
+    for script in install.sh silere update.sh uninstall.sh reset.sh; do
+        rc=0; out="$(run SUDO_USER=someone bash "$ROOT/scripts/$script" --help)" || rc=$?
+        case "$rc:$out" in
+            "1:"*"run this as someone, without sudo or doas"*) ;;
+            *) fail "$script under sudo was not refused: rc $rc, $out" ;;
+        esac
+    done
+    out="$(run DOAS_USER=someone bash "$ROOT/scripts/silere" version)" && fail "silere under doas was not refused: $out"
+    out="$(run SUDO_USER=root bash "$ROOT/scripts/silere" version)" || fail "silere refused sudo from root: $out"
+    out="$(run env -u SUDO_USER -u DOAS_USER bash "$ROOT/scripts/silere" version)" \
+        || fail "silere refused plain root, as a CI container runs it: $out"
+)
 test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
@@ -4641,6 +4663,7 @@ test_xdg_paths_and_timer_default
 test_doctor_json
 test_doctor_menu_bind
 test_quickshell_install_hint
+test_refuse_sudo
 test_keyboard_brightness_helper
 test_battery_limit_helper
 test_fresh_install_permissions

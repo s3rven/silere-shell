@@ -18,6 +18,8 @@ settings file carries its own `__version` and migrates separately.
   the line that replaces it.
 - Without Quickshell, the installer names the package to install on Void, and on Debian or Ubuntu when theirs is new
   enough.
+- The installer, `silere`, the updater, reset and uninstall stop under sudo or doas: Silere works on your own session,
+  and a run as root used root's home and left files in the checkout that later updates could not replace.
 
 ### Fixed
 

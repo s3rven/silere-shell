@@ -4,6 +4,7 @@ export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/xdg.sh"
+_silere_refuse_elevated silere-uninstall
 source "$SCRIPT_DIR/lib/completions.sh"
 CONFIG_HOME="$(_silere_xdg_home "${XDG_CONFIG_HOME:-}" .config)" || {
     printf 'silere-uninstall: HOME must be an absolute path\n' >&2
