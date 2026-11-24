@@ -265,7 +265,9 @@ var luaGeneric = { layout: true, global: true, submap: true, pass: true, send_sh
 
 function luaAction(verb, bind) {
     var key = String(bind.key || "")
-    var digit = /^[0-9]$/.test(key) ? (key === "0" ? "10" : key) : ""
+    // a bind made by keycode has no key name; the number row's codes 10-19 are 1-9 and 0, as keyName reads them
+    var code = key.length === 0 ? Number(bind.keycode) || 0 : 0
+    var digit = /^[0-9]$/.test(key) ? (key === "0" ? "10" : key) : code >= 10 && code <= 19 ? String(code - 9) : ""
     var dir = keyDirection(key)
     if (verb === "focus")
         return digit ? { text: "Go to workspace " + digit, exact: true } : dir ? { text: "Focus " + dir, exact: true }

@@ -13138,13 +13138,16 @@ ShellRoot {
             lua(64, "Q", "exec_cmd"), lua(64, "C", "close"), lua(64, "left", "focus"), lua(64, "1", "focus"), lua(65, "0", "move"),
             lua(64, "L", "focus"), lua(64, "mouse_down", "focus"), lua(64, "S", "move"), lua(0, "XF86AudioRaiseVolume", "exec_cmd"),
             lua(64, "XF86AudioMute", "exec_cmd"), lua(0, "XF86AudioNext", "function: 0x55"), lua(64, "J", "layout"),
-            lua(64, "slash", "global"), lua(64, "mouse:272", "drag", { mouse: true })
+            lua(64, "slash", "global"), lua(64, "mouse:272", "drag", { mouse: true }),
+            lua(64, "", "focus", { keycode: 12 }), lua(65, "", "move", { keycode: 19 }), lua(64, "", "focus", { keycode: 38 })
         ]), 500)
         const said = stock.map(r => (r.exact ? "" : "~") + r.action)
         root._check(JSON.stringify(said) === JSON.stringify(["~Run a command", "Close window", "Focus left", "Go to workspace 1",
                 "Move window to workspace 10", "Focus right", "Switch workspace", "~Move window", "Volume up", "~Run a command",
-                "Next track", "~Layout message", "~Global shortcut", "Drag window"]) && stock.every(r => r.lua && !r.own),
-            "a Lua bind without a description reads from its dispatcher and key: digits are workspaces, arrows and h j k l "
+                "Next track", "~Layout message", "~Global shortcut", "Drag window",
+                "Go to workspace 3", "Move window to workspace 10", "~Focus"]) && stock.every(r => r.lua && !r.own),
+            "a Lua bind without a description reads from its dispatcher and key: digits are workspaces, also by the number "
+                + "row's keycode (another layout's binds), arrows and h j k l "
                 + "directions, a media key what it says unless a modifier is held; a category alone is marked as one")
 
         // an older Hyprland's hyprlang config names the dispatcher and its argument

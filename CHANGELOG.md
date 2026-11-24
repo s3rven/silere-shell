@@ -25,6 +25,8 @@ settings file carries its own `__version` and migrates separately.
 - A notification that names no app shows its initial instead of an unrelated app's icon.
 - `silere doctor` suggests a package for a missing screen locker, Git, curl or xdg-open too, and names more of them on
   openSUSE and Void.
+- Settings › System › Keybinds reads a Lua workspace bind made by keycode, as other keyboard layouts need, as the
+  workspace it goes to instead of a bare "Focus".
 
 ## Releases
 
