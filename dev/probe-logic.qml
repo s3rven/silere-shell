@@ -13140,6 +13140,11 @@ ShellRoot {
                 && !Audio.twoWay([app("easyeffects", "EasyEffects")], [app("easyeffects", "EasyEffects")])
                 && !Audio.twoWay([{}], [{}]) && !Audio.twoWay([], [app("firefox", "Firefox")]),
             "a call is one app recording and playing at once; a recorder alone or an effects processor is not")
+        const crashAt = new Date(2026, 10, 16, 14, 23)
+        root._check(SystemAlerts.crashText(Math.floor(crashAt.getTime() / 1000) + "\t/c/report.txt\t0.3.2\tSegmentation fault (11)\n")
+                    === "Quickshell 0.3.2 stopped (Segmentation fault (11)) at " + DateTime.clockText(crashAt) + ". silere doctor names the report."
+                && SystemAlerts.crashText("") === "" && SystemAlerts.crashText("x\ty\tz\tw") === "",
+            "a crash the shell came back from is named with its version, signal and time")
         const dfHead = "Filesystem 1024-blocks Used Available Capacity Mounted on\n"
         const dfRow = (dev, sizeGb, freeGb, mount) => dev + " " + Math.round(sizeGb * 1048576) + " 0 "
             + Math.round(freeGb * 1048576) + " 99% " + mount + "\n"

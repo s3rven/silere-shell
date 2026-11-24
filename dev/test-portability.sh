@@ -388,6 +388,21 @@ test_quickshell_version_after_qt_warning() (
     assert_eq 0.3.1 "$(_silere_quickshell_version)" "the Quickshell version is read past Qt's locale warning"
 )
 
+test_last_crash() (
+    local cache="$TMP/crash-cache" dir
+    dir="$cache/quickshell/crashes/abc123"
+    mkdir -p "$dir"
+    export XDG_CACHE_HOME="$cache"
+    source "$ROOT/scripts/lib/crash.sh"
+    if _silere_last_crash /x/shell.qml >/dev/null; then fail "a crash was reported with no report on disk"; fi
+    printf 'Quickshell: 0.3.2 (revision , x)\nSignal: Segmentation fault (11)\nConfig Path: /x/shell.qml\n' > "$dir/report.txt"
+    assert_eq "0.3.2|Segmentation fault (11)|$dir/report.txt" \
+        "$(_silere_last_crash /x/shell.qml | awk -F '\t' '{ print $3 "|" $4 "|" $2 }')" "the newest crash report of this shell is read"
+    if _silere_last_crash /other/shell.qml >/dev/null; then fail "another Quickshell config's crash was taken for this shell's"; fi
+    sed -i 's|^Config Path: .*|Config Path: |' "$dir/report.txt"
+    _silere_last_crash /other/shell.qml >/dev/null || fail "a report that names no config was not read"
+)
+
 test_quickshell_qt_drift() (
     local stub="$TMP/qs-log-stub"
     mkdir -p "$stub"
@@ -4725,6 +4740,7 @@ fi
 
 test_xdg_paths_and_timer_default
 test_doctor_json
+test_last_crash
 test_doctor_menu_bind
 test_quickshell_install_hint
 test_refuse_sudo

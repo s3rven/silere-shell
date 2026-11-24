@@ -57,6 +57,12 @@ singleton KeyboardBrightness 1.0 KeyboardBrightness.qml
 singleton BatteryLimit 1.0 BatteryLimit.qml
 singleton CpuTemp 1.0 CpuTemp.qml
 singleton Notifications 1.0 Notifications.qml
+singleton ConfigStore 1.0 ConfigStore.qml
+EOF
+cat > "$scratch/services/ConfigStore.qml" <<'EOF'
+pragma Singleton
+import Quickshell
+Singleton { property string stateDirectory: "" }
 EOF
 cat > "$scratch/services/Audio.qml" <<'EOF'
 pragma Singleton

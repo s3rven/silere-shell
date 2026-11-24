@@ -11,6 +11,7 @@ fi
 source "$ROOT/scripts/lib/xdg.sh"
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/ui.sh"
+source "$ROOT/scripts/lib/crash.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/instances.sh"
 
@@ -119,6 +120,14 @@ elif [ -r "$ROOT/release.json" ]; then
 else
     info "version" "unknown"
     info "installation" "$ROOT"
+fi
+if crash="$(_silere_last_crash "$ROOT/shell.qml")"; then
+    IFS=$'\t' read -r crash_at crash_report crash_qs crash_signal <<< "$crash"
+    crash_line="$(date -d "@$crash_at" '+%Y-%m-%d %H:%M' 2>/dev/null || printf '%s' "$crash_at"), ${crash_signal:-no signal named}"
+    crash_line="$crash_line, Quickshell ${crash_qs:-unknown}: ${crash_report/#"$HOME"/\~}"
+    if [ "$(( $(date +%s) - crash_at ))" -lt 604800 ]; then warn "last crash" "$crash_line"
+    else info "last crash" "$crash_line"
+    fi
 fi
 
 section "Core"

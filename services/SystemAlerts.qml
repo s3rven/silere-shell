@@ -262,6 +262,34 @@ Singleton {
             root._diskWarned = step.warned
         }
     }
+    // a crash the shell came back from within 15 minutes is named once; the marker keeps an old report from being news
+    readonly property string _crashScript: '. "$1/scripts/lib/crash.sh" || exit 1\n'
+        + 'line=$(_silere_last_crash "$1/shell.qml") || exit 0\n'
+        + 'at=${line%%\t*}; seen="$2/last-crash"\n'
+        + '[ "$at" != "$(cat "$seen" 2>/dev/null)" ] || exit 0\n'
+        + 'mkdir -p "$2" && printf "%s\\n" "$at" > "$seen" || exit 0\n'
+        + '[ "$(( $(date +%s) - at ))" -lt 900 ] && printf "%s\\n" "$line"\nexit 0'
+    function crashText(line: string): string {
+        const f = String(line || "").trim().split("\t")
+        if (f.length < 4 || !/^[0-9]+$/.test(f[0])) return ""
+        return "Quickshell " + (f[2] || "") + " stopped" + (f[3].length > 0 ? " (" + f[3] + ")" : "")
+            + " at " + DateTime.clockText(new Date(Number(f[0]) * 1000)) + ". silere doctor names the report."
+    }
+    BoundedProcess {
+        id: _crash
+        timeoutMs: 5000
+        stdout: StdioCollector { id: _crashOut }
+        onExited: code => {
+            const text = _crash.completedSuccessfully(code) ? root.crashText(_crashOut.text) : ""
+            if (text.length > 0) root._send("Silere restarted after a crash", text, "normal", "dialog-warning")
+        }
+    }
+    Timer {
+        interval: 10000
+        running: SystemTools.ready && root.canAlert && ConfigStore.stateDirectory.length > 0
+        onTriggered: _crash.exec(["bash", "-c", root._crashScript, "silere-crash", Quickshell.shellDir, ConfigStore.stateDirectory])
+    }
+
     // at login, then every few hours of use: one df, never while the machine sits idle
     Timer {
         interval: 4 * 3600 * 1000
