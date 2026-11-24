@@ -108,7 +108,7 @@ FittedPopupWindow {
         }
         readonly property int railExpandedW: railCollapsedW + navW
         // width, rail and padding use the same response. Retargeting a quick tab reversal preserves velocity instead of restarting three eases
-        readonly property bool _horizontalMotion: panel._geometryReady && panel.open
+        readonly property bool _horizontalMotion: panel._geometryReady && (panel.open || panel._closing)
         readonly property real railW: _railGlide.value
         SmoothGlide {
             id: _railGlide
@@ -308,8 +308,9 @@ FittedPopupWindow {
             if (panel._compactRecentNav) recentLoader.item?.focusAppsButton()
         }
 
+        // a card still fading out is on screen, so a tab picked then is a switch like any other
         function _beginTabHeightHold(): void {
-            if (!panel.open || ShellSettings.reduceMotion) return
+            if (!(panel.open || panel._closing) || ShellSettings.reduceMotion) return
             panel._tabHeldH = Math.max(4, panel.height)
             panel._tabHeightHeld = true
         }
@@ -376,11 +377,14 @@ FittedPopupWindow {
                     panel.powerOpen = false
                     if (panel.activeTab === MenuState.mediaTab && !Media.menuShown)
                         MenuState.selectTab(MenuState.homeTab)
-                    panel._outerHeightMotion = false
-                    panel._tabHeightHeld = false
-                    _tabHeightRelease.stop()
-                    _outerHeightMotionHold.stop()
-                    contentFlick.scrollToTop()
+                    // a reopen during the fade reverses it: keep the switch a tab picked meanwhile started
+                    if (panel.opacity <= 0.001) {
+                        panel._outerHeightMotion = false
+                        panel._tabHeightHeld = false
+                        _tabHeightRelease.stop()
+                        _outerHeightMotionHold.stop()
+                        contentFlick.scrollToTop()
+                    }
                 } else {
                     rail.stopWarmDelays()
                     if (settingsLoader.item?.contentReady === true) {
@@ -511,7 +515,7 @@ FittedPopupWindow {
             gate: panel._horizontalMotion
         }
         // home sections animate their own height, so the panel follows it live instead of easing twice; tab swaps still animate here
-        readonly property bool _heightGlides: panel._geometryReady && panel.open
+        readonly property bool _heightGlides: panel._geometryReady && (panel.open || panel._closing)
             && (panel._transitionReady || panel._outerHeightMotion)
             && (panel.activeTab !== 0 || panel._outerHeightMotion)
             && !ShellSettings.reduceMotion && !Idle.isIdle

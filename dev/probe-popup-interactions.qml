@@ -147,6 +147,46 @@ Item {
         ShellSettings.reduceMotion = previousMotion
     }
 
+    // the card stays on screen until its close fade ends: a reopen onto another tab, or a close mid-resize, glides from the size it shows
+    function _checkReopenDuringFade(): void {
+        const panel = menu.popupCard
+        const previousTab = MenuState.activeTab
+        const previousMotion = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        // built inside this probe's one long Qt.callLater, the menu gets its own deferred flag only after the run
+        panel._geometryReady = true
+        MenuState.showTab(MenuState.recentTab)
+        for (let i = 0; !panel.fullyShown && i < 300; i++) input.wait(10)
+        input.wait(400)
+        const w = panel.width
+        const h = panel.height
+        MenuState.close()
+        MenuState.showTab(MenuState.settingsTab)
+        root._check(panel.fullyShown === false && panel.width === w && panel.height === h,
+            "a tab picked while the menu fades out starts from the size the card shows")
+        const settled = () => !panel._tabHeightHeld && Math.abs(panel.height - panel._resolvedPanelH) <= 0.5
+        for (let i = 0; !settled() && i < 300; i++) input.wait(10)
+        root._check(settled() && panel._resolvedPanelH !== h,
+            "the reopened menu settles at the new tab's height")
+        // Home glides only from a held height, so the reopen must keep the hold the fade began
+        const settingsH = panel.height
+        MenuState.close()
+        MenuState.keybindToggle()
+        root._check(MenuState.activeTab === MenuState.homeTab && Math.abs(panel.height - settingsH) < 1
+                && Math.abs(panel._resolvedPanelH - settingsH) > 1,
+            "the menu key pressed again during the fade keeps the card's size for Home to glide from")
+        for (let i = 0; !settled() && i < 300; i++) input.wait(10)
+        MenuState.showTab(MenuState.recentTab)
+        input.wait(60)
+        const midH = panel.height
+        MenuState.close()
+        root._check(panel.height === midH && Math.abs(panel._resolvedPanelH - midH) > 1,
+            "closing the menu mid-resize leaves the card at the height it shows")
+        for (let i = 0; panel.opacity > 0.001 && i < 300; i++) input.wait(10)
+        MenuState.selectTab(previousTab)
+        ShellSettings.reduceMotion = previousMotion
+    }
+
     function _checkResponsiveHistory(): void {
         const panel = menu.popupCard
         if (!panel) return
@@ -1012,6 +1052,7 @@ Item {
         root._checkPopupOpacity()
         root._checkResponsiveSettings()
         root._checkResponsiveHistory()
+        root._checkReopenDuringFade()
         console.warn("PROBE-POPUP-INTERACTIONS checked " + root._checks + " behaviors")
     }
 
