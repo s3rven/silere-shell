@@ -13133,6 +13133,12 @@ ShellRoot {
             || DateTime.localDateFormat(f, true) !== longFormats[f][1])
         root._check(badFormats.length === 0,
             "dates outside English take the locale's own day and month order from its long format: " + badFormats.join(" | "))
+        const pictureAccent = Theme.accentFrom(["#101010", "#f4f4f4", "#3a6ea5", "#7a8088"])
+        const pictureLch = Theme.lchOf(pictureAccent)
+        root._check(/^#[0-9a-f]{6}$/.test(pictureAccent) && pictureLch.L >= 54 && pictureLch.L <= 73
+                && Math.abs(pictureLch.h - Theme.lchOf("#3a6ea5").h) < 4
+                && Theme.accentFrom(["#101010", "#f4f4f4", "#808080"]) === "" && Theme.accentFrom([]) === "",
+            "a picture gives its most colourful main colour as the accent, lifted to read on the dark base; a grey one gives none")
         const app = (binary, name) => ({ "application.process.binary": binary, "application.name": name })
         root._check(Audio.twoWay([app("firefox", "Firefox")], [app("firefox", "Firefox")])
                 && Audio.twoWay([app("", "Discord")], [app("", "discord")])

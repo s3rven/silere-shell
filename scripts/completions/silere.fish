@@ -70,7 +70,7 @@ function __silere_setting_values --argument-names at
 end
 
 set -l commands try reset run stop restart use status log doctor ipc link update repair service version uninstall help \
-    menu calendar quick tray toggle volume mic dismiss osd get set settings
+    menu calendar quick tray toggle volume mic dismiss osd theme get set settings
 # Settings pages are the rail's ids in services/SettingsTree.js, which ci-lint holds this list to
 set -l pages clock devices history indicators interface keybinds media osd popups separators surface theme underline \
     updates warnings widgets workspaces
@@ -85,6 +85,8 @@ complete -c silere -n "not __fish_seen_subcommand_from $commands" -a volume -d '
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a mic -d 'Microphone volume'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a dismiss -d 'Dismiss the newest notification popup'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a osd -d "Show a script's message in the OSD"
+complete -c silere -n "not __fish_seen_subcommand_from $commands" -a theme -d 'Take the accent from a picture'
+complete -c silere -n '__silere_verb_at theme 0' -F
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a get -d 'Print a setting'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a set -d 'Change a setting'
 complete -c silere -n "not __fish_seen_subcommand_from $commands" -a settings -d 'List settings and their values'

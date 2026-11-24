@@ -41,6 +41,7 @@ Control the running shell
   mic [...]              The microphone, with the same words as volume
   dismiss [all]          Dismiss the newest notification popup, or all of them
   osd <glyph> <text> [0-100]  Show a script's own message in the OSD, with a level bar if given
+  theme <image>          Take the accent from a picture, on the neutral theme
   get <setting>          Print a setting
   set <setting> <value>  Change a setting
   settings [filter]      List settings and the values each takes; --changed lists yours
@@ -935,6 +936,12 @@ case "$command_name" in
                 ipc_call osd show "$1" "$2" "$((10#${3%\%}))" ;;
             *) bad_usage "osd <glyph> <text> [0-100]" ;;
         esac
+        ;;
+    theme)
+        [ "$#" -eq 1 ] || bad_usage "theme <image>"
+        # a FIFO or a missing file would hold an image thread inside the shell
+        [ -f "$1" ] || { echo "silere: not a picture file: $1" >&2; exit 1; }
+        ipc_call theme fromImage "$(realpath -e -- "$1")"
         ;;
     get)
         [ "$#" -eq 1 ] || bad_usage "get <setting>"

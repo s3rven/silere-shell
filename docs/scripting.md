@@ -20,6 +20,7 @@ silere set osdTimeout 3000   # change a setting
 | `silere mic [up\|down\|mute\|next\|0-100]` | the same for the microphone |
 | `silere dismiss [all]` | dismisses the newest notification popup, or every one |
 | `silere osd <glyph> <text> [0-100]` | shows a message of your own in the OSD: with a level it draws the bar volume uses, without one it stays up as long as a battery alert. Nothing shows while the OSD is off or the session idle |
+| `silere theme <image>` | takes the accent from a picture and switches to the neutral theme, for a desktop without matugen; a grey picture changes nothing |
 | `silere get <key>`, `silere set <key> <value>` | reads or writes a setting; `on` and `off` work for true/false |
 | `silere settings [filter]` | lists settings with the values each takes; `--changed` lists only the ones you changed |
 

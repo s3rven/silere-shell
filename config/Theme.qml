@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "../services"
 
 Singleton {
@@ -590,6 +591,40 @@ Singleton {
         return Qt.rgba(ch( 3.2406 * X - 1.5372 * Y - 0.4986 * Z),
                        ch(-0.9689 * X + 1.8758 * Y + 0.0415 * Z),
                        ch( 0.0557 * X - 0.2040 * Y + 1.0570 * Z), 1.0)
+    }
+
+    // `silere theme <image>`, for a desktop without matugen: the picture's most colourful main colour, at the lightness
+    // the neutral base reads an accent at. Near-black and near-white say nothing about a picture, and a grey one has none
+    function accentFrom(colors): string {
+        let best = null
+        for (let i = 0; i < (colors || []).length; i++) {
+            const l = root.lchOf(colors[i])
+            if (l.L >= 15 && l.L <= 95 && (!best || l.C > best.C)) best = l
+        }
+        return best && best.C >= 8 ? String(root.lchColor(Math.max(55, Math.min(72, best.L)), Math.min(best.C, 60), best.h)) : ""
+    }
+    property string _themeImage: ""
+    readonly property ColorQuantizer _quantizer: ColorQuantizer {
+        source: root._themeImage.length > 0 ? "file://" + root._themeImage : ""
+        depth: 3
+        rescaleSize: 64
+        onColorsChanged: {
+            if (root._themeImage.length === 0 || colors.length === 0) return
+            const accent = root.accentFrom(colors)
+            root._themeImage = ""
+            if (accent.length === 0) return
+            ShellSettings.neutralAccent = accent
+            ShellSettings.neutralAccentAuto = false
+            ShellSettings.neutralTheme = true
+        }
+    }
+    readonly property IpcHandler _themeIpc: IpcHandler {
+        target: "theme"
+        function fromImage(path: string): string {
+            if (!String(path).startsWith("/")) return "error: give the picture's full path"
+            root._themeImage = String(path)
+            return "ok"
+        }
     }
 
     function lchOf(c: color): var {
