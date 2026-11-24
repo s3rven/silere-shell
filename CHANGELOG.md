@@ -27,6 +27,7 @@ settings file carries its own `__version` and migrates separately.
   say when it last found none.
 - A workspace app icon no longer flashes its letter while it loads.
 - The menu no longer jumps in size when it closes mid-resize or reopens on another page while fading out.
+- Opening the Wi-Fi list on Home while another list is open no longer jerks the rows below it up first.
 - With app icons on, a workspace's first window fades its icon in over the empty ring instead of swapping them in one frame.
 - A notification that names no app shows its initial instead of an unrelated app's icon.
 - `silere doctor` suggests a package for a missing screen locker, Git, curl or xdg-open too, and names more of them on

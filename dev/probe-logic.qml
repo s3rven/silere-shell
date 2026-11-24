@@ -1848,8 +1848,8 @@ ShellRoot {
             home.destroy()
             host.input.wait(10)
         }
-        // switching pickers: the old list folds on the new one's curve and only once the new one is built, so the card's
-        // height moves one way (a faster fold that started before Wi-Fi's build shrank the card 100 px, then it grew)
+        // switching pickers: the old list folds on the new one's curve and only once the new one is laid out, so the card's
+        // height moves one way (a fold that started before the new list's first layout shrank the card 140 px, then it grew)
         ShellSettings.barPosition = "top"
         const swapHome = homeComponent.createObject(host.contentItem, { width: 440, active: true })
         swapHome._togglePicker("dnd")
@@ -1859,14 +1859,16 @@ ShellRoot {
         let builtBeforeFold = false, foldSymmetric = false
         const noteFold = () => {
             if (dndList.open) return
-            builtBeforeFold = awakeList.open && root._findTrayNode(awakeList, item => item.label === "For 2 hours") !== null
+            builtBeforeFold = awakeList.open && awakeList.foldTarget > 0
+                && root._findTrayNode(awakeList, item => item.label === "For 2 hours") !== null
             foldSymmetric = dndList.symmetric
         }
         dndList.openChanged.connect(noteFold)
         swapHome._togglePicker("awake")
+        for (let i = 0; dndList.open && i < 50; i++) host.input.wait(10)
         dndList.openChanged.disconnect(noteFold)
         root._check(builtBeforeFold && foldSymmetric,
-            "switching Home pickers folds the old list after the new one is built, on the opening curve")
+            "switching Home pickers folds the old list once the new one is laid out, on the opening curve")
         host.input.wait(Motion.medium + 120)
         swapHome._closePicker()
         root._check(!awakeList.symmetric && !awakeList.open,

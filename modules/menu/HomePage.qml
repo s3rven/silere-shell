@@ -47,9 +47,20 @@ PageShell {
     readonly property bool _wifiPickerOpen: _picker === "wifi"
     readonly property bool _btPickerOpen: _picker === "bt"
 
-    // switching lists, the old one folds on the new one's curve and only once the new one is built: a faster fold, or one
-    // that started before a Wi-Fi list's build frame, shrank the card up to 100 px before it grew again
+    // switching lists, the old one folds on the new one's curve and only once the new one is laid out: a faster fold, or
+    // one that started before the new list's first layout, a frame after its build, shrank the card up to 140 px before it grew
     property string _pickerLeaving: ""
+    property InlinePicker _pickerArriving: null
+    Connections {
+        target: root._pickerArriving
+        function onFoldTargetChanged() { root._releaseLeaving() }
+    }
+    Timer { id: _leavingFallback; interval: 100; onTriggered: root._releaseLeaving() }
+    function _releaseLeaving(): void {
+        _leavingFallback.stop()
+        root._pickerArriving = null
+        root._pickerLeaving = ""
+    }
     property bool _swapFold: false
     function _listOpen(which: string): bool { return root._picker === which || root._pickerLeaving === which }
     function _armSwapFold(): void {
@@ -68,7 +79,13 @@ PageShell {
         root._pickerLeaving = root._picker
         root._closePicker()
         _picker = which
-        root._pickerLeaving = ""
+        const arriving = root._pickerParts(which)[1]
+        if (root._pickerLeaving === "" || !arriving || arriving.foldTarget > 0) {
+            root._releaseLeaving()
+        } else {
+            root._pickerArriving = arriving
+            _leavingFallback.restart()
+        }
         _volumeRow.closeInline()
         _brightnessRow.closeInline()
         // opened by hand or by a bar shortcut alike: a list past the edge of a tall Home scrolls in, and no further than it must

@@ -15,6 +15,8 @@ Column {
     readonly property bool shown: root.above ? root._barBelow && root.mirror.open
         : !root._barBelow && root.open
     readonly property Component _content: root.above ? root.mirror.content : root.content
+    // the height the fold heads for, known only at the content's first layout: a frame after a list is built
+    readonly property real foldTarget: _section.radiusColumn.implicitHeight
 
     width: parent ? parent.width : 0
     spacing: 0
