@@ -117,6 +117,15 @@ if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
+# it takes no options, and "--help" used to start the removal like any other word
+case "${1:-}" in
+    "") ;;
+    -h|--help)
+        printf 'Usage: bash scripts/uninstall.sh\n  Asks before removing each integration the installer added: autostart, the menu keybind,\n  the layer rule, theme and update-timer wiring and the silere command. The checkout, settings,\n  notification history and font stay. SILERE_ASSUME_YES=1 answers yes to every question.\n'
+        exit 0 ;;
+    *) printf 'silere-uninstall: unknown option %s; it takes none (--help explains)\n' "$1" >&2; exit 2 ;;
+esac
+
 # ── header ───────────────────────────────────────────────────────────────────────
 printf "\n${BOLD}:: silere-shell uninstaller${R}\n"
 

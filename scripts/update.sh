@@ -878,6 +878,13 @@ case "${1:-}" in
         ;;
 esac
 
+# any other word, a typo of --apply or a --help, would otherwise run a plain check as if nothing had been asked
+case "${1:-}" in
+    ""|--apply|--rollback|--pin-release|--scheduled) ;;
+    *) printf 'silere-update: unknown option %s; silere update checks, --apply installs, --rollback undoes\n' "$1" >&2
+        exit 2 ;;
+esac
+
 _acquire_update_lock
 
 if [ "${1:-}" = "--rollback" ]; then

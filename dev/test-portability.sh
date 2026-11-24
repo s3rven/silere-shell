@@ -4247,6 +4247,21 @@ test_refuse_sudo() (
     out="$(run env -u SUDO_USER -u DOAS_USER bash "$ROOT/scripts/silere" version)" \
         || fail "silere refused plain root, as a CI container runs it: $out"
 )
+
+# the scripts people run by hand stop at a word they do not know: uninstall.sh used to start its removal on --help,
+# update.sh to run a plain check on a typo of --apply
+test_script_options() (
+    local home="$TMP/script-options" out rc=0
+    mkdir -p "$home"
+    run() { env HOME="$home" XDG_CONFIG_HOME="$home/config" XDG_STATE_HOME="$home/state" XDG_DATA_HOME="$home/data" \
+        XDG_CACHE_HOME="$home/cache" bash "$ROOT/scripts/$1" "${@:2}" </dev/null 2>&1; }
+    out="$(run uninstall.sh --help)" || fail "uninstall.sh --help failed: $out"
+    case "$out" in "Usage: bash scripts/uninstall.sh"*) ;; *) fail "uninstall.sh --help printed: $out" ;; esac
+    out="$(run uninstall.sh --yes)" || rc=$?
+    [ "$rc" = 2 ] || fail "uninstall.sh ran with an unknown option: rc $rc, $out"
+    rc=0; out="$(run update.sh --aply)" || rc=$?
+    case "$rc:$out" in "2:silere-update: unknown option --aply"*) ;; *) fail "update.sh took --aply: rc $rc, $out" ;; esac
+)
 test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
@@ -4664,6 +4679,7 @@ test_doctor_json
 test_doctor_menu_bind
 test_quickshell_install_hint
 test_refuse_sudo
+test_script_options
 test_keyboard_brightness_helper
 test_battery_limit_helper
 test_fresh_install_permissions

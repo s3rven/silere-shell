@@ -32,6 +32,8 @@ settings file carries its own `__version` and migrates separately.
   workspace it goes to instead of a bare "Focus".
 - Notification, Recent page and slider icons no longer flash a letter or glyph before they first appear.
 - The menu's Now Playing label keeps an emoji or flag whole where it shortens a long track title.
+- `bash scripts/uninstall.sh --help` explains the uninstaller instead of starting it, and it and `scripts/update.sh` stop
+  at an option they don't know instead of carrying on without it.
 
 ## Releases
 
