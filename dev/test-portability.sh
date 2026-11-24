@@ -3920,6 +3920,12 @@ test_cli_status_readings() (
         bash "$ROOT/scripts/silere" status 2>&1)" || fail "silere status failed: $out"
     [[ "$out" == *"Shell: running (pid $BASHPID, "[0-9]*" MB PSS)"* ]] || fail "status left out the shell's memory: $out"
     [[ "$out" == *"Update: up to date, checked 10 min ago"* ]] || fail "status left out when updates were last checked: $out"
+    echo $(( $(date +%s) - 15 * 86400 - 60 )) > "$home/cache/silere-shell/update-checked"
+    out="$(env -u LC_ALL PATH="$stubs:$PATH" HOME="$home" XDG_CACHE_HOME="$home/cache" XDG_STATE_HOME="$home/state" \
+        GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$ROOT" \
+        bash "$ROOT/scripts/silere" status 2>&1)" || fail "silere status failed: $out"
+    [[ "$out" == *"Update: none found 15 days ago; silere update checks now"* ]] \
+        || fail "status called a 15-day-old update check up to date: $out"
 )
 
 test_cli_use_switches_checkout() (

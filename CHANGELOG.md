@@ -16,6 +16,10 @@ settings file carries its own `__version` and migrates separately.
 - On Hyprland the installer binds the menu key to the `silere:menu` global shortcut, which starts no process per press.
   `silere doctor` names an older `qs ipc` menu bind and the line that replaces it.
 
+### Fixed
+
+- `silere status` no longer calls an update check older than two days up to date; it says when it last found none.
+
 ## Releases
 
 - [1.9.0](docs/releases/1.9.0.md) — 2026-11-24

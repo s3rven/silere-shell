@@ -709,12 +709,15 @@ print_update_status() {
     if [ -n "$error" ]; then
         printf 'Update: %slast check failed%s — %s\n' "$RED" "$R" "$error"
     elif [[ "$checked" =~ ^[0-9]{1,12}$ ]]; then
-        # a timer that stopped running reads as up to date forever without the age
+        # the timer checks daily: an older answer is from a timer that stopped or is off, and says nothing of today
         age=$(( $(date +%s) - checked ))
+        if [ "$age" -ge 172800 ]; then
+            printf 'Update: none found %s days ago; silere update checks now\n' "$((age / 86400))"
+            return
+        fi
         if [ "$age" -lt 120 ]; then age="just now"
         elif [ "$age" -lt 7200 ]; then age="$((age / 60)) min ago"
-        elif [ "$age" -lt 172800 ]; then age="$((age / 3600)) h ago"
-        else age="$((age / 86400)) days ago"
+        else age="$((age / 3600)) h ago"
         fi
         printf 'Update: up to date, checked %s\n' "$age"
     elif [ -s "$cache_dir/update-checked" ]; then
