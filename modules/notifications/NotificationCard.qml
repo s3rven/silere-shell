@@ -256,10 +256,12 @@ Item {
     // snapshot focus and urgency before invoking, since the app cannot answer before this returns
     function activatePrimary(): void {
         if (!card._canInteract) return
-        // files changed under a running shell: only a new engine compiles the panel against them
-        if (SystemAlerts.isReloadAlert(card.notification)) {
+        const click = SystemAlerts.clickOf(card.notification)
+        if (click.length > 0) {
             card.dismiss()
-            MenuState.reloadShell()
+            // files changed under a running shell: only a new engine compiles the panel against them
+            if (click === "reload") MenuState.reloadShell()
+            else MenuState.showTabUnanchored(MenuState.homeTab)
             return
         }
         const action = card._defaultAction

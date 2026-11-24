@@ -360,6 +360,10 @@ AnchoredPopupState {
         if (!open) open = true
         tabRequested(tab)
     }
+    function showTabUnanchored(index: int): void {
+        root._unanchor()
+        root.showTab(index)
+    }
 
     function showTabAt(tab: int, source, screen): void {
         const point = source ? source.mapToItem(null, source.width / 2, 0) : null
@@ -455,8 +459,7 @@ AnchoredPopupState {
                 return "error: unknown menu tab " + index + "; valid: 0 (home), 1 (settings), 2 (notifications), 3 (now playing)"
             if (index === root.mediaTab && !Media.menuShown)
                 return "error: nothing is playing"
-            root._unanchor()
-            root.showTab(index)
+            root.showTabUnanchored(index)
             return root.open ? "ok" : root._refusedText
         }
         function settings(name: string): string {

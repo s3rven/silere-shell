@@ -9198,11 +9198,13 @@ ShellRoot {
         const reloadAlert = SystemAlerts.alertCommand("A Silere panel could not load", "body", "critical", "dialog-error", 10000, "reload")
         root._check(reloadAlert.indexOf("--hint=string:x-silere-click:reload") > 0
                 && reloadAlert.indexOf("--") === reloadAlert.length - 3
-                && SystemAlerts.isReloadAlert({ appName: "Silere Shell", hints: { "x-silere-click": "reload" } })
-                && !SystemAlerts.isReloadAlert({ appName: "Other", hints: { "x-silere-click": "reload" } })
-                && !SystemAlerts.isReloadAlert({ appName: "Silere Shell", hints: {} })
-                && !SystemAlerts.isReloadAlert({ appName: "Silere Shell" }) && !SystemAlerts.isReloadAlert(null),
-            "a panel that failed to load sends an alert a click reloads the shell from, and only Silere's own alert does that")
+                && SystemAlerts.clickOf({ appName: "Silere Shell", hints: { "x-silere-click": "reload" } }) === "reload"
+                && SystemAlerts.clickOf({ appName: "Silere Shell", hints: { "x-silere-click": "menu" } }) === "menu"
+                && SystemAlerts.clickOf({ appName: "Other", hints: { "x-silere-click": "reload" } }) === ""
+                && SystemAlerts.clickOf({ appName: "Silere Shell", hints: { "x-silere-click": "run" } }) === ""
+                && SystemAlerts.clickOf({ appName: "Silere Shell", hints: {} }) === ""
+                && SystemAlerts.clickOf({ appName: "Silere Shell" }) === "" && SystemAlerts.clickOf(null) === "",
+            "Silere's own alerts reload the shell or open the menu when clicked, and nothing else or no other app can")
         const busAlert = SystemAlerts.busAlertCommand("-x battery low", "10%", "critical", "", 10000, "reload")
         const busPlain = SystemAlerts.busAlertCommand("a", "b", "low", "battery-caution", 0)
         root._check(busAlert.slice(0, 10).join(" ") === "busctl --user --timeout=5 call -- org.freedesktop.Notifications "

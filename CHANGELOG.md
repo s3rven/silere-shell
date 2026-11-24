@@ -43,6 +43,8 @@ settings file carries its own `__version` and migrates separately.
   order; English is unchanged.
 - Notification popups wait in history during a call, as they do in fullscreen. The switch is now **Hide in
   fullscreen and calls**.
+- Clicking the welcome notification opens the menu, and the installer's last line also mentions right-clicking the
+  workspace for quick actions.
 
 ### Fixed
 

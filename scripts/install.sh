@@ -2038,10 +2038,10 @@ else
 fi
 printf "  if a surface does not appear: ${DIM}%s doctor${R}\n" "$SILERE_CMD"
 if $did_keybind || $had_keybind; then
-    printf "  press ${DIM}%s + %s${R} or click the active workspace to open the menu\n" \
+    printf "  press ${DIM}%s + %s${R} or click the active workspace to open the menu; right-click it for quick actions\n" \
         "$MENU_BIND_MODS" "$MENU_BIND_KEY"
 else
-    printf "  click the active workspace to open the menu and settings\n"
+    printf "  click the active workspace to open the menu and settings; right-click it for quick actions\n"
     case "$receipt_compositor:$HYPR_CONFIG" in
         niri:*|*:) bind_hint="$MENU_BIND_SHOWN" ;;
         *.lua) bind_hint="$LUA_BIND_SHOWN" ;;

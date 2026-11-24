@@ -51,10 +51,12 @@ Singleton {
             : root.busAlertCommand(summary, body, urgency, icon, timeout, click)
     }
 
-    // a hint, not an action: an action keeps notify-send waiting as long as a critical alert stays up. A faked one only reloads the shell
-    function isReloadAlert(notification): bool {
-        return !!notification && notification.appName === "Silere Shell"
-            && String(notification.hints?.["x-silere-click"] ?? "") === "reload"
+    // a hint, not an action: an action keeps notify-send waiting as long as a critical alert stays up. A closed set, so a
+    // faked one can only reload the shell or open the menu
+    function clickOf(notification): string {
+        const click = !!notification && notification.appName === "Silere Shell"
+            ? String(notification.hints?.["x-silere-click"] ?? "") : ""
+        return click === "reload" || click === "menu" ? click : ""
     }
 
     function _send(summary: string, body: string, urgency: string, icon: string, click = ""): bool {
@@ -101,7 +103,7 @@ Singleton {
         onTriggered: {
             if (root._send("Welcome to Silere",
                 "Click the active workspace to open the menu, or right-click it for quick actions.",
-                "normal", "dialog-information")) ShellSettings.markFirstRunSeen()
+                "normal", "dialog-information", "menu")) ShellSettings.markFirstRunSeen()
         }
     }
 
