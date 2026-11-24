@@ -4204,6 +4204,27 @@ test_doctor_menu_bind() (
     [ -z "$(doctor '')" ] || fail "doctor offered silere:menu while no running shell holds it"
 )
 
+# the install hint names a package only where one new enough exists
+test_quickshell_install_hint() (
+    local fixture="$TMP/install-hint"
+    mkdir -p "$fixture/bin"
+    printf '#!/bin/sh\nprintf "quickshell:\\n  Installed: (none)\\n  Candidate: %%s\\n" "$SILERE_TEST_CANDIDATE"\n' \
+        > "$fixture/bin/apt-cache"
+    # dpkg --compare-versions A ge B, by version sort: Arch has no dpkg
+    printf '#!/bin/sh\n[ "$1 $3" = "--compare-versions ge" ] || exit 2\n[ "$(printf "%%s\\n%%s\\n" "$2" "$4" | sort -V | head -n 1)" = "$4" ]\n' \
+        > "$fixture/bin/dpkg"
+    chmod +x "$fixture/bin/apt-cache" "$fixture/bin/dpkg"
+    hint() { # $1 = package family, $2 = apt's candidate
+        PATH="$fixture/bin:$PATH" SILERE_TEST_CANDIDATE="${2:-}" bash -c \
+            '. "$1/scripts/lib/ui.sh"; family="$2"; _silere_package_family() { printf "%s\n" "$family"; }; _silere_quickshell_install_hint' \
+            bash "$ROOT" "$1"
+    }
+    assert_eq "sudo apt install quickshell" "$(hint apt 0.3.2-1)" "Debian 14 is offered its package"
+    case "$(hint apt 0.3.0-1)" in "see https://"*) ;; *) fail "a 0.3.0 apt package was offered" ;; esac
+    case "$(hint apt '(none)')" in "see https://"*) ;; *) fail "apt was offered a package it does not have" ;; esac
+    assert_eq "sudo xbps-install -S quickshell" "$(hint xbps)" "Void is offered its package"
+    case "$(hint unknown)" in "see https://"*) ;; *) fail "an unknown system was offered a package" ;; esac
+)
 test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
@@ -4619,6 +4640,7 @@ fi
 test_xdg_paths_and_timer_default
 test_doctor_json
 test_doctor_menu_bind
+test_quickshell_install_hint
 test_keyboard_brightness_helper
 test_battery_limit_helper
 test_fresh_install_permissions

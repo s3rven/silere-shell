@@ -76,11 +76,22 @@ _silere_package_family() {
 
 # the one command that gets Quickshell on this system, as its own install guide gives it
 _silere_quickshell_install_hint() {
+    local candidate=""
     case "$(_silere_package_family)" in
-        pacman) printf 'sudo pacman -S --needed quickshell\n' ;;
-        dnf)    printf 'sudo dnf copr enable errornointernet/quickshell && sudo dnf install quickshell\n' ;;
-        *)      printf 'see https://quickshell.org/docs/v0.3.1/guide/install-setup/\n' ;;
+        pacman) printf 'sudo pacman -S --needed quickshell\n'; return ;;
+        dnf)    printf 'sudo dnf copr enable errornointernet/quickshell && sudo dnf install quickshell\n'; return ;;
+        xbps)   printf 'sudo xbps-install -S quickshell\n'; return ;;
+        apt)
+            # Debian 14 and Ubuntu 27.04 package it; older releases have none, or a 0.3.0 Silere cannot run on
+            candidate="$(LC_ALL=C apt-cache policy quickshell 2>/dev/null \
+                | awk '$1 == "Candidate:" && !seen { print $2; seen = 1 }')" || candidate=""
+            if [ -n "$candidate" ] && [ "$candidate" != "(none)" ] \
+                    && dpkg --compare-versions "$candidate" ge 0.3.1 2>/dev/null; then
+                printf 'sudo apt install quickshell\n'
+                return
+            fi ;;
     esac
+    printf 'see https://quickshell.org/docs/v0.3.1/guide/install-setup/\n'
 }
 
 # another bar left running draws beside Silere's, which reads as Silere being broken. Named one per line
