@@ -247,6 +247,12 @@ if [ -f "$MATUGEN_CFG" ] && grep -qF '# silere-shell begin' "$MATUGEN_CFG"; then
     if _ask "Remove silere-shell entry?"; then
         if _remove_block "$MATUGEN_CFG" '# silere-shell begin' '# silere-shell end'; then
             _ok "entry removed"
+            # the installer writes this header when there was no config; with its entry gone the file is only that
+            if [ "$(grep -v '^[[:space:]]*$' "$MATUGEN_CFG")" = $'[config]\nversion_check = false' ]; then
+                rm -f -- "$MATUGEN_CFG"
+                rmdir -- "$CONFIG_HOME/matugen/templates" "$CONFIG_HOME/matugen" 2>/dev/null || true
+                _ok "removed $MATUGEN_CFG, which only the installer had written"
+            fi
         fi
     else
         _skip "kept"
@@ -386,6 +392,11 @@ for f in "${AUTOSTART_FILES[@]}"; do
         elif $has_backup; then
             _skip "live file has no Silere block; retained backup without restoring it"
         fi
+    fi
+    # with every block gone and nothing else changed since the install, the backup is the file again
+    if [ -f "${f}.bak" ] && _silere_same_text "${f}.bak" "$f"; then
+        rm -f -- "${f}.bak"
+        _ok "removed ${f}.bak, the same as $(basename "$f") again"
     fi
 done
 

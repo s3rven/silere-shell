@@ -4266,6 +4266,41 @@ test_script_options() (
     rc=0; out="$(run update.sh --aply)" || rc=$?
     case "$rc:$out" in "2:silere-update: unknown option --aply"*) ;; *) fail "update.sh took --aply: rc $rc, $out" ;; esac
 )
+
+# an install and an uninstall hand the home back as it was, but for the state kept in case Silere comes back: the
+# config's backup matches it again and goes, as does a matugen config that only the installer wrote
+test_install_round_trip() (
+    export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+    local home="$TMP/round-trip" stubs="$TMP/round-trip-stubs" installed conf before tool out
+    installed="$home/.config/silere-shell"
+    conf="$home/.config/hypr/hyprland.lua"
+    mkdir -p "${conf%/*}" "$stubs" "$installed"
+    # nothing may reach this machine: no services, packages, compositor or downloads; the font is there already
+    for tool in systemctl sudo pacman yay paru hyprctl notify-send curl; do
+        printf '#!/bin/sh\nexit 1\n' > "$stubs/$tool"
+    done
+    printf '#!/bin/sh\nexit 0\n' > "$stubs/matugen"
+    printf '#!/bin/sh\nprintf "JetBrainsMono Nerd Font\\n"\n' > "$stubs/fc-list"
+    chmod +x "$stubs"/*
+    printf '%s\n' '-- a config of its own' 'hl.config({ general = { gaps_in = 4 } })' > "$conf"
+    before="$(<"$conf")"
+    (cd "$ROOT" && tar --exclude=.git --exclude=./TODO -cf - .) | tar -x -C "$installed"
+    printf '#!/bin/sh\nexit 0\n' > "$installed/scripts/update.sh"
+    git -C "$installed" init -q
+    git -C "$installed" add -A
+    git -C "$installed" -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false commit -qm checkout
+    run() { env -u WAYLAND_DISPLAY -u HYPRLAND_INSTANCE_SIGNATURE -u NIRI_SOCKET HOME="$home" \
+        XDG_CONFIG_HOME="$home/.config" XDG_STATE_HOME="$home/.local/state" XDG_CACHE_HOME="$home/.cache" \
+        XDG_DATA_HOME="$home/.local/share" PATH="$stubs:$PATH" "$@" </dev/null 2>&1; }
+    out="$(run bash "$installed/scripts/install.sh" --yes --no-start)" || fail "the round-trip install failed: $out"
+    grep -qF 'silere-shell begin' "$conf" || fail "the round-trip install added no autostart"
+    [ -f "$home/.config/matugen/config.toml" ] || fail "the round-trip install wrote no matugen config"
+    out="$(run env SILERE_ASSUME_YES=1 bash "$installed/scripts/uninstall.sh")" || fail "the uninstall failed: $out"
+    assert_eq "$before" "$(<"$conf")" "the uninstall gave the Hyprland config back as it was"
+    [ ! -e "$conf.bak" ] || fail "the uninstall left a backup that matches the config again"
+    [ ! -e "$home/.config/matugen" ] || fail "the uninstall left a matugen config that only the installer wrote"
+)
+
 test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
@@ -4684,6 +4719,7 @@ test_doctor_menu_bind
 test_quickshell_install_hint
 test_refuse_sudo
 test_script_options
+test_install_round_trip
 test_keyboard_brightness_helper
 test_battery_limit_helper
 test_fresh_install_permissions

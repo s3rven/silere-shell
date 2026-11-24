@@ -35,6 +35,8 @@ settings file carries its own `__version` and migrates separately.
 - `bash scripts/uninstall.sh --help` explains the uninstaller instead of starting it, and it and `scripts/update.sh` stop
   at an option they don't know instead of carrying on without it.
 - `bash scripts/install.sh --dry-run` also lists the shell completion links the install creates.
+- Uninstalling removes the backup of your Hyprland or niri config once it matches the config again, and a matugen
+  config that only the installer wrote.
 
 ## Releases
 
