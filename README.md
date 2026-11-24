@@ -55,10 +55,10 @@ On Arch Linux:
 sudo pacman -S --needed quickshell git curl ttf-jetbrains-mono-nerd
 ```
 
-On other distributions, follow [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
+On other distributions, the [requirements](docs/install.md#requirements) name the packages.
 
-**Try it first.** The preview opens in a window with its own temporary settings. Its sound, network
-and Bluetooth controls are live.
+To try it first, run the preview. It opens in a window with its own temporary settings. Its sound,
+network and Bluetooth controls are live.
 
 ```bash
 git clone --depth 1 https://github.com/s3rven/silere-shell
@@ -66,15 +66,16 @@ cd silere-shell
 bash scripts/silere try    # Alt + / opens the menu, close the window to quit
 ```
 
-**Install it.** Run `bash scripts/install.sh` from the clone, or:
+To install it, run `bash scripts/install.sh` from the clone, or:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
 ```
 
-The installer asks before it changes your compositor config and backs up what it edits. Stop your
-old bar and notification daemon first; it shows which lines start them. Then run `silere run`.
-The [installation guide](docs/install.md) has the details.
+The installer asks before it changes your compositor config, backs up what it edits, and names the
+lines that start your old bar and notification daemon at login. Stop both, then let the installer
+start Silere, or start it later with `silere run`. The [installation guide](docs/install.md) has
+the details.
 
 ## Using it
 
@@ -86,9 +87,10 @@ The [installation guide](docs/install.md) has the details.
 | Now Playing | Right-click the media widget |
 | Settings | Open the menu and choose **Settings**; **Ctrl+F** searches |
 
-**Tab**, **Enter** and **Esc** work everywhere. Settings apply as you change them and are saved in
-`~/.config/silere-shell/settings.json`. With several monitors, **Settings › System › Devices** picks
-which ones show the bar. On Hyprland, **Settings › System › Keybinds** lists your shortcuts.
+Panels work from the keyboard too: **Tab** moves, **Enter** activates and **Esc** steps back or
+closes. Settings apply as you change them and are saved in `~/.config/silere-shell/settings.json`.
+With several monitors, **Settings › System › Devices** picks which ones show the bar. On Hyprland,
+**Settings › System › Keybinds** lists your shortcuts.
 
 More in the [usage guide](docs/usage.md) and, for keybinds and scripts, the
 [scripting guide](docs/scripting.md).
