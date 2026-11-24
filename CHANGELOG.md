@@ -19,6 +19,7 @@ settings file carries its own `__version` and migrates separately.
 ### Fixed
 
 - `silere status` no longer calls an update check older than two days up to date; it says when it last found none.
+- A notification that names no app shows its initial instead of an unrelated app's icon.
 
 ## Releases
 

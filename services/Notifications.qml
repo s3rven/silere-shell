@@ -1113,8 +1113,7 @@ Singleton {
     // a sender often points at a temp file it deletes as soon as the call returns, and history
     // keeps that path for good; the desktop entry's icon outlives both
     function entryIconSource(desktopEntry, appName): string {
-        const identity = root.identityText(desktopEntry || appName)
-        const entry = DesktopEntries.heuristicLookup(identity)
+        const entry = IconResolver.appEntry(root.identityText(desktopEntry || appName))
         return entry && entry.icon ? root.resolveIconSource(entry.icon) : ""
     }
 

@@ -195,6 +195,8 @@ Singleton {
 
     // a game's own Steam shortcut first: the fuzzy lookup could take Steam itself
     function appEntry(identity: string): var {
+        // quickshell's fuzzy lookup answers "" with the first entry that has no StartupWMClass, an unrelated app
+        if (identity.length === 0) return null
         const steamIcon = root.steamGameIcon(identity)
         const game = steamIcon.length > 0
             ? (DesktopEntries.applications.values || []).find(e => e && e.icon === steamIcon) : null
@@ -213,7 +215,7 @@ Singleton {
             ? s.slice(s.lastIndexOf(".") + 1) : s.replace(/\.exe$/i, "")
         const tail = tailOf(lower)
         const steamIcon = root.steamGameIcon(lower)
-        const entry = root.appEntry(original) || DesktopEntries.heuristicLookup(noDesktop)
+        const entry = root.appEntry(original) || root.appEntry(noDesktop)
         const candidates = [
             entry && entry.icon,
             steamIcon,

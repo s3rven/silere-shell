@@ -9056,6 +9056,11 @@ ShellRoot {
         const wine = IconResolver.appMeta("ProbeTool.exe")
         root._check(mc.fallback === "M" && rdns.name === "ProbeTool" && wine.name === "ProbeTool",
             "an app without an icon is named by a reverse-DNS id's last part, never by a version or .exe")
+        // the desktop entries load off this thread; before they land an empty lookup finds nothing either way
+        for (let i = 0; (DesktopEntries.applications.values || []).length === 0 && i < 300; i++) discoveryClock.wait(10)
+        root._check(IconResolver.appEntry("") === null && Notifications.entryIconSource("", "") === ""
+                && Notifications.appIconSource("", "", "") === "",
+            "a notification that names no app shows no app's icon (an empty name matches any entry without a window class)")
         root._check(IconResolver.steamGameIcon("steam_app_1234560") === "steam_icon_1234560"
                 && IconResolver.steamGameIcon("steam") === "" && IconResolver.steamGameIcon("steam_app_") === ""
                 && IconResolver.steamGameIcon("steam_app_12x") === "",
