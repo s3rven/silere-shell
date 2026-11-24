@@ -86,12 +86,12 @@ _silere_quickshell_install_hint() {
             candidate="$(LC_ALL=C apt-cache policy quickshell 2>/dev/null \
                 | awk '$1 == "Candidate:" && !seen { print $2; seen = 1 }')" || candidate=""
             if [ -n "$candidate" ] && [ "$candidate" != "(none)" ] \
-                    && dpkg --compare-versions "$candidate" ge 0.3.1 2>/dev/null; then
+                    && dpkg --compare-versions "$candidate" ge 0.3.2 2>/dev/null; then
                 printf 'sudo apt install quickshell %s\n' "$(_silere_qml_module_package QtQuick.Effects)"
                 return
             fi ;;
     esac
-    printf 'see https://quickshell.org/docs/v0.3.1/guide/install-setup/\n'
+    printf 'see https://quickshell.org/docs/v0.3.2/guide/install-setup/\n'
 }
 
 # the package that provides a command on a package family, as the doctor and the installer suggest it; nothing

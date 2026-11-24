@@ -18,43 +18,10 @@ QtObject {
 
     readonly property real stepPct: 0.05
 
-    // quickshell 0.3.1 drops a volume write on a bluetooth route without hardware volume yet reports it applied; wireplumber writes it
-    // either way. 0.3.2 writes it natively (verified on a bluez5 headset), sparing a process per scroll step; an unknown version keeps wpctl
-    // the same drop hits any node 0.3.1 routes through its card when the route names no volume step (quickshell#1178)
-    function needsWpctl(properties, hasWpctl: bool, nativeWrites: bool): bool {
-        if (!hasWpctl || nativeWrites || !properties) return false
-        return String(properties["device.api"] ?? "") === "bluez5" || properties["card.profile.device"] !== undefined
-    }
-    readonly property bool _viaWpctl: node !== null
-        && ctl.needsWpctl(node.properties, SystemTools.hasWpctl, SystemTools.quickshellAtLeast("0.3.2"))
-    // one process per drag frame is most of a core; a spaced write still lands the newest target
-    property bool _wpctlAgain: false
-    readonly property BoundedProcess _wpctl: BoundedProcess { timeoutMs: 3000 }
-    readonly property Timer _wpctlGap: Timer {
-        interval: 80
-        onTriggered: {
-            if (!ctl._wpctlAgain) return
-            if (ctl._wpctl.running) { ctl._wpctlGap.restart(); return }
-            ctl._wpctlAgain = false
-            ctl._apply(ctl.targetVolume)
-        }
-    }
-
     function _apply(v: real): void {
         const a = ready ? audio : null
         if (!a) return
-        v = ctl._clampVolume(v)
-        if (!ctl._viaWpctl) {
-            a.volume = v
-            return
-        }
-        if (ctl._wpctl.running || ctl._wpctlGap.running) {
-            ctl._wpctlAgain = true
-            return
-        }
-        ctl._wpctl.command = ["wpctl", "set-volume", String(ctl.node.id), v.toFixed(4)]
-        ctl._wpctl.running = true
-        ctl._wpctlGap.restart()
+        a.volume = ctl._clampVolume(v)
     }
 
     // audio can notify null before ready re-evaluates, so guard it directly
@@ -103,10 +70,6 @@ QtObject {
         ctl._writeThrottle.stop()
         ctl._pendingSafety.stop()
         ctl._muteSafety.stop()
-        // a route/availability change invalidates both the outstanding command and the target that the Bluetooth fallback planned to replay
-        ctl._wpctlGap.stop()
-        ctl._wpctlAgain = false
-        if (ctl._wpctl.running) ctl._wpctl.running = false
         pendingApply = false
         const a = ready ? audio : null
         targetVolume = a ? _clampVolume(a.volume) : 0

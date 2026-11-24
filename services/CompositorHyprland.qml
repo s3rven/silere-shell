@@ -172,7 +172,7 @@ QtObject {
         if (_restartWatch.gaveUp) _restartWatch.retry()
     }
 
-    // quickshell 0.3.1 never reconnects a dropped event socket while hyprland keeps running, so the watcher above never fires; wayland focus flips with no socket event between them prove it dead
+    // quickshell never reconnects a dropped event socket while hyprland keeps running, so the watcher above never fires; wayland focus flips with no socket event between them prove it dead
     property int _eventSeq: 0
     property int _seqAtFlip: -1
     property int _silentFlips: 0
@@ -498,7 +498,7 @@ QtObject {
         return root._liveToplevels().filter(t => t && t.urgent && root._addr(t)).map(t => "0x" + root._addr(t))
     }
 
-    // quickshell 0.3.1 prunes a workspace created while its startup snapshot is in flight and ignores hyprland 0.57 id changes; a window still names the workspace either way
+    // quickshell prunes a workspace created while its startup snapshot is in flight; a window still names the workspace
     property string _workspaceRefreshKey: ""
     property int _workspaceRefreshTries: 0
     // a plain copy: a lastIpcObject kept in a variable makes Qt watch the toplevel, and Qt can free that watch mid-update (quickshell#1535)

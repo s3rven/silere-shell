@@ -87,12 +87,6 @@ preview them with `silere repair`. Running it with `--apply` saves the edits in 
 reversible Git stash and restores the shipped files; `--undo` restores the latest saved
 repair.
 
-### Special or named workspaces misbehave after a Hyprland update
-
-Hyprland 0.57 changes how it names special and named workspaces, and Quickshell 0.3.1 reads
-them all as the same workspace. Numbered workspaces are not affected. If you rely on the others,
-update Quickshell to 0.3.2 or newer. `silere doctor` warns about this pairing.
-
 ## Display and speed
 
 ### The desktop feels slow on a high refresh panel
@@ -241,11 +235,6 @@ Silere needs a separate Bluetooth pairing agent for PIN entry or confirmation. S
 BlueZ refuses a device that reconnects by itself unless it is trusted. Silere trusts a paired
 device the first time it connects, so connect it once by any means, or run
 `bluetoothctl trust <address>`.
-
-### The network widget stops updating
-
-With Quickshell 0.3.1, the network widget and Wi-Fi list can keep showing old devices after
-NetworkManager restarts. Update Quickshell to 0.3.2 or newer, or restart Silere.
 
 ### The network icon warns of no internet while pages load
 

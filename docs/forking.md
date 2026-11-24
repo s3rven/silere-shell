@@ -66,7 +66,7 @@ their retention period ends. Reading a loading `LazyLoader.item` forces the load
 to finish synchronously; wait for activation when preparing a hidden surface.
 Use viewport-sized delegates for long lists, and stop timers/animations and clear
 focus when a row is pooled. Profile active workloads before changing rendering
-strategies. [Quickshell LazyLoader](https://quickshell.org/docs/v0.3.1/types/Quickshell/LazyLoader/),
+strategies. [Quickshell LazyLoader](https://quickshell.org/docs/v0.3.2/types/Quickshell/LazyLoader/),
 [Qt list reuse](https://doc.qt.io/qt-6/qml-qtquick-listview.html#reusing-items),
 [Qt Quick profiling](https://doc.qt.io/qt-6/qtquick-performance.html#profiling).
 

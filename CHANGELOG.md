@@ -32,6 +32,7 @@ settings file carries its own `__version` and migrates separately.
   enough.
 - The installer, `silere`, the updater, reset and uninstall stop under sudo or doas: Silere works on your own session,
   and a run as root used root's home and left files in the checkout that later updates could not replace.
+- Silere now needs Quickshell 0.3.2 or newer. On 0.3.1, `silere update` stays on the installed release and says why.
 
 ### Fixed
 

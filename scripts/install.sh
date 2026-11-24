@@ -1137,7 +1137,7 @@ _optdep pgrep         "optional night light external state check and stop"
 _optdep powerprofilesctl "power profile selector"
 _optdep_any "lock screen" "lock action" hyprlock swaylock gtklock
 _optdep_any "sound settings" "per-app routing hand-off" pwvucontrol pavucontrol
-_optdep wpctl         "headset modes + bluetooth volume on Quickshell 0.3.1"
+_optdep wpctl         "headset modes"
 _optdep pw-dump       "headset modes"
 _optdep curl          "web cover art + installer downloads"
 _optdep xdg-open      "network sign-in page"

@@ -34,8 +34,6 @@ ShellRoot {
     property int _checks: 0
     property string _sentInlineReply: ""
     property int _confirmActions: 0
-    property PwVolumeControl _volumeCancelProbe: null
-    property bool _volumeCancelDone: false
     property bool _ignoredUpdatesDone: false
     property bool _meteredUpdatesDone: false
     property bool _helperUpdatesDone: false
@@ -46,7 +44,6 @@ ShellRoot {
     property bool _zonePrefixDone: false
     property bool _localArtDone: false
     property bool _launchFailDone: false
-    property real _volumeCancelDeadline: 0
 
     QtObject {
         id: probeAnchor
@@ -328,7 +325,6 @@ ShellRoot {
     }
     Component { id: mediaVisualizerFactory; MediaVisualizer { presentationActive: false } }
     Component { id: waveLineFactory; WaveLine { width: 200; height: 16; value: 0.75; flowing: true } }
-    Component { id: volumeControlFactory; PwVolumeControl {} }
     Component { id: boundedProcessFactory; BoundedProcess {} }
     Component { id: persistedFileFactory; PersistedFile { writeAllowed: false } }
     Component { id: niriBackendFactory; CompositorNiri {} }
@@ -10614,19 +10610,6 @@ ShellRoot {
                 && Audio._out._clampVolume(Infinity) === 0
                 && Audio._out._clampVolume(1.5) === 1,
             "audio service normalizes non-finite backend volume")
-        const volumeControl = volumeControlFactory.createObject(root)
-        volumeControl._wpctl.command = ["sleep", "5"]
-        volumeControl._wpctl.running = true
-        volumeControl._wpctlAgain = true
-        volumeControl._wpctlGap.start()
-        volumeControl.pendingApply = true
-        volumeControl.sync()
-        root._check(!volumeControl._wpctlAgain && !volumeControl._wpctlGap.running
-                && !volumeControl.pendingApply,
-            "resynchronizing audio cancels the old route's process and queued fallback writes")
-        root._volumeCancelProbe = volumeControl
-        root._volumeCancelDeadline = Date.now() + 1000
-        _volumeCancelCheck.restart()
     }
 
     function _checksAudioAndSliders(): void {
@@ -10752,13 +10735,6 @@ ShellRoot {
         Audio._releaseProfilePresentation()
         root._check(!Audio.profileSwitching && Audio._profilePresentation === null,
             "finishing a headset transition releases its temporary presentation state")
-        root._check(Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, true, false)
-                && Audio._out.needsWpctl({ "device.api": "bluez5" }, true, false)
-                && !Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, true, true)
-                && !Audio._out.needsWpctl({ "device.api": "alsa", "card.profile.device": "3" }, false, false)
-                && !Audio._out.needsWpctl({ "application.name": "stream" }, true, false)
-                && !Audio._out.needsWpctl(null, true, false),
-            "volume on a card-routed or bluetooth node goes through wpctl only where quickshell 0.3.1 would drop the write")
         const keyboardRows = KeyboardBrightness.parseDevices("/org/freedesktop/UPower/KbdBacklight/led0\t0\t2\tfixture\n"
             + "/org/freedesktop/UPower/KbdBacklight/led1\t1\t0\tfixture\n"
             + "/org/freedesktop/UPower/KbdBacklight/led2\t3\t2\tfixture\n"
@@ -13710,13 +13686,9 @@ ShellRoot {
         root._check(Network._lastRxBytes === -1 && Network._lastTxBytes === -1,
             "malformed network counter fields cannot seed a traffic rate")
         for (let i = 0; i < trafficState.length; i++) Network[trafficState[i]] = trafficSaved[i]
-        root._check(Network.wifiPasswordless(Net.WifiSecurityType.Unknown, false) && !Network.wifiPasswordless(Net.WifiSecurityType.Unknown, true)
-                && Network.wifiPasswordless(Net.WifiSecurityType.Open, true) && !Network.wifiPasswordless(Net.WifiSecurityType.Wpa2Psk, false),
-            "an Unknown network joins without a password only where quickshell 0.3.1 mislabels open ones")
-        root._check(SystemTools.versionAtLeast("0.3.2", "0.3.2") && SystemTools.versionAtLeast("0.4", "0.3.2")
-                && SystemTools.versionAtLeast("0.3.10", "0.3.2") && !SystemTools.versionAtLeast("0.3.1", "0.3.2")
-                && !SystemTools.versionAtLeast("", "0.3.2") && !SystemTools.versionAtLeast("git", "0.3.2"),
-            "Quickshell version gates compare numerically and stay closed on an unknown version")
+        root._check(!Network.wifiPasswordless(Net.WifiSecurityType.Unknown) && Network.wifiPasswordless(Net.WifiSecurityType.Open)
+                && Network.wifiPasswordless(Net.WifiSecurityType.Owe) && !Network.wifiPasswordless(Net.WifiSecurityType.Wpa2Psk),
+            "only open and enhanced-open networks join without a password")
         root._check(OsdBarState.holdFor("volume", 2000) === 2000 && OsdBarState.holdFor("battery", 2000) === 5000
                 && OsdBarState.holdFor("temp", 8000) === 8000 && OsdBarState.holdFor("brightness", 100) === 500,
             "an alert stays up long enough to read while level feedback keeps the chosen timeout")
@@ -17768,29 +17740,6 @@ ShellRoot {
         else Qt.callLater(root._finish)
     }
 
-    Timer {
-        id: _volumeCancelCheck
-        interval: 120
-        onTriggered: {
-            const control = root._volumeCancelProbe
-            // child exit is asynchronous and parallel checks can delay delivery.
-            // Stay below the helper's 3s safety timeout so a missed cancel still fails
-            if (control && control._wpctl.running && Date.now() < root._volumeCancelDeadline) {
-                restart()
-                return
-            }
-            root._check(control && !control._wpctl.running,
-                "an invalidated audio route leaves no fallback process running")
-            if (control) {
-                control._wpctl.running = false
-                control._wpctlGap.stop()
-                control.destroy()
-            }
-            root._volumeCancelProbe = null
-            root._volumeCancelDone = true
-        }
-    }
-
     function _checkBarWheelLifetimes(f, app, tile): void {
         const wheel = (target, x, y) => f.input.mouseWheel(target,
             target.width / 2, target.height / 2, x, y, Qt.NoButton, Qt.NoModifier, 0)
@@ -18085,7 +18034,6 @@ ShellRoot {
     function _finish(): void {
         // here, seconds after the theme checks flipped the source and contrast, so no mode switch is still settling
         root._checkModeSwitchFades()
-        root._check(root._volumeCancelDone, "the audio route cleanup check completes")
         root._check(root._ignoredUpdatesDone, "the ignored AUR package check completes")
         root._check(root._meteredUpdatesDone, "the metered package check completes")
         root._check(root._helperUpdatesDone, "the helper-only update split check completes")

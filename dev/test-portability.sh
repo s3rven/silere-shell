@@ -4321,7 +4321,7 @@ test_doctor_json() (
     printf '{"version":"9.1.2"}\n' > "$fixture/release.json"
     cat > "$fixture/bin/qs" <<'EOF'
 #!/usr/bin/env bash
-if [ "${1:-}" = --version ]; then printf 'Quickshell 0.3.1\n'
+if [ "${1:-}" = --version ]; then printf 'Quickshell 0.3.2\n'
 else printf '%s\n' "${SILERE_JSON_REPLY:-unavailable}"; fi
 EOF
     cat > "$fixture/bin/qtpaths6" <<'EOF'
@@ -4341,7 +4341,7 @@ EOF
 import json, sys
 d = json.loads(sys.argv[1])
 assert d["schemaVersion"] == 1 and d["runtime"]["silere"] == "9.1.2"
-assert d["runtime"]["quickshell"] == "0.3.1" and d["runtime"]["qt"] == "6.10.2"
+assert d["runtime"]["quickshell"] == "0.3.2" and d["runtime"]["qt"] == "6.10.2"
 assert d["runtime"]["compositor"] == "hyprland" and d["runtime"]["compositorVersion"] == "0.57.2"
 assert d["runtime"]["distro"] and all(c.islower() or c.isdigit() or c in "._-" for c in d["runtime"]["distro"])
 assert d["devices"]["audio"]["outputs"] == 2
@@ -4375,7 +4375,7 @@ assert sys.argv[2] not in sys.argv[1]
     chmod +x "$fixture/busybox/timeout"
     actual="$(PATH="$fixture/busybox:$fixture/bin:$PATH" SILERE_JSON_REPLY='{"schemaVersion":1,"audio":{"outputs":2}}' \
         bash "$fixture/scripts/doctor.sh" --json)"
-    "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["runtime"]["quickshell"] == "0.3.1" and d["devices"]["audio"]["outputs"] == 2' "$actual" \
+    "$python_path" -c 'import json,sys; d=json.loads(sys.argv[1]); assert d["runtime"]["quickshell"] == "0.3.2" and d["devices"]["audio"]["outputs"] == 2' "$actual" \
         || fail "doctor report lost its probes to a timeout without --kill-after"
     # git present, the checkout not describable: the packaged version still answers
     mkdir -p "$fixture/.git" "$fixture/nogit"

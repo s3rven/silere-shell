@@ -7,13 +7,13 @@
 # The floor the README and the AUR PKGBUILD both promise. Lint keeps those two in
 # step with this value; check.sh compares it against the Quickshell actually installed.
 # shellcheck disable=SC2034
-SILERE_MIN_QUICKSHELL="0.3.1"
-# Quickshell 0.3.1 builds on older Qt, but PerimeterProgress trims its ShapePath, which is 6.10+,
+SILERE_MIN_QUICKSHELL="0.3.2"
+# Quickshell builds on older Qt, but PerimeterProgress trims its ShapePath, which is 6.10+,
 # and the menu, notification cards and confirm buttons all fail to load without it.
 # shellcheck disable=SC2034
 SILERE_MIN_QT="6.10"
 
-# Reads the version out of `qs --version`, e.g. "Quickshell 0.3.1 (revision ...)".
+# Reads the version out of `qs --version`, e.g. "Quickshell 0.3.2 (revision ...)".
 # Prints nothing when the binary is missing or the format is one we don't know.
 _silere_quickshell_version() {
     command -v qs >/dev/null 2>&1 || return 1

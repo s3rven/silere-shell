@@ -4,13 +4,13 @@
 
 ## Requirements
 
-You need Hyprland or niri, `git`, and Quickshell 0.3.1 or newer, built against at least
+You need Hyprland or niri, `git`, and Quickshell 0.3.2 or newer, built against at least
 Qt 6.10. The one-line installer below also needs `curl`; installing from a clone does not.
 On Arch and its derivatives, use `sudo pacman -S --needed quickshell git curl`.
 Debian 14 and unstable, Ubuntu 27.04 and Void package a recent enough one as `quickshell`; on Debian and Ubuntu, add
 `qml6-module-qtquick-effects`, which it does not pull in. Fedora's own package is older, so use the
 `errornointernet/quickshell` COPR there.
-For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.1/guide/install-setup/).
+For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.2/guide/install-setup/).
 
 ## Try it without installing
 
@@ -188,7 +188,6 @@ hides that widget or marks it unavailable.
 | `matugen` | wallpaper theming |
 | `cava` | media visualizer |
 | `curl` | cover art from the web, when that setting is on |
-| `wpctl` | Bluetooth volume on Quickshell 0.3.1 (part of WirePlumber) |
 | `wpctl` + `pw-dump` | Listening / Calls modes on compatible Bluetooth headsets |
 | `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
 | `inotifywait` | screenshot feedback on the underline (niri reports its own screenshots without it), and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |

@@ -36,7 +36,6 @@ jobs:
             /var/lib/pacman/sync
           key: arch-archive-2026-02-15
       - name: Install build and probe dependencies
-        # The minimum runtime needs a compatible Qt too; 0.3.1 does not build on Qt 6.12.
         # This snapshot supplies Qt 6.10.2 and checks the documented Qt 6.10 floor; 6.10.0 itself
         # crashes in QColor reading a value type, inside Qt.
         env:
@@ -81,8 +80,8 @@ jobs:
       - name: Build the minimum supported Quickshell
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.3.1 https://github.com/quickshell-mirror/quickshell.git /tmp/minimum-quickshell
-          test "$(git -C /tmp/minimum-quickshell rev-parse HEAD)" = 1a4716cde794a59928d9d9fc15f2afc7a95de360
+          git clone --depth 1 --branch v0.3.2 https://github.com/quickshell-mirror/quickshell.git /tmp/minimum-quickshell
+          test "$(git -C /tmp/minimum-quickshell rev-parse HEAD)" = 4f508be500dea6e5732cc3d50382a0048b17e7b1
           cmake -S /tmp/minimum-quickshell -B /tmp/minimum-quickshell/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/minimum-quickshell -DINSTALL_QML_PREFIX=qml -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF 2>&1 | tee /tmp/minimum-configure.log
           cmake --build /tmp/minimum-quickshell/build --parallel 4 2>&1 | tee /tmp/minimum-build.log
           cmake --install /tmp/minimum-quickshell/build 2>&1 | tee /tmp/minimum-install.log

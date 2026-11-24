@@ -48,7 +48,7 @@ You choose the widgets and their order.
 
 ## Getting started
 
-You need **Hyprland or niri** and **Quickshell 0.3.1 or newer** built against **at least Qt 6.10**.
+You need **Hyprland or niri** and **Quickshell 0.3.2 or newer** built against **at least Qt 6.10**.
 On Arch Linux:
 
 ```bash

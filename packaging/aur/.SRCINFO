@@ -7,7 +7,7 @@ pkgbase = silere-shell-git
 	arch = any
 	license = MIT
 	makedepends = git
-	depends = quickshell>=0.3.1
+	depends = quickshell>=0.3.2
 	depends = ttf-jetbrains-mono-nerd
 	optdepends = hyprland: compositor support
 	optdepends = niri: compositor support

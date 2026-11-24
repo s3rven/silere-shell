@@ -151,12 +151,6 @@ if [ "$compositor" = Hyprland ]; then
         ok "compositor" "Hyprland IPC reachable"
         hypr_version="$(hyprctl version -j 2>/dev/null \
             | sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([0-9.]*\)".*/\1/p' | head -n 1)"
-        # 0.57 gives only numbered workspaces an id; Quickshell 0.3.1 reads special and named ones as id 0
-        if [ -n "$hypr_version" ] && [ -n "${qs_version:-}" ] \
-            && _silere_version_at_least "$hypr_version" 0.57 \
-            && ! _silere_version_at_least "$qs_version" 0.3.2; then
-            warn "workspaces" "Quickshell $qs_version may mix up special and named workspaces on Hyprland $hypr_version"
-        fi
         # translucent surfaces ask Hyprland to blur behind them; these are the two things that quietly stop it
         blur_opt="$(hyprctl -j getoption decoration:blur:enabled 2>/dev/null || true)"
         if [ -n "$hypr_version" ] && ! _silere_version_at_least "$hypr_version" 0.56; then
@@ -319,12 +313,7 @@ else
     optional_any "screen lock" "lock action" hyprlock swaylock gtklock
 fi
 optional_any "sound settings" "per-app routing UI" pwvucontrol pavucontrol
-# Quickshell 0.3.2 sets bluetooth volume itself; headset modes still need both pipewire tools
-if [ -z "${qs_version:-}" ] || ! _silere_version_at_least "$qs_version" 0.3.2; then
-    optional_tool wpctl "headset modes + bluetooth volume on Quickshell 0.3.1"
-else
-    optional_tool wpctl "headset modes"
-fi
+optional_tool wpctl "headset modes"
 optional_tool pw-dump "headset modes"
 optional_tool curl "cover art from the web + installer downloads"
 optional_tool xdg-open "network sign-in page"

@@ -32,7 +32,7 @@ body:
     attributes:
       label: Quickshell version
       description: Output from `qs --version` and how Quickshell was installed.
-      placeholder: 0.3.1 from distro package
+      placeholder: 0.3.2 from distro package
     validations:
       required: true
 
