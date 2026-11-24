@@ -346,6 +346,7 @@ _rollback_applied_update() {
     _clear_flag
     _clear_update_error
     rm -f -- "$CHECKED"
+    bash "$ROOT/scripts/service.sh" refresh || true
     # Only restart a unit that actually runs this checkout; the test suite and a
     # throwaway checkout share one user manager, where being in use alone would
     # reach whatever shell is live.
@@ -1026,6 +1027,7 @@ if [ "${1:-}" = "--apply" ]; then
     plural="change"; [ "$count" -ne 1 ] && plural="changes"
     note_suffix=""
     [ -n "$CANDIDATE_GATE_NOTE" ] && note_suffix=" (${CANDIDATE_GATE_NOTE})"
+    bash "$ROOT/scripts/service.sh" refresh || true
     if systemctl --user is-active --quiet silere-shell.service 2>/dev/null \
             && _unit_runs_this_checkout; then
         # Do not wait inside the shell's own process tree for systemd to stop that tree.

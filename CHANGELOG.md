@@ -46,6 +46,7 @@ settings file carries its own `__version` and migrates separately.
   fullscreen and calls**.
 - Clicking the welcome notification opens the menu, and the installer's last line also mentions right-clicking the
   workspace for quick actions.
+- `silere update` brings the optional user service it installed up to date with the release.
 
 ### Fixed
 
