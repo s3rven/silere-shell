@@ -35,7 +35,6 @@ and prints the line to add on niri. Any keybind can run `silere menu`; on Hyprla
 | Brightness | Brightness sliders in Home | | | Step all controllable displays | |
 | Battery | Power Mode in Home | | | | Time left or charging state |
 | Updates | Package details | Check again | | | Status, and the error of a failed check |
-| Command | Its click command, or run the command again | | | | The script's tooltip |
 | Shell update | Settings › System › Overview | | | | |
 | Tray | Open the app's menu or window | Its menu, with Hide from bar | The app's secondary action | Passed to the app | App name, unless widgets are compact |
 
