@@ -13108,6 +13108,24 @@ ShellRoot {
                 && PowerProfiles.profileForSource(false, "balanced", "power-saver", "balanced") === "",
             "a power source restores the mode last picked on it, and leaves an unpicked source alone")
 
+        const dfHead = "Filesystem 1024-blocks Used Available Capacity Mounted on\n"
+        const dfRow = (dev, sizeGb, freeGb, mount) => dev + " " + Math.round(sizeGb * 1048576) + " 0 "
+            + Math.round(freeGb * 1048576) + " 99% " + mount + "\n"
+        let disk = SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/a", 1000, 1.5, "/") + dfRow("/dev/a", 1000, 1.5, "/home"))
+        const diskOnce = disk.alerts.length === 1 && disk.alerts[0].mount === "/" && disk.warned["/dev/a"] === true
+        const diskHeld = SystemAlerts.diskAlertStep(disk.warned, dfHead + dfRow("/dev/a", 1000, 2.2, "/")).alerts.length === 0
+            && SystemAlerts.diskAlertStep(disk.warned, dfHead + dfRow("/dev/a", 1000, 2.2, "/")).warned["/dev/a"] === true
+        const diskRearmed = SystemAlerts.diskAlertStep(
+            SystemAlerts.diskAlertStep(disk.warned, dfHead + dfRow("/dev/a", 1000, 3, "/")).warned,
+            dfHead + dfRow("/dev/a", 1000, 1.5, "/")).alerts.length === 1
+        root._check(diskOnce && diskHeld && diskRearmed,
+            "a nearly full disk warns once, for a home on the same device too, and again only after space came back")
+        root._check(SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/a", 1000, 40, "/")).alerts.length === 0
+                && SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/b", 30, 1.6, "/")).alerts.length === 0
+                && SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/b", 30, 1.4, "/")).alerts.length === 1
+                && SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/c", 500, 1, "/my disk")).alerts[0].mount === "/my disk"
+                && SystemAlerts.diskAlertStep({}, dfHead + "garbage\n/dev/d 0 0 0 0% /\n").alerts.length === 0,
+            "a disk warns under both 5% and 2 GB free, names a mount with spaces, and skips rows it cannot read")
         const bt = (pct) => [{ address: "AA", name: "Headset", pct: pct }]
         let btStep = SystemAlerts.btAlertStep({}, bt(18), 20, 25)
         const btFirst = btStep.alerts.length === 1 && btStep.alerts[0].name === "Headset"

@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 Singleton {
     id: root
@@ -216,6 +217,53 @@ Singleton {
                 delete step.warned[alert.address]
         }
         root._btWarned = step.warned
+    }
+
+    // gnome's rule: under 5% and under 2 GB free. A big disk at 5% still has room for an upgrade, a small one at 2 GB does not
+    readonly property real diskLowKb: 2 * 1024 * 1024
+    function diskAlertStep(warned, dfText: string): var {
+        const next = {}
+        const alerts = []
+        const lines = String(dfText || "").split("\n")
+        for (let i = 1; i < lines.length; i++) {
+            const f = lines[i].trim().split(/\s+/)
+            if (f.length < 6) continue
+            // by device: home on the root filesystem, a btrfs subvolume included, is one disk and one warning
+            const disk = f[0], size = Number(f[1]), avail = Number(f[3])
+            if (!(size > 0) || !(avail >= 0) || disk in next) continue
+            const limit = Math.min(root.diskLowKb, size * 0.05)
+            // a quarter over the mark before it rearms, so a cache filling and emptying around it warns once
+            next[disk] = avail < limit || warned[disk] === true && avail < limit * 1.25
+            if (next[disk] && warned[disk] !== true) alerts.push({ disk: disk, mount: f.slice(5).join(" "), availKb: avail })
+        }
+        return { warned: next, alerts: alerts }
+    }
+    property var _diskWarned: ({})
+    BoundedProcess {
+        id: _df
+        timeoutMs: 5000
+        stdout: StdioCollector { id: _dfOut }
+        onExited: code => {
+            if (!_df.completedSuccessfully(code)) return
+            const step = root.diskAlertStep(root._diskWarned, _dfOut.text)
+            for (let i = 0; i < step.alerts.length; i++) {
+                const alert = step.alerts[i]
+                const free = alert.availKb < 1048576 ? Math.round(alert.availKb / 1024) + " MB"
+                    : (alert.availKb / 1048576).toFixed(1) + " GB"
+                if (!root._send("Disk almost full", free + " left on " + alert.mount
+                        + ". Updates and apps can fail until some space is freed.", "normal", "drive-harddisk"))
+                    delete step.warned[alert.disk]
+            }
+            root._diskWarned = step.warned
+        }
+    }
+    // at login, then every few hours of use: one df, never while the machine sits idle
+    Timer {
+        interval: 4 * 3600 * 1000
+        repeat: true
+        triggeredOnStart: true
+        running: SystemTools.ready && root.canAlert && !Idle.isIdle
+        onTriggered: if (!_df.running) _df.exec(["df", "-Pk", "/", Quickshell.env("HOME") || "/"])
     }
 
     Connections {

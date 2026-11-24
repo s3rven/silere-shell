@@ -18,6 +18,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere osd <glyph> <text> [0-100]` shows a message of your own in the OSD, with a level bar when you give one, so a
   script's key or toggle answers the way volume and brightness do.
 - Hibernate in the power menu, where the system can resume from it.
+- A warning when the system disk or your home has under 2 GB and under 5% free, checked at login and every few
+  hours of use.
 
 ### Changed
 
