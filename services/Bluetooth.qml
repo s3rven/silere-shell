@@ -94,19 +94,19 @@ Singleton {
     }
 
     // backend models can be momentarily empty while BlueZ re-enumerates
-    readonly property var _devices: (adapter && adapter.devices)
+    readonly property var allDevices: (adapter && adapter.devices)
         ? (adapter.devices.values || []) : []
 
     readonly property int connectedCount: {
         let n = 0
-        for (let i = 0; i < _devices.length; i++)
-            if (_devices[i] && _devices[i].connected) n++
+        for (let i = 0; i < allDevices.length; i++)
+            if (allDevices[i] && allDevices[i].connected) n++
         return n
     }
 
     readonly property string connectedName: {
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.connected) return root.deviceLabel(d)
         }
         return ""
@@ -130,7 +130,7 @@ Singleton {
 
     function connectedDevice(address: string, devices): var {
         const wanted = String(address || "").toLowerCase()
-        const list = devices ?? root._devices
+        const list = devices ?? root.allDevices
         if (wanted.length === 0) return null
         for (let i = 0; i < list.length; i++) {
             const d = list[i]
@@ -145,8 +145,8 @@ Singleton {
     }
 
     readonly property int connectedBattery: {
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.connected) return root.batteryPercent(d)
         }
         return -1
@@ -187,8 +187,8 @@ Singleton {
     function iconForNodeName(nodeName: string): string {
         const flat = String(nodeName || "").replace(/[:_-]/g, "").toLowerCase()
         if (flat.length === 0) return ""
-        for (let i = 0; i < root._devices.length; i++) {
-            const d = root._devices[i]
+        for (let i = 0; i < root.allDevices.length; i++) {
+            const d = root.allDevices[i]
             if (!d) continue
             const addr = String(d.address || "").replace(/[:_-]/g, "").toLowerCase()
             if (addr.length > 0 && flat.indexOf(addr) >= 0) return String(d.icon || "")
@@ -197,8 +197,8 @@ Singleton {
     }
 
     readonly property string connectedGlyph: {
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.connected) return root.deviceGlyph(d.icon)
         }
         return ""
@@ -214,7 +214,7 @@ Singleton {
     }
 
     readonly property var devices: {
-        const list = _devices.filter(d => root.listed(d))
+        const list = allDevices.filter(d => root.listed(d))
         list.sort((a, b) => {
             if (!a || !b) return 0
             if (a.connected !== b.connected) return a.connected ? -1 : 1
@@ -385,8 +385,8 @@ Singleton {
 
     readonly property var _pendingDevice: {
         if (root._pendingAddr === "") return null
-        for (let i = 0; i < root._devices.length; i++) {
-            const d = root._devices[i]
+        for (let i = 0; i < root.allDevices.length; i++) {
+            const d = root.allDevices[i]
             if (d && d.address === root._pendingAddr) return d
         }
         return null
@@ -437,7 +437,7 @@ Singleton {
     // manager, is no longer failed: its row kept the mark and the retry hint while it worked
     readonly property bool _errorResolved: {
         if (root.errorAddr === "") return false
-        const d = root._devices.find(d => d && d.address === root.errorAddr)
+        const d = root.allDevices.find(d => d && d.address === root.errorAddr)
         return !!d && (root.errorKind === "pair" ? d.paired === true : d.connected === true)
     }
     // a tick later: clearing inside the change would rewrite the address this binding reads
@@ -524,7 +524,7 @@ Singleton {
         for (let i = 0; i < devices.length; i++)
             if (devices[i] && devices[i].connected) root._trustDevice(devices[i], false)
     }
-    readonly property var _untrustedConnected: root._sandboxed ? [] : _devices.filter(d => d && d.connected && d.paired && !d.trusted)
+    readonly property var _untrustedConnected: root._sandboxed ? [] : allDevices.filter(d => d && d.connected && d.paired && !d.trusted)
     on_UntrustedConnectedChanged: Qt.callLater(root._trustConnected, root._untrustedConnected)
     Component.onCompleted: {
         root._trustConnected(root._untrustedConnected)
@@ -562,11 +562,11 @@ Singleton {
         }
     }
 
-    // dispatch by address through the raw _devices array to reach the live C++ object, not a sorted JS copy
+    // dispatch by address through the raw allDevices array to reach the live C++ object, not a sorted JS copy
     function connectDevice(address: string): void {
         if (!SystemTools.writesDevices) return
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.address === address) { root._beginAttempt(address, "connect"); d.connect(); return }
         }
     }
@@ -585,29 +585,29 @@ Singleton {
 
     function disconnectDevice(address: string): void {
         if (!SystemTools.writesDevices) return
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.address === address) { root._clearDeviceAttempt(address); d.disconnect(); return }
         }
     }
     function pairDevice(address: string): void {
         if (!SystemTools.writesDevices) return
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.address === address) { root._beginAttempt(address, "pair"); d.pair(); return }
         }
     }
     function cancelPair(address: string): void {
         if (!SystemTools.writesDevices) return
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.address === address) { root._clearDeviceAttempt(address); d.cancelPair(); return }
         }
     }
     function forgetDevice(address: string): void {
         if (!SystemTools.writesDevices) return
-        for (let i = 0; i < _devices.length; i++) {
-            const d = _devices[i]
+        for (let i = 0; i < allDevices.length; i++) {
+            const d = allDevices[i]
             if (d && d.address === address) {
                 root._clearDeviceAttempt(address)
                 d.forget()

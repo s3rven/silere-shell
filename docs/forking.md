@@ -36,7 +36,7 @@ a restarted ease loses its speed and kicks.
 **A new setting** goes in four places:
 
 1. a property in `services/ShellSettings.qml` — its value there is the default
-2. an entry in that file's `_schema`, carrying a `sec:` that names a settings page
+2. an entry in that file's `schema`, carrying a `sec:` that names a settings page
 3. wherever you read it
 4. a row on that same page under `modules/menu/settings/`
 
@@ -104,7 +104,7 @@ writing to the user's hardware.
 4. an entry under that key in `barWidgetMeta` in `services/ShellSettings.qml` — glyph,
    label, group, the `zone` it ships in, and the `setting` name that hides it (empty
    string means it cannot be hidden)
-5. that `setting` as a property plus a `_schema` entry whose `sec:` names the
+5. that `setting` as a property plus a `schema` entry whose `sec:` names the
    `widgets` page, if it is hideable
 
 `barWidgetMeta` is the catalog: the key list and the default layout are read from it,

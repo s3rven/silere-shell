@@ -287,7 +287,7 @@ Column {
         ControlRow {
             glyph: "󰦛"
             // a file that will not load blocks every save, and its values never arrived to count as changed
-            readonly property bool _unreadable: ShellSettings._readError.length > 0
+            readonly property bool _unreadable: ShellSettings.readError.length > 0
             title: root._armed ? "Confirm restore" : "Restore default settings"
             status: _unreadable ? "Replaces the settings file that cannot be read"
                 : ShellSettings.modifiedTotal > 0

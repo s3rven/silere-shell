@@ -99,7 +99,7 @@ section "settings rail label width"
 # anything. 13 is the longest label observed to fit ("Notifications"), measured at 100%
 # with the modified dot showing: 85.7px of text against a 97px budget. Above 100% the cap
 # grows with the type (MenuWindow's _typeGain), which is what keeps 13 inside the budget.
-rail_over="$(grep -oE 'label: "[^"]{14,}"' services/MenuState.qml || true)"
+rail_over="$(grep -oE 'label: "[^"]{14,}"' services/SettingsTree.js || true)"
 if [ -n "$rail_over" ]; then
   fail "these settings nav labels are too long for the rail and will elide:"
   while IFS= read -r m; do printf '  %s\n' "$m"; done <<< "$rail_over"
@@ -1067,6 +1067,16 @@ else
   ok "start-up size" "${start_now%% *} bytes in ${start_now##* } files; $last_tag ${start_tag%% *}"
 fi
 
+section "private members"
+if ! command -v python3 >/dev/null 2>&1; then
+  structural_skip "private reads" "python3 missing"
+elif private_reads="$(python3 dev/check-private-reads.py)"; then
+  ok "private reads" "$private_reads"
+else
+  fail "these read a singleton's underscore member from another file; make it public or move the logic next to it:"
+  printf '%s\n' "$private_reads"
+fi
+
 section "grapheme walk"
 # a binding records a dependency per id lookup, from a pool Qt never shrinks: walking a long string through root held ~30 MB for good
 if grep -qF '.pragma library' services/Grapheme.js && ! grep -qE '(^|[^a-zA-Z_])root\.' services/Grapheme.js \
@@ -1391,7 +1401,7 @@ fi
 section "settings schema coverage"
 settings="services/ShellSettings.qml"
 if [ -f "$settings" ]; then
-    # public (non-underscore) mutable properties — these must all be in _schema
+    # public (non-underscore) mutable properties — these must all be in the schema
     declared=$(grep -v 'readonly' "$settings" \
                | grep -oE 'property (bool|int|real|string) +[a-zA-Z][a-zA-Z0-9]*' \
                | awk '{print $NF}' | sort)
@@ -1399,15 +1409,15 @@ if [ -f "$settings" ]; then
     missing=$(comm -23 <(echo "$declared") <(echo "$schema"))
     extra=$(comm -13 <(echo "$declared") <(echo "$schema"))
     if [ -n "$missing" ]; then
-        fail "ShellSettings properties missing from _schema:"
+        fail "ShellSettings properties missing from schema:"
         echo "$missing" | while read -r m; do printf '  %s\n' "$m"; done
     fi
     if [ -n "$extra" ]; then
-        fail "ShellSettings _schema keys without properties:"
+        fail "ShellSettings schema keys without properties:"
         echo "$extra" | while read -r m; do printf '  %s\n' "$m"; done
     fi
     if [ -z "$missing" ] && [ -z "$extra" ]; then
-        ok "settings" "properties match _schema"
+        ok "settings" "properties match the schema"
     else
         :
     fi
@@ -1858,7 +1868,7 @@ else
 fi
 
 section "settings navigation coverage"
-settings_nav="services/MenuState.qml"
+settings_nav="services/SettingsTree.js"
 settings_page="modules/menu/settings/SettingsPage.qml"
 if [ -f "$settings_nav" ] && [ -f "$settings_page" ]; then
     nav_sections=$(grep -oE 'section: "[^"]+"' "$settings_nav" \
@@ -1889,7 +1899,7 @@ if [ -f "$shell_settings" ] && [ -f "$settings_nav" ]; then
     # the nav dot lies if a schema key is unattributed or points at a page that does not exist
     attr_nav=$(grep -oE 'section: "[^"]+"' "$settings_nav" \
                | sed -E 's/.*"([^"]+)"/\1/' | sort -u)
-    schema_block=$(sed -n '/readonly property var _schema: \[/,/^[[:space:]]*\]/p' "$shell_settings")
+    schema_block=$(sed -n '/readonly property var schema: \[/,/^[[:space:]]*\]/p' "$shell_settings")
     schema_keys=$(printf '%s\n' "$schema_block" | grep -cE '\{ k: "')
     schema_secs=$(printf '%s\n' "$schema_block" | grep -cE 'sec: "')
     if [ "$schema_keys" -ne "$schema_secs" ]; then
@@ -2618,7 +2628,7 @@ fi
 
 # `silere menu <page>` completes Settings pages from a list in each completion; a page added or renamed in MenuState
 # would complete to a word that opens Theme instead
-nav_ids="$(grep -oE 'section: "[^"]+"' services/MenuState.qml | sed -E 's/.*"([^"]+)"/\1/' | sort -u | paste -sd ' ')"
+nav_ids="$(grep -oE 'section: "[^"]+"' services/SettingsTree.js | sed -E 's/.*"([^"]+)"/\1/' | sort -u | paste -sd ' ')"
 bash_pages="$(sed -n '/^_silere_pages=(/,/)$/p' scripts/completions/silere.bash | sed 's/^_silere_pages=//' | tr -d '()' \
   | tr -s ' ' '\n' | sed '/^$/d' | sort | paste -sd ' ')"
 fish_pages="$(sed -n '/^set -l pages /,/[^\\]$/p' scripts/completions/silere.fish | sed 's/^set -l pages //' | tr -d '\\' \

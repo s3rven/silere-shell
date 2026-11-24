@@ -1,9 +1,9 @@
 import glob, os, re, sys
 
 # a page renamed or moved left docs and messages naming one that no longer exists (11-18: three, 11-21: two)
-src = open("services/MenuState.qml", encoding="utf-8").read()
-start = src.index("readonly property var settingsTree: [")
-tree = src[start:src.index("\n    ]\n", start)]
+src = open("services/SettingsTree.js", encoding="utf-8").read()
+start = src.index("var tree = [")
+tree = src[start:src.index("\n]\n", start)]
 groups = {}
 group = None
 for m in re.finditer(r'label: "([^"]+)"(, children)?', tree):
@@ -13,7 +13,7 @@ for m in re.finditer(r'label: "([^"]+)"(, children)?', tree):
     elif group:
         groups[group].append(m.group(1))
 if not groups:
-    sys.exit("could not read MenuState.settingsTree")
+    sys.exit("could not read SettingsTree.tree")
 
 def starts_with_label(text, labels):
     for label in sorted(labels, key=len, reverse=True):

@@ -532,7 +532,7 @@ Singleton {
             root._finishWifi(false, ConnectionFailReason.Unknown)
     }
 
-    function _splitNmcliLine(line: string): var {
+    function splitNmcliLine(line: string): var {
         const fields = []
         let cur = ""
         let escaped = false
@@ -548,7 +548,7 @@ Singleton {
         return fields
     }
 
-    function _queueVpnRefresh(): void {
+    function queueVpnRefresh(): void {
         if (!root._vpnWanted) return
         if (_vpnProc.running) {
             root._vpnRefreshPending = true
@@ -601,14 +601,14 @@ Singleton {
     }
 
     on_LinkSignatureChanged: {
-        root._queueVpnRefresh()
+        root.queueVpnRefresh()
         Qt.callLater(root._settleWifiLink)
         if (root.wifiError.length === 0) return
         const network = root._findWifiNetwork(root.wifiError)
         if (network && network.connected) root.clearWifiError()
     }
     on_VpnWantedChanged: {
-        if (_vpnWanted) _queueVpnRefresh()
+        if (_vpnWanted) queueVpnRefresh()
         else {
             _vpnRefresh.stop()
             _vpnRefreshPending = false
@@ -620,9 +620,9 @@ Singleton {
 
     Connections {
         target: SystemTools
-        function onReadyChanged() { root._queueVpnRefresh() }
+        function onReadyChanged() { root.queueVpnRefresh() }
         function onScanRevisionChanged() {
-            if (SystemTools.hasNmcli) root._queueVpnRefresh()
+            if (SystemTools.hasNmcli) root.queueVpnRefresh()
             else root._clearVpnState()
         }
     }
@@ -646,7 +646,7 @@ Singleton {
         stdout: SplitParser {
             onRead: line => {
                 if (root._vpnCandidateActive) return
-                const fields = root._splitNmcliLine(line)
+                const fields = root.splitNmcliLine(line)
                 if (fields.length >= 3
                         && (fields[0] === "vpn" || fields[0] === "wireguard" || fields[0] === "tun")) {
                     root._vpnCandidateActive = true
@@ -699,7 +699,7 @@ Singleton {
         interval: 900000
         repeat: true
         running: root._vpnWanted
-        onTriggered: root._queueVpnRefresh()
+        onTriggered: root.queueVpnRefresh()
     }
 
     // quickshell models only wifi and wired devices, so a tunnel coming or going never moves the link signature
@@ -721,7 +721,7 @@ Singleton {
         const first = root._interfaceNames.length === 0
         root._interfaceNames = next
         if (first) return
-        root._queueVpnRefresh()
+        root.queueVpnRefresh()
         // networkmanager hears of a new tunnel only after the kernel lists it
         _vpnSettle.restart()
     }
@@ -729,7 +729,7 @@ Singleton {
     property Timer _vpnSettleTimer: Timer {
         id: _vpnSettle
         interval: 3000
-        onTriggered: root._queueVpnRefresh()
+        onTriggered: root.queueVpnRefresh()
     }
 
     property real downBps: 0

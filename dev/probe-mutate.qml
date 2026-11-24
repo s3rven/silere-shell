@@ -79,7 +79,7 @@ ShellRoot {
     }
 
     function plan(): void {
-        const schema = ShellSettings._schema
+        const schema = ShellSettings.schema
         for (let i = 0; i < schema.length; i++) {
             const s = schema[i]
             if (s.t === "bool") root.steps.push({ k: s.k, v: !ShellSettings[s.k], d: "toggled" })

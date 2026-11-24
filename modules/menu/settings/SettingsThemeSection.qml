@@ -391,12 +391,12 @@ Column {
                        { value: "none",   name: "Graphite" }]
                 // preview Theme.background exactly: the elevated surface read lighter than the applied color
                 colors: _neutral
-                    ? [Theme._tones.black.background,
-                       Theme._tones.charcoal.background,
-                       Theme._tones.graphite.background]
-                    : [Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deeper),
-                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.deep),
-                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme._depths.none)]
+                    ? [Theme.tones.black.background,
+                       Theme.tones.charcoal.background,
+                       Theme.tones.graphite.background]
+                    : [Theme.mix(MatugenTheme.background, Theme.depthSink, Theme.depths.deeper),
+                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme.depths.deep),
+                       Theme.mix(MatugenTheme.background, Theme.depthSink, Theme.depths.none)]
                 activeIndex: options.findIndex(o => o.value ===
                     (_neutral ? ShellSettings.baseTone : ShellSettings.matugenDepth))
                 outlined: true

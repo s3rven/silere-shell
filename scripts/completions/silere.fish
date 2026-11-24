@@ -71,7 +71,7 @@ end
 
 set -l commands try reset run stop restart use status log doctor ipc link update repair service version uninstall help \
     menu calendar quick tray toggle volume mic dismiss osd get set settings
-# Settings pages are MenuState's ids, which ci-lint holds this list to
+# Settings pages are the rail's ids in services/SettingsTree.js, which ci-lint holds this list to
 set -l pages clock devices history indicators interface keybinds media osd popups separators surface theme underline \
     updates warnings widgets workspaces
 

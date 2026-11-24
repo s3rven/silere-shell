@@ -37,8 +37,8 @@ Singleton {
             schema ? schema.max : 0, ShellSettings.ready)
     }
     readonly property int _maxIdentityChars: 512
-    readonly property int _maxSummaryChars: 2048
-    readonly property int _maxBodyChars: 16384
+    readonly property int maxSummaryChars: 2048
+    readonly property int maxBodyChars: 16384
     readonly property int _maxSourceChars: IconResolver.maxSourceChars
     readonly property int activeCount: Array.isArray(list) ? list.length : 0
 
@@ -189,10 +189,10 @@ Singleton {
             appName:      root.identityText(e.appName),
             appIcon:      SafeText.boundedText(e.appIcon, root._maxSourceChars),
             desktopEntry: root.identityText(e.desktopEntry),
-            summary:      storedText === true ? root._boundedPlainText(e.summary, root._maxSummaryChars)
-                : root.plainText(e.summary, root._maxSummaryChars),
-            body:         storedText === true ? root._boundedPlainText(e.body, root._maxBodyChars)
-                : root.plainText(e.body, root._maxBodyChars),
+            summary:      storedText === true ? root._boundedPlainText(e.summary, root.maxSummaryChars)
+                : root.plainText(e.summary, root.maxSummaryChars),
+            body:         storedText === true ? root._boundedPlainText(e.body, root.maxBodyChars)
+                : root.plainText(e.body, root.maxBodyChars),
             urgency:      isFinite(rawUrgency)
                 ? Math.max(0, Math.min(2, Math.round(rawUrgency))) : 1,
             time:         isFinite(rawTime) && rawTime >= 0 && rawTime <= 8.64e15
@@ -1088,7 +1088,7 @@ Singleton {
         if (!s) return ""
         const requested = Number(maxChars)
         const limit = isFinite(requested) && requested > 0
-            ? Math.min(root._maxBodyChars, Math.floor(requested)) : root._maxBodyChars
+            ? Math.min(root.maxBodyChars, Math.floor(requested)) : root.maxBodyChars
         const source = SafeText.boundedText(s, limit * 2)
         const plain = NotificationText.plainText(source)
         return root._boundedPlainText(plain, limit)

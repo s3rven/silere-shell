@@ -13,6 +13,7 @@ import "config"
 import "config/PixelGeometry.js" as PixelGeometry
 import "services/TimeZonePlace.js" as TimeZonePlace
 import "services/KeybindList.js" as KeybindList
+import "services/SettingsTree.js" as SettingsTree
 import "services"
 import "modules/bar"
 import "modules/common"
@@ -3536,7 +3537,7 @@ ShellRoot {
         ring.destroy()
         const entry = ShellSettings.schemaFor("systemRings")
         root._check(entry && entry.t === "bool" && entry.sec === "indicators"
-                && ShellSettings._sectionGates.indicators.some(g => g.master === "barShowSystem"
+                && ShellSettings.sectionGates.indicators.some(g => g.master === "barShowSystem"
                     && g.hides.indexOf("systemRings") !== -1)
                 && ["ring", "circle", "gauge"].every(q => MenuState.searchSettings(q).some(row => row.section === "indicators")),
             "the monitor's style is a setting under the monitor, found by ring, circle or gauge")
@@ -7140,11 +7141,11 @@ ShellRoot {
             firstSelect._setOpen(true)
             secondSelect._setOpen(true)
             root._check(!firstSelect._open && secondSelect._open
-                    && MenuState._settingsSelectOwner === secondSelect,
+                    && MenuState.settingsSelectOwner === secondSelect,
                 "opening a settings select folds the previous dropdown")
             secondSelect.model = []
             root._check(!secondSelect._open
-                    && MenuState._settingsSelectOwner === null,
+                    && MenuState.settingsSelectOwner === null,
                 "an open settings select folds when its choices disappear")
             const sectionBeforeSelectProbe = MenuState.settingsSection
             const sectionAfterSelectProbe = sectionBeforeSelectProbe === "theme"
@@ -7152,7 +7153,7 @@ ShellRoot {
             firstSelect._setOpen(true)
             MenuState.setSettingsSection(sectionAfterSelectProbe)
             root._check(!firstSelect._open
-                    && MenuState._settingsSelectOwner === null,
+                    && MenuState.settingsSelectOwner === null,
                 "leaving a settings page folds its open dropdown")
             MenuState.setSettingsSection(sectionBeforeSelectProbe)
         }
@@ -7175,25 +7176,25 @@ ShellRoot {
         const pickerHost = Qt.createQmlObject("import QtQuick; Item {}", barFixtureHost)
         const visibilitySelect = selectRowFactory.createObject(pickerHost)
         visibilitySelect._setOpen(true)
-        root._check(visibilitySelect._open && MenuState._settingsSelectOwner === visibilitySelect,
+        root._check(visibilitySelect._open && MenuState.settingsSelectOwner === visibilitySelect,
             "a visible dropdown claims the shared settings-picker state")
         visibilitySelect.visible = false
-        root._check(!visibilitySelect._open && MenuState._settingsSelectOwner === null
+        root._check(!visibilitySelect._open && MenuState.settingsSelectOwner === null
                 && !visibilitySelect.Accessible.focusable,
             "hiding a dropdown folds it and releases its settings-picker state")
         visibilitySelect.Accessible.pressAction()
         visibilitySelect._setOpen(true)
-        root._check(!visibilitySelect._open && MenuState._settingsSelectOwner === null,
+        root._check(!visibilitySelect._open && MenuState.settingsSelectOwner === null,
             "a hidden dropdown rejects both accessible and direct open requests")
         visibilitySelect.visible = true
         visibilitySelect._setOpen(true)
         pickerHost.visible = false
-        root._check(!visibilitySelect._open && MenuState._settingsSelectOwner === null,
+        root._check(!visibilitySelect._open && MenuState.settingsSelectOwner === null,
             "hiding a dropdown's parent also releases its open-picker ownership")
         pickerHost.visible = true
         visibilitySelect.Accessible.pressAction()
         root._check(visibilitySelect._open && visibilitySelect.Accessible.focusable
-                && MenuState._settingsSelectOwner === visibilitySelect,
+                && MenuState.settingsSelectOwner === visibilitySelect,
             "a restored dropdown can open and claim ownership again")
         visibilitySelect._setOpen(false)
         pickerHost.destroy()
@@ -7480,7 +7481,7 @@ ShellRoot {
             "false", null, undefined, NaN, Infinity, -Infinity, [], ({}), "0x10"]
         let fuzzBad = ""
         let fuzzCount = 0
-        const fuzzSchema = ShellSettings._schema
+        const fuzzSchema = ShellSettings.schema
         for (let i = 0; i < fuzzSchema.length && fuzzBad.length === 0; i++) {
             const entry = fuzzSchema[i]
             const key = entry.k
@@ -8709,12 +8710,12 @@ ShellRoot {
 
     function _checksSettingsSearchAndText(): void {
         const savedSection = MenuState.settingsSection
-        root._check(MenuState._settingsSearchEntries.length === MenuState._flatSections.length
-                && MenuState._settingsSearchEntries.every(row => MenuState._flatSections.indexOf(row.section) >= 0),
+        root._check(MenuState._settingsSearchEntries.length === MenuState.flatSections.length
+                && MenuState._settingsSearchEntries.every(row => MenuState.flatSections.indexOf(row.section) >= 0),
             "settings search indexes each available section once without constructing pages")
         // a renamed setting or section would leave its search words pointing at nothing, silently
         root._check(Object.keys(MenuState._settingsKeyAliases).every(k => ShellSettings._schemaByKey[k] !== undefined)
-                && Object.keys(MenuState._settingsSearchAliases).every(s => MenuState._flatSections.indexOf(s) >= 0),
+                && Object.keys(MenuState._settingsSearchAliases).every(s => MenuState.flatSections.indexOf(s) >= 0),
             "every search alias names a real setting or section")
         root._check(MenuState.searchSettings("").length === 0
                 && MenuState.searchSettings("   ").length === 0
@@ -8739,7 +8740,7 @@ ShellRoot {
                 && MenuState.searchSettings("fontFamily").some(row => row.section === "interface"),
             "settings search accepts exact configuration names as well as plain-language queries")
         const wrongKeys = []
-        for (const entry of ShellSettings._schema.filter(setting => setting.sec !== "-")) {
+        for (const entry of ShellSettings.schema.filter(setting => setting.sec !== "-")) {
             const sections = entry.sec.split(",")
             for (const query of [entry.k, entry.k.toLowerCase()]) {
                 const results = MenuState.searchSettings(query)
@@ -8768,7 +8769,7 @@ ShellRoot {
                 && MenuState.searchSettings("media")[0].section === "media",
             "visible section and group names outrank incidental configuration-key matches")
         root._check(MenuState._settingsSearchEntries.map(row => row.section).join(",")
-                === MenuState._flatSections.join(","),
+                === MenuState.flatSections.join(","),
             "ranking search results leaves the cached index in navigation order")
         const keyedHit = MenuState.searchSettings("notifHistoryDays").find(row => row.section === "history")
         const quietHit = MenuState.searchSettings("dnd from").find(row => row.section === "popups")
@@ -8801,7 +8802,7 @@ ShellRoot {
                 && top("update").section === "updates" && top("reset").section === "updates"
                 && top("dark mode").section === "theme" && top("blue light").section === "devices",
             "settings search answers everyday words and the widget names on Show & order")
-        root._check(ShellSettings._schema.every(e => !e.l || e.sec.split(",").every(sec =>
+        root._check(ShellSettings.schema.every(e => !e.l || e.sec.split(",").every(sec =>
                 MenuState.searchSettings(e.l).some(row => row.section === sec && row.key === e.k))),
             "every labelled setting is found on each of its pages by the label it shows")
         const revealPage = settingsPageFactory.createObject(root, { width: 320, active: false })
@@ -8822,13 +8823,13 @@ ShellRoot {
         // the glow half of an alert chip has no independent row
         const unkeyed = ["underlineBattGlow@warnings", "underlineTempGlow@warnings"]
         const unreachable = []
-        for (const e of ShellSettings._schema.filter(e => e.l))
+        for (const e of ShellSettings.schema.filter(e => e.l))
             for (const sec of e.sec.split(","))
                 if (unkeyed.indexOf(e.k + "@" + sec) < 0 && !reachable(sec, e.k, 3)) unreachable.push(e.k + "@" + sec)
         root._check(unreachable.length === 0,
             "every labelled setting has a row on each of its pages for search to flash: " + unreachable.join(" "))
         const flashless = []
-        for (const e of ShellSettings._schema.filter(e => e.l))
+        for (const e of ShellSettings.schema.filter(e => e.l))
             for (const sec of e.sec.split(","))
                 for (const row of rowsFor(sec, e.k))
                     if (![row.topRadius, row.bottomRadius, row.cardInset].every(v => isFinite(v))) flashless.push(e.k + "@" + sec)
@@ -8895,23 +8896,23 @@ ShellRoot {
         MenuState.setSettingsSection("notifications")
         root._check(MenuState.settingsSection === "theme",
             "a settings page renamed since a keybind was written falls back to theme")
-        root._check(MenuState._ipcSection("Surface") === "surface"
-                && MenuState._ipcSection("INDICATORS") === "indicators",
+        root._check(SettingsTree.ipcSection("Surface") === "surface"
+                && SettingsTree.ipcSection("INDICATORS") === "indicators",
             "a settings page typed over ipc matches without case")
-        root._check(MenuState._ipcSection("Alerts") === "warnings"
-                && MenuState._ipcSection("show-order") === "widgets"
-                && MenuState._ipcSection("layout") === "surface",
+        root._check(SettingsTree.ipcSection("Alerts") === "warnings"
+                && SettingsTree.ipcSection("show-order") === "widgets"
+                && SettingsTree.ipcSection("layout") === "surface",
             "ipc accepts the page labels the rail shows")
-        root._check(MenuState._ipcSection("Diagnostics") === "updates"
-                && MenuState._ipcSection("maintenance") === "updates"
-                && MenuState._ipcSection("Overview") === "updates"
-                && MenuState._ipcSection("system") === "updates",
+        root._check(SettingsTree.ipcSection("Diagnostics") === "updates"
+                && SettingsTree.ipcSection("maintenance") === "updates"
+                && SettingsTree.ipcSection("Overview") === "updates"
+                && SettingsTree.ipcSection("system") === "updates",
             "the system overview accepts both combined and former page names")
         MenuState.setSettingsSection("maintenance")
         root._check(MenuState.settingsSection === "updates"
-                && MenuState._flatSections.indexOf("maintenance") < 0,
+                && MenuState.flatSections.indexOf("maintenance") < 0,
             "the former diagnostics id selects the one combined settings page")
-        root._check(MenuState._ipcSection("nosuchpage") === "nosuchpage",
+        root._check(SettingsTree.ipcSection("nosuchpage") === "nosuchpage",
             "an unknown ipc page name is left alone for the caller's message")
         MenuState.setSettingsSection("Surface")
         root._check(MenuState.settingsSection === "theme",
@@ -11921,14 +11922,14 @@ ShellRoot {
         niri.destroy()
 
         // nmcli -t escapes a colon inside a name; the VPN row is the only reader left
-        const nmFields = Network._splitNmcliLine("home\\:vpn:vpn:activated")
+        const nmFields = Network.splitNmcliLine("home\\:vpn:vpn:activated")
         root._check(nmFields.length === 3 && nmFields[0] === "home:vpn"
                 && nmFields[1] === "vpn" && nmFields[2] === "activated",
             "an escaped colon stays inside one nmcli field")
-        const nmSlash = Network._splitNmcliLine("back\\\\slash:vpn")
+        const nmSlash = Network.splitNmcliLine("back\\\\slash:vpn")
         root._check(nmSlash.length === 2 && nmSlash[0] === "back\\slash",
             "an escaped backslash ends its own escape")
-        const nmEmpty = Network._splitNmcliLine("a::b")
+        const nmEmpty = Network.splitNmcliLine("a::b")
         root._check(nmEmpty.length === 3 && nmEmpty[1] === "",
             "an empty nmcli field is kept in place")
         const wifiAp = { name: "Probe Wi-Fi", connected: true, signalStrength: 0.79 }
@@ -13828,19 +13829,19 @@ ShellRoot {
                 && BatteryLimit.stopAfter([probeLimit(true, 60), probeLimit(true, 0)], 80) === 80
                 && BatteryLimit.stopAfter([], 80) === 80,
             "a charge limit whose stop the kernel names times the charge to that stop, not to a higher one held before")
-        const heldAtWas = Battery._heldAt
+        const heldAtWas = Battery.heldAt
         const limitDevicesWas = BatteryLimit.devices
         BatteryLimit.devices = [probeLimit(true, 60)]
-        Battery._heldAt = 80
+        Battery.heldAt = 80
         BatteryLimit._publish(probeLimit(false, 0))
-        root._check(Battery._heldAt === 0 && BatteryLimit.devices.length === 1 && !BatteryLimit.devices[0].on,
+        root._check(Battery.heldAt === 0 && BatteryLimit.devices.length === 1 && !BatteryLimit.devices[0].on,
             "publishing a limit row replaces it and applies its stop to the battery's timing")
         // 100 is never passed, whatever this machine's battery is doing
-        Battery._heldAt = 100
+        Battery.heldAt = 100
         Battery._forgetPassedStop()
-        root._check(Battery._heldAt === 100,
+        root._check(Battery.heldAt === 100,
             "a deferred check keeps a learned stop the battery has not charged past")
-        Battery._heldAt = heldAtWas
+        Battery.heldAt = heldAtWas
         BatteryLimit.devices = limitDevicesWas
 
         Battery._rates = [[1000, 20], [2000, 30]]

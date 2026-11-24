@@ -136,7 +136,7 @@ PageShell {
     }
 
     function revealRowFor(section: string, key: string): string {
-        const gates = ShellSettings._sectionGates[section] || []
+        const gates = ShellSettings.sectionGates[section] || []
         for (let i = 0; i < gates.length; i++)
             if (gates[i].hides.indexOf(key) >= 0) return gates[i].master ?? gates[i].any[0].master
         return ""
@@ -310,7 +310,7 @@ PageShell {
                     root._settleSection()
                     return
                 }
-                const sections = MenuState._flatSections
+                const sections = MenuState.flatSections
                 const from = sections.indexOf(root._shownSection)
                 const to = sections.indexOf(MenuState.settingsSection)
                 root._sectionDirection = from >= 0 && to >= 0 && to < from ? -1 : 1

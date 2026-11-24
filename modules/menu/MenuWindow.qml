@@ -684,7 +684,7 @@ FittedPopupWindow {
                     id: _selectReveal
                     interval: Motion.medium + 24
                     onTriggered: if (contentFlick._settingsRevealSection)
-                        contentFlick.revealControl(MenuState._settingsSelectOwner, null)
+                        contentFlick.revealControl(MenuState.settingsSelectOwner, null)
                 }
 
                 Timer {

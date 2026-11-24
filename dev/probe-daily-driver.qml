@@ -1063,7 +1063,7 @@ Scope {
         root.write("alert-calls", "")
         root.check(!SystemAlerts.armed, "the alert fixture starts with its notification tool unavailable")
         const headset = percent => ({ address: "AA", name: "Fixture headset", connected: true, percent: percent })
-        Bluetooth._devices = [headset(18)]
+        Bluetooth.allDevices = [headset(18)]
         input.wait(30)
         root.check(SystemAlerts._btWarned.AA !== true && root.alertCalls().length === 0,
             "an unavailable notification tool does not consume a Bluetooth battery warning")
@@ -1072,21 +1072,21 @@ Scope {
         root.waitFor(() => root.alertCalls().length === 1 && SystemAlerts._btWarned.AA === true,
             "a completed tool scan sends the waiting Bluetooth battery warning")
 
-        Bluetooth._devices = [headset(-1)]
+        Bluetooth.allDevices = [headset(-1)]
         input.wait(30)
         root.check(SystemAlerts._btReadings.length === 1 && SystemAlerts._btWarned.AA === true,
             "a connected device retains its warning through a missing battery reading")
-        Bluetooth._devices = [headset(17)]
+        Bluetooth.allDevices = [headset(17)]
         input.wait(60)
         root.check(root.alertCalls().length === 1,
             "recovering the same low battery reading does not send another warning")
 
         ShellSettings.osdBatteryWarn = false
-        Bluetooth._devices = [headset(SystemAlerts.btRearmPct)]
+        Bluetooth.allDevices = [headset(SystemAlerts.btRearmPct)]
         input.wait(30)
         root.check(SystemAlerts._btWarned.AA !== true,
             "a charging device rearms its warning even while battery alerts are disabled")
-        Bluetooth._devices = [headset(18)]
+        Bluetooth.allDevices = [headset(18)]
         input.wait(30)
         root.check(SystemAlerts._btWarned.AA !== true && root.alertCalls().length === 1,
             "disabled alerts do not consume a new low battery warning")
@@ -1095,26 +1095,26 @@ Scope {
             "reenabling battery alerts reports the connected device's low battery")
 
         const keyboard = { address: "BB", name: "Fixture keyboard", connected: true, percent: 8 }
-        Bluetooth._devices = [headset(18), keyboard]
+        Bluetooth.allDevices = [headset(18), keyboard]
         root.waitFor(() => root.alertCalls().length === 3 && SystemAlerts._btWarned.BB === true,
             "a second low device receives its own warning")
         const keyboardAlert = root.alertCalls()[2] || ""
         root.check(keyboardAlert.indexOf("Fixture keyboard battery low") >= 0
                 && keyboardAlert.indexOf("8%") >= 0,
             "the queued alert names the device and its actual reading")
-        Bluetooth._devices = [headset(18)]
+        Bluetooth.allDevices = [headset(18)]
         input.wait(30)
         root.check(SystemAlerts._btWarned.BB !== true && SystemAlerts._btWarned.AA === true,
             "disconnecting one Bluetooth device rearms only its own warning")
-        Bluetooth._devices = [headset(18), keyboard]
+        Bluetooth.allDevices = [headset(18), keyboard]
         root.waitFor(() => root.alertCalls().length === 4,
             "reconnecting a still-low device warns once for the new connection")
-        Bluetooth._devices = [{ address: "CC", name: "-x pad", connected: true, percent: 5 }]
+        Bluetooth.allDevices = [{ address: "CC", name: "-x pad", connected: true, percent: 5 }]
         root.waitFor(() => root.alertCalls().length === 5,
             "a device whose name starts with a dash is warned")
         root.check((root.alertCalls()[4] || "").indexOf(" -- -x pad battery low") >= 0,
             "a dash-led device name reaches notify-send after the end of its options")
-        Bluetooth._devices = []
+        Bluetooth.allDevices = []
         input.wait(30)
         root.check(Object.keys(SystemAlerts._btWarned).length === 0,
             "disconnecting all Bluetooth devices releases their warning state")

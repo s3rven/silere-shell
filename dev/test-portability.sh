@@ -2943,7 +2943,7 @@ test_aur_removal_notes() (
     esac
     local page
     page="$(post_install | sed -n 's/.*Settings > System > \([A-Za-z]*\).*/\1/p')"
-    grep -qF "label: \"${page:-?}\", section:" "$ROOT/services/MenuState.qml" \
+    grep -qF "label: \"${page:-?}\", section:" "$ROOT/services/SettingsTree.js" \
         || fail "the AUR install notes send people to a Settings page that does not exist: ${page:-none}"
 )
 

@@ -87,7 +87,7 @@ Singleton {
     }
 
     function _syncPreferences(): void {
-        if (!ShellSettings.ready || ShellSettings._applying || root._syncingPreferences) return
+        if (!ShellSettings.ready || ShellSettings.applying || root._syncingPreferences) return
         const screens = Quickshell.screens || []
         const name = ShellSettings.overlayMonitor
         const nextIdentity = root.overlayIdentityFor(name, ShellSettings.overlayMonitorIdentity,

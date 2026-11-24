@@ -1103,7 +1103,7 @@ PageShell {
                                 font.weight: Font.DemiBold
                                 wrapMode: Text.Wrap
                                 // a line per stored character can never truncate the bounded title
-                                maximumLineCount: _entry._expanded ? Notifications._maxSummaryChars : _entry._hasBody ? 1 : 2
+                                maximumLineCount: _entry._expanded ? Notifications.maxSummaryChars : _entry._hasBody ? 1 : 2
                                 elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
 
@@ -1118,7 +1118,7 @@ PageShell {
                                 color: Theme.withAlpha(Theme.text, 0.78)
                                 font.pixelSize: Settings.fontLabel
                                 wrapMode: Text.Wrap
-                                maximumLineCount: _entry._expanded ? Notifications._maxBodyChars : 2
+                                maximumLineCount: _entry._expanded ? Notifications.maxBodyChars : 2
                                 elide: _entry._expanded ? Text.ElideNone : Text.ElideRight
                             }
                         }

@@ -78,7 +78,7 @@ cat > "$scratch/services/Bluetooth.qml" <<'EOF'
 pragma Singleton
 import Quickshell
 Singleton {
-    property var _devices: []
+    property var allDevices: []
     function batteryPercent(device) { return device.percent }
     function deviceLabel(device) { return device.name }
 }
@@ -150,8 +150,8 @@ Singleton {
     property bool hasVpn: false
     property string vpnName: ""
     property int refreshes: 0
-    function _queueVpnRefresh() { refreshes++ }
-    function _splitNmcliLine(raw) { return raw.split(":") }
+    function queueVpnRefresh() { refreshes++ }
+    function splitNmcliLine(raw) { return raw.split(":") }
 }
 EOF
 cat > "$scratch/services/Idle.qml" <<'EOF'
@@ -208,7 +208,7 @@ Singleton {
     property bool critical: false
     property string alertWarning: ""
     property real pct: 100
-    property real _critPct: 10
+    property real criticalPct: 10
 }
 EOF
 cat > "$scratch/bin/notify-send" <<'EOF'

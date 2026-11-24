@@ -26,10 +26,10 @@ Singleton {
     }
     readonly property bool available: root.validReading(present, pct)
     readonly property bool onBattery: available ? UPower.onBattery : false
-    readonly property int  _critPct: Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2))
+    readonly property int  criticalPct: Math.max(5, Math.round(ShellSettings.batteryLowThreshold / 2))
     // pct > 0 again here: a gate on a sibling binding can run a step behind pct and pass the placeholder
     readonly property bool low: available && pct > 0 && pct < ShellSettings.batteryLowThreshold && onBattery
-    readonly property bool critical: available && pct > 0 && pct < _critPct && onBattery
+    readonly property bool critical: available && pct > 0 && pct < criticalPct && onBattery
     readonly property int state: upowerReady ? UPower.displayDevice.state : UPowerDeviceState.Unknown
     readonly property bool onAc: available && !onBattery
     readonly property bool charging: available && state === UPowerDeviceState.Charging
@@ -43,7 +43,7 @@ Singleton {
         if (onAc && full)                             return good
         if (held)                                     return idle
         if (charging)                                 return active
-        if (pct < _critPct)                           return bad
+        if (pct < criticalPct)                           return bad
         if (pct < ShellSettings.batteryLowThreshold)  return low
         return rest
     }
@@ -197,17 +197,17 @@ Singleton {
         root.steadyTime(UPower.displayDevice.timeToFull, root._rateNow, root._meanRate), root.pct, root.chargeStop) : 0
 
     // UPower counts to 100% under a charge limit too, and Lenovo's names no stop: the level the battery was last held at is it
-    property int _heldAt: 0
+    property int heldAt: 0
     // some firmware reports a full battery on AC as held too: that is no limit
-    onHeldChanged: if (root.held && root.pct < 99) root._heldAt = Math.max(root._heldAt, Math.round(root.pct))
+    onHeldChanged: if (root.held && root.pct < 99) root.heldAt = Math.max(root.heldAt, Math.round(root.pct))
     // charging on past it: the limit was switched off, or that hold had another cause
-    readonly property bool _passedStop: root.charging && root._heldAt > 0 && root.pct > root._heldAt + 1
-    // later, and only if still past: clearing _heldAt inside this handler re-enters the binding it reads (a binding loop)
+    readonly property bool _passedStop: root.charging && root.heldAt > 0 && root.pct > root.heldAt + 1
+    // later, and only if still past: clearing heldAt inside this handler re-enters the binding it reads (a binding loop)
     on_PassedStopChanged: if (root._passedStop) Qt.callLater(root._forgetPassedStop)
     function _forgetPassedStop(): void {
-        if (root._passedStop) root._heldAt = 0
+        if (root._passedStop) root.heldAt = 0
     }
-    readonly property int chargeStop: root.charging && root._heldAt >= root.pct ? root._heldAt : 0
+    readonly property int chargeStop: root.charging && root.heldAt >= root.pct ? root.heldAt : 0
     function timeToStop(seconds: real, level: real, stop: int): real {
         return stop > 0 && stop >= level && level < 100 ? seconds * (stop - level) / (100 - level) : seconds
     }
@@ -301,7 +301,7 @@ Singleton {
         if (!ShellSettings.ready) return
         root._notificationState = root.notificationStateFor(root._notificationState,
             root.available, root.pct, root.onBattery, root.charging, root.full,
-            ShellSettings.batteryLowThreshold, root._critPct)
+            ShellSettings.batteryLowThreshold, root.criticalPct)
     }
 
     // UPower's percentage, power source and state can update in one event turn.

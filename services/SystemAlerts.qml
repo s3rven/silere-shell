@@ -140,7 +140,7 @@ Singleton {
     }
     function _rearmBattery(): void {
         const state = root.batteryRearmState(Battery.available, Battery.onBattery,
-            Battery.pct, ShellSettings.batteryLowThreshold, Battery._critPct,
+            Battery.pct, ShellSettings.batteryLowThreshold, Battery.criticalPct,
             false, root._battCritSent)
         root._battCritSent = state.critical
     }
@@ -172,7 +172,7 @@ Singleton {
     property var _btWarned: ({})
     readonly property var _btReadings: {
         const out = []
-        const devs = Bluetooth._devices
+        const devs = Bluetooth.allDevices
         for (let i = 0; i < devs.length; i++) {
             const d = devs[i]
             if (!d || !d.connected) continue

@@ -44,7 +44,7 @@ Singleton {
     function parseProfiles(raw: string): var {
         const rows = []
         for (const line of raw.split(/\r?\n/)) {
-            const fields = Network._splitNmcliLine(line)
+            const fields = Network.splitNmcliLine(line)
             if (fields.length !== 4 || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(fields[0])) continue
             if (["vpn", "wireguard", "tun"].indexOf(fields[1]) < 0) continue
             rows.push({ uuid: fields[0], type: fields[1], name: SafeText.singleLineText(fields[2], 128), active: fields[3] === "yes" })
@@ -159,7 +159,7 @@ Singleton {
             root._actionError = _action.timedOut ? "VPN request timed out."
                 : code !== 0 ? "VPN request failed. Open network settings to check credentials or the connection." : ""
             root._failedRequest = root._actionError.length > 0 ? { uuid: _action.uuid, active: _action.wantActive } : null
-            Network._queueVpnRefresh()
+            Network.queueVpnRefresh()
             root.refresh()
         }
     }

@@ -15,21 +15,21 @@ Singleton {
     readonly property bool _matugenLight: luminance(MatugenTheme.background) > luminance(MatugenTheme.text)
     readonly property bool paletteLight: !_n && _matugenLight
 
-    readonly property var _tones: ({
+    readonly property var tones: ({
         black:    { background: "#030405", surface: "#121214", subtext: "#9296a1" },
         charcoal: { background: "#0b0c0e", surface: "#1b1b1c", subtext: "#9a9eaa" },
         graphite: { background: "#131315", surface: "#232324", subtext: "#a3a7b2" }
     })
-    readonly property var _pal: _tones[ShellSettings.baseTone] ?? _tones.charcoal
+    readonly property var _pal: tones[ShellSettings.baseTone] ?? tones.charcoal
 
     readonly property color _matuAccent: ShellSettings.matugenAccentRole === "secondary" ? MatugenTheme.success
                                        : ShellSettings.matugenAccentRole === "tertiary"  ? MatugenTheme.warning
                                        : MatugenTheme.accent
 
     // matugen's own base lands near the graphite tone; these sink it to charcoal and to black
-    readonly property var _depths: ({ none: 0.0, deep: 0.38, deeper: 0.80 })
+    readonly property var depths: ({ none: 0.0, deep: 0.38, deeper: 0.80 })
     // sinking a light base under dark ink would leave nothing readable, so it keeps its own
-    readonly property real _depthK: paletteLight ? 0.0 : (_depths[ShellSettings.matugenDepth] ?? 0.0)
+    readonly property real _depthK: paletteLight ? 0.0 : (depths[ShellSettings.matugenDepth] ?? 0.0)
     // surface sinks slower than background, or the elevation separation flattens out
     readonly property color _matuBg:      mix(MatugenTheme.background, depthSink, _depthK)
     readonly property color _matuSurface: mix(MatugenTheme.surface,    depthSink, _depthK * 0.6)

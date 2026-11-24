@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "SettingsTree.js" as SettingsTree
 
 AnchoredPopupState {
     id: root
@@ -69,24 +70,24 @@ AnchoredPopupState {
     // SelectRow dropdowns are inline, so two open at once stack their option
     // lists and retarget the panel height twice. Keep one owner for the whole
     // settings surface and ask the previous row to fold before the next opens
-    property var _settingsSelectOwner: null
-    readonly property bool settingsSelectOpen: _settingsSelectOwner !== null
+    property var settingsSelectOwner: null
+    readonly property bool settingsSelectOpen: settingsSelectOwner !== null
     signal settingsSelectClaimed()
     // a switch flipped by hand: the rows it opens can land under the edge of a capped page
     signal settingsRevealRequested(Item row)
     function claimSettingsSelect(owner): void {
-        if (!owner || _settingsSelectOwner === owner) return
-        const previous = _settingsSelectOwner
+        if (!owner || settingsSelectOwner === owner) return
+        const previous = settingsSelectOwner
         if (previous) previous._setOpen(false)
-        _settingsSelectOwner = owner
+        settingsSelectOwner = owner
         root.settingsSelectClaimed()
     }
     function releaseSettingsSelect(owner): void {
-        if (_settingsSelectOwner === owner) _settingsSelectOwner = null
+        if (settingsSelectOwner === owner) settingsSelectOwner = null
     }
     function closeSettingsSelect(): void {
-        const previous = _settingsSelectOwner
-        _settingsSelectOwner = null
+        const previous = settingsSelectOwner
+        settingsSelectOwner = null
         if (previous) previous._setOpen(false)
     }
     onOpenChanged: {
@@ -98,63 +99,8 @@ AnchoredPopupState {
         }
     }
 
-    // order by user impact and frequency: global appearance first, daily bar surfaces next, then feedback; operational and recovery tools stay last
-    readonly property var settingsTree: [
-        { glyph: "󰉦", label: "Appearance", children: [
-            { glyph: "󰉦", label: "Theme",       section: "theme",
-              description: "Colors, opacity, blur, and shadows" },
-            { glyph: "󰛖", label: "Interface", section: "interface",
-              description: "Text, scale, and accessibility" }
-        ]},
-        { glyph: "󰕮", label: "Bar", children: [
-            { glyph: "󰍹", label: "Layout",    section: "surface",
-              description: "Position, size, shape, and hover" },
-            { glyph: "󰍴", label: "Underline", section: "underline",
-              description: "Line and event glow" },
-            { glyph: "󰤼", label: "Spacing",   section: "separators",
-              description: "Gaps and dividers" }
-        ]},
-        { glyph: "󰀻", label: "Widgets", children: [
-            { glyph: "󰀻", label: "Show & order", section: "widgets",
-              description: "Choose and reorder bar widgets" },
-            { glyph: "󰕰", label: "Workspaces", section: "workspaces",
-              description: "Markers, labels, and app icons" },
-            { glyph: "󰅐", label: "Clock",      section: "clock",
-              description: "Date, time, calendar, and weather" },
-            { glyph: "󰝚", label: "Media",      section: "media",
-              description: "Track details and visualizer" },
-            { glyph: "󰈈", label: "Indicators", section: "indicators",
-              description: "Window title, status, and system" }
-        ]},
-        { glyph: "󰂚", label: "Feedback", children: [
-            { glyph: "󰂚", label: "Notifications", section: "popups",
-              description: "Popups and quiet hours" },
-            { glyph: "󰋚", label: "History", section: "history",
-              description: "Saved notifications and muted apps" },
-            { glyph: "󱀅", label: "OSD",    section: "osd",
-              description: "Volume and brightness feedback" },
-            { glyph: "󰀦", label: "Alerts", section: "warnings",
-              description: "Battery and temperature limits" }
-        ]},
-        { glyph: "󰒓", label: "System", children: [
-            { glyph: "󰒓", label: "Overview", section: "updates",
-              description: "Updates, diagnostics, and recovery" },
-            { glyph: "󰦉", label: "Devices", section: "devices",
-              description: "Displays, lighting, Bluetooth, and programs" },
-            { glyph: "󰌌", label: "Keybinds", section: "keybinds",
-              description: "Shortcuts and what each does" }
-        ]}
-    ]
-
-    readonly property var _flatSections: {
-        const out = []
-        for (let i = 0; i < settingsTree.length; i++) {
-            const it = settingsTree[i]
-            if (it.children) for (let j = 0; j < it.children.length; j++) out.push(it.children[j].section)
-            else out.push(it.section)
-        }
-        return out
-    }
+    readonly property var settingsTree: SettingsTree.tree
+    readonly property var flatSections: SettingsTree.flatSections
 
     readonly property var _settingsSearchAliases: ({
         theme: "accent wallpaper palette colors transparency transparent frosted matugen dark light mode black base border outline",
@@ -210,7 +156,7 @@ AnchoredPopupState {
         const keys = Object.create(null)
         const labels = Object.create(null)
         const keyWords = Object.create(null)
-        const schema = ShellSettings._schema
+        const schema = ShellSettings.schema
         // the bar's widget toggles show the widget's own name
         const widgetLabels = Object.create(null)
         for (const id in ShellSettings.barWidgetMeta) {
@@ -358,31 +304,12 @@ AnchoredPopupState {
     function setSettingsSection(s: string): void {
         // keep callers of the former diagnostics page on the combined overview
         const requested = s === "maintenance" ? "updates" : s
-        const next = root._flatSections.indexOf(requested) >= 0 ? requested : "theme"
+        const next = root.flatSections.indexOf(requested) >= 0 ? requested : "theme"
         root.settingsSectionRequested()
         if (next !== settingsSection) {
             root.closeSettingsSelect()
             settingsSection = next
         }
-    }
-
-    function _foldName(name): string {
-        return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "")
-    }
-
-    // folds only hand-typed ipc names; setSettingsSection stays exact so no caller lands on a page by accident
-    function _ipcSection(name: string): string {
-        const fold = root._foldName(name)
-        if (fold.length === 0) return name
-        if (fold === "maintenance" || fold === "diagnostics" || fold === "system") return "updates"
-        for (let i = 0; i < root._flatSections.length; i++)
-            if (root._foldName(root._flatSections[i]) === fold) return root._flatSections[i]
-        for (let i = 0; i < settingsTree.length; i++) {
-            const kids = settingsTree[i].children || []
-            for (let j = 0; j < kids.length; j++)
-                if (root._foldName(kids[j].label) === fold) return kids[j].section
-        }
-        return name
     }
 
     signal tabRequested(int index)
@@ -532,10 +459,9 @@ AnchoredPopupState {
             root.showTab(index)
             return root.open ? "ok" : root._refusedText
         }
-        // keep `section: "` out of any literal below: ci-lint harvests nav entries by that pattern
         function settings(name: string): string {
-            const resolved = root._ipcSection(name)
-            const known = root._flatSections.indexOf(resolved) >= 0
+            const resolved = SettingsTree.ipcSection(name)
+            const known = root.flatSections.indexOf(resolved) >= 0
             root._unanchor()
             root.setSettingsSection(resolved)
             root.showTab(root.settingsTab)
@@ -543,7 +469,7 @@ AnchoredPopupState {
             if (known) return "ok"
             // pages get renamed; a keybind carrying an old name still opens Settings rather than doing nothing, and says why it landed somewhere else
             return "unknown settings page '" + name + "'; opened theme instead. valid: "
-                + root._flatSections.join(", ")
+                + root.flatSections.join(", ")
         }
     }
 }

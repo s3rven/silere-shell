@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import "../config"
 import "SettingsMigrations.js" as SettingsMigrations
+import "SettingsTree.js" as SettingsTree
 
 Singleton {
     id: root
@@ -333,6 +334,7 @@ Singleton {
 
     property bool _loaded: false
     property string _readError: ""
+    readonly property string readError: _readError
     property string _writeError: ""
     property string _diskText: ""
     property string _appliedText: ""
@@ -349,7 +351,7 @@ Singleton {
     property var _futureTouched: ({})
 
     // drives load/save/change-tracking. t: bool|int|real|enum|re — int/real use min/max, enum vals, re a pattern
-    readonly property var _schema: [
+    readonly property var schema: [
         { k: "mediaProgress",       t: "bool", sec: "media", l: "Audio visualizer" },
         { k: "mediaWidgetHelper",   t: "bool", sec: "media", l: "Playback status" },
         { k: "mediaRemoteArt",      t: "bool", sec: "media", l: "Cover art from the web" },
@@ -499,7 +501,7 @@ Singleton {
     ]
     readonly property var _schemaByKey: {
         const m = Object.create(null)
-        for (let i = 0; i < _schema.length; i++) m[_schema[i].k] = _schema[i]
+        for (let i = 0; i < schema.length; i++) m[schema[i].k] = schema[i]
         return m
     }
 
@@ -518,8 +520,8 @@ Singleton {
         const trimmed = String(key || "").trim()
         if (root.schemaFor(trimmed)) return trimmed
         const fold = trimmed.toLowerCase()
-        for (let i = 0; i < root._schema.length; i++)
-            if (root._schema[i].k.toLowerCase() === fold) return root._schema[i].k
+        for (let i = 0; i < root.schema.length; i++)
+            if (root.schema[i].k.toLowerCase() === fold) return root.schema[i].k
         return trimmed
     }
 
@@ -617,10 +619,10 @@ Singleton {
             // keys are camelCase, so a typed-out lowercase filter matches nothing without this
             const fold = want.toLowerCase()
             // the rail's labels ("Alerts") name the same pages as the section ids ("warnings")
-            const page = MenuState._ipcSection(want).toLowerCase()
+            const page = SettingsTree.ipcSection(want).toLowerCase()
             const out = []
-            for (let i = 0; i < root._schema.length; i++) {
-                const s = root._schema[i]
+            for (let i = 0; i < root.schema.length; i++) {
+                const s = root.schema[i]
                 if (fold.length > 0 && s.sec.toLowerCase().indexOf(fold) < 0
                     && s.k.toLowerCase().indexOf(fold) < 0
                     && s.sec.split(",").indexOf(page) < 0)
@@ -654,13 +656,14 @@ Singleton {
     // reset assigns every key at once; one write at the end, not one per toggle
     property bool _bulkAssign: false
     property bool _applying: false
+    readonly property bool applying: _applying
 
     property var _modifiedSections: Object.create(null)
     readonly property var modifiedSections: _modifiedSections
 
     readonly property var _sectionOf: {
         const m = Object.create(null)
-        for (let i = 0; i < _schema.length; i++) m[_schema[i].k] = _schema[i].sec
+        for (let i = 0; i < schema.length; i++) m[schema[i].k] = schema[i].sec
         return m
     }
 
@@ -671,7 +674,7 @@ Singleton {
     // A master, and anything that stays visible beside it, belongs in no rule. `negate` flips
     // a rule to fire while its master is ON, for a key nested behind "expanded: !master";
     // `off` names the enum value that collapses the rule
-    readonly property var _sectionGates: ({
+    readonly property var sectionGates: ({
         underline: [
             { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
                 "underlineNotifGlow", "underlineBattGlow", "underlineNetGlow",
@@ -733,7 +736,7 @@ Singleton {
     })
 
     function _dotHidden(section: string, key: string): bool {
-        const rules = root._sectionGates[section]
+        const rules = root.sectionGates[section]
         if (!rules) return false
         // an any rule folds only while every one of its conditions would fold
         const folds = r => r.off !== undefined ? root[r.master] === r.off : r.negate ? !!root[r.master] : !root[r.master]
@@ -764,8 +767,8 @@ Singleton {
 
     function _recountModified(): void {
         const keys = Object.create(null)
-        for (let i = 0; i < _schema.length; i++) {
-            const entry = _schema[i]
+        for (let i = 0; i < schema.length; i++) {
+            const entry = schema[i]
             const key = entry.k
             if (root._sameValue(root[key], root._defaults[key])) continue
             keys[key] = true
@@ -818,8 +821,8 @@ Singleton {
             root._readError = ""
         }
         root.batch(function() {
-            for (let i = 0; i < _schema.length; i++) {
-                const k = _schema[i].k
+            for (let i = 0; i < schema.length; i++) {
+                const k = schema[i].k
                 if (k !== "barWidgetOrderLeft" && k !== "barWidgetOrderCenter" && k !== "barWidgetOrderRight")
                     root[k] = _defaults[k]
             }
@@ -862,7 +865,7 @@ Singleton {
 
     function _captureDefaults(): var {
         const d = {}
-        for (let i = 0; i < _schema.length; i++) d[_schema[i].k] = root[_schema[i].k]
+        for (let i = 0; i < schema.length; i++) d[schema[i].k] = root[schema[i].k]
         return d
     }
 
@@ -896,8 +899,8 @@ Singleton {
 
     Component.onCompleted: {
         _defaults = _captureDefaults()
-        for (let i = 0; i < _schema.length; i++) {
-            const s = _schema[i]
+        for (let i = 0; i < schema.length; i++) {
+            const s = schema[i]
             const key = s.k
             if (s.t === "bool" || s.t === "enum" || key === "notifHistoryDays")
                 root._discreteKeys[key] = true
@@ -1036,8 +1039,8 @@ Singleton {
             // a hand edit this release cannot use is dropped at the next save: say what, and what would work
             const ignored = []
             try {
-                for (let i = 0; i < _schema.length; i++) {
-                    const s = _schema[i]
+                for (let i = 0; i < schema.length; i++) {
+                    const s = schema[i]
                     let value = _defaults[s.k]
                     if (parsed[s.k] !== undefined) {
                         const c = _coerced(s, parsed[s.k])
@@ -1080,8 +1083,8 @@ Singleton {
             ? JSON.parse(JSON.stringify(_futureSettings)) : ({})
         out.__version = preserveFuture ? _loadedVersion : _settingsVersion
         const modifiedKeys = Object.create(null)
-        for (let i = 0; i < _schema.length; i++) {
-            const entry = _schema[i]
+        for (let i = 0; i < schema.length; i++) {
+            const entry = schema[i]
             const key = entry.k
             const modified = !root._sameValue(root[key], root._defaults[key])
             if (modified) modifiedKeys[key] = true

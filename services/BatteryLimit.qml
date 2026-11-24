@@ -96,7 +96,7 @@ Singleton {
         return on.every(d => d.stopsAt > 0) ? Math.max(...on.map(d => d.stopsAt)) : heldAt
     }
     function _followStops(rows): void {
-        Battery._heldAt = root.stopAfter(rows, Battery._heldAt)
+        Battery.heldAt = root.stopAfter(rows, Battery.heldAt)
     }
 
     on_WantedChanged: if (root._wanted && !root._listed) root.rescan()
