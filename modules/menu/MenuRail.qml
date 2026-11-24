@@ -181,7 +181,7 @@ Item {
             labels: _railLabels
             glidingSelection: true
             railW: rail.menu.railCollapsedW
-            label: _title.length > 32 ? _title.slice(0, 31) + "…" : _title
+            label: SafeText.boundedText(_title, 32)
             labelPillEnabled: rail.labelsShown
             active: rail.menu.activeTab === MenuState.mediaTab
             onTapped: rail.menu.switchTab(MenuState.mediaTab)
