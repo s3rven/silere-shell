@@ -11,7 +11,9 @@ post_install() {
                  or `spawn-at-startup "silere-shell"` to your niri config
 
   click the active workspace to open the menu and settings,
-  or bind it: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
+  or bind it in hyprland.lua:
+    hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))
+  on niri: qs ipc -p /usr/share/silere-shell/shell.qml call menu toggle
 
   Hyprland fades layers on top of Silere's own popup animations. to
   leave Silere's to their own, add to hyprland.lua:

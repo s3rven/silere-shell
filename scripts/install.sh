@@ -1754,11 +1754,10 @@ MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
     || _die "menu keybind modifiers contain unsupported characters"
 [[ "$MENU_BIND_KEY" =~ ^[A-Za-z0-9_:-]+$ ]] \
     || _die "menu keybind key contains unsupported characters"
-MENU_BIND_CMD="qs ipc -p $ROOT_EXEC/shell.qml\" call menu toggle"
 MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
-HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_CMD"
-HYPR_BIND_SHOWN="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, exec, $MENU_BIND_SHOWN"
-LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.exec_cmd($(_lua_string "$MENU_BIND_SHOWN")))"
+# the shell silere run starts answers this global shortcut, so a press starts no qs process; niri has none
+HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, global, silere:menu"
+LUA_BIND_SHOWN="hl.bind($(_lua_string "$MENU_BIND_MODS + $MENU_BIND_KEY"), hl.dsp.global(\"silere:menu\"))"
 NIRI_BIND_SHOWN="$(_niri_combo "$MENU_BIND_MODS" "$MENU_BIND_KEY") { spawn \"sh\" \"-c\" $(_lua_string "$MENU_BIND_SHOWN"); }"
 
 if [ "$receipt_compositor" = niri ]; then
@@ -1767,7 +1766,7 @@ if [ "$receipt_compositor" = niri ]; then
     _skip "niri keeps every bind in one block — add inside yours:"
     _info "  $NIRI_BIND_SHOWN"
 elif [[ "$HYPR_CONFIG" == *.lua ]] && _owned_block_contains "$HYPR_CONFIG" '-- silere-shell keybind begin' \
-        '-- silere-shell keybind end' 'call menu toggle'; then
+        '-- silere-shell keybind end' 'menu'; then
     _ok "already present in $(_tilde "$HYPR_CONFIG")"
     had_keybind=true
     receipt_keybind="$HYPR_CONFIG"
@@ -1795,16 +1794,16 @@ elif [[ "$HYPR_CONFIG" == *.lua ]]; then
     fi
 elif [ -z "$HYPR_CONFIG" ]; then
     _skip "no Hyprland config found — add manually:"
-    _info "  $HYPR_BIND_SHOWN"
+    _info "  $HYPR_BIND"
 elif _owned_block_contains "$HYPR_CONFIG" '# silere-shell keybind begin' \
-        '# silere-shell keybind end' 'call menu toggle'; then
+        '# silere-shell keybind end' 'menu'; then
     _ok "already present in $(_tilde "$HYPR_CONFIG")"
     had_keybind=true
     receipt_keybind="$HYPR_CONFIG"
 elif _menu_bind_taken; then
     _warn "$MENU_BIND_MODS + $MENU_BIND_KEY is already bound in your Hyprland config"
     _warn "re-run with SILERE_MENU_BIND_KEY set to a free key, or add manually:"
-    _warn "  $HYPR_BIND_SHOWN"
+    _warn "  $HYPR_BIND"
 elif _dry; then
     _would "append to $HYPR_CONFIG: $HYPR_BIND"
 elif _ask "Bind $MENU_BIND_MODS + $MENU_BIND_KEY to open the Silere menu?"; then
@@ -1816,7 +1815,7 @@ elif _ask "Bind $MENU_BIND_MODS + $MENU_BIND_KEY to open the Silere menu?"; then
     did_keybind=true
     receipt_keybind="$HYPR_CONFIG"
 else
-    _skip "skipped — add manually: $HYPR_BIND_SHOWN"
+    _skip "skipped — add manually: $HYPR_BIND"
 fi
 
 # ── layer animations ───────────────────────────────────────────────────────────
@@ -2019,7 +2018,12 @@ if $did_keybind || $had_keybind; then
         "$MENU_BIND_MODS" "$MENU_BIND_KEY"
 else
     printf "  click the active workspace to open the menu and settings\n"
-    printf "  or bind it: ${DIM}%s${R}\n" "$MENU_BIND_SHOWN"
+    case "$receipt_compositor:$HYPR_CONFIG" in
+        niri:*|*:) bind_hint="$MENU_BIND_SHOWN" ;;
+        *.lua) bind_hint="$LUA_BIND_SHOWN" ;;
+        *) bind_hint="$HYPR_BIND" ;;
+    esac
+    printf "  or bind it: ${DIM}%s${R}\n" "$bind_hint"
 fi
 # a packaged install ships no uninstall.sh: pointing at it there sends the user
 # to a path that does not exist and would fight their package manager if it did

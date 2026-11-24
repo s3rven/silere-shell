@@ -14,9 +14,9 @@
 | Now Playing | Right-click the media widget |
 | Wi-Fi or Bluetooth list | Click its bar widget (reveals the power switch while the radio is off) |
 
-Clicking outside a popup closes it. The installer offers **Super + /** for the menu on Hyprland
-and prints the line to add on niri. Any keybind can run `silere menu`; on Hyprland,
-[`global, silere:menu`](scripting.md#keybinds-on-hyprland) answers faster.
+Clicking outside a popup closes it. The installer offers **Super + /** for the menu on Hyprland, bound to the
+[`silere:menu`](scripting.md#keybinds-on-hyprland) global shortcut, and prints the line to add on niri. Any
+other keybind can run `silere menu`.
 
 ## The bar
 

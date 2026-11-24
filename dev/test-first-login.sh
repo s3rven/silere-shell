@@ -125,15 +125,15 @@ if [ "${1:-}" = --inner ]; then
         *"key: slash"*) ;;
         *) printf '%s\n' "$binds" | head -n 12 >&2; fail "the installed menu shortcut is not bound" ;;
     esac
-    bind_cmd="$(sed -n 's/.*hl\.dsp\.exec_cmd("\(qs ipc .*call menu toggle\)").*/\1/p' "$home/.config/hypr/hyprland.lua" | head -n 1)"
-    [ -n "$bind_cmd" ] || fail "could not read the installed shortcut's command"
-    "${home_env[@]}" WAYLAND_DISPLAY="$nested" sh -c "$bind_cmd" > /dev/null 2>&1 || true
+    grep -qF 'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))' "$home/.config/hypr/hyprland.lua" \
+        || fail "the installed shortcut is not the silere:menu global shortcut"
+    hyprctl dispatch 'hl.dsp.global("silere:menu")' > /dev/null 2>&1 || true
     opened=0
     for _ in $(seq 1 50); do
         has_layer silere-menu && { opened=1; break; }
         sleep 0.1
     done
-    [ "$opened" = 1 ] || fail "the installed menu shortcut's command did not open the menu"
+    [ "$opened" = 1 ] || fail "the installed silere:menu shortcut did not open the menu"
 
     # and it all comes back out
     "${home_env[@]}" SILERE_ASSUME_YES=1 bash "$installed/scripts/uninstall.sh" </dev/null >> "$scratch/install.log" 2>&1 \

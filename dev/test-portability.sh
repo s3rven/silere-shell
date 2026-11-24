@@ -2776,7 +2776,7 @@ test_menu_keybind_plan() (
         bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
         || fail "keybind dry run exited non-zero"
     case "$out" in
-        *"append to $conf: bind = SUPER, slash, exec, qs ipc -p "*"call menu toggle"*) ;;
+        *"append to $conf: bind = SUPER, slash, global, silere:menu"*) ;;
         *) fail "dry run did not plan the menu keybind for a free key" ;;
     esac
     assert_eq "$before" "$(<"$conf")" "keybind dry run left the config unchanged"
@@ -2812,7 +2812,7 @@ test_menu_keybind_plan() (
         bash "$ROOT/scripts/install.sh" --dry-run </dev/null 2>&1)" \
         || fail "keybind dry run with a Lua config exited non-zero"
     case "$out" in
-        *"append to $dir/hyprland.lua: "'hl.bind("SUPER + slash", hl.dsp.exec_cmd("qs ipc -p '*'call menu toggle"))'*) ;;
+        *"append to $dir/hyprland.lua: "'hl.bind("SUPER + slash", hl.dsp.global("silere:menu"))'*) ;;
         *) fail "a stock Lua config was not offered the bind: $out" ;;
     esac
     case "$out" in
@@ -4177,6 +4177,27 @@ SH
         || fail "warm benchmark did not borrow the shell's display for both IPC calls"
 )
 
+# an old qs ipc menu bind gets its global-shortcut replacement, but only while the running shell holds silere:menu
+test_doctor_menu_bind() (
+    local fixture="$TMP/doctor-bind" out
+    mkdir -p "$fixture/scripts/lib" "$fixture/bin" "$fixture/config/hypr"
+    cp "$ROOT/scripts/doctor.sh" "$fixture/scripts/"
+    cp "$ROOT/scripts/lib/qml-modules.sh" "$ROOT/scripts/lib/xdg.sh" "$ROOT/scripts/lib/ui.sh" "$fixture/scripts/lib/"
+    printf '#!/bin/sh\nexit 1\n' > "$fixture/bin/qs"
+    printf '#!/bin/sh\n[ "$1" = globalshortcuts ] && printf "%%s\\n" "${SILERE_TEST_SHORTCUTS-}"\nexit 0\n' > "$fixture/bin/hyprctl"
+    chmod +x "$fixture/bin/qs" "$fixture/bin/hyprctl"
+    printf '%s\n' '# bind = SUPER, M, exec, qs ipc call menu toggle' \
+        'bind = $mainMod SHIFT, M, exec, qs ipc -p /x/shell.qml call menu toggle' > "$fixture/config/hypr/binds.conf"
+    doctor() { PATH="$fixture/bin:$PATH" XDG_CONFIG_HOME="$fixture/config" HYPRLAND_INSTANCE_SIGNATURE=fixture NIRI_SOCKET='' \
+        SILERE_TEST_SHORTCUTS="$1" bash "$fixture/scripts/doctor.sh" 2>&1 | grep 'menu keybind' || true; }
+    out="$(doctor 'silere:menu -> Open or close the Silere menu')"
+    case "$out" in
+        *"binds.conf:2 starts a qs process on each press; this one does not: bind = \$mainMod SHIFT, M, global, silere:menu") ;;
+        *) fail "doctor did not name the global-shortcut replacement for an old menu bind: $out" ;;
+    esac
+    [ -z "$(doctor '')" ] || fail "doctor offered silere:menu while no running shell holds it"
+)
+
 test_doctor_json() (
     command -v python3 >/dev/null 2>&1 || return 0
     local fixture="$TMP/doctor-json" actual python_path
@@ -4591,6 +4612,7 @@ fi
 
 test_xdg_paths_and_timer_default
 test_doctor_json
+test_doctor_menu_bind
 test_keyboard_brightness_helper
 test_battery_limit_helper
 test_fresh_install_permissions

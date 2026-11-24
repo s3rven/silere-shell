@@ -444,6 +444,23 @@ elif [ -n "$autostart" ]; then ok "autostart" "$autostart"
 else warn "autostart" "no compositor entry or enabled user service found"
 fi
 
+# a bind that runs qs ipc starts a process on every press; named only once the running shell holds silere:menu
+if [ "$compositor" = Hyprland ] && [ -n "$config_home" ] \
+        && [[ "$(hyprctl globalshortcuts 2>/dev/null)" == *"silere:menu "* ]]; then
+    old_bind="$(grep -rnE --include='*.conf' --include='*.lua' '^[[:space:]]*[^#[:space:]-].*call menu toggle' \
+        "$config_home/hypr" 2>/dev/null | head -n 1)" || old_bind=""
+    if [[ "$old_bind" =~ ^([^:]+:[0-9]+):(.*)$ ]]; then
+        bind_where="${BASH_REMATCH[1]}" bind_line="${BASH_REMATCH[2]}"
+        bind_new="a bind to global, silere:menu"
+        if [[ "$bind_line" =~ ^[[:space:]]*(hl\.bind\([^,]*,) ]]; then
+            bind_new="${BASH_REMATCH[1]} hl.dsp.global(\"silere:menu\"))"
+        elif [[ "$bind_line" =~ ^[[:space:]]*(bind[a-ce-z]*[[:space:]]*=[^,]*,[^,]*,)[[:space:]]*exec[[:space:]]*, ]]; then
+            bind_new="${BASH_REMATCH[1]} global, silere:menu"
+        fi
+        info "menu keybind" "$bind_where starts a qs process on each press; this one does not: $bind_new"
+    fi
+fi
+
 if command -v systemctl >/dev/null 2>&1 \
         && systemctl --user show-environment >/dev/null 2>&1; then
     if _silere_unit_uses_transient_images; then
