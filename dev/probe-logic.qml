@@ -12337,6 +12337,19 @@ ShellRoot {
         root._check(!ShellUpdate.upToDate && ShellUpdate.statusText === "Status unavailable"
                 && ShellUpdate.statusReadError === ShellUpdate.versionError,
             "a failed checkout verification is reported instead of a cached up-to-date result")
+        const checkedNowWas = ShellUpdate._nowMs
+        ShellUpdate.versionError = ""
+        ShellUpdate.versionReady = true
+        ShellUpdate._nowMs = 10 * 86400000
+        ShellUpdate.lastCheckMs = ShellUpdate._nowMs - 3600000
+        const freshDetail = ShellUpdate.statusDetail
+        ShellUpdate.lastCheckMs = ShellUpdate._nowMs - 3 * 86400000
+        root._check(freshDetail === "Up to date · checked 1 h ago" && ShellUpdate.checkStale
+                && ShellUpdate.statusDetail === "No update found 3 days ago",
+            "an update check two days old says when it found nothing instead of up to date, as silere status does")
+        ShellUpdate._nowMs = checkedNowWas
+        ShellUpdate.lastCheckMs = 1234000
+        ShellUpdate.versionReady = false
         const shellUpdateShownWas = ShellSettings.barShowShellUpdate
         ShellSettings.barShowShellUpdate = true
         ShellUpdate.versionError = ""

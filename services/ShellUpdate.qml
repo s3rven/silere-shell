@@ -148,9 +148,13 @@ Singleton {
         return "Next check in " + Math.round(secs / 86400) + " days"
     }
 
+    // the timer checks daily, so an answer two days old is from a timer that is off or stopped and says nothing of today
+    readonly property bool checkStale: root.upToDate && root._nowMs - root.lastCheckMs >= 172800000
+
     // the bar pill renders statusText and must not grow with it; this longer form is menu-only
     readonly property string statusDetail: {
         if (!root.upToDate) return root.statusText
+        if (root.checkStale) return "No update found " + root.lastCheckedText
         if (root.lastCheckedText.length > 0) return root.statusText + " · checked " + root.lastCheckedText
         if (root.buildDate.length > 0) return root.statusText + " · built " + root.buildDate
         return root.statusText
