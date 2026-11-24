@@ -1074,7 +1074,7 @@ Scope {
 
         Bluetooth.allDevices = [headset(-1)]
         input.wait(30)
-        root.check(SystemAlerts._btReadings.length === 1 && SystemAlerts._btWarned.AA === true,
+        root.check(SystemAlerts._deviceReadings.length === 1 && SystemAlerts._btWarned.AA === true,
             "a connected device retains its warning through a missing battery reading")
         Bluetooth.allDevices = [headset(17)]
         input.wait(60)

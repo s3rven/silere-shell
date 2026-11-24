@@ -9,13 +9,15 @@ Pill {
     property var screen: null
 
     readonly property bool autoHidden: ShellSettings.batteryAutoHide && !Battery.onBattery
-    readonly property bool show: ShellSettings.barShowBattery && Battery.available && !autoHidden
+    readonly property var _device: Battery.lowPeripheral
+    readonly property bool show: ShellSettings.barShowBattery && (Battery.available ? !autoHidden : _device !== null)
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
     collapsed: !show
 
-    glyph:          Battery.icon
+    glyph:          _device ? _device.glyph : Battery.icon
     accessibleName: {
+        if (_device) return _device.name + " battery " + _device.pct + "%"
         if (!Battery.available) return "Battery"
         const parts = []
         if (Battery.label.length > 0)       parts.push(Battery.label)
@@ -23,7 +25,7 @@ Pill {
         if (Battery.estimateLabel.length > 0) parts.push(Battery.estimateLabel)
         return parts.length > 0 ? "Battery " + parts.join(", ") : "Battery"
     }
-    glyphColor:     Battery.barIconColor
+    glyphColor:     _device ? Theme.barWarning : Battery.barIconColor
     textColor:      Theme.barSubtext
     animateGlyph:   false
     shrinkDelay:    0
@@ -35,7 +37,7 @@ Pill {
     opacity: _baseOpacity * (Battery.critical ? 1.0 - Battery.alertPulse * 0.60
                            : (Battery.low     ? 1.0 - Battery.alertPulse * 0.18 : 1.0))
     visible: layoutVisible
-    interactive: show
+    interactive: show && !_device
     pressed: _tap.pressed
     onActivated: if (batteryPill.canActivate) MenuState.showHomeAt("power", batteryPill, batteryPill.screen)
 
@@ -48,6 +50,7 @@ Pill {
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     text: {
+        if (_device) return _device.pct + "%"
         if (ShellSettings.valuesOnHover && !expanded)
             return ""
         if (!expanded)

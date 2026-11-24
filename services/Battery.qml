@@ -88,6 +88,32 @@ Singleton {
             && (d.type === UPowerDeviceType.Battery || d.type === UPowerDeviceType.Ups))
     }
 
+    // mice, keyboards, pads and headsets on their own receivers; the ones BlueZ connects are Bluetooth's to watch
+    readonly property var _peripheralGlyphs: ({
+        [UPowerDeviceType.Mouse]: "󰍽", [UPowerDeviceType.Keyboard]: "󰌌", [UPowerDeviceType.GamingInput]: "󰊗",
+        [UPowerDeviceType.Touchpad]: "󰝁", [UPowerDeviceType.Tablet]: "󰓶", [UPowerDeviceType.Pen]: "󱦹",
+        [UPowerDeviceType.Headset]: "󰋎", [UPowerDeviceType.Headphones]: "󰋋"
+    })
+    function peripheralsFrom(values): var {
+        const out = []
+        for (const d of values || []) {
+            if (!d || !d.ready || !d.isPresent || d.powerSupply || !(d.type in root._peripheralGlyphs)
+                    || String(d.nativePath || "").startsWith("/org/bluez/") || !root._measurement(d.percentage)) continue
+            const name = SafeText.singleLineText(d.model || "", 96)
+            out.push({ id: String(d.nativePath || name), glyph: root._peripheralGlyphs[d.type],
+                name: name || UPowerDeviceType.toString(d.type), pct: Math.round(root.normalizedPercent(d.percentage)) })
+        }
+        return out
+    }
+    readonly property var peripherals: root.peripheralsFrom(UPower.devices ? UPower.devices.values : [])
+    // with no battery of its own, the bar shows the lowest of these, and only while it is low
+    function lowPeripheralOf(list): var {
+        let low = null
+        for (const p of list || []) if (p && p.pct <= 20 && (!low || p.pct < low.pct)) low = p
+        return low
+    }
+    readonly property var lowPeripheral: root.available ? null : root.lowPeripheralOf(root.peripherals)
+
     readonly property StableObjectList _detailDevices: StableObjectList {
         source: root._powerDevices(UPower.devices ? UPower.devices.values : [])
     }

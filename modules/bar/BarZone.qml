@@ -53,7 +53,7 @@ Row {
         const meta = ShellSettings.barWidgetMeta[key]
         if (!meta) return false
         if (!ShellSettings.barWidgetConfiguredVisible(key)) return false
-        if (key === "battery" && !Battery.available) return false
+        if (key === "battery" && !Battery.available && !Battery.lowPeripheral) return false
         if (key === "bluetooth" && !Bluetooth.available) return false
         if (key === "keyboard" && !InputState.available) return false
         if (key === "system" && !SysInfo.monitorHasReadings) return false

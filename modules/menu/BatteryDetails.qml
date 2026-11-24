@@ -78,6 +78,17 @@ Column {
         }
     }
 
+    Repeater {
+        model: Battery.peripherals
+        ControlRow {
+            required property var modelData
+            glyph: modelData.glyph
+            title: modelData.name
+            valueText: modelData.pct + "%"
+            passive: true
+        }
+    }
+
     // a read that failed belongs to no battery, and may have left no switch to sit under
     HintText {
         visible: BatteryLimit.lastError.length > 0 && BatteryLimit.errorNative.length === 0

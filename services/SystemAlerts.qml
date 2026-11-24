@@ -196,7 +196,7 @@ Singleton {
     }
 
     property var _btWarned: ({})
-    readonly property var _btReadings: {
+    readonly property var _deviceReadings: {
         const out = []
         const devs = Bluetooth.allDevices
         for (let i = 0; i < devs.length; i++) {
@@ -205,11 +205,14 @@ Singleton {
             out.push({ address: String(d.address), name: Bluetooth.deviceLabel(d),
                 pct: Bluetooth.batteryPercent(d) })
         }
+        const wired = Battery.peripherals
+        for (let i = 0; i < wired.length; i++)
+            out.push({ address: wired[i].id, name: wired[i].name, pct: wired[i].pct })
         return out
     }
-    on_BtReadingsChanged: Qt.callLater(root._checkBtBatteries)
+    on_DeviceReadingsChanged: Qt.callLater(root._checkBtBatteries)
     function _checkBtBatteries(): void {
-        const step = root.btAlertStep(root._btWarned, root._btReadings, root.btLowPct, root.btRearmPct)
+        const step = root.btAlertStep(root._btWarned, root._deviceReadings, root.btLowPct, root.btRearmPct)
         for (let i = 0; i < step.alerts.length; i++) {
             const alert = step.alerts[i]
             if (!ShellSettings.osdBatteryWarn

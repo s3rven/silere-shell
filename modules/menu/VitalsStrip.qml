@@ -333,7 +333,8 @@ SettingsCard {
 
     property bool batteryShown: Battery.available
     // a battery with no reading to add still opens for its charge limit switch; a battery UPower lost does not
-    readonly property bool batteryOpenable: batteryShown && (Battery.hasDetails || BatteryLimit.devices.length > 0)
+    readonly property bool batteryOpenable: batteryShown
+        && (Battery.hasDetails || BatteryLimit.devices.length > 0 || Battery.peripherals.length > 0)
 
     Vital {
         id: _battery

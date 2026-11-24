@@ -212,6 +212,7 @@ Singleton {
     property string alertWarning: ""
     property real pct: 100
     property real criticalPct: 10
+    property var peripherals: []
 }
 EOF
 cat > "$scratch/bin/notify-send" <<'EOF'

@@ -21,6 +21,8 @@ settings file carries its own `__version` and migrates separately.
 - A warning when the system disk or your home has under 2 GB and under 5% free, checked at login and every few
   hours of use.
 - Flatpak app updates in the package count and list, checked every few hours alongside your package manager.
+- Wireless mice, keyboards and pads on their own receivers warn when low, as Bluetooth devices do, and appear in
+  Home's battery details. On a desktop the bar shows one while it is low.
 
 ### Changed
 
