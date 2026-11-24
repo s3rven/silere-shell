@@ -1062,8 +1062,16 @@ fi
 section "reference watch"
 # Qt watches a map property that JS keeps in a variable, and can free that watch inside a grouped update (11-06 cores)
 mapfile -t ref_files < <(find services modules config -name '*.qml'; printf '%s\n' shell.qml)
-if ref_hits="$(grep -nE '(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=.*\.(metadata|hints|lastIpcObject)[[:space:]]*(\?\?[[:space:]]*\{\}|:[[:space:]]*null)?[[:space:]]*$' \
-    "${ref_files[@]}" </dev/null)"; then
+# a whole map handed to a function or held by a var property is kept the same way; JSON.stringify's copy is the safe read
+ref_hits="$({
+  grep -nE '(const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=.*\.(metadata|hints|lastIpcObject)[[:space:]]*(\?\?[[:space:]]*\{\}|:[[:space:]]*null)?[[:space:]]*$' \
+    "${ref_files[@]}"
+  grep -nE '[(,][[:space:]]*[A-Za-z_$][A-Za-z0-9_$?.]*\.(metadata|hints|lastIpcObject)[[:space:]]*[,)]' "${ref_files[@]}" \
+    | grep -vE 'JSON\.stringify\([A-Za-z0-9_$?.]*\.(metadata|hints|lastIpcObject)\)'
+  grep -nE 'property[[:space:]]+var[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*:[^/]*\.(metadata|hints|lastIpcObject)[[:space:]]*$' \
+    "${ref_files[@]}"
+} </dev/null)"
+if [ -n "$ref_hits" ]; then
   fail "read metadata, hints and lastIpcObject in one expression or copy them, never keep the map: $ref_hits"
 else
   ok "reference watch" "Quickshell's map properties are never kept as a live reference in JS"
