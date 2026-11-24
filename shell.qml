@@ -57,11 +57,6 @@ ShellRoot {
             void NightLight.armed
     }
 
-    function armSystemAlertsIfNeeded(): void {
-        if (ShellSettings.osdBatteryWarn || ShellSettings.osdTempWarn)
-            void SystemAlerts.armed
-    }
-
     Connections {
         target: Quickshell
         function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
@@ -122,15 +117,14 @@ ShellRoot {
         void NotificationKeys.armed
         // `silere osd` answers before anything has shown on the OSD
         void OsdBarState.armed
+        // the welcome, the low-disk and crash checks run whatever the battery and temperature switches say
+        void SystemAlerts.armed
         root.armNightLightIfNeeded()
-        root.armSystemAlertsIfNeeded()
     }
 
     Connections {
         target: ShellSettings
         enabled: !root.smokeTest
-        function onOsdBatteryWarnChanged() { root.armSystemAlertsIfNeeded() }
-        function onOsdTempWarnChanged() { root.armSystemAlertsIfNeeded() }
         function onNightLightAutoChanged() { root.armNightLightIfNeeded() }
         function onNightLightOnChanged() { root.armNightLightIfNeeded() }
     }
