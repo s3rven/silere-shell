@@ -1053,6 +1053,20 @@ else
   ok "lazy compile" "popups and large menu pages compile when first wanted"
 fi
 
+section "start-up size"
+# shell.qml's type-name reach compiles before the bar shows (~600 ms of a start): a release grows it 2% at most
+if ! command -v python3 >/dev/null 2>&1; then
+  structural_skip "start-up size" "python3 missing"
+elif [ -z "$last_tag" ]; then
+  skip "start-up size" "no release tag in this checkout"
+elif ! start_now="$(python3 dev/startup-set.py)" || ! start_tag="$(python3 dev/startup-set.py "$last_tag")"; then
+  fail "dev/startup-set.py could not read the start-up set"
+elif [ "${start_now%% *}" -gt $(( ${start_tag%% *} * 102 / 100 )) ]; then
+  fail "what compiles before the bar shows grew from ${start_tag%% *} to ${start_now%% *} bytes since $last_tag (2% allowed): load new code from a file when first wanted, or cut as much"
+else
+  ok "start-up size" "${start_now%% *} bytes in ${start_now##* } files; $last_tag ${start_tag%% *}"
+fi
+
 section "grapheme walk"
 # a binding records a dependency per id lookup, from a pool Qt never shrinks: walking a long string through root held ~30 MB for good
 if grep -qF '.pragma library' services/Grapheme.js && ! grep -qE '(^|[^a-zA-Z_])root\.' services/Grapheme.js \
