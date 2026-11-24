@@ -16,6 +16,8 @@ for suite in scripts/test-qml-headless.sh dev/test-logic.sh dev/test-layout-fit.
     else
         status=1
         printf 'fail %-20s %4ss\n' "$name" "$((SECONDS - start))"
+        # a probe names a failed check where it runs, and the warnings printed after it push that line out of the tail
+        grep -E 'PROBE-FAIL' "$logs/$name.log" | head -n 10 | sed 's/^/     /'
         tail -n 25 "$logs/$name.log" | sed 's/^/     /'
     fi
 done
