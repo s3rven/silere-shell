@@ -287,6 +287,16 @@ for f in "${script_files[@]}"; do
   if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
 done
 
+section "lua syntax"
+# a user's hyprland.lua loads these with dofile, so a parse error an update ships reaches their compositor config
+if command -v luac >/dev/null 2>&1; then
+  for f in hyprland/*.lua; do
+    if err=$(luac -p -- "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi
+  done
+else
+  structural_skip "lua syntax" "luac not installed"
+fi
+
 section "early-exit greps under pipefail"
 # grep -q exits at its first match, and bash's printf writes a line per write(), so the writer can die of SIGPIPE
 # on a later line and pipefail fails the check that matched; the 1.4.3 release run lost its updater test this way
