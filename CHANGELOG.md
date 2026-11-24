@@ -27,6 +27,7 @@ settings file carries its own `__version` and migrates separately.
   openSUSE and Void.
 - Settings › System › Keybinds reads a Lua workspace bind made by keycode, as other keyboard layouts need, as the
   workspace it goes to instead of a bare "Focus".
+- Notification, Recent page and slider icons no longer flash a letter or glyph before they first appear.
 
 ## Releases
 

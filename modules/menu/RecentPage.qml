@@ -1035,10 +1035,11 @@ PageShell {
                                     readonly property string _fallbackSource: String(
                                         _entry.modelData.appName || _entry.modelData.summary || "N").trim()
 
-                                    // the popup card's initial tile, its radius kept in proportion: a bare dim letter reads as a missing glyph
+                                    // the popup card's initial tile, its radius kept in proportion: a bare dim letter reads as a missing glyph.
+                                    // Not while loading, or the initial flashes in before the icon's first decode
                                     Rectangle {
                                         anchors.fill: parent
-                                        visible: _recentAppIcon.status !== Image.Ready
+                                        visible: _recentAppIcon.status === Image.Null || _recentAppIcon.status === Image.Error
                                         radius: Math.round(Theme.radiusField * 2 / 3)
                                         color: Theme.withAlpha(Theme.subtext, 0.12)
                                     }
@@ -1046,7 +1047,7 @@ PageShell {
                                     ShellText {
                                         anchors.centerIn: parent
                                         anchors.alignWhenCentered: false
-                                        visible: _recentAppIcon.status !== Image.Ready
+                                        visible: _recentAppIcon.status === Image.Null || _recentAppIcon.status === Image.Error
                                         text: SafeText.initial(_appIconSlot._fallbackSource, "N")
                                         color: Theme.menuTextDetail
                                         // held at its 100% size: the tile stays 16 px, as the icon does

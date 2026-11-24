@@ -194,12 +194,13 @@ Item {
                         width: Metrics.iconCellFor(Settings.fontLabel)
                         height: width
 
-                        // the popup card's initial tile, at the icon's 16 px: a bare dim letter reads as a missing glyph
+                        // the popup card's initial tile, at the icon's 16 px: a bare dim letter reads as a missing glyph.
+                        // Not while loading, or the initial flashes in before the icon's first decode
                         Rectangle {
                             anchors.centerIn: parent
                             anchors.alignWhenCentered: false
                             width: 16; height: 16
-                            visible: !_row.isAll && _rowIcon.status !== Image.Ready
+                            visible: !_row.isAll && (_rowIcon.status === Image.Null || _rowIcon.status === Image.Error)
                             radius: Math.round(Theme.radiusField * 2 / 3)
                             color: Theme.withAlpha(Theme.subtext, 0.12)
                         }
@@ -207,7 +208,7 @@ Item {
                         ShellText {
                             anchors.centerIn: parent
                             anchors.alignWhenCentered: false
-                            visible: _row.isAll || _rowIcon.status !== Image.Ready
+                            visible: _row.isAll || _rowIcon.status === Image.Null || _rowIcon.status === Image.Error
                             text: _row.isAll ? "󰂚"
                                 : SafeText.initial(_row.label, "N")
                             color: _row.active

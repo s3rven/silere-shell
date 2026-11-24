@@ -646,11 +646,14 @@ Item {
         ColorFade on color {}
 
         ClippingRectangle {
+            id: _headerTile
             visible: card.showIconSlot
             width: card._iconSide; height: card._iconSide
             radius: Theme.radiusField
+            // not while loading: a first decode takes a frame or two, and the initial flashed in before the icon
+            readonly property bool _initialShown: _headerIcon.status === Image.Null || _headerIcon.status === Image.Error
             // the initial gets a tile of its own; bare, a lone dim letter reads as a missing glyph
-            color: _headerIcon.status === Image.Ready ? "transparent" : Theme.withAlpha(Theme.subtext, 0.12)
+            color: _initialShown ? Theme.withAlpha(Theme.subtext, 0.12) : "transparent"
             anchors.top:        parent.top
             anchors.left:       parent.left
             anchors.topMargin:  13
@@ -659,7 +662,8 @@ Item {
             ShellText {
                 anchors.centerIn: parent
                 anchors.alignWhenCentered: false
-                visible: _headerIcon.status !== Image.Ready
+                objectName: "notification-initial"
+                visible: _headerTile._initialShown
                 text: card.fallbackInitial
                 color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontCaption

@@ -6869,6 +6869,14 @@ ShellRoot {
         root._check(notificationCard._timeUpdateMs > 30000 && notificationCard._timeUpdateMs <= 60000,
             "a new notification schedules its age label for the next minute boundary")
         root._check(notificationCard !== null, "a notification card builds")
+        const cardInitial = root._findTrayNode(notificationCard, item => item.objectName === "notification-initial")
+        root._check(cardInitial && cardInitial.visible, "a notification with no app icon shows its initial")
+        const iconless = notificationCard.notification
+        notificationCard.notification = Object.assign({}, iconless, { appIcon: "/usr/share/icons/silere-probe-missing.svg" })
+        const cardIcon = root._findTrayNode(notificationCard, item => item instanceof Image && item.status === Image.Loading)
+        root._check(cardIcon && cardInitial && !cardInitial.visible,
+            "a notification app icon that is still loading shows no initial in its place")
+        notificationCard.notification = iconless
         root._check(notificationCard.actionColumns(400, 80, 4) === 4
                 && notificationCard.actionColumns(232, 90, 4) === 2
                 && notificationCard.actionColumns(160, 120, 3) === 1
@@ -11045,6 +11053,13 @@ ShellRoot {
             "each app slider accumulates touchpad steps only for its own target")
         appSliderA.destroy()
         appSliderB.destroy()
+        const iconSlider = quickSliderFactory.createObject(barFixtureHost, { width: 320, glyph: "󰕾" })
+        const sliderGlyph = root._findTrayNode(iconSlider, item => item.text === "󰕾")
+        root._check(sliderGlyph && sliderGlyph.visible, "a slider with no icon shows its glyph")
+        iconSlider.glyphSource = "file:///usr/share/icons/silere-probe-missing.svg"
+        root._check(root._findTrayNode(iconSlider, item => item.status === Image.Loading) && sliderGlyph && !sliderGlyph.visible,
+            "a slider icon that is still loading shows no glyph in its place")
+        iconSlider.destroy()
 
         const gradient = gradientSliderFactory.createObject(barFixtureHost, {
             width: 100, position: 0.5, displayScale: 360, wraps: true

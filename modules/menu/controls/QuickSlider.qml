@@ -55,7 +55,8 @@ MenuRow {
 
         ShellText {
             anchors.centerIn: parent
-            visible: _icon.status !== Image.Ready
+            // not while the icon loads, or the glyph flashes in before its first decode
+            visible: _icon.status === Image.Null || _icon.status === Image.Error
             text: root.glyph
             color: root.glyphClickable && (_glyphHover.hovered || _glyphTap.pressed)
                 ? Theme.text : Theme.withAlpha(Theme.subtext, 0.85)
