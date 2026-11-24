@@ -453,9 +453,11 @@ FittedPopupWindow {
                 readonly property real _panelH: Metrics.snap4Up(
                     Math.min(_subCol.implicitHeight + pad * 2, Math.max(48, card.winH - 8)))
                 readonly property real _targetY: Math.max(4 - _origin.y, Math.min(-pad, card.winH - 4 - _origin.y - height))
-                x: Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW, _entry.ownerOpensLeft)
-                y: _origin.y + _targetY
-                width:  _w
+                // on whole output pixels: placed off a row's mapped position, the submenu's outline sat half a pixel off at 1.25
+                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                x: Metrics.devicePx(Metrics.flyoutX(_origin.x, _entry.width, _w, card.winW, _entry.ownerOpensLeft), _dpr)
+                y: Metrics.devicePx(_origin.y + _targetY, _dpr)
+                width:  Metrics.devicePx(_w, _dpr)
                 height: _flyHeight.value
                 // rows an app sends after the submenu shows grow it like the card; the rows it opens with land at once, before the fade starts
                 SmoothGlide {

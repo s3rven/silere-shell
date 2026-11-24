@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -362,8 +363,13 @@ FittedPopupWindow {
             }
 
             Item {
+                id: _navRow
                 width: parent.width
                 height: Metrics.rowHeightFor(34)
+                // the 14 px inset is half an output pixel at 1.25, and the round arrow buttons drew soft-edged there.
+                // Snapped here, not in IconButton: inside an already snapped row the menu's buttons would move twice
+                readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
+                transform: PixelSnap { item: _navRow; dpr: _navRow._dpr }
 
                 IconButton {
                     id: _prevButton

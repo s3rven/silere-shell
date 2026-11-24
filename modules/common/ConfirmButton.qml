@@ -73,9 +73,10 @@ Rectangle {
     property real _armT: root._armedFace ? 1 : 0
     property real _reveal: root.shown ? 1 : 0
     property real _dim: root._interactive ? 1.0 : Theme.disabledOpacity
-    // the pinned widths keep the menu's button steady; max() only ever grows it, so a longer label cannot clip against them
-    property real _restW: Math.max(root.restWidth, _restRow.implicitWidth + 20)
-    property real _armedW: Math.max(root.armedWidth, _armedRow.implicitWidth + 20)
+    // the pinned widths keep the menu's button steady; max() only ever grows it, so a longer label cannot clip against them.
+    // On the 4 px grid: a width taken from text left the outline's far edge between output pixels at 1.25
+    property real _restW: Math.max(root.restWidth, Metrics.snap4Up(_restRow.implicitWidth + 20))
+    property real _armedW: Math.max(root.armedWidth, Metrics.snap4Up(_armedRow.implicitWidth + 20))
 
     // no Behavior on width: it would grow from 0 every time the button is shown
     width:  root.revealed ? root._restW + (root._armedW - root._restW) * root._armT : 0
