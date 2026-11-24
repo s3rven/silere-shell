@@ -10,6 +10,10 @@ StartLimitBurst=3
 Type=exec
 ExecStart=@SILERE_LAUNCHER@ run
 Restart=on-failure
+# quickshell exits 255 only when it has no compositor: at logout, or once Hyprland or niri is gone. A crash is a
+# signal and restarts; a restart without a compositor cannot help, and a logout is not a failure
+RestartPreventExitStatus=255
+SuccessExitStatus=255
 RestartSec=2
 TimeoutStopSec=10
 

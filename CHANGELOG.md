@@ -15,6 +15,9 @@ settings file carries its own `__version` and migrates separately.
 
 - The installer ends its list of missing optional tools with the one command that installs them on your system, the
   way `silere doctor` does, and stays quiet about matugen's steps when matugen is not installed.
+- The optional user service treats a logout as a clean stop: Quickshell exits 255 only once the compositor is gone,
+  so the unit no longer shows as failed after every logout or tries to restart without one. Crashes still restart it.
+
 - On Hyprland the installer binds the menu key to the `silere:menu` global shortcut, which starts no process per press,
   and Settings › System › Keybinds names that bind on any key. `silere doctor` names an older `qs ipc` menu bind and
   the line that replaces it.

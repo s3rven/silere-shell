@@ -185,6 +185,9 @@ bash "$ROOT/scripts/service.sh" install --dry-run > "$scratch/unit-preview"
 check test ! -d "$scratch/config/systemd"
 check grep -qx 'Restart=on-failure' "$scratch/unit-preview"
 check grep -qx 'StartLimitBurst=3' "$scratch/unit-preview"
+# a logout (quickshell exits 255 without a compositor) stops the unit clean instead of failing and restarting it
+check grep -qx 'RestartPreventExitStatus=255' "$scratch/unit-preview"
+check grep -qx 'SuccessExitStatus=255' "$scratch/unit-preview"
 bash "$ROOT/scripts/service.sh" install > /dev/null
 check test -f "$scratch/config/systemd/user/silere-shell.service"
 check test "$(tail -1 "$SILERE_TEST_LOG")" = '--user daemon-reload'
