@@ -294,17 +294,14 @@ PanelWindow {
     }
 
     // the keyboard's verbs (NotificationKeys). The newest card still on screen is what dunst and mako mean by the last one;
-    // arrival time picks it, since a top bar stacks the newest first and a bottom bar last
+    // the model is in arrival order whichever way the bar stacks it, so the newest is the last slot
     function _newestCard(): var {
-        let best = null, bestTime = -Infinity
-        for (let i = 0; i < stack.count; i++) {
+        for (let i = stack.count - 1; i >= 0; i--) {
             const slot = stack.itemAt(i)
             const card = slot ? slot.cardItem : null
-            if (!card || card._leaving || !card._canInteract) continue
-            const t = Number(slot.modelData?.time ?? 0)
-            if (t >= bestTime) { best = card; bestTime = t }
+            if (card && !card._leaving && card._canInteract) return card
         }
-        return best
+        return null
     }
     function keyDismissNewest(): bool {
         const card = win._newestCard()
