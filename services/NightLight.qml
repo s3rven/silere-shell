@@ -308,6 +308,12 @@ Singleton {
 
     function toggle(): void {
         if (!toolAvailable || _sandboxed) return
+        // a light another program started can only be stopped through pgrep: without it the light stays on, so the
+        // saved state must not say off
+        if (enabled && !_killProc.running && !_sunsetProc.running && !_stopping && !SystemTools.hasPgrep) {
+            root.lastError = "Install pgrep to stop an external night light"
+            return
+        }
         // any pgrep in flight describes the state before this action
         root._stateGeneration++
         root._restoreDone = true
@@ -320,11 +326,8 @@ Singleton {
             if (_sunsetProc.running || _stopping) {
                 _stopping = true
                 if (_sunsetProc.running) _sunsetProc.running = false
-            } else if (SystemTools.hasPgrep) {
-                root._stopSessionTool()
             } else {
-                root.lastError = "Install pgrep to stop an external night light"
-                return
+                root._stopSessionTool()
             }
             enabled = false
         } else {

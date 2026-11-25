@@ -280,7 +280,13 @@ Singleton {
         id: _rfkillUnblock
         timeoutMs: 3000
         onExited: code => {
-            if (!_rfkillUnblock.completedSuccessfully(code)) root._clearUnblock()
+            if (!_rfkillUnblock.completedSuccessfully(code)) {
+                root._clearUnblock()
+                // the toggle did nothing else: without rfkill (its own package on Debian) or a writable switch it stays off
+                SystemAlerts.send("Bluetooth stays off", code === 127
+                    ? "Install rfkill to turn Bluetooth back on." : "Its radio could not be unblocked.",
+                    "normal", "bluetooth-disabled")
+            }
             root.refreshBlockState()
         }
     }
