@@ -201,6 +201,8 @@ EOF
     test "$(notifications invoke)" = ok
     signal "ActionInvoked (uint32 $acted, 'default')"
     newest="$(notify 0 'newest' '[]')"
+    # shown counts a notification as soon as the server has it; its card is up a little later, more on a slow runner
+    for _ in $(seq 1 50); do [[ "$(notifications status)" == *"\"newest\":$newest}"* ]] && break; sleep 0.1; done
     test "$(notifications dismiss)" = ok
     signal "NotificationClosed (uint32 $newest, uint32 2)"
     test "$(notifications dismissAll)" = ok

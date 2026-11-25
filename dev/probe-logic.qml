@@ -1038,7 +1038,8 @@ ShellRoot {
         const fake = Qt.createQmlObject('import QtQuick; QtObject { property var calls: []; property bool hasCard: true; '
             + 'function keyDismissNewest() { calls = calls.concat("newest"); return hasCard } '
             + 'function keyDismissAll() { calls = calls.concat("all"); return hasCard } '
-            + 'function keyInvokeNewest() { calls = calls.concat("invoke"); return hasCard } }', root)
+            + 'function keyInvokeNewest() { calls = calls.concat("invoke"); return hasCard } '
+            + 'function newestCard() { return hasCard ? { notification: { id: 7 } } : null } }', root)
         NotificationKeys.surface = null
         const noWindow = NotificationKeys.run("dismiss")
         NotificationKeys.surface = fake
@@ -1048,6 +1049,9 @@ ShellRoot {
         const calls = fake.calls.join()
         let status = null
         try { status = JSON.parse(NotificationKeys.statusText()) } catch (e) { status = null }
+        fake.hasCard = true
+        let withCard = null
+        try { withCard = JSON.parse(NotificationKeys.statusText()) } catch (e) { withCard = null }
         NotificationKeys.surface = surfaceWas
         fake.destroy()
         root._check(noWindow === "no notification on screen" && noCard === "no notification on screen"
@@ -1056,6 +1060,8 @@ ShellRoot {
         root._check(status !== null && typeof status.shown === "number" && typeof status.missed === "number"
                 && typeof status.dnd === "boolean" && typeof status.silenced === "boolean",
             "notifications status answers JSON with the shown and missed counts and both quiet states")
+        root._check(status !== null && status.newest === 0 && withCard !== null && withCard.newest === 7,
+            "notifications status names the card dismiss and invoke would act on, 0 with none up")
     }
 
     // what the silere:menu and silere:tray global shortcuts call: Home unanchored, a second press closes it

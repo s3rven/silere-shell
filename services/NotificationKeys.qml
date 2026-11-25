@@ -23,9 +23,13 @@ Singleton {
         return done ? "ok" : "no notification on screen"
     }
 
+    // newest: the id dismiss and invoke would act on now, 0 with no card up; a notification only just sent is counted
+    // in shown before its card is up, so a script that wants that one waits for it here
     function statusText(): string {
+        const card = root.surface ? root.surface.newestCard() : null
         return JSON.stringify({ shown: Notifications.activeCount, missed: Notifications.missedShown,
-            dnd: Notifications.effectiveDnd, silenced: Notifications.silencingActive })
+            dnd: Notifications.effectiveDnd, silenced: Notifications.silencingActive,
+            newest: card && card.notification ? card.notification.id : 0 })
     }
 
     IpcHandler {

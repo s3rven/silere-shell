@@ -226,7 +226,7 @@ silere dismiss
 | `dismiss` | dismisses the newest popup (`silere dismiss`) |
 | `dismissAll` | dismisses every popup; history keeps them (`silere dismiss all`) |
 | `invoke` | acts on the newest popup as a click would: its default action, or the window it came from |
-| `status` | prints JSON with `shown`, `missed`, `dnd` and `silenced` |
+| `status` | prints JSON with `shown`, `missed`, `dnd`, `silenced` and `newest`, the id of the card `dismiss` and `invoke` act on (0 with none up) |
 
 With no popup on screen the first three reply `no notification on screen`. Bound in Hyprland:
 
