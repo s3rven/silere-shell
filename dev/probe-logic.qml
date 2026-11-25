@@ -13145,6 +13145,11 @@ ShellRoot {
                 && Math.abs(pictureLch.h - Theme.lchOf("#3a6ea5").h) < 4
                 && Theme.accentFrom(["#101010", "#f4f4f4", "#808080"]) === "" && Theme.accentFrom([]) === "",
             "a picture gives its most colourful main colour as the accent, lifted to read on the dark base; a grey one gives none")
+        Theme._themeImage = "/nonexistent/wall #2 50%.png"
+        const pictureUrl = String(Theme._quantizer.source)
+        Theme._themeImage = ""
+        root._check(pictureUrl === "file:///nonexistent/wall %232 50%25.png",
+            "a picture whose name holds # or % reaches the quantizer as that file: " + pictureUrl)
         const app = (binary, name) => ({ "application.process.binary": binary, "application.name": name })
         root._check(Audio.twoWay([app("firefox", "Firefox")], [app("firefox", "Firefox")])
                 && Audio.twoWay([app("", "Discord")], [app("", "discord")])

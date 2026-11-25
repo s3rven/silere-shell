@@ -605,7 +605,8 @@ Singleton {
     }
     property string _themeImage: ""
     readonly property ColorQuantizer _quantizer: ColorQuantizer {
-        source: root._themeImage.length > 0 ? "file://" + root._themeImage : ""
+        // encoded a segment at a time: raw, a "#" or "?" in a wallpaper's name cut the URL short and nothing loaded
+        source: root._themeImage.length > 0 ? "file://" + root._themeImage.split("/").map(encodeURIComponent).join("/") : ""
         depth: 3
         rescaleSize: 64
         onColorsChanged: {
