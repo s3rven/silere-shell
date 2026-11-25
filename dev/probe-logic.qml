@@ -14088,6 +14088,19 @@ ShellRoot {
         root._check(dndUnchangedRuns === 0 && Hooks._runTimes.length === 1
                 && Hooks._stateSeen["dnd-changed"] === (Notifications.dnd ? "on" : "off"),
             "a state hook runs once per change, not again for the same state, and never for an event with no hook")
+        Hooks._present = { "dnd-changed": true, "media-changed": true }
+        const mediaKey = Hooks._stateNow("media-changed")[0]
+        Hooks._stateSeen = Object.assign({}, Hooks._stateSeen, { "media-changed": "stale" })
+        Hooks._stateChanged("media-changed")
+        const foundQuiet = Hooks._runTimes.length === 1 && Hooks._stateSeen["media-changed"] === mediaKey
+        Hooks._stateFound.stop()
+        Hooks._stateSeen = Object.assign({}, Hooks._stateSeen, { "media-changed": "stale" })
+        Hooks._stateChanged("media-changed")
+        const laterRuns = Hooks._runTimes.length === 2
+        Hooks._stateSeen = Object.assign({}, Hooks._stateSeen, { "media-changed": "" })
+        Hooks._stateChanged("media-changed")
+        root._check(foundQuiet && laterRuns && Hooks._runTimes.length === 2 && Hooks._stateSeen["media-changed"] === mediaKey,
+            "a late-reporting state settling just after a scan, or a first reading after none, is recorded without a run")
         const scheduleWas = ShellSettings.dndSchedule, fromWas = ShellSettings.dndFrom, toWas = ShellSettings.dndTo
         const dndHourWas = DateTime.hour24
         ShellSettings.dndSchedule = true

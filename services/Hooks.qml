@@ -301,7 +301,10 @@ Singleton {
         for (const event of root._stateEvents)
             if (root._present[event] === true) seen[event] = root._stateNow(event)[0]
         root._stateSeen = seen
+        root._stateFound.restart()
     }
+    // media, network and power report a moment after the shell starts: the first seconds after a scan are the state found
+    property Timer _stateFound: Timer { interval: 3000 }
     // [key, arguments]; an empty key is a state with nothing to report, such as no battery
     function _stateNow(event: string): var {
         switch (event) {
@@ -333,10 +336,12 @@ Singleton {
     function _stateChanged(event: string): void {
         if (root._present[event] !== true) return
         const now = root._stateNow(event)
-        if (now[0].length === 0 || now[0] === root._stateSeen[event]) return
+        const was = root._stateSeen[event] ?? ""
+        if (now[0].length === 0 || now[0] === was) return
         const seen = Object.assign({}, root._stateSeen)
         seen[event] = now[0]
         root._stateSeen = seen
+        if (was.length === 0 || (root._stateFound.running && !/^(dnd|idle)/.test(event))) return
         root.fire(event, now[1])
     }
     function _dndChanged(): void { root._stateChanged("dnd-changed") }
