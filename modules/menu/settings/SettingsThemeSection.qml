@@ -381,6 +381,7 @@ Column {
 
             SwatchPickerRow {
                 readonly property bool _neutral: ShellSettings.neutralTheme
+                searchKey: _neutral ? "baseTone" : "matugenDepth"
                 glyph: "󰏘"; label: "Base"
                 options: _neutral
                     ? [{ value: "black",  name: "Black" },

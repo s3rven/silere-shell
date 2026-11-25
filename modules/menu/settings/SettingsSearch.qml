@@ -310,7 +310,8 @@ Column {
 
     Rectangle {
         width: parent.width
-        height: Math.min(_results.count, 4) * Metrics.rowHeightFor(48) + 8
+        // four rows as drawn: a result's caption line grows with the type, which the 48px grid step does not count
+        height: (_results.count > 0 ? Math.min(_results.contentHeight, 4 * _results.contentHeight / _results.count) : 0) + 8
         visible: root.searching && _results.count > 0
         radius: Theme.radiusCard
         color: Theme.menuCard
