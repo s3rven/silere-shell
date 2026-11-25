@@ -13508,6 +13508,11 @@ ShellRoot {
                 "a full disk says so in its caption, and an unread disk leaves the caption empty")
             SysInfo.diskTotalKb = diskWas[0]; SysInfo.diskAvailKb = diskWas[1]
             const cpuRow = root._findTrayNode(vitals, item => item.label === "CPU" && item.sub !== undefined)
+            const memoryRow = root._findTrayNode(vitals, item => item.label === "Memory" && item.sub !== undefined)
+            root._check(diskRow && cpuRow && memoryRow && diskRow.openable === cpuRow.openable
+                    && memoryRow.openable === cpuRow.openable
+                    && diskRow.openable === Settings.systemMonitorCommand.length > 0,
+                "the disk row opens the system monitor whenever the CPU and memory rows do")
             const busiestWas = [SysInfo.topShown, SysInfo.topName, SysInfo.topPid]
             SysInfo.topName = "ffmpeg"; SysInfo.topPid = 41; SysInfo.topShown = true
             const busiestCaption = cpuRow ? cpuRow.sub : ""

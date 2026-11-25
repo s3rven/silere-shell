@@ -319,6 +319,8 @@ SettingsCard {
     Vital {
         id: _disk
         live: root.active
+        openable: Settings.systemMonitorCommand.length > 0
+        onActivated: root.openMonitor()
         glyph: "󰋊"
         label: "Disk"
         captionReserve: "999G free"
