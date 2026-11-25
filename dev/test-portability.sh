@@ -20,6 +20,9 @@ printf '#!/bin/sh\nexit 1\n' > "$TMP/suite-stubs/systemctl"
 chmod +x "$TMP/suite-stubs/notify-send" "$TMP/suite-stubs/systemctl"
 PATH="$TMP/suite-stubs:$PATH"
 export PATH
+# tests hide the user's git config, and with it the safe.directory a CI container sets for a checkout another user
+# owns; copies of that checkout keep its owner. Trust the suite's own repos once here (a test may still set its own)
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0='*'
 
 fail() {
     printf 'FAIL: %s\n' "$*" >&2
