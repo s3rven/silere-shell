@@ -306,7 +306,7 @@ Singleton {
     function _stateNow(event: string): var {
         switch (event) {
         case "dnd-changed": {
-            const dnd = Notifications.dnd ? "on" : "off"
+            const dnd = Notifications.effectiveDnd ? "on" : "off"
             return [dnd, [dnd]]
         }
         case "idle-changed": {
@@ -347,7 +347,7 @@ Singleton {
 
     Connections {
         target: root._present["dnd-changed"] === true ? Notifications : null
-        function onDndChanged() { root._dndChanged() }
+        function onEffectiveDndChanged() { root._dndChanged() }
     }
     Connections {
         target: root._present["idle-changed"] === true ? Idle : null

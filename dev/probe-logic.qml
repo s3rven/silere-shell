@@ -14088,6 +14088,19 @@ ShellRoot {
         root._check(dndUnchangedRuns === 0 && Hooks._runTimes.length === 1
                 && Hooks._stateSeen["dnd-changed"] === (Notifications.dnd ? "on" : "off"),
             "a state hook runs once per change, not again for the same state, and never for an event with no hook")
+        const scheduleWas = ShellSettings.dndSchedule, fromWas = ShellSettings.dndFrom, toWas = ShellSettings.dndTo
+        const dndHourWas = DateTime.hour24
+        ShellSettings.dndSchedule = true
+        ShellSettings.dndFrom = 22
+        ShellSettings.dndTo = 7
+        DateTime.hour24 = 21
+        const before = Hooks._stateNow("dnd-changed")[0]
+        DateTime.hour24 = 23
+        const during = Hooks._stateNow("dnd-changed")[0]
+        DateTime.hour24 = dndHourWas
+        ShellSettings.dndSchedule = scheduleWas; ShellSettings.dndFrom = fromWas; ShellSettings.dndTo = toWas
+        root._check(Notifications.dnd || (before === "off" && during === "on"),
+            "the dnd-changed hook hears quiet hours starting, as the bar's bell shows them")
         root._check((Hooks._stateNow("power-source-changed")[0].length > 0) === Battery.available
                 && Hooks._stateNow("media-changed")[1].length === 3
                 && Hooks._stateNow("network-changed")[1].length === 2,
