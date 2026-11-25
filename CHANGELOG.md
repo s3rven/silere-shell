@@ -31,6 +31,11 @@ settings file carries its own `__version` and migrates separately.
 
 ### Changed
 
+- Settings › System › Keybinds names keys as printed on them: Page Up, Caps Lock, Left, Brightness Up, and `.` or
+  `/` for punctuation.
+- A widget an update adds takes its default place in a bar you have rearranged, not the end of its side.
+- The underline glow and the OSD inside the bar are compiled only once switched on, so a default start does less
+  before the bar shows.
 - The installer ends its list of missing optional tools with the one command that installs them on your system, the
   way `silere doctor` does, and stays quiet about matugen's steps when matugen is not installed.
 - The optional user service treats a logout as a clean stop: Quickshell exits 255 only once the compositor is gone,
