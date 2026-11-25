@@ -180,6 +180,8 @@ Item {
                     }
                     return
                 }
+                // a double click's first tap switches here, so its second found this cell active and opened the menu
+                if (_tap.tapCount > 1) return
                 root._activate()
             }
         }
