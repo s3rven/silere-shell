@@ -12,19 +12,26 @@ Row {
     readonly property bool layoutVisible: show
     visible: show
 
+    function unfold(): void {
+        for (const pill of children) if (typeof pill.unfold === "function") pill.unfold()
+    }
+
     Repeater {
-        model: Indicators.items
+        // names only: any change to an array model rebuilds every delegate, so a script updating its text each second
+        // rebuilt every pill
+        model: Indicators.items.map(i => i.name)
         Pill {
-            required property var modelData
+            required property string modelData
+            readonly property var mark: Indicators.items.find(i => i.name === modelData) ?? { glyph: "", label: "" }
             anchors.verticalCenter: parent ? parent.verticalCenter : undefined
             height: root.height
             compact: root.compact
             barActive: root.barActive
-            glyph: modelData.glyph
-            text: modelData.label
+            glyph: mark.glyph
+            text: mark.label
             glyphColor: Theme.barSubtext
             textColor: Theme.barSubtext
-            accessibleName: modelData.label.length > 0 ? modelData.name + ": " + modelData.label : modelData.name
+            accessibleName: mark.label.length > 0 ? modelData + ": " + mark.label : modelData
         }
     }
 }

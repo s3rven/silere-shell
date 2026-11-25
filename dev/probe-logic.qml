@@ -272,6 +272,7 @@ ShellRoot {
         }
     }
     Component { id: systemWidgetFactory; SystemWidget {} }
+    Component { id: indicatorsWidgetFactory; IndicatorsWidget { height: 30 } }
     Component { id: ringGaugeFactory; RingGauge {} }
     Component { id: controlRowFactory; ControlRow { width: 320; title: "Probe control" } }
     Component { id: inlineOptionFactory; InlineOptionRow { width: 320; label: "Probe option" } }
@@ -13163,6 +13164,18 @@ ShellRoot {
         root._check(indicatorSet && indicatorOrder && indicatorRefused && indicatorCapped && Indicators.clear("build") === "ok"
                 && Indicators.items.every(i => i.name !== "build"),
             "script indicators keep their place when updated, refuse bad names and empty glyphs, and stop at six")
+        Indicators.items = []
+        const strip = indicatorsWidgetFactory.createObject(barFixtureHost)
+        const pills = () => strip.children.filter(c => c.modelData !== undefined)
+        Indicators.set("timer", "󰔟", "24:59")
+        const timerPill = pills()[0]
+        Indicators.set("timer", "󰔟", "24:58")
+        const kept = pills().length === 1 && pills()[0] === timerPill && timerPill.text === "24:58"
+        Indicators.set("vpn", "󰦝", "")
+        Indicators.clear("timer")
+        root._check(kept && pills().length === 1 && pills()[0].modelData === "vpn" && pills()[0].glyph === "󰦝",
+            "an indicator's new text keeps its pill, which a script updating every second rebuilt each time")
+        strip.destroy()
         Indicators.items = indicatorsWas
         const crashAt = new Date(2026, 10, 16, 14, 23)
         root._check(SystemAlerts.crashText(Math.floor(crashAt.getTime() / 1000) + "\t/c/report.txt\t0.3.2\tSegmentation fault (11)\n")
