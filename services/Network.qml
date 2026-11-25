@@ -170,11 +170,12 @@ Singleton {
     function recheckInternet(): void {
         if (root.toolAvailable && Networking.canCheckConnectivity) Networking.checkConnectivity()
     }
-    // NetworkManager backs off to one check every five minutes, so a finished sign-in would otherwise show late
+    // NetworkManager backs off to one check every five minutes, so a finished sign-in would otherwise show late; only
+    // while something shows it, or a network that blocks the check host was asked about all day
     Timer {
         interval: 30000
         repeat: true
-        running: root.connectivityIssue.length > 0 && !Idle.isIdle
+        running: root.connectivityIssue.length > 0 && !Idle.isIdle && (ShellSettings.barShowNetwork || MenuState.homeActive)
         onTriggered: root.recheckInternet()
     }
     Connections {
@@ -458,6 +459,7 @@ Singleton {
         wifiConnecting = ssid
         _wifiNameWasLinked = network.connected
         _pendingNetwork = network
+        _connectTimeout.extended = false
         _connectTimeout.restart()
         const security = network.security
         const psk = security === WifiSecurityType.WpaPsk
@@ -525,11 +527,21 @@ Singleton {
         interval: 900
     }
 
+    // 802.1X, a slow SAE handshake or DHCP can pass 20 s: while NetworkManager is still working on it, one more wait,
+    // so its own answer (a wrong password) still reaches the row instead of a bare "Failed"
     Timer {
         id: _connectTimeout
+        property bool extended: false
         interval: 20000
-        onTriggered: if (!root._settleWifiLink())
+        onTriggered: {
+            if (root._settleWifiLink()) return
+            if (!extended && root._pendingNetwork && root._pendingNetwork.stateChanging) {
+                extended = true
+                restart()
+                return
+            }
             root._finishWifi(false, ConnectionFailReason.Unknown)
+        }
     }
 
     function splitNmcliLine(line: string): var {

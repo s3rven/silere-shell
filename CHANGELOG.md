@@ -110,7 +110,10 @@ settings file carries its own `__version` and migrates separately.
   failures with the rest, so a saved report keeps them; `silere reset --history` previews; `silere service install`
   says when the system has no systemd; a mistyped `osd`, `theme` or `indicator` is suggested.
 - Turning Bluetooth on when its radio cannot be unblocked says why instead of doing nothing.
+- A Wi-Fi network that takes long to join, such as a work network, reports NetworkManager's own answer instead of
+  failing after 20 seconds.
 - Without pgrep, switching off a night light another program started keeps it shown as on.
+- On a limited network, the internet check stops while nothing shows the network.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
 - Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.
