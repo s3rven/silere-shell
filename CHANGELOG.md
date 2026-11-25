@@ -123,6 +123,7 @@ settings file carries its own `__version` and migrates separately.
 - Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.
 - With `~/.config/silere-shell` linked into a dotfiles folder, settings, notification history and hooks are saved and
   run again; the installer installs through such a link, but the shell refused to write there.
+- The `update-available` hook no longer runs again at every check while Flatpak updates are pending.
 
 ## Releases
 

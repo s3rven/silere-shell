@@ -292,8 +292,10 @@ Singleton {
                 if (m) root._detail(out, m[1], "", m[2], false)
             }
         }
-        root.repoCount = repo >= 0 ? repo : root.manager === "aur" ? 0 : root.count
-        root.aurCount  = aur  >= 0 ? aur  : root.manager === "aur" ? root.count : 0
+        // the list's own count, not `count`: that one also holds the Flatpak rows
+        const total = Math.max(0, root._countFrom(text))
+        root.repoCount = repo >= 0 ? repo : root.manager === "aur" ? 0 : total
+        root.aurCount  = aur  >= 0 ? aur  : root.manager === "aur" ? total : 0
         root.packages  = out
     }
 
@@ -457,7 +459,7 @@ Singleton {
         const n = root._countFrom(main)
         if (code === 0 && !main.startsWith("ERR") && n >= 0) {
             if (cut >= 0) root._acceptFlatpak(t.substring(cut + 1))
-            root.count = n
+            // one assignment: a dip to the repository count and back read as a rise to the update hook
             root._parseDetail(main)
             root.count = n + root.flatpakCount
             root.packages = root.packages.concat(root._flatpakRows).slice(0, root._maxDetail)

@@ -11434,6 +11434,14 @@ ShellRoot {
             && Updates.packages[3].name === "GNOME Application Platform version 50" && Updates.packages[3].to === "update"
             && Updates._flatpakPart().includes("--columns=application,name,version")
             && Updates.sourcesText === "2 from repos, 2 from Flatpak"
+        const repeatSteps = []
+        const repeatWatch = () => repeatSteps.push(Updates.count)
+        Updates.countChanged.connect(repeatWatch)
+        Updates._acceptCheckResult(0, "2\nSPLIT 2 0\none 1 -> 2\ntwo 1 -> 2\n")
+        Updates.countChanged.disconnect(repeatWatch)
+        root._check(Updates.count === 4 && repeatSteps.length === 0,
+            "a repeat check with Flatpak updates pending leaves the count alone, so the update hook does not fire again (steps "
+                + repeatSteps.join(",") + ")")
         Updates._acceptCheckResult(0, "1\none 1 -> 2\n")
         root._check(flatpakCounted && Updates.count === 3 && Updates.flatpakCount === 2 && Updates.packages.length === 3,
             "Flatpak updates, a runtime without a version too, add to the package count and list, and stand between their own slower checks")
