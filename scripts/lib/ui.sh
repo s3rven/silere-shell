@@ -265,6 +265,10 @@ _silere_notification_autostarters() {
             cmd="$(awk 'sub(/^Exec=/, "") { print; exit }' "$file" 2>/dev/null)"
             unit="$(awk 'sub(/^SystemdService=/, "") { print; exit }' "$file" 2>/dev/null)"
             case "$cmd" in ""|*plasma_waitforname*|*quickshell*|*silere*) continue ;; esac
+            # the mask this advice gives keeps D-Bus from starting it, so a masked one is off already
+            if [ -n "$unit" ]; then
+                case "$(systemctl --user is-enabled "$unit" 2>/dev/null)" in masked|masked-runtime) continue ;; esac
+            fi
             name="${cmd%% *}"; name="${name##*/}"
             case "$seen" in *" $name "*) continue ;; esac
             seen="$seen$name "

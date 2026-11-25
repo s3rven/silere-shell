@@ -3470,6 +3470,12 @@ test_notification_autostarters_are_named() (
     out="$(HOME="$home" XDG_DATA_HOME="" XDG_DATA_DIRS="$sys:$sys" _silere_notification_autostarters)"
     assert_eq $'dunst\t\nmako\tmako.service' "$out" \
         "notification daemons D-Bus can start are named once each with their unit; Plasma's waiter and other names are not"
+    # once masked as advised, D-Bus can no longer start it, so the advice stops
+    mkdir -p "$TMP/notif-stubs"
+    printf '#!/bin/sh\n[ "$3" = mako.service ] && echo masked\nexit 1\n' > "$TMP/notif-stubs/systemctl"
+    chmod +x "$TMP/notif-stubs/systemctl"
+    out="$(PATH="$TMP/notif-stubs:$PATH" HOME="$home" XDG_DATA_HOME="" XDG_DATA_DIRS="$sys" _silere_notification_autostarters)"
+    assert_eq $'dunst\t' "$out" "a daemon whose unit is masked is not named again"
     out="$(HOME="$TMP/notif-none" XDG_DATA_HOME="" XDG_DATA_DIRS="$TMP/notif-none" _silere_notification_autostarters)"
     assert_eq "" "$out" "no D-Bus file, nothing to say"
 )
