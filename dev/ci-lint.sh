@@ -530,12 +530,13 @@ fi
 section "compositor backend contract"
 # The facade reads every model and action off Loader.item. A member the adapter does not
 # define comes back undefined rather than failing, so a backend silently renders empty.
+# A name the facade lacks fails too: skipping it let "specialOutput" check nothing for months
 compositor_contract_missing=""
 for member in workspaces toplevels workspaceToplevels activeToplevel focusedMonitor \
-              focusedWorkspaceRef overviewActive specialOutput monitorName focusWorkspace \
+              focusedWorkspaceRef overviewActive specialOutputs monitorName focusWorkspace \
               moveActiveToWorkspace focusToplevel refreshToplevels popupGrab; do
   grep -qE "^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z<>]+[[:space:]]+|function[[:space:]]+)${member}\b" \
-    services/Compositor.qml || continue
+    services/Compositor.qml || { compositor_contract_missing="$compositor_contract_missing services/Compositor.qml:$member"; continue; }
   for adapter in services/CompositorHyprland.qml services/CompositorNiri.qml; do
     grep -qE "^[[:space:]]*(readonly[[:space:]]+)?(property[[:space:]]+[A-Za-z<>]+[[:space:]]+|function[[:space:]]+)${member}\b" \
       "$adapter" || compositor_contract_missing="$compositor_contract_missing $adapter:$member"
