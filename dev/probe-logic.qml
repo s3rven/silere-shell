@@ -17366,6 +17366,9 @@ ShellRoot {
         popup._setAnchor(probeAnchor)
         root._check(popup.anchorSource === probeAnchor,
             "setting a popup anchor retains the requested live object")
+        root._check(popup.effectiveAnchorX === 17,
+            "a popup opened from a widget with no live x keeps its x when a live one takes the anchor")
+        popup.openAt(17, null, probeAnchor)
         root._check(popup.effectiveAnchorX === probeAnchor.menuAnchorX,
             "a popup reads the current x from its live anchor")
         popup.adoptAnchor(invalidProbeAnchor)

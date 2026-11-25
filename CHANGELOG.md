@@ -167,6 +167,8 @@ settings file carries its own `__version` and migrates separately.
 - Turning on Do Not Disturb, or quiet hours starting, also clears the cards already on screen into history, except
   critical ones, ones that stay until dismissed, and one you are replying to.
 - Double-clicking a workspace switches to it without also opening the menu.
+- A menu opened from a bar icon stays under that icon when the bar is rebuilt beneath it (reordering widgets, moving
+  the bar), instead of jumping to the workspaces on its next resize.
 
 ## Releases
 

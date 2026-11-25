@@ -23,8 +23,12 @@ Singleton {
         }
     }
 
+    // the live x of whichever widget holds the anchor, but only for a popup opened from one that has it (the workspace
+    // strip, the clock) or from a keybind. Opened from an icon, a bar rebuild handed the anchor to the strip, and the
+    // menu's next resize carried it across the screen to the strip's x
+    property bool _followsSource: true
     readonly property real effectiveAnchorX: {
-        const live = Number(root.anchorSource?.menuAnchorX)
+        const live = root._followsSource ? Number(root.anchorSource?.menuAnchorX) : NaN
         return isFinite(live) ? live : root.anchorX
     }
 
@@ -64,12 +68,14 @@ Singleton {
         root._setAnchor(null)
     }
     function openUnanchored(): void {
+        root._followsSource = true
         root._unanchor()
         root.open = true
     }
 
     function openAt(x: real, screen, source): void {
         root.anchorX = x
+        root._followsSource = !source || isFinite(Number(source.menuAnchorX))
         root._setAnchor(source)
         root.triggerScreen = screen ?? null
         root.open = true
