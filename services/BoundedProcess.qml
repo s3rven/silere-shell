@@ -7,8 +7,6 @@ Process {
 
     property int timeoutMs: 0
     property bool timedOut: false
-    // set by stop(): the run ended because its caller had what it needed, not because it failed
-    property bool stopped: false
 
     signal timeoutReached()
 
@@ -45,7 +43,6 @@ Process {
         function onRunningChanged() {
             if (root.running) {
                 root.timedOut = false
-                root.stopped = false
                 // a run chained from exited starts before the old run's flag clears
                 root._exitSeen = false
                 // and running never falls between the two, so the bound timer alone would keep the old deadline
@@ -57,12 +54,6 @@ Process {
         }
     }
 
-    // ends a run early, with its whole tree, as the deadline would
-    function stop(): void {
-        if (!root.running || root.stopped) return
-        root.stopped = true
-        root._terminateTree()
-    }
     function _terminateTree(): void {
         const pid = root.processId
         if (pid > 0)
@@ -85,7 +76,7 @@ Process {
     // backstop a tree helper that never ran; its own KILL pass normally lands first
     property Timer _killGrace: Timer {
         interval: 3000
-        running: (root.timedOut || root.stopped) && root.running
+        running: root.timedOut && root.running
         onTriggered: {
             const pid = root.processId
             if (root.running && pid > 0)
