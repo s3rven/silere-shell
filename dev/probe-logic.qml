@@ -5524,6 +5524,11 @@ ShellRoot {
         const homeLayout = ShellSettings._normaliseBarWidgetLayout("workspaces", "windowTitle", "clock")
         root._check(homeLayout.loc.media.zone === "left" && homeLayout.loc.battery.zone === "right",
             "a widget missing from every zone returns to its catalog zone")
+        const savedRight = ShellSettings._normaliseBarWidgetLayout("workspaces,media", "windowTitle",
+            "clock,shellUpdate,tray,updates,system,network,bluetooth,keyboard,volume,microphone,brightness,battery").right
+        root._check(savedRight.indexOf("indicators") === 0 && savedRight[1] === "clock"
+                && legacyLayout.right.join(",") === ShellSettings._defaults.barWidgetOrderRight,
+            "a widget an update adds takes its catalog place in a saved layout, not the end of its zone")
         root._check(ShellSettings._defaults.barWidgetOrderLeft === "workspaces,media"
                 && ShellSettings._defaults.barWidgetOrderCenter === "windowTitle"
                 && ShellSettings._defaults.barWidgetOrderRight
@@ -14182,7 +14187,7 @@ ShellRoot {
         const ipcOrder = ShellSettings.barWidgetOrderLeftKeys.concat(
             ShellSettings.barWidgetOrderCenterKeys,
             ShellSettings.barWidgetOrderRightKeys)
-        root._check(ipcOrderResult === "clock,windowTitle"
+        root._check(ipcOrderResult === "windowTitle,clock"
                 && ShellSettings.barWidgetLocate("clock").zone === "center",
             "a widget-order IPC write moves a key and restores center-default additions")
         root._check(ipcOrder.length === ShellSettings.barWidgetKeys.length

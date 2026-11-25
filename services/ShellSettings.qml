@@ -210,7 +210,10 @@ Singleton {
             const k = all[i]
             if (seen[k]) continue
             const home = names.indexOf(root.barWidgetMeta[k].zone)
-            zones[home < 0 ? 2 : home].push(k)
+            const zone = zones[home < 0 ? 2 : home]
+            // a widget an update adds goes before its catalog successor: appended, it landed past a saved layout's clock
+            const next = all.slice(i + 1).find(n => zone.indexOf(n) >= 0)
+            zone.splice(next === undefined ? zone.length : zone.indexOf(next), 0, k)
         }
         const loc = {}
         for (let zone = 0; zone < zones.length; zone++)
