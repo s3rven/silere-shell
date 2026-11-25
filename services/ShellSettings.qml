@@ -604,7 +604,16 @@ Singleton {
                 || k === "barWidgetOrderRight")
             root.setBarWidgetLayout(root.barWidgetOrderLeftKeys,
                 root.barWidgetOrderCenterKeys, root.barWidgetOrderRightKeys)
-        return String(root[k])
+        // one command is human pace, as a toggle is: a slider key's debounce would lose `silere set ... && silere restart`
+        _store.flush(false)
+        return root._ipcSavedReply(String(root[k]))
+    }
+
+    // a change that cannot reach disk still applies, as in the pages, but the command says so and exits non-zero
+    function _ipcSavedReply(value: string): string {
+        if (_store.writeAllowed && ConfigStore.error.length === 0) return value
+        const why = root.settingsError.length > 0 ? root.settingsError : "settings.json cannot be written."
+        return "error: " + value + " for this session only, not saved. " + why
     }
 
     IpcHandler {
@@ -630,7 +639,7 @@ Singleton {
             if (s.t !== "bool")
                 return "error: " + k + " is not a toggle; expected " + root.constraintOf(k)
             root[k] = !root[k]
-            return String(root[k])
+            return root._ipcSavedReply(String(root[k]))
         }
 
         function list(filter: string): string {

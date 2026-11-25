@@ -22,7 +22,7 @@ silere set osdTimeout 3000   # change a setting
 | `silere osd <glyph> <text> [0-100]` | shows a message of your own in the OSD: with a level it draws the bar volume uses, without one it stays up as long as a battery alert. Nothing shows while the OSD is off or the session idle |
 | `silere indicator set <name> <glyph> [text]` | shows a mark of your own in the bar until `silere indicator clear <name>`; a script pushes it, nothing polls. Up to six, names in lowercase letters, digits and dashes |
 | `silere theme <image>` | takes the accent from a picture and switches to the neutral theme, for a desktop without matugen; a grey picture changes nothing |
-| `silere get <key>`, `silere set <key> <value>` | reads or writes a setting; `on` and `off` work for true/false |
+| `silere get <key>`, `silere set <key> <value>` | reads or writes a setting; `on` and `off` work for true/false. A value that cannot be saved still applies until a restart, and the command fails saying why |
 | `silere settings [filter]` | lists settings with the values each takes; `--changed` lists only the ones you changed |
 
 `close` after `menu`, `calendar`, `quick` or `tray` only closes, for a keybind that dismisses without opening.

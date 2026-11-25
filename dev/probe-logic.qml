@@ -14362,6 +14362,17 @@ ShellRoot {
         root._check(ShellSettings._ipcSet("BARSPACING", "999") === "12"
                 && ShellSettings.barSpacing === 12,
             "a mixed-case IPC write resolves and reports its clamped value")
+        root._check(ShellSettings._persistence._reloading
+                || JSON.parse(ShellSettings._persistence.lastSavedText || "{}").barSpacing === 12,
+            "an IPC write of a slider setting is saved at once, not after the slider debounce a restart would cut short")
+        ShellSettings._persistence.writeAllowed = false
+        ShellSettings._readError = "Could not read settings.json. Existing data was left untouched."
+        const unsavedReply = ShellSettings._ipcSet("barSpacing", "4")
+        ShellSettings._readError = ""
+        ShellSettings._persistence.writeAllowed = true
+        root._check(unsavedReply.indexOf("error: 4 for this session only, not saved. Could not read settings.json") === 0
+                && ShellSettings.barSpacing === 4,
+            "an IPC write that cannot be saved still applies but says so, so the command exits non-zero (" + unsavedReply + ")")
         ShellSettings.barSpacing = ipcSpacingWas
         const ipcMotionWas = ShellSettings.reduceMotion
         root._check(ShellSettings._ipcSet("reduceMotion", "On") === "true" && ShellSettings.reduceMotion === true
