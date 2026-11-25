@@ -847,7 +847,14 @@ Singleton {
             else { _fsBlockTimer.stop(); root._fsBlocked = false }
         }
     }
-    Timer { id: _fsBlockTimer; interval: 2000; onTriggered: root._fsBlocked = true }
+    // only the bar a fullscreen window covers: with the visualizer on another monitor's bar (one without a bar of its own
+    // focused, as an external display often is) it kept drawing in sight and froze
+    Timer {
+        id: _fsBlockTimer
+        interval: 2000
+        onTriggered: root._fsBlocked = Quickshell.screens.length <= 1
+            || String(Compositor.activeToplevel?.output ?? "") === Monitors.overlayBarName
+    }
     on_FullscreenPauseWantedChanged: {
         if (!root._fullscreenPauseWanted) {
             _fsBlockTimer.stop()

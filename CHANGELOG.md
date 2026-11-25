@@ -114,6 +114,7 @@ settings file carries its own `__version` and migrates separately.
   failing after 20 seconds.
 - A power mode the laptop switches itself as the charger is pulled is no longer remembered as your plugged-in choice.
 - Without pgrep, switching off a night light another program started keeps it shown as on.
+- The audio visualizer keeps moving when a fullscreen window covers a monitor whose bar it is not on.
 - On niri, clicking an X11 app's notification raises it when another X11 app has the focus.
 - On a limited network, the internet check stops while nothing shows the network.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
