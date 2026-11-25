@@ -36,8 +36,9 @@ SURFACES = [
 ]
 
 PLAYER = r'''
-import dbus, dbus.mainloop.glib, dbus.service
+import dbus, dbus.mainloop.glib, dbus.service, os
 from gi.repository import GLib
+ART = os.environ.get("BENCH_ART_DIR", "")
 dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 P = "org.mpris.MediaPlayer2.Player"
 R = "org.mpris.MediaPlayer2"
@@ -49,7 +50,8 @@ class Player(dbus.service.Object):
     def meta(self):
         return dbus.Dictionary({"mpris:trackid": dbus.ObjectPath(f"/lab/{self.n}"), "xesam:title": dbus.String(f"Track {self.n}"),
             "xesam:artist": dbus.Array([dbus.String(f"Artist {self.n % 7}")], signature="s"),
-            "mpris:length": dbus.Int64(180000000)}, signature="sv")
+            "mpris:length": dbus.Int64(180000000),
+            **({"mpris:artUrl": dbus.String(f"file://{ART}/art{self.n % 40}.png")} if ART else {})}, signature="sv")
     def props(self):
         return {"PlaybackStatus": dbus.String("Playing"), "Metadata": self.meta(), "Position": dbus.Int64(self.n * 1000000),
             "Rate": dbus.Double(1.0), "Volume": dbus.Double(1.0), "CanGoNext": True, "CanGoPrevious": True, "CanPlay": True,
@@ -634,11 +636,88 @@ def run_settings(lab, args, arms):
     return results
 
 
+# a chat app's tray icon whose pixmap, tooltip and title change every 10 s, as an unread count does
+TRAY = r'''
+import dbus, dbus.mainloop.glib, dbus.service, os
+from gi.repository import GLib
+dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+I = "org.kde.StatusNotifierItem"
+class Item(dbus.service.Object):
+    def __init__(self, bus):
+        self.n = 0
+        self.name = dbus.service.BusName(f"org.kde.StatusNotifierItem-{os.getpid()}-1", bus)
+        super().__init__(self.name, "/StatusNotifierItem")
+    def props(self):
+        v = self.n % 256
+        pix = dbus.Array([dbus.Struct((dbus.Int32(32), dbus.Int32(32), dbus.ByteArray(bytes([255, v, 255 - v, v * 7 % 256]) * 1024)),
+                                      signature="iiay")], signature="(iiay)")
+        return {"Category": "Communications", "Id": "benchtray", "Title": f"Bench {self.n}", "Status": "Active",
+                "IconName": "", "IconPixmap": pix, "ItemIsMenu": False, "Menu": dbus.ObjectPath("/NoMenu"),
+                "ToolTip": dbus.Struct(("", dbus.Array([], signature="(iiay)"), "Bench", f"{self.n} unread"), signature="sa(iiay)ss")}
+    @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="ss", out_signature="v")
+    def Get(self, i, p):
+        return self.props()[p]
+    @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="s", out_signature="a{sv}")
+    def GetAll(self, i):
+        return self.props()
+    @dbus.service.signal(I)
+    def NewIcon(self): pass
+    @dbus.service.signal(I)
+    def NewToolTip(self): pass
+    @dbus.service.signal(I)
+    def NewTitle(self): pass
+    def tick(self):
+        self.n += 1
+        self.NewIcon(); self.NewToolTip(); self.NewTitle()
+        return True
+bus = dbus.SessionBus()
+item = Item(bus)
+def register():
+    try:
+        bus.get_object("org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher").RegisterStatusNotifierItem(
+            item.name.get_name(), dbus_interface="org.kde.StatusNotifierWatcher")
+    except dbus.DBusException:
+        return True
+    return False
+GLib.timeout_add_seconds(2, register)
+GLib.timeout_add_seconds(10, item.tick)
+GLib.MainLoop().run()
+'''
+
+
+def write_art(folder, count=40):
+    # distinct 160px PNGs for cover art and notification images: each track and picture decodes anew, as real ones do
+    import struct
+    import zlib
+    os.makedirs(folder, exist_ok=True)
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+    size = 160
+    for i in range(count):
+        rows = b"".join(b"\0" + bytes(c for x in range(size) for c in ((i * 37 + x) % 256, (i * 91 + y) % 256, i * 13 % 256))
+                        for y in range(size))
+        png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)) \
+            + chunk(b"IDAT", zlib.compress(rows, 6)) + chunk(b"IEND", b"")
+        with open(f"{folder}/art{i}.png", "wb") as f:
+            f.write(png)
+    return folder
+
+
 def soak_round(lab, i):
     rng = random.Random(i)
     lab.run("notify-send", "-a", "bench", f"Round {i}", "short body")
     lab.run("notify-send", "-a", f"app{i % 6}", f"Long {i}", " ".join(f"word{rng.randrange(9999)}" for _ in range(300)))
     lab.run("notify-send", "-a", "progress", "-r", "4242", f"Progress {i}", f"{i % 100}%")
+    art = lab.env.get("BENCH_ART_DIR", "")
+    if art:
+        lab.run("notify-send", "-a", "shot", "-i", f"{art}/art{(i * 7) % 40}.png", f"Shot {i}", "an image")
+        lab.run("notify-send", "-a", "chat", "-h", f"string:image-path:file://{art}/art{(i * 3) % 40}.png", f"Chat {i}", "a picture")
+    # a browser tab's title changing every second, for half of each other minute
+    if i % 2 == 0 and shutil.which("kitty"):
+        subprocess.Popen(["timeout", "50", "kitty", "-o", "allow_remote_control=no", "sh", "-c",
+                          "for n in $(seq 1 45); do printf '\\033]0;page %s - Browser\\007' $n; sleep 1; done"],
+                         env=lab.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for workspace in rng.sample(range(1, 7), 4):
         lab.run("hyprctl", "dispatch", f"hl.dsp.focus({{ workspace = {workspace} }})")
         time.sleep(0.15)
@@ -673,10 +752,13 @@ def run_soak(lab, args, arms):
     time.sleep(4)
     lab.ipc("quickActions", "keepAwake")
     if args.workload:
-        path = os.environ["XDG_RUNTIME_DIR"] + "/player.py"
-        with open(path, "w") as f:
-            f.write(PLAYER)
-        lab._spawn(["python3", path], lab.env, "player")
+        # cover art per track, pictures in notifications and a changing tray icon: the image paths a session decodes
+        lab.env["BENCH_ART_DIR"] = write_art(os.environ["XDG_RUNTIME_DIR"] + "/art")
+        for script, label in ((PLAYER, "player"), (TRAY, "tray")):
+            path = f"{os.environ['XDG_RUNTIME_DIR']}/{label}.py"
+            with open(path, "w") as f:
+                f.write(script)
+            lab._spawn(["python3", path], lab.env, label)
     time.sleep(4)
     started = time.monotonic()
     crashes = os.environ["XDG_CACHE_HOME"] + "/quickshell/crashes"
