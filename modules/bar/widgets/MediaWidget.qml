@@ -215,8 +215,10 @@ Item {
                 color:          ((_rootHover.hovered && ShellSettings.barHoverHighlight)) ? Theme.mix(_base, Theme.barAccent, 0.30) : _base
                 ColorFade on color {}
                 font.pixelSize: Settings.fontSize
-                width: ShellSettings.reduceMotion ? textClip.maxW : implicitWidth
-                elide: !ShellSettings.reduceMotion ? Text.ElideNone
+                // whole only while it slides; at rest (after its two passes, paused, on another monitor's bar) it
+                // elides, where the clip had cut a letter in half
+                width: _scroll.running ? implicitWidth : textClip.maxW
+                elide: _scroll.running ? Text.ElideNone
                     : root._canInteract && _rootHover.hovered ? Text.ElideLeft : Text.ElideRight
 
                 opacity: Media.playing ? 1.0 : 0.72
