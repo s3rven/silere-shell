@@ -429,6 +429,14 @@ _latest_release_tag() {
     return 1
 }
 
+# a well-formed list, not a known one: this check only ever reads the newest release, so naming the compositors it
+# knew would make an updater refuse every later release that adds one. Whether the running session is among them
+# is asked separately
+_manifest_compositors_valid() {
+    # a here-string, not a pipe: grep -q stops at the match and printf's next line would die of SIGPIPE under pipefail
+    grep -Eq '^[[:space:]]*"compositors"[[:space:]]*:[[:space:]]*\[[[:space:]]*"[a-z][a-z0-9_-]{0,31}"([[:space:]]*,[[:space:]]*"[a-z][a-z0-9_-]{0,31}")*[[:space:]]*\][[:space:]]*,?[[:space:]]*$' <<<"$1"
+}
+
 _release_fail() {
     local mode="$1" message="$2"
     if [ "$mode" = apply ]; then _fail "$message"; fi
@@ -467,8 +475,7 @@ _check_release_manifest() {
         || _release_fail "$mode" "$release_tag has an invalid settings schema"
     [[ "$manifest_qs" =~ ^[0-9]+(\.[0-9]+)*$ ]] \
         || _release_fail "$mode" "$release_tag has an invalid Quickshell requirement"
-    # a here-string, not a pipe: grep -q stops at the match and printf's next line would die of SIGPIPE under pipefail
-    grep -Eq '^[[:space:]]*"compositors"[[:space:]]*:[[:space:]]*\[[[:space:]]*"(hyprland|niri)"([[:space:]]*,[[:space:]]*"(hyprland|niri)")*[[:space:]]*\][[:space:]]*,?[[:space:]]*$' <<<"$release_manifest" \
+    _manifest_compositors_valid "$release_manifest" \
         || _release_fail "$mode" "$release_tag has an invalid compositor list"
 
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then compositor=hyprland

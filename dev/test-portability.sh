@@ -1105,6 +1105,22 @@ test_niri_config_discovery() {
     assert_eq "$TMP/niri/custom.kdl" "$actual" "flagless niri falls back to NIRI_CONFIG"
 }
 
+# the updater reads only the newest release's manifest, so an updater that knew only today's compositors would refuse
+# every later release that adds one, and never update again
+test_manifest_compositor_list() (
+    SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
+    local list
+    for list in '["hyprland", "niri"]' '["hyprland", "niri", "sway"]' '["sway"]' '[ "river-classic","labwc" ]'; do
+        _manifest_compositors_valid $'{\n  "compositors": '"$list"$'\n}' \
+            || fail "a well-formed compositor list was refused: $list"
+    done
+    for list in '[]' '["Hyprland"]' '["hyprland",]' '[hyprland]' '["a\"b"]' '["hyprland" "niri"]'; do
+        if _manifest_compositors_valid $'{\n  "compositors": '"$list"$'\n}'; then
+            fail "a malformed compositor list was accepted: $list"
+        fi
+    done
+)
+
 test_atomic_units() (
     SILERE_SCRIPT_LIB_ONLY=1 source "$ROOT/scripts/update.sh"
     local generated source_root="$ROOT" odd_root
@@ -4856,6 +4872,7 @@ test_aur_removal_notes
 test_unit_identity
 test_hypr_discovery
 test_niri_config_discovery
+test_manifest_compositor_list
 test_atomic_units
 test_shared_launcher
 test_reset_workflow

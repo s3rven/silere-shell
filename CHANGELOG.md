@@ -93,6 +93,8 @@ settings file carries its own `__version` and migrates separately.
 - The installer no longer offers to start Silere on a Quickshell older than it needs, and says which version to
   install; it also names mako, dunst or swaync when D-Bus would start one before Silere, with the command that stops it.
 - `silere doctor` stops telling you to mask a notification daemon you already masked.
+- The updater accepts a later release that supports more compositors; it refused any compositor it did not know
+  as a malformed release, which would have stopped updates for good.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).
 - The package updates pill no longer appears and folds away at each automatic check while nothing is pending.
