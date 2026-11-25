@@ -747,7 +747,7 @@ PageShell {
                     readonly property int _sidePad: 14
                     // layout reads what the row holds, never effective visibility: the page goes invisible as its fade
                     // ends, and every row relaid itself out then and again on the first frame back (once in a binding loop)
-                    readonly property bool _hasBody: _body.text.length > 0
+                    readonly property bool _hasBody: _body.text.trim().length > 0
                     // a lone line has no bottom corner clear of the remove button, so the chevron joins that line
                     readonly property bool _chevronInline: !_showHeader && !_hasBody
                     readonly property int _rightGutter: _rightSlot.width + 10

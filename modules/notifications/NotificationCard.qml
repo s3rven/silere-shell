@@ -121,7 +121,8 @@ Item {
         card.appNameText || card.summaryText, "N")
     // with no summary the body takes the title line, which otherwise drew blank above it
     readonly property string titleText:   summaryText.trim() || bodyText.trim() || "Notification"
-    readonly property bool hasBody:       bodyText.length > 0 && summaryText.trim().length > 0
+    // a body of spaces or a lone <br> reads as none, or the summary gave up its second line to a blank one
+    readonly property bool hasBody:       bodyText.trim().length > 0 && summaryText.trim().length > 0
     // messages this card folded in from the same app and sender, oldest first
     // dismiss() pins it: the service forgets a thread as soon as its notification closes, mid-exit for a withdrawn card
     property var           _thread:       Notifications.threadFor(card.notifId)
@@ -759,6 +760,7 @@ Item {
                         required property string modelData
                         width: _earlier.width
                         text: modelData
+                        horizontalAlignment: SafeText.startsRightToLeft(text) ? Text.AlignRight : Text.AlignLeft
                         color: Theme.menuTextQuiet
                         font.pixelSize: Settings.fontLabel
                         maximumLineCount: 1
