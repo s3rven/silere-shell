@@ -164,8 +164,9 @@ Rectangle {
     // place() not reclamp(): clamping the old x makes a widening card grow from its left edge
     onTargetWidthChanged: if (open) place()
     // the anchor moves with the bar it sits in; once the card has settled it holds still, so a
-    // bar edited from inside the menu does not drag the control being edited out from under the pointer
-    onAnchorXChanged: if (!open || !_placementSettled) place()
+    // bar edited from inside the menu does not drag the control being edited out from under the pointer. A closing
+    // card holds still too: its state lets go of the widget as it closes, and the anchor falls back to the click's x
+    onAnchorXChanged: if (open ? !_placementSettled : !_closing) place()
     onOpenChanged: {
         if (open) {
             _placementSettled = false

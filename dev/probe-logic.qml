@@ -3614,6 +3614,26 @@ ShellRoot {
         card.destroy(); host.destroy()
     }
 
+    // closing drops the widget's live x for the click's, and a card that had followed the widget jumped mid-fade
+    function _checkCardHoldsWhileClosing(): void {
+        const host = Qt.createQmlObject("import QtQuick; Item { width: 1536; height: 960 }", root)
+        const motionWas = ShellSettings.reduceMotion
+        ShellSettings.reduceMotion = false
+        const card = popupCardFactory.createObject(root, { win: host, open: true, anchorX: 900, barBottom: false, width: 232 })
+        card._transitionReady = true
+        card.opacity = 1
+        card.open = false
+        const fading = card._closing, x = card.x
+        card.anchorX = 300
+        const held = card.x === x
+        card._snapClosed(false)
+        card.anchorX = 600
+        root._check(fading && held && card.x === Metrics.snap4(card._targetX()),
+            "a closing popup card holds its place when its anchor falls back, and follows the anchor once closed")
+        ShellSettings.reduceMotion = motionWas
+        card.destroy(); host.destroy()
+    }
+
     function _checkPageBuildHidden(): void {
         const openWas = MenuState.open
         const reduceWas = ShellSettings.reduceMotion
@@ -5198,6 +5218,7 @@ ShellRoot {
         root._checkReadingsOutlastFade()
         root._checkPageBuildHidden()
         root._checkCardWidenKeepsMargin()
+        root._checkCardHoldsWhileClosing()
         root._checkAppHandoffs()
         root._checkBluetoothPairing()
         root._checkConnectivityConfirmations()
