@@ -38,7 +38,6 @@ Singleton {
     readonly property bool _topWanted: root._active && root._topRequests.active
     property string topName: ""
     property int topPid: 0
-    property real topShare: 0
     property bool topShown: false
     property int _topSamples: 0
     property var _topLast: null
@@ -476,7 +475,6 @@ Singleton {
         root.topName = !root.topShown ? ""
             : root._nameFor(busiest.pid, busiest.name, root._cmdNamePid === busiest.pid ? root._cmdName : "")
         root.topPid = root.topShown ? busiest.pid : 0
-        root.topShare = root.topShown ? busiest.share : 0
     }
 
     function _sampleTop(): void {
@@ -492,7 +490,6 @@ Singleton {
         root.topShown = false
         root.topName = ""
         root.topPid = 0
-        root.topShare = 0
         root._cmdlinePid = 0
         root._cmdlineStart = ""
         root._cmdlineComm = ""

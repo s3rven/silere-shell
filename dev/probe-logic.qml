@@ -3320,7 +3320,7 @@ ShellRoot {
                 && Qt.colorEqual(w.glyphColor, Theme.error),
             "with values on hover the monitor rests as its glyph, still tinted")
 
-        const topWas = { shown: SysInfo.topShown, name: SysInfo.topName, pid: SysInfo.topPid, share: SysInfo.topShare,
+        const topWas = { shown: SysInfo.topShown, name: SysInfo.topName, pid: SysInfo.topPid,
             samples: SysInfo._topSamples, last: SysInfo._topLast, active: SysInfo._active }
         const procLine = (pid, name, utime, stime, started = 1) => pid + " (" + name + ") R 1 " + pid + " " + pid
             + " 0 -1 0 0 0 0 0 " + utime + " " + stime + " 0 0 20 0 1 0 " + started + " 0 0"
@@ -3441,7 +3441,6 @@ ShellRoot {
         SysInfo.topShown = topWas.shown
         SysInfo.topName = topWas.name
         SysInfo.topPid = topWas.pid
-        SysInfo.topShare = topWas.share
         SysInfo._topSamples = topWas.samples
         SysInfo._topLast = topWas.last
         w.destroy()
