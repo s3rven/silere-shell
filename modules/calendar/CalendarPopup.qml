@@ -106,8 +106,10 @@ FittedPopupWindow {
         function _activateDay(index: int): void {
             if (!CalendarState.open || _gridSwap.running || index < 0 || index >= card._rowCount * 7) return
             const date = card._dateForCell(index)
-            if (date.getFullYear() !== card.shownYear || date.getMonth() !== card.shownMonth)
-                card._go(date.getFullYear(), date.getMonth(), index < card._lead ? -1 : 1)
+            if (date.getFullYear() === card.shownYear && date.getMonth() === card.shownMonth) return
+            card._go(date.getFullYear(), date.getMonth(), index < card._lead ? -1 : 1)
+            // the day stops taking focus as its month leaves, and the grid it parks on has no ring and no keys
+            if (_grid.activeFocus) _monthButton.forceActiveFocus(Qt.TabFocusReason)
         }
 
         function _weekForRow(r: int): int {
