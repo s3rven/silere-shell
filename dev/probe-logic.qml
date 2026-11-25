@@ -13231,8 +13231,9 @@ ShellRoot {
                 && Audio.twoWay([app("", "Discord")], [app("", "discord")])
                 && !Audio.twoWay([app("gnome-sound-recorder", "Recorder")], [app("firefox", "Firefox")])
                 && !Audio.twoWay([app("easyeffects", "EasyEffects")], [app("easyeffects", "EasyEffects")])
+                && !Audio.twoWay([app("pw-loopback", "pw-loopback")], [app("pw-loopback", "pw-loopback")])
                 && !Audio.twoWay([{}], [{}]) && !Audio.twoWay([], [app("firefox", "Firefox")]),
-            "a call is one app recording and playing at once; a recorder alone or an effects processor is not")
+            "a call is one app recording and playing at once; a recorder alone, an effects processor or a loopback is not")
         const indicatorsWas = Indicators.items
         Indicators.items = []
         const indicatorSet = Indicators.set("vpn-work", "󰦝", "office") === "ok" && Indicators.set("build", "󰔟", "") === "ok"

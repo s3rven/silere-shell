@@ -336,7 +336,7 @@ Singleton {
         for (let i = 0; i < playbackProps.length; i++) playing[root.appKey(playbackProps[i])] = true
         return captureProps.some(p => {
             const key = root.appKey(p)
-            return key.length > 0 && playing[key] === true && !/^(easyeffects|pulseeffects|noisetorch)$/.test(key)
+            return key.length > 0 && playing[key] === true && !/^(easyeffects|pulseeffects|noisetorch|pw-loopback|carla)$/.test(key)
         })
     }
     readonly property bool callActive: root.captureStreams.length > 0 && root.twoWay(
