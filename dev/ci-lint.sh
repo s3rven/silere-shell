@@ -304,6 +304,22 @@ else
   status=1
 fi
 
+# Quickshell resolves any other relative name to a file:// URL, and the text's implicit import of its folder then
+# compiles that folder and every singleton it reaches a second time (services/ and config/: 51 ms of each start)
+section "inline object urls"
+mapfile -t inline_files < <(git ls-files 'modules/*.qml' 'services/*.qml' 'config/*.qml')
+inline_report="$(awk '
+  /Qt\.createQmlObject\(/ { calls++; open = FILENAME ":" FNR; left = 4 }
+  open != "" { if ($0 ~ /\.qml"\)/) { open = ""; next } if (--left == 0) { print open; open = "" } }
+  END { print "calls " calls + 0 }' shell.qml "${inline_files[@]}")"
+inline_bad="$(grep -v '^calls ' <<<"$inline_report" || true)"
+if [ -z "$inline_bad" ]; then
+  ok "names" "$(sed -n 's/^calls //p' <<<"$inline_report") Qt.createQmlObject calls name a .qml URL"
+else
+  while IFS= read -r at; do fail "$at: Qt.createQmlObject needs a name ending in .qml as its third argument"; done <<<"$inline_bad"
+  status=1
+fi
+
 section "shell script syntax"
 for f in "${script_files[@]}"; do
   if err=$(bash -n "$f" 2>&1); then ok "$f"; else fail "syntax error in $f"; printf '%s\n' "$err"; fi

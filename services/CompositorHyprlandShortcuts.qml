@@ -13,14 +13,17 @@ QtObject {
     // the shortcuts are children of root; holding them here keeps the engine from collecting them
     property list<QtObject> _held
 
-    // built from source text: the linter has no type data for GlobalShortcut's base, PostReloadHook
+    // built from source text: the linter has no type data for GlobalShortcut's base, PostReloadHook.
+    // The name must end in .qml: Quickshell turns any other relative name into a file:// URL, and the text's
+    // implicit import of this folder then compiled every file in services/ and config/ a second time (51 ms of
+    // each start, 295 ms after an update, 2 MB)
     function _register(name: string, description: string): void {
         let shortcut = null
         try {
             shortcut = Qt.createQmlObject(
                 "import Quickshell.Hyprland\nGlobalShortcut { appid: \"silere\"; name: \"" + name
                     + "\"; description: \"" + description + "\" }",
-                root, "CompositorHyprlandShortcuts")
+                root, "GlobalShortcutText.qml")
         } catch (e) {
             console.warn("Hyprland global shortcuts are unavailable in this Quickshell build:", e.message ?? e)
             return
