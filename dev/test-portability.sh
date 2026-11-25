@@ -428,6 +428,10 @@ test_last_crash() (
     if _silere_last_crash /other/shell.qml >/dev/null; then fail "another Quickshell config's crash was taken for this shell's"; fi
     sed -i 's|^Config Path: .*|Config Path: |' "$dir/report.txt"
     _silere_last_crash /other/shell.qml >/dev/null || fail "a report that names no config was not read"
+    # 0.3.2 leaves the field empty and saves the run's binary log beside the report
+    printf '\001\002default\000@Launching config: "/x/shell.qml"W\000Shell ID\n' > "$dir/log.qslog.log"
+    _silere_last_crash /x/shell.qml >/dev/null || fail "an empty report whose log names this shell was not read"
+    if _silere_last_crash /other/shell.qml >/dev/null; then fail "an empty report whose log names another config was taken"; fi
 )
 
 test_quickshell_qt_drift() (
