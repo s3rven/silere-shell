@@ -380,7 +380,7 @@ for f in "${AUTOSTART_FILES[@]}"; do
         fi
     fi
 
-    if ! $has_block && ! $has_keybind && ! $has_layers; then
+    if ! $has_block && ! $has_keybind && ! $has_layers && ! $has_motion; then
         if _backup_restore_allowed "$f"; then
             _info "live config is missing; backup found for $f"
             if _ask "Restore $(basename "$f") from backup?"; then

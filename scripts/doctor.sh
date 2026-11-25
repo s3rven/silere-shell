@@ -38,7 +38,8 @@ section() {
 ok()   { printf '%sok%s   %-20s %s\n' "$GREEN" "$R" "$1" "$2"; }
 info() { printf '     %-20s %s\n' "$1" "$2"; }
 warn() { printf '%swarn%s %-20s %s\n' "$YELLOW" "$R" "$1" "$2"; }
-fail() { printf '%sfail%s %-20s %s\n' "$ERED" "$ER" "$1" "$2" >&2; status=1; }
+# on stdout with the rest: a report saved with > or piped to a clipboard lost exactly its failures
+fail() { printf '%sfail%s %-20s %s\n' "$RED" "$R" "$1" "$2"; status=1; }
 
 package_family="$(_silere_package_family)"
 

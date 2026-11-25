@@ -106,6 +106,9 @@ settings file carries its own `__version` and migrates separately.
   without the optional service.
 - `silere repair --undo` and `silere reset --undo` leave the checkout as it was when the saved edits conflict, instead
   of files full of conflict markers.
+- `silere use` replaces a `silere` command left pointing at a moved or deleted checkout; `silere doctor` prints its
+  failures with the rest, so a saved report keeps them; `silere reset --history` previews; `silere service install`
+  says when the system has no systemd; a mistyped `osd`, `theme` or `indicator` is suggested.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
 - Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.

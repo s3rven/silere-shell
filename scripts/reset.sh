@@ -369,7 +369,8 @@ _main() {
             *) _usage >&2; return 2 ;;
         esac
     done
-    [ "$WITH_HISTORY" = 0 ] || [ "$action" = apply ] || { _usage >&2; return 2; }
+    # the preview says what --history adds; only an undo cannot take it
+    [ "$WITH_HISTORY" = 0 ] || [ "$action" != undo ] || { _usage >&2; return 2; }
     case "$action" in
         preview) _preview ;;
         apply) _apply ;;

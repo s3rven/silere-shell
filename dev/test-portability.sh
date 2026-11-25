@@ -3211,6 +3211,9 @@ test_reset_workflow() (
     rm -f "$config/settings.json"; ln -s "$home/dotfile.json" "$config/settings.json"
     local legacy_history='{"history":[{"summary":"older copy"}]}'
     printf '%s\n' "$legacy_history" > "$config/notifications.json"
+    out="$(run_reset --history)" || fail "reset --history refused to preview"
+    case "$out" in *"Notification history will be deleted"*) ;; *) fail "reset --history preview did not name the history: $out" ;; esac
+    if run_reset --undo --history >/dev/null 2>&1; then fail "reset accepted --history with --undo"; fi
     run_reset --apply --yes --history >/dev/null || fail "reset --history failed"
     [ -L "$config/settings.json" ] || fail "reset replaced a linked settings file with a plain one"
     assert_eq $'{\n  "__version": '"$schema"$'\n}' "$(cat "$home/dotfile.json")" "reset writes through the link"
@@ -4144,6 +4147,12 @@ STUB
     if cli use "$ROOT" "$t/other" >/dev/null 2>&1; then fail "use accepted two checkout arguments"; fi
     assert_eq "$t/other/scripts/silere" "$(readlink "$t/home/.local/bin/silere")" \
         "an extra checkout argument cannot redirect the command link"
+
+    # a moved or deleted checkout leaves the link dangling: use links this checkout in its place
+    ln -sfn "$t/gone/scripts/silere" "$t/home/.local/bin/silere"
+    out="$(cli use --dry-run 2>&1)" || fail "use --dry-run failed over a dangling command link: $out"
+    case "$out" in *"would link $t/home/.local/bin/silere -> $ROOT/scripts/silere"*) ;;
+        *) fail "use would leave a dangling command link alone: $out" ;; esac
 )
 
 test_pooled_motion_scope() (

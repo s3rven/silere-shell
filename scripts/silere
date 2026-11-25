@@ -30,7 +30,11 @@ usage() {
     ! _silere_color_fd 1 || { b=$'\033[1m'; r=$'\033[0m'; }
     _usage_text | awk -v b="$b" -v r="$r" '
         /^[A-Z]/ { print b $0 r; next }
-        /^  [^ ]/ { printf "  %s%s%s%s\n", b, substr($0, 3, 23), r, substr($0, 26); next }
+        # the command up to the gap before its description, or all of it where the description takes the next line
+        /^  [^ ]/ { rest = substr($0, 3); i = index(rest, "  ")
+                    if (i == 0) printf "  %s%s%s\n", b, rest, r
+                    else printf "  %s%s%s%s\n", b, substr(rest, 1, i - 1), r, substr(rest, i)
+                    next }
         { print }'
 }
 
@@ -48,9 +52,11 @@ Control the running shell
   volume <0-100|next>    Set the output level, or move to the next output
   mic [...]              The microphone, with the same words as volume
   dismiss [all]          Dismiss the newest notification popup, or all of them
-  osd <glyph> <text> [0-100]  Show a script's own message in the OSD, with a level bar if given
+  osd <glyph> <text> [0-100]
+                         Show a script's own message in the OSD, with a level bar if given
   theme <image>          Take the accent from a picture, on the neutral theme
-  indicator set <name> <glyph> [text]  Show a script's own mark in the bar; clear <name> removes it
+  indicator set <name> <glyph> [text]
+                         Show a script's own mark in the bar; indicator clear <name> removes it
   get <setting>          Print a setting
   set <setting> <value>  Change a setting
   settings [filter]      List settings and the values each takes; --changed lists yours
@@ -591,9 +597,13 @@ use_checkout() {
     local path_ours=1
     if [ "$current" = "$target/scripts/silere" ]; then
         printf 'silere on PATH: already %s\n' "$target"
+    # a link to a checkout, no file at all, or a link left dangling by a moved or deleted checkout (ours by its name, as
+    # the completions are)
     elif { [ -L "$link_path" ] && [ "${current%/scripts/silere}" != "$current" ] \
             && [ -f "${current%/scripts/silere}/shell.qml" ]; } \
-            || { [ ! -e "$link_path" ] && [ ! -L "$link_path" ]; }; then
+            || { [ ! -e "$link_path" ] && [ ! -L "$link_path" ]; } \
+            || { [ -L "$link_path" ] && [ ! -e "$link_path" ] \
+                && case "$(readlink -- "$link_path")" in */scripts/silere) true ;; *) false ;; esac; }; then
         if [ "$dry" -eq 1 ]; then
             printf 'silere on PATH: would link %s -> %s\n' "$link_path" "$target/scripts/silere"
         else
@@ -1056,7 +1066,7 @@ case "$command_name" in
         printf '%ssilere:%s unknown command: %s\n' "$ERED" "$ER" "$command_name" >&2
         # within two edits of a real command is a typo, not a guess; uninstall and reset only one edit away, or
         # "-install" was answered with uninstall
-        near="$(printf '%s\n' menu calendar quick tray toggle volume mic dismiss get set settings ipc \
+        near="$(printf '%s\n' menu calendar quick tray toggle volume mic dismiss osd theme indicator get set settings ipc \
             try reset run stop restart use status log doctor link update repair service version uninstall help \
             | awk -v w="$command_name" '
                 BEGIN { sub(/^-+/, "", w) }
