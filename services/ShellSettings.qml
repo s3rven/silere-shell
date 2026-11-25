@@ -1029,6 +1029,12 @@ Singleton {
             _loaded = true
             return
         }
+        // an editor that truncates before it writes can be read in between: like a deleted file, an emptied one
+        // mid-session keeps every value, and the write that follows brings the real content
+        if (_loaded && raw.length === 0) {
+            _store.lastSavedText = ""
+            return
+        }
         // the startup chmod trips the watcher too: re-running the reload path below would bounce
         // every setting through its default and back, rebuilding the bar; a bad read must still re-arm saving
         if (_loaded && _store.writeAllowed && raw === root._appliedText) return

@@ -8025,6 +8025,14 @@ ShellRoot {
         root._check(ShellSettings.showSeconds === savedSeconds
                 && ShellSettings.showWindowTitle === savedTitle,
             "a key removed by hand falls back to its default")
+        const emptiedEdit = JSON.parse(beforeEdit)
+        emptiedEdit.showSeconds = !ShellSettings._defaults.showSeconds
+        ShellSettings._applyText(JSON.stringify(emptiedEdit))
+        ShellSettings._applyText("")
+        root._check(ShellSettings.showSeconds === !ShellSettings._defaults.showSeconds
+                && ShellSettings._readError.length === 0,
+            "an emptied settings file mid-session (an editor truncating before it writes) keeps every value")
+        ShellSettings._applyText(beforeEdit)
         ShellSettings._applyText("{unfinished settings edit")
         root._check(ShellSettings._readError.length > 0
                 && !ShellSettings.flushForUpdate()

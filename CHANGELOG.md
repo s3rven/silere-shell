@@ -125,6 +125,7 @@ settings file carries its own `__version` and migrates separately.
   run again; the installer installs through such a link, but the shell refused to write there.
 - The `update-available` hook no longer runs again at every check while Flatpak updates are pending.
 - `silere set` saves a slider setting at once, so `silere set … && silere restart` keeps it.
+- An editor that empties settings.json before writing it no longer flips every setting to its default for a moment.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 
 ## Releases
