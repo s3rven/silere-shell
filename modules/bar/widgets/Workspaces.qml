@@ -552,11 +552,20 @@ Item {
         if (id > 0) Compositor.moveActiveToWorkspace(id, root.monitorName)
     }
 
+    // Hyprland's ids are global, so a spin had no end: it made a run of empty workspaces, or walked on into another
+    // monitor's. It now stops at the page's last workspace or one past the last with windows, as niri's ids do
+    function _scrollCeiling(from: int): int {
+        let top = Math.max(from, root._displayIds.length > 0 ? root._displayIds[root._displayIds.length - 1] : 0)
+        const own = root._workspaceIndex ? root._workspaceIndex.own : []
+        for (let i = 0; i < own.length; i++)
+            if (own[i].occupied && own[i].wsId >= top) top = own[i].wsId + 1
+        return top
+    }
     function _scrollTarget(delta: int): int {
         let target = root._queuedId > 0 ? root._queuedId : root._pendingId > 0 ? root._pendingId : root.activeId
         const direction = delta > 0 ? -1 : 1
         const steps = Math.abs(delta)
-        const cap = root._idCap
+        const cap = root._idCap > 0 ? root._idCap : root._scrollCeiling(target)
         for (let step = 0; step < steps; step++) {
             let candidate = target + direction
             while (candidate > 0 && root._knownOnOtherMonitor(candidate))

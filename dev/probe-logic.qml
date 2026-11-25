@@ -3218,6 +3218,12 @@ ShellRoot {
         strip._settlePending()
         root._check(strip._pendingId === 0 && strip._queuedId === 0,
             "the queued workspace goes once the one asked for lands or expires")
+        strip._displayIds = [1, 2, 3, 4, 5]
+        strip._pendingId = 5
+        const spinStops = strip._idCap > 0 || strip._scrollTarget(-3) === 5
+        strip._pendingId = 2
+        root._check(spinStops && (strip._idCap > 0 || strip._scrollTarget(-2) === 4),
+            "a workspace spin stops at the page's last workspace when none past it has windows")
         const urgentTops = [
             { ref: "0xa", wsId: 3, wsName: "3", output: "eDP-1" },
             { ref: "0xb", wsId: -1338, wsName: "special:scratch", output: "eDP-1" },

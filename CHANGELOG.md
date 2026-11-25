@@ -62,6 +62,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere update` brings the optional user service it installed up to date with the release.
 - The workspaces' urgent arrow also points to a window that needs you in the scratchpad or on a monitor whose bar is
   off, named by its workspace; clicking it goes to that window.
+- Scrolling over the workspaces on Hyprland stops at the last one on the page, or one past the last with windows,
+  instead of making empty workspaces or crossing into another monitor's.
 
 ### Fixed
 
