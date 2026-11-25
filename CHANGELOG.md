@@ -174,6 +174,8 @@ settings file carries its own `__version` and migrates separately.
 - The charge limit row no longer reports a read error on UPower older than 1.90, which has no charge limits.
 - The copied diagnostic report gives each display's real scale (1.25, not 2).
 - `silere status` and `silere use` read a checkout whose path has a space in it.
+- Home's last rows keep the card's rounded corners when hovered or selected: the battery or disk reading, the last
+  Power Mode choice on a desktop, and the Wi-Fi or Bluetooth list at the end of Connectivity.
 
 ## Releases
 

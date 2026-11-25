@@ -13778,6 +13778,13 @@ ShellRoot {
             SysInfo.diskTotalKb = diskWas[0]; SysInfo.diskAvailKb = diskWas[1]
             const cpuRow = root._findTrayNode(vitals, item => item.label === "CPU" && item.sub !== undefined)
             const memoryRow = root._findTrayNode(vitals, item => item.label === "Memory" && item.sub !== undefined)
+            vitals._applyRadii()
+            const lastVital = vitals.batteryShown ? root._findTrayNode(vitals, item => item.label === "Battery"
+                && item.sub !== undefined) : diskRow
+            root._check(cpuRow && memoryRow && lastVital && cpuRow.topRadius === vitals.radius
+                    && lastVital.bottomRadius === vitals.radius && memoryRow.topRadius === 0
+                    && memoryRow.bottomRadius === 0 && cpuRow.bottomRadius === 0,
+                "the vitals card gives its first and last tile its corners, so a hover fill cannot square them")
             root._check(diskRow && cpuRow && memoryRow && diskRow.openable === cpuRow.openable
                     && memoryRow.openable === cpuRow.openable
                     && diskRow.openable === Settings.systemMonitorCommand.length > 0,

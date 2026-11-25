@@ -382,6 +382,9 @@ PageShell {
                         WifiList {
                             width: parent.width
                             open: root._wifiPickerOpen
+                            // the card's last thing when no row follows Wi-Fi (no Bluetooth, no VPN, no sign-in)
+                            lastRowRadius: !Metrics.barAtBottom && !root._signInShown && !root._vpnShown
+                                && !root._btAvailable ? Theme.radiusCard : 0
                         }
                     }
                 }
@@ -460,8 +463,9 @@ PageShell {
                         BluetoothList {
                             width: parent.width
                             open: root._btPickerOpen
-                            // last thing in the Connectivity card, so its last row owns the corner
-                            lastRowRadius: Theme.radiusCard
+                            // last thing in the Connectivity card when it opens below its row, so its last row owns the
+                            // corner; with the bar below it opens above the row, mid-card
+                            lastRowRadius: Metrics.barAtBottom ? 0 : Theme.radiusCard
                         }
                     }
                 }
@@ -676,6 +680,11 @@ PageShell {
 
                                 InlineOptionRow {
                                     required property var modelData
+                                    required property int index
+                                    // opened below Power Mode (the bar on top), the list ends the card; without a
+                                    // battery nothing follows the last choice, so its tint takes the card's corners
+                                    bottomRadius: !Metrics.barAtBottom && !Battery.available
+                                        && index === PowerProfiles.choices.length - 1 ? Theme.radiusCard : 0
                                     glyph: modelData.glyph
                                     label: modelData.label
                                     accessiblePrefix: "Power Mode"
@@ -686,6 +695,7 @@ PageShell {
                             }
                             ToggleRow {
                                 visible: Battery.available
+                                bottomRadius: Metrics.barAtBottom ? 0 : Theme.radiusCard
                                 glyph: "󰚥"
                                 label: "Remember per power source"
                                 checked: ShellSettings.powerProfileRemember

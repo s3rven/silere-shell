@@ -74,7 +74,9 @@ SettingsCard {
         // a reading that has a fuller view opens the system monitor
         property bool   openable: false
         property string actionDescription: "Opens the system monitor"
+        // the card hands its first and last row its corners, and skips a row that cannot take both
         property real   topRadius: 0
+        property real   bottomRadius: 0
         signal activated()
 
         readonly property color tint: status === 2 ? Theme.error
@@ -130,6 +132,7 @@ SettingsCard {
         RowHoverBg {
             anchors.fill: parent
             topRadius: tile.topRadius
+            bottomRadius: tile.bottomRadius
             active: tile.openable && _tileHover.hovered
             pressed: tile.openable && _tileTap.pressed
         }
@@ -281,7 +284,6 @@ SettingsCard {
         id: _cpu
         live: root.active
         openable: Settings.systemMonitorCommand.length > 0
-        topRadius: Theme.radiusCard
         onActivated: root.openMonitor()
         // the bar's CPU glyph; the temperature it alerts on rides in the caption and tint
         glyph: "󰍛"
