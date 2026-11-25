@@ -1036,10 +1036,12 @@ command -v git >/dev/null 2>&1 || _die "git is required — install it and re-ru
 _ok "git"
 
 has_qs=true
+qs_too_old=false
 if command -v qs >/dev/null 2>&1; then
     qs_version="$(_silere_quickshell_version || true)"
     if [ -n "$qs_version" ] && ! _silere_version_at_least "$qs_version" "$SILERE_MIN_QUICKSHELL"; then
         _warn "quickshell $qs_version is older than the required $SILERE_MIN_QUICKSHELL"
+        qs_too_old=true
     else
         _ok "quickshell${qs_version:+ $qs_version}"
     fi
@@ -2022,11 +2024,14 @@ fi
 printf '\n'
 if ! $has_qs; then
     printf "  ${YELLOW}install Quickshell${R}: %s\n" "$(_silere_quickshell_install_hint)"
+elif $qs_too_old; then
+    printf "  ${YELLOW}update Quickshell to %s or newer${R}: %s\n" "$SILERE_MIN_QUICKSHELL" "$(_silere_quickshell_install_hint)"
 elif ! $qs_modules_ok; then
     printf "  ${YELLOW}install a complete current Quickshell build${R}\n"
 fi
 started=false
-if $has_qs && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scripts/silere" ] \
+# an older Quickshell would start a shell that fails to load
+if $has_qs && ! $qs_too_old && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -f "$ROOT/scripts/silere" ] \
         && [ "$_no_start" = 0 ] && ! _assume_yes && [ "${SILERE_SANDBOX:-0}" != "1" ]; then
     # another quickshell config (an older silere elsewhere, or another shell) would end up beside this one
     qs_configs="$(_silere_running_configs)"
