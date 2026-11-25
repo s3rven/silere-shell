@@ -116,6 +116,7 @@ settings file carries its own `__version` and migrates separately.
 - Without pgrep, switching off a night light another program started keeps it shown as on.
 - The audio visualizer keeps moving when a fullscreen window covers a monitor whose bar it is not on.
 - On niri, clicking an X11 app's notification raises it when another X11 app has the focus.
+- A tray app whose own icon fails gets its app's icon once the installed apps are read, not only its initial.
 - On a limited network, the internet check stops while nothing shows the network.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

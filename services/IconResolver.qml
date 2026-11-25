@@ -193,8 +193,17 @@ Singleton {
         return game ? "steam_icon_" + game[1] : ""
     }
 
+    // desktop entries are scanned after the shell starts and again as apps come and go: a lookup made before that
+    // (a tray item whose own icon failed) kept its letter, so every binding that resolves an app reads this
+    property int entriesRevision: 0
+    readonly property Connections _entriesWatch: Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() { root.entriesRevision++ }
+    }
+
     // a game's own Steam shortcut first: the fuzzy lookup could take Steam itself
     function appEntry(identity: string): var {
+        void root.entriesRevision
         // quickshell's fuzzy lookup answers "" with the first entry that has no StartupWMClass, an unrelated app
         if (identity.length === 0) return null
         const steamIcon = root.steamGameIcon(identity)
