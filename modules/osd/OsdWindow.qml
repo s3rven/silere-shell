@@ -318,7 +318,7 @@ PanelWindow {
                                 visible: card.trackW > 0
                                 width:  card.trackW
                                 height: 6
-                                radius: 3
+                                radius: Theme.capsuleRadius(height)
                                 color:  Theme.menuTrack
 
                                 Rectangle {

@@ -529,8 +529,8 @@ PageShell {
             anchors.topMargin: root.hasHistory ? 8 : 0
             visible: root.hasHistory
             height: root.hasHistory ? Metrics.rowHeightFor(36) : 0
-            // a capsule, so the round clear button sits concentric in its end cap; matches settings search
-            radius: height / 2
+            // a capsule at the stock Roundness, so the round clear button sits concentric in its end cap, as in settings search
+            radius: Theme.capsuleRadius(height)
             antialiasing: true
             color: Theme.menuControl
             enabled: visible && !root._clearing

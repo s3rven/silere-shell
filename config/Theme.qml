@@ -536,6 +536,10 @@ Singleton {
     // one step tighter than a control: nav and rail rows, inline wells, compact action buttons
     readonly property int radiusInline:  _rounded(8)
     readonly property int radiusField:   _rounded(6)
+    // the Roundness setting as a share of the stock 14, for shapes that are capsules or squircles at the stock setting
+    readonly property real roundness: Math.min(1, _surfaceRadiusTarget / radiusPanel)
+    // a round button, chip, search field or rail: a capsule at the stock Roundness, squaring off in step with the cards
+    function capsuleRadius(size: real): real { return size / 2 * roundness }
     readonly property int _surfaceRadiusTarget: ShellSettings.barFloating
         ? ShellSettings.barRadius
         : radiusPanel

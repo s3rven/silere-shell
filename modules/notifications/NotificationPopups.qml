@@ -144,7 +144,8 @@ PanelWindow {
             anchors.verticalCenter: parent.verticalCenter
             width:  _row.implicitWidth + 20
             height: 24
-            radius: 12
+            // the Clear all button above follows Roundness, so this chip does too
+            radius: Theme.capsuleRadius(height)
             antialiasing: true
             // the popup window is transparent, so an alpha tint would let the desktop through - blend into the base
             color: chip.pressed ? Theme.blend(Theme.menuControl, chip.tint, 0.26)

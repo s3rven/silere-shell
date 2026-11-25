@@ -59,8 +59,9 @@ Item {
             readonly property real _restWidth: root.pressed ? root._knobSize + Metrics.devicePx(5, root._dpr) : root._knobSize
             width: _restWidth
             height: root._knobSize
-            // concentric with the track, so the inset stays even around the corners at any roundness
-            radius: Math.max(0, _track.radius - root._inset)
+            // concentric with the track, so the inset stays even around the corners. Where the inset ate the whole
+            // corner it left the menu's one sharp square: it keeps the slider handle's 2px, never rounder than the track
+            radius: Math.max(_track.radius - root._inset, Math.min(2, _track.radius))
             antialiasing: true
             // a slide aims at the width the knob is heading to: the release stretch moved the animated width every
             // frame, which restarted the slide each time and held the knob still for 100 ms before it set off

@@ -14,8 +14,9 @@ Rectangle {
     property bool hoverGrow: true
     property bool animate: true
 
-    // proportional, not fixed: 4px on the default 14px thumb is the squircle Silere uses, but the same 4px on a smaller thumb rounds it into a circle
-    radius: Math.max(2, Math.round(Math.min(width, height) * 0.286))
+    // proportional, not fixed: 4px on the default 14px thumb is the squircle Silere uses, where the same 4px on a smaller
+    // thumb rounds it into a circle. It squares off with Roundness like the toggle's knob, never rounder than a field
+    radius: Math.max(Math.min(2, Theme.radiusField), Math.round(Math.min(width, height) * 0.286 * Theme.roundness))
     antialiasing: true
     color: root.fillColor
     // grow via scale, not width: a re-layouted odd width lands the centre on a half-pixel and the handle visibly shifts under fractional scaling

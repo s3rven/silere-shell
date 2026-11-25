@@ -33,7 +33,7 @@ Item {
     Accessible.name: root.accessibleName
     Accessible.focusable: root._canActivate
     Accessible.onPressAction: root.activate()
-    KeyboardFocus { interactive: root._canActivate; radius: root.width / 2; onActivated: root.activate() }
+    KeyboardFocus { interactive: root._canActivate; radius: Theme.capsuleRadius(root.width); onActivated: root.activate() }
 
     HoverHandler {
         id: _hover
@@ -51,7 +51,7 @@ Item {
     Rectangle {
         id: _face
         anchors.fill: parent
-        radius: width / 2
+        radius: Theme.capsuleRadius(width)
         antialiasing: true
         readonly property real _dpr: QsWindow.window ? QsWindow.window.devicePixelRatio : 1
         transform: PixelScale {
@@ -63,7 +63,7 @@ Item {
         color: Theme.buttonFill(root.accentColor, _hover.hovered, root.pressed)
 
         OutlineBorder {
-            radius: width / 2
+            radius: _face.radius
             outlineWidth: 1
             outlineColor: Theme.buttonLine(
                 root.accentColor, _hover.hovered, root.pressed)

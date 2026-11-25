@@ -1107,7 +1107,7 @@ Item {
 
             Rectangle {
                 anchors.fill: parent
-                radius: height / 2
+                radius: Theme.capsuleRadius(height)
                 antialiasing: true
                 color: _closeTap.pressed ? Theme.withAlpha(Theme.error, 0.24)
                     : _closeHover.hovered ? Theme.withAlpha(Theme.error, 0.18) : Theme.menuControl

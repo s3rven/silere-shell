@@ -247,7 +247,7 @@ Item {
             y: Metrics.devicePx((root.height - root._railH) / 2, root._dpr)
             width: root._railWidth
             height: root._railH
-            radius: 3; antialiasing: true
+            radius: Theme.capsuleRadius(height); antialiasing: true
             color: root.trackColor
             ColorFade on color { gate: root.animate }
 

@@ -169,7 +169,7 @@ Item {
         height: root.ringSize > 0 ? root.ringSize : root.ringHeight
         active: root.ringShown && root.canInteract && root.control.activeFocus
         sourceComponent: OutlineBorder {
-            radius: root.ringSize > 0 ? root.ringSize / 2 : root.radius
+            radius: root.ringSize > 0 ? Theme.capsuleRadius(root.ringSize) : root.radius
             outlineWidth: 2
             outlineColor: Theme.withAlpha(Theme.accent, Theme.focusRingAlpha)
         }

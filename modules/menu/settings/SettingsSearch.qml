@@ -177,7 +177,7 @@ Column {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
                 height: root.expanded ? root.fieldHeight : root.toggleHeight
-                radius: height / 2
+                radius: Theme.capsuleRadius(height)
                 antialiasing: true
                 color: Theme.menuControl
                 MotionBehavior on height {

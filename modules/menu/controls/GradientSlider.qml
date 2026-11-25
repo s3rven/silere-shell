@@ -105,7 +105,7 @@ Item {
             y: Metrics.devicePx((parent.height - height) / 2, root._dpr)
             width: Math.max(1, Metrics.devicePx(parent.width, root._dpr) - 2 * x)
             height: Metrics.devicePx(6, root._dpr)
-            radius: 3
+            radius: Theme.capsuleRadius(height)
             antialiasing: true
             gradient: root.trackGradient
 
