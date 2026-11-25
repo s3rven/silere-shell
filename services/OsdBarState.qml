@@ -316,6 +316,9 @@ Singleton {
     readonly property Timer _profileHoldTimer: Timer { id: _profileHold; interval: 400; onTriggered: root._releaseProfileHold() }
     // the hold swallows the new node's read-back, and with it a level the user set from this shell meanwhile: only that one is owed
     property bool _heldVolumeWrite: false
+    // an output becoming ready reads its level from 0: PipeWire up after the shell at login, after a restart or an
+    // output coming back. That first reading is not the user changing the volume; a key pressed meanwhile still shows
+    readonly property Timer _readySettleTimer: Timer { id: _readySettle; interval: 600 }
     function _releaseProfileHold(): void {
         if (!root._heldVolumeWrite) return
         root._heldVolumeWrite = false
@@ -345,7 +348,9 @@ Singleton {
         _volumeUpdateQueued = false
         // an output that went away reads as volume 0, which is not the user muting anything
         if (!Audio.ready || Audio.profileSwitching || _profileHold.running) return
-        const effectiveMuted = Audio.muted || Audio.uiVolume <= 0
+        if (_readySettle.running && !root._showDeviceName && !Audio.pendingApply) return
+        // 0% is a level, not a mute: calling both Muted left the mute key at 0% with no visible answer
+        const effectiveMuted = Audio.muted
         const level = effectiveMuted ? "Muted" : Audio.label
         const lbl = root._showDeviceName && Audio.sinkName
             ? (!effectiveMuted && root._pausedNote ? `Paused · ${Audio.sinkName}` : `${Audio.sinkName} · ${level}`)
@@ -374,6 +379,7 @@ Singleton {
             root._queueVolumeUpdate()
         }
         function onMutedChanged() { root._queueVolumeUpdate() }
+        function onReadyChanged() { if (Audio.ready) _readySettle.restart() }
         function onMicMutedExternally() { root._showMicMute() }
         // what played in the headphones stops rather than moving to the speakers; the osd says why it went quiet
         function onPausedForSpeakers() {

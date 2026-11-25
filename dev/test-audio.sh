@@ -198,6 +198,10 @@ wait_node lab-a; timeout 4 wpctl set-mute "$id" 1
 expect "a mute reaches the OSD" 'vol=0 muted=1 osd=Muted'
 timeout 4 wpctl set-mute "$id" 0
 expect "an unmute reaches the OSD" 'vol=33 muted=0 osd=33%'
+set_volume lab-a 0
+expect "volume 0 reads as 0%, not as muted" 'vol=0 muted=0 osd=0%'
+set_volume lab-a 0.33
+expect "the level comes back from 0%" 'vol=33 muted=0 osd=33%'
 wait_node lab-b; timeout 4 wpctl set-mute "$id" 1
 set_default lab-b
 expect "a muted new default shows its name and mute state" 'sink=lab-b .*vol=0 muted=1 osd=lab-b · Muted'
@@ -232,6 +236,7 @@ expect "a lost output is gone" 'sink=none source=lab-mic vol=none'
 add_node lab-a Audio/Sink
 set_default lab-a
 expect "an output that returns is picked up" 'sink=lab-a '
+stays "an output coming back is not a volume change" 'osd=none'
 
 _probe_stop "$wp_pid"; wp_pid=""
 sleep 0.5
@@ -248,6 +253,7 @@ start_daemons
 add_node lab-a Audio/Sink
 set_default lab-a
 expect "PipeWire comes back" 'ready=1 sink=lab-a '
+stays "PipeWire coming back is not a volume change" 'osd=none'
 set_volume lab-a 0.72
 expect "volume works after PipeWire comes back" 'vol=72 muted=0 osd=.*72%'
 
@@ -259,6 +265,7 @@ start_daemons
 add_node lab-a Audio/Sink
 set_default lab-a
 expect "PipeWire arriving after the shell is picked up" 'ready=1 sink=lab-a '
+stays "PipeWire arriving after the shell shows no OSD, as at a slow login" 'osd=none'
 
 [ -z "$(ls -A "$XDG_CACHE_HOME/quickshell/crashes" 2>/dev/null)" ] || fail "the shell crashed"
 errors="$(_probe_errors "$scratch/probe.log")"
