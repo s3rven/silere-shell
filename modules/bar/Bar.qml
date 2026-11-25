@@ -328,12 +328,13 @@ PanelWindow {
                 id: _underline
                 anchors.fill: _outlineBox
                 active: ShellSettings.underlineGlow && contents.opacity > 0.001 && !bar.concealed
-                sourceComponent: Component {
-                    BarUnderline {
-                        screen: bar.targetScreen
-                        floatingProgress: bar.floatingProgress
-                        wrapRadius: surface.radius
-                    }
+                // by file name, so it compiles when first switched on: off by default, it and its glows (27 KB) compiled
+                // at every start before the bar showed
+                source: "BarUnderline.qml"
+                onLoaded: {
+                    item.screen = Qt.binding(() => bar.targetScreen)
+                    item.floatingProgress = Qt.binding(() => bar.floatingProgress)
+                    item.wrapRadius = Qt.binding(() => surface.radius)
                 }
             }
 

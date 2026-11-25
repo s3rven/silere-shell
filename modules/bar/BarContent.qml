@@ -335,7 +335,8 @@ Item {
         height: parent.height
         z: 2
         active: ShellSettings.osdEnabled && ShellSettings.osdBarIntegrated && root._isOverlayBar
-        sourceComponent: Component { OsdBarWidget {} }
+        // by file name, so the 10 KB it takes compiles only where the OSD is moved into the bar (off by default)
+        source: "widgets/OsdBarWidget.qml"
     }
 
     BarZone {
