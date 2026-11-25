@@ -60,6 +60,8 @@ settings file carries its own `__version` and migrates separately.
 - Clicking the welcome notification opens the menu, and the installer's last line also mentions right-clicking the
   workspace for quick actions.
 - `silere update` brings the optional user service it installed up to date with the release.
+- The workspaces' urgent arrow also points to a window that needs you in the scratchpad or on a monitor whose bar is
+  off, named by its workspace; clicking it goes to that window.
 
 ### Fixed
 

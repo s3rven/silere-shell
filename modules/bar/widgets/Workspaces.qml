@@ -46,7 +46,10 @@ Item {
         if (!QuickActionsState.anchorSource || QuickActionsState.anchorSource === root)
             QuickActionsState.anchorX = root.menuAnchorX
     }
-    on_AnchorFallbackBarChanged: root._syncMenuAnchor()
+    on_AnchorFallbackBarChanged: {
+        root._syncMenuAnchor()
+        root._syncUrgentOffPage()
+    }
 
     readonly property bool _menuTargetsThisBar: {
         const self = root.screen
@@ -68,7 +71,7 @@ Item {
     property bool _initialized: false
 
     // the cells ease their own widths; a Behavior on their sum restarts every frame and stalls until they settle
-    property real _tickRoom: urgentOffPage > 0 ? urgentTick.implicitWidth + 4 : 0
+    property real _tickRoom: _tickWanted ? urgentTick.implicitWidth + 4 : 0
     MotionBehavior on _tickRoom {
         gate: root.barActive
         NumberAnimation { duration: Motion.width; easing.type: Easing.OutCubic }
@@ -94,7 +97,7 @@ Item {
             Math.floor((btnW - _numberInkWidth(wsId)) / 2) - Metrics.pillPadFor(compact)))
     }
     property real _leadTrim: _displayIds.length > 0 ? _edgeTrim(_displayIds[0]) : 0
-    property real _tailTrim: _displayIds.length > 0 && urgentOffPage <= 0 && !root._modeShown
+    property real _tailTrim: _displayIds.length > 0 && !root._tickWanted && !root._modeShown
         ? _edgeTrim(_displayIds[_displayIds.length - 1]) : 0
     MotionBehavior on _leadTrim {
         gate: root.barActive
@@ -189,6 +192,13 @@ Item {
     }
 
     property int urgentOffPage: 0
+    // a window needing attention where no strip shows it, on the bar the overlays follow: in a scratchpad, or on a
+    // monitor whose bar is off. A window rather than a workspace, since a scratchpad has no number to go to
+    property var urgentElsewhere: null
+    readonly property string _urgentElsewhereLabel: !root.urgentElsewhere ? ""
+        : root.urgentElsewhere.wsId > 0 ? String(root.urgentElsewhere.wsId)
+        : String(root.urgentElsewhere.wsName ?? "").replace(/^special:/, "").slice(0, 12)
+    readonly property bool _tickWanted: root.urgentOffPage > 0 || root._urgentElsewhereLabel.length > 0
 
     function _syncUrgentOffPage(): void {
         let next = 0
@@ -203,6 +213,26 @@ Item {
             }
         }
         if (root.urgentOffPage !== next) root.urgentOffPage = next
+        const elsewhere = next === 0 && root._anchorFallbackBar ? root._urgentWindowElsewhere() : null
+        const key = t => t ? t.ref + "@" + t.wsId + ":" + t.wsName : ""
+        if (key(elsewhere) !== key(root.urgentElsewhere)) root.urgentElsewhere = elsewhere
+    }
+    function _urgentWindowElsewhere(): var {
+        if (Compositor.urgentRefs.length === 0) return null
+        return root.urgentWindowAmong(Compositor.urgentRefs, Compositor.workspaceToplevels,
+            (Quickshell.screens || []).filter(s => !Monitors.barEnabled(s)).map(s => s.name))
+    }
+    function urgentWindowAmong(refs: var, tops: var, barless: var): var {
+        for (let i = 0; i < tops.length; i++) {
+            const t = tops[i]
+            if (!t || refs.indexOf(t.ref) < 0) continue
+            if (String(t.wsName ?? "").startsWith("special:") || barless.indexOf(t.output) >= 0) return t
+        }
+        return null
+    }
+    function _jumpToUrgent(id: int): void {
+        if (id > 0) root.activate(id)
+        else if (root.urgentElsewhere) Compositor.focusToplevel(root.urgentElsewhere)
     }
 
     Connections {
@@ -299,6 +329,7 @@ Item {
     Connections {
         target: Compositor
         function onWorkspacesChanged() { root._syncUrgentOffPage() }
+        function onUrgentRefsChanged() { root._syncUrgentOffPage() }
     }
 
     // reordering bar widgets rebuilds this instance under the open menu; every live copy
@@ -692,12 +723,13 @@ Item {
         id: urgentTick
         x: wsRow.x + wsRow.implicitWidth + 2
         liveId: root.urgentOffPage
-        before: root._displayIds.length > 0 && root.urgentOffPage < root._displayIds[0]
+        liveLabel: root.urgentOffPage > 0 ? "" : root._urgentElsewhereLabel
+        before: root.urgentOffPage > 0 && root._displayIds.length > 0 && root.urgentOffPage < root._displayIds[0]
         rowHeight: root.btnH
         barActive: root.barActive
         hitTop: root._rowY
         hitBottom: root._rowBelow
-        onJumpRequested: id => root.activate(id)
+        onJumpRequested: id => root._jumpToUrgent(id)
     }
     }
 

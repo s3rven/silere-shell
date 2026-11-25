@@ -3218,6 +3218,15 @@ ShellRoot {
         strip._settlePending()
         root._check(strip._pendingId === 0 && strip._queuedId === 0,
             "the queued workspace goes once the one asked for lands or expires")
+        const urgentTops = [
+            { ref: "0xa", wsId: 3, wsName: "3", output: "eDP-1" },
+            { ref: "0xb", wsId: -1338, wsName: "special:scratch", output: "eDP-1" },
+            { ref: "0xc", wsId: 13, wsName: "13", output: "DP-1" }]
+        root._check(strip.urgentWindowAmong(["0xa"], urgentTops, ["DP-1"]) === null
+                && strip.urgentWindowAmong(["0xa", "0xb"], urgentTops, ["DP-1"]) === urgentTops[1]
+                && strip.urgentWindowAmong(["0xc"], urgentTops, ["DP-1"]) === urgentTops[2]
+                && strip.urgentWindowAmong(["0xc"], urgentTops, []) === null,
+            "the urgent tick looks past the strip only to a scratchpad or a monitor with no bar")
         strip._pendingId = 0
         strip.destroy()
         const tick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
@@ -7609,6 +7618,18 @@ ShellRoot {
         urgentTick._jump()
         root._check(urgentJumps === 1, "a fading urgent-workspace indicator cannot jump to its stale target")
         urgentTick.destroy()
+        const namedTick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
+            liveId: 0, liveLabel: "scratch", rowHeight: 24, barActive: true
+        })
+        let namedJump = -1
+        namedTick.jumpRequested.connect(id => namedJump = id)
+        namedTick.Accessible.pressAction()
+        const namedText = root._findTrayNode(namedTick, item => item.text !== undefined)?.text ?? ""
+        namedTick.liveLabel = ""
+        root._check(namedJump === 0 && namedText === "› scratch" && namedTick.targetLabel === "scratch"
+                && namedTick.Accessible.description.indexOf("scratch") >= 0 && !namedTick.shown,
+            "a window needing attention off the strip gets the tick by its workspace's name, kept while it fades")
+        namedTick.destroy()
         const sideTick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
             liveId: 9, rowHeight: 24, barActive: true, before: false
         })

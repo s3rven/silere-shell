@@ -9,6 +9,8 @@ Item {
     id: root
 
     required property int liveId
+    // a target the strip cannot number: a scratchpad's name, or a workspace on a monitor without a bar
+    property string liveLabel: ""
     required property real rowHeight
     required property bool barActive
     property bool before: false
@@ -17,20 +19,28 @@ Item {
 
     signal jumpRequested(int wsId)
 
-    readonly property bool shown: liveId > 0
+    readonly property bool shown: liveId > 0 || liveLabel.length > 0
     property int targetWs: 0
+    property string targetLabel: ""
     // the strip's side flips to before once nothing is urgent, possibly ahead of liveId: a fading arrow keeps its own
     property bool _shownBefore: false
     function _latchSide(): void { if (root.shown) root._shownBefore = root.before }
     onBeforeChanged: Qt.callLater(root._latchSide)
 
-    onLiveIdChanged: if (liveId > 0) {
-        if (targetWs !== liveId) _pulseSettled = false
-        targetWs = liveId
+    // the last target stays latched while the tick fades out. Read from the inputs: shown may not have caught up yet
+    function _latchTarget(): void {
+        if (root.liveId <= 0 && root.liveLabel.length === 0) return
+        const label = root.liveId > 0 ? "" : root.liveLabel
+        if (root.targetWs !== root.liveId || root.targetLabel !== label) root._pulseSettled = false
+        root.targetWs = root.liveId
+        root.targetLabel = label
         Qt.callLater(root._latchSide)
     }
-    Component.onCompleted: if (liveId > 0) {
+    onLiveIdChanged: root._latchTarget()
+    onLiveLabelChanged: root._latchTarget()
+    Component.onCompleted: if (shown) {
         targetWs = liveId
+        targetLabel = liveId > 0 ? "" : liveLabel
         _shownBefore = before
     }
 
@@ -46,8 +56,11 @@ Item {
     function _jump(): void { if (root.canActivate) root.jumpRequested(targetWs) }
 
     Accessible.role: Accessible.Button
-    Accessible.name: "Go to workspace " + root.targetWs
-    Accessible.description: "Needs attention. " + (root.before ? "Before" : "After") + " the current page"
+    Accessible.name: root.targetLabel.length > 0 ? "Go to the window that needs attention"
+        : "Go to workspace " + root.targetWs
+    Accessible.description: root.targetLabel.length > 0
+        ? "Needs attention. On " + (/^[0-9]+$/.test(root.targetLabel) ? "workspace " : "") + root.targetLabel
+        : "Needs attention. " + (root.before ? "Before" : "After") + " the current page"
     Accessible.focusable: root.canActivate
     Accessible.onPressAction: root._jump()
     KeyboardFocus { interactive: control ? control.Accessible.focusable : false; listNavigation: true; onActivated: { if (control) control.Accessible.pressAction() } }
@@ -83,7 +96,7 @@ Item {
     ShellText {
         id: _label
         anchors.centerIn: parent
-        text: (root._shownBefore ? "‹ " : "› ") + root.targetWs
+        text: (root._shownBefore ? "‹ " : "› ") + (root.targetLabel.length > 0 ? root.targetLabel : root.targetWs)
         font.pixelSize: Settings.fontLabel
         color: Theme.barInk(Theme.barWarning, true)
         readonly property bool _hot: _tickHover.hovered && ShellSettings.barHoverHighlight
