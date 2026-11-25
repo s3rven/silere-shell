@@ -11458,11 +11458,13 @@ ShellRoot {
             + "kind=1 expect='DEFER metered' check \"$1\" && kind=3 expect='DEFER metered' check \"$1\" "
             + "&& kind=fallback expect='DEFER metered' check \"$1\" "
             + "&& kind=2 expect=1 check \"$1\" && kind=0 expect=1 check \"$1\" "
-            + "&& out=$(kind=3; " + Updates._checkCommand(false)[2] + ") && [ \"${out%%$'\\n'*}\" = 1 ]"
+            + "&& out=$(kind=3; " + Updates._checkCommand(false)[2] + ") && [ \"${out%%$'\\n'*}\" = 1 ] "
+            + "&& [ \"${out##*$'\\n'}\" = 'FLATPAK 0' ]"
         const meteredRun = processFactory.createObject(root, { command: ["bash", "-c", meteredScript,
             automatic[3], automatic[4]] })
         meteredRun.exited.connect(function(code) {
-            root._check(code === 0, "automatic package checks defer explicit and inferred metering, with a manual override")
+            root._check(code === 0, "automatic package checks defer explicit and inferred metering, with a manual override,"
+                + " and a check with no Flatpak app left counts none from it")
             root._meteredUpdatesDone = true
             meteredRun.destroy()
         })

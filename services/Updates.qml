@@ -319,7 +319,8 @@ Singleton {
         return "\nif [ -n \"$(flatpak list --app --columns=application 2>/dev/null | head -n 1)\" ]; then "
             + "fp=$(" + root._limit(90, "flatpak remote-ls --updates --columns=application,name,version") + " </dev/null 2>/dev/null) && "
             + "{ echo \"FLATPAK $(printf '%s\\n' \"$fp\" | grep -c \"$(printf '\\t')\")\"; "
-            + "printf '%s\\n' \"$fp\" | grep \"$(printf '\\t')\" | " + root._head(root._maxDetail) + "; }; fi"
+            + "printf '%s\\n' \"$fp\" | grep \"$(printf '\\t')\" | " + root._head(root._maxDetail) + "; }; "
+            + "else echo 'FLATPAK 0'; fi"
     }
 
     function _checkCommand(automatic: bool): var {
@@ -478,7 +479,7 @@ Singleton {
 
     BoundedProcess {
         id: _proc
-        timeoutMs: 180000
+        timeoutMs: 255000 // the tools' limits added up
         environment: ({ "LC_ALL": "C" })
         stdout: StdioCollector { id: _out }
         onTimeoutReached: {
