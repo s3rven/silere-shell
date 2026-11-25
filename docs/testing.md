@@ -17,6 +17,12 @@ runs structural, service, UI interaction and layout checks. Probes use private
 configuration directories and isolated session buses when the required tools are
 installed. A skipped probe leaves that part of the change unverified.
 
+`dev/check.sh` starts nested compositors and runs its probes in parallel, so it keeps
+every core busy for minutes. Between edits, `bash dev/light-check.sh` runs the type
+check, the behaviour checks, the fit probe and `dev/ci-lint.sh` one at a time at low
+priority, and is safe beside a desktop you are using. Run `dev/check.sh` once before
+you submit.
+
 Behaviour checks live in `dev/probe-logic.qml`, whose `_run()` calls one function per
 area in order, such as `_checksNotificationHistory()`. Add a check to the function for
 its area, and put back any setting it changes before that function returns: every
