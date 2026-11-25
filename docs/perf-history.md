@@ -59,6 +59,8 @@ Hardware not already listed takes a new letter.
 | 1.8.0 | 2026-11-19 | A | warm | 108 MB | 230 MB | 0.3% | 25 | 55 |
 | 1.9.0 | 2026-11-24 | A | cold | 96 MB | 217 MB | 0.4% | 20 | 59 |
 | 1.9.0 | 2026-11-24 | A | warm | 105 MB | 226 MB | 0.4% | 20 | 59 |
+| 1.10.0 | 2026-11-25 | A | cold | 91 MB | 209 MB | 0.5% | 20 | 58 |
+| 1.10.0 | 2026-11-25 | A | warm | 100 MB | 219 MB | 0.6% | 21 | 58 |
 
 A dash means that release was not measured.
 
@@ -179,6 +181,9 @@ Quickshell running.
 | B | 1.7.0 | 2026-11-13 | warm | default | 179 MB | 231 MB | 0.1% | 18 | 54 |
 | B | 1.7.0 | 2026-11-13 | cold | one pool, 1 s decay | 106 MB | — | — | 17 | 53 |
 | B | 1.7.0 | 2026-11-13 | warm | one pool, 1 s decay | 121 MB | — | — | 18 | 54 |
+
+The 1.10.0 rows ran on machine A's newer stack (kernel 7.3.6, Quickshell 0.3.2, Qt 6.12.0) while two terminal agents
+animated their window titles: both runs flag "noisy" on one 3.9% second, which moves CPU, not PSS.
 
 "One pool, 1 s decay" is the `MALLOC_CONF` that `silere run` sets from the release after 1.7.0;
 the 1.7.0 rows above it ran with jemalloc's defaults.
