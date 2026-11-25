@@ -18,7 +18,9 @@ _silere() {
                 elif [ "$COMP_CWORD" -eq 3 ] && [ "${COMP_WORDS[2]}" = settings ]; then words=("${_silere_pages[@]}")
                 fi ;;
             calendar|quick|tray) [ "$COMP_CWORD" -eq 2 ] && words=(close) ;;
-            theme) [ "$COMP_CWORD" -eq 2 ] && { mapfile -t COMPREPLY < <(compgen -f -- "$cur"); return; } ;;
+            # as for use: readline quotes names with spaces and adds a slash to folders
+            theme) [ "$COMP_CWORD" -eq 2 ] && { compopt -o filenames 2>/dev/null || true
+                mapfile -t COMPREPLY < <(compgen -f -- "$cur"); return; } ;;
             indicator) [ "$COMP_CWORD" -eq 2 ] && words=(set clear list) ;;
             volume|mic) [ "$COMP_CWORD" -eq 2 ] && words=(up down mute next) ;;
             dismiss) [ "$COMP_CWORD" -eq 2 ] && words=(all) ;;
