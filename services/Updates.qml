@@ -523,12 +523,19 @@ Singleton {
     function checkRestart(): void {
         if (!_restartCheck.running) _restartCheck.running = true
     }
-    Timer {
+    // at start, then hourly in use: coming back from idle restarts the timer, and within the hour that asks nothing new
+    property real _restartCheckedAt: 0
+    readonly property Timer _restartTick: Timer {
         interval: 3600000
         repeat: true
         triggeredOnStart: true
         running: !Idle.isIdle
-        onTriggered: root.checkRestart()
+        onTriggered: {
+            const since = Date.now() - root._restartCheckedAt
+            if (since >= 0 && since < interval - 60000) return
+            root._restartCheckedAt = Date.now()
+            root.checkRestart()
+        }
     }
     property int _countBefore: 0
     onCountChanged: {

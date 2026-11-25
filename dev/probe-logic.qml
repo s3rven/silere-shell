@@ -11460,6 +11460,14 @@ ShellRoot {
             && Updates.packages[3].name === "GNOME Application Platform version 50" && Updates.packages[3].to === "update"
             && Updates._flatpakPart().includes("--columns=application,name,version")
             && Updates.sourcesText === "2 from repos, 2 from Flatpak"
+        Updates._restartCheckedAt = Date.now() - 1000
+        const restartMark = Updates._restartCheckedAt
+        Updates._restartTick.triggered()
+        SystemAlerts._dfAt = Date.now() - 1000
+        const diskMark = SystemAlerts._dfAt
+        SystemAlerts._diskTick.triggered()
+        root._check(Updates._restartCheckedAt === restartMark && SystemAlerts._dfAt === diskMark,
+            "coming back from idle within the hour asks again neither whether a restart is needed nor how full the disk is")
         const repeatSteps = []
         const repeatWatch = () => repeatSteps.push(Updates.count)
         Updates.countChanged.connect(repeatWatch)

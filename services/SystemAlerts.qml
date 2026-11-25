@@ -290,13 +290,20 @@ Singleton {
         onTriggered: _crash.exec(["bash", "-c", root._crashScript, "silere-crash", Quickshell.shellDir, ConfigStore.stateDirectory])
     }
 
-    // at login, then every few hours of use: one df, never while the machine sits idle
-    Timer {
+    // at login, then every few hours of use: one df, never while the machine sits idle, and not again at each return
+    // from idle (the timer restarts there)
+    property real _dfAt: 0
+    readonly property Timer _diskTick: Timer {
         interval: 4 * 3600 * 1000
         repeat: true
         triggeredOnStart: true
         running: SystemTools.ready && root.canAlert && !Idle.isIdle
-        onTriggered: if (!_df.running) _df.exec(["df", "-Pk", "/", Quickshell.env("HOME") || "/"])
+        onTriggered: {
+            const since = Date.now() - root._dfAt
+            if (_df.running || (since >= 0 && since < interval - 60000)) return
+            root._dfAt = Date.now()
+            _df.exec(["df", "-Pk", "/", Quickshell.env("HOME") || "/"])
+        }
     }
 
     Connections {
