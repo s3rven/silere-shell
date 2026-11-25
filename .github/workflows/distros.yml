@@ -71,7 +71,10 @@ jobs:
           as_user bash scripts/doctor.sh 2>&1 | tee /tmp/distro-doctor.log || true
           grep -E '^ok +Quickshell ' /tmp/distro-doctor.log
           grep -E '^ok +QML modules ' /tmp/distro-doctor.log
-          as_user env SILERE_REQUIRE_QML_TOOLS=1 bash scripts/test-qml-headless.sh 2>&1 | tee /tmp/distro-types.log
+          # Fedora's Qt tooling can trail Arch's: its qmllint lacks flags the validate job's full lint uses, so here the
+          # bytecode check of every import and type runs on the distro's own Qt and the extra diagnostics are skipped
+          as_user env SILERE_REQUIRE_QML_TOOLS=1 SILERE_ALLOW_OLD_QMLLINT=1 bash scripts/test-qml-headless.sh 2>&1 \
+            | tee /tmp/distro-types.log
 
       - name: Save distro logs
         if: ${{ !cancelled() }}
