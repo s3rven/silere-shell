@@ -126,6 +126,8 @@ settings file carries its own `__version` and migrates separately.
 - The `update-available` hook no longer runs again at every check while Flatpak updates are pending.
 - `silere set` saves a slider setting at once, so `silere set … && silere restart` keeps it.
 - An editor that empties settings.json before writing it no longer flips every setting to its default for a moment.
+- Volume keys and the bar's wheel no longer stop at a level set elsewhere just off a 5% step, as a headset's own
+  buttons leave it.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 
 ## Releases

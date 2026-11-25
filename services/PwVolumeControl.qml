@@ -173,12 +173,14 @@ QtObject {
         }
     }
 
-    // a level set elsewhere rejoins the step grid on the first notch instead of staying off it
+    // a level set elsewhere rejoins the step grid on the first notch instead of staying off it. A level within the
+    // write tolerance of a line counts as on it: stepping to that line would be dropped as no change, every notch
     function _stepFrom(v: real, delta: real): real {
         const notches = Math.round(delta / stepPct)
         if (notches === 0) return v + delta
         const at = v / stepPct
-        const base = notches > 0 ? Math.floor(at + 0.01) : Math.ceil(at - 0.01)
+        const slop = ctl._volumeEpsilon / stepPct
+        const base = notches > 0 ? Math.floor(at + slop) : Math.ceil(at - slop)
         return (base + notches) * stepPct
     }
 

@@ -10759,6 +10759,12 @@ ShellRoot {
                 && near(Audio._out._stepFrom(0.45, 0.10), 0.55)
                 && near(Audio._out._stepFrom(0.45, -0.05), 0.40),
             "a volume notch lands on the step grid from any starting level")
+        // 64/127 from a headset's own buttons, 0.5027 from another mixer: a step to 0.50 would be dropped as no change
+        root._check(near(Audio._out._stepFrom(64 / 127, -0.05), 0.45)
+                && near(Audio._out._stepFrom(0.4973, 0.05), 0.55)
+                && near(Audio._out._stepFrom(0.5027, -0.05), 0.45)
+                && near(Audio._out._stepFrom(0.494, 0.05), 0.50),
+            "a level just off a grid line steps past it, so a notch is never swallowed as no change")
         root._check(CpuTemp.temperatureDemand(false, true, false, false)
                 && !CpuTemp.temperatureDemand(false, true, true, false)
                 && CpuTemp.temperatureDemand(true, false, true, false)
