@@ -3,6 +3,8 @@
 # from older versions and caches. Everything but caches and a history the user chose to clear comes back with --undo.
 # It stops at what Silere owns: hooks, the Matugen palette, autostart and the service are the user's and stay
 set -euo pipefail
+# the shell this script may restart gets the caller's own LC_ALL back, not the C it parses under
+[ -n "${SILERE_CALLER_LC_ALL_SET+x}" ] || export SILERE_CALLER_LC_ALL_SET="${LC_ALL+x}" SILERE_CALLER_LC_ALL="${LC_ALL-}"
 export LC_ALL=C
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

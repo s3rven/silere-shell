@@ -1314,6 +1314,16 @@ test_shared_launcher() (
         || fail "shared launcher did not preserve an empty EGL override"
     grep -qFx 'locale=C' "$capture" \
         || fail "shared launcher did not preserve an inherited locale"
+    # reset, the updater and the installer parse under C and restart the shell through silere: the user's value comes back
+    local caller_capture="$TMP/launcher-caller-locale.out"
+    LC_ALL=C SILERE_CALLER_LC_ALL_SET=x SILERE_CALLER_LC_ALL=lv_LV.UTF-8 PATH="$stub_dir:$PATH" \
+        SILERE_LAUNCH_CAPTURE="$caller_capture" bash "$ROOT/scripts/silere" run
+    grep -qFx 'locale=lv_LV.UTF-8' "$caller_capture" \
+        || fail "a shell restarted by a Silere script kept the script's C locale"
+    LC_ALL=C SILERE_CALLER_LC_ALL_SET='' PATH="$stub_dir:$PATH" SILERE_LAUNCH_CAPTURE="$caller_capture" \
+        bash "$ROOT/scripts/silere" run
+    grep -qFx 'locale=<unset>' "$caller_capture" \
+        || fail "a caller without LC_ALL got the script's C locale"
     grep -qFx 'watch=1' "$capture" \
         || fail "shared launcher did not preserve the user's hot reload choice"
 

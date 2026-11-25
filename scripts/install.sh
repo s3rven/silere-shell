@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# the shell this script may restart gets the caller's own LC_ALL back, not the C it parses under
+[ -n "${SILERE_CALLER_LC_ALL_SET+x}" ] || export SILERE_CALLER_LC_ALL_SET="${LC_ALL+x}" SILERE_CALLER_LC_ALL="${LC_ALL-}"
 export LC_ALL=C
 
 REPO_URL="https://github.com/s3rven/silere-shell.git"

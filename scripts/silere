@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-original_lc_all_set="${LC_ALL+x}"
-original_lc_all="${LC_ALL-}"
+# the user's own LC_ALL, which the shell gets back: a Silere script that already parses under C (reset, update, the
+# installer) hands it down, or a restart from there started the shell in the C locale, English dates and all
+if [ -n "${SILERE_CALLER_LC_ALL_SET+x}" ]; then
+    original_lc_all_set="$SILERE_CALLER_LC_ALL_SET"
+    original_lc_all="${SILERE_CALLER_LC_ALL-}"
+else
+    original_lc_all_set="${LC_ALL+x}"
+    original_lc_all="${LC_ALL-}"
+    export SILERE_CALLER_LC_ALL_SET="$original_lc_all_set" SILERE_CALLER_LC_ALL="$original_lc_all"
+fi
 export LC_ALL=C
 
 source_path="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null || true)"
@@ -252,6 +260,7 @@ report_failed_start() {
 
 # LC_ALL=C is for this script's parsing; programs the shell launches get the user's locale
 restore_locale() {
+    unset SILERE_CALLER_LC_ALL_SET SILERE_CALLER_LC_ALL
     if [ -n "$original_lc_all_set" ]; then
         export LC_ALL="$original_lc_all"
     else
