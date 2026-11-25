@@ -344,16 +344,27 @@ Item {
 
     onRawActiveIdChanged: {
         if (rawActiveId > 0) _lastNormalActiveId = rawActiveId
-        if (rawActiveId === root._pendingId) root._pendingId = 0
+        if (root._pendingId > 0 && rawActiveId === root._pendingId) {
+            _pendingExpiry.stop()
+            root._settlePending()
+        }
     }
 
     // a wheel spin outruns the compositor's reply: notches before it lands count on from the workspace already asked
-    // for, and asking again for that one would bounce back where workspace back-and-forth is on
+    // for. One request at a time: detached dispatches can land out of order, and asking again for the one in flight
+    // bounces back where workspace back-and-forth is on, so later notches wait as one target, sent once it lands
     property int _pendingId: 0
+    property int _queuedId: 0
     Timer {
         id: _pendingExpiry
         interval: 400
-        onTriggered: root._pendingId = 0
+        onTriggered: root._settlePending()
+    }
+    function _settlePending(): void {
+        root._pendingId = 0
+        const next = root._queuedId
+        root._queuedId = 0
+        if (next > 0 && next !== root.rawActiveId) root.activate(next)
     }
 
     // one input event can emit several compositor updates; coalesce to one hand-off
@@ -493,8 +504,13 @@ Item {
     }
 
     function activate(id: int): void {
-        if (!monitorLive) return
-        if (id < 1 || id === rawActiveId || id === root._pendingId || root._knownOnOtherMonitor(id)) return
+        if (id < 1 || root._knownOnOtherMonitor(id)) return
+        if (root._pendingId > 0) {
+            // back to the one in flight drops what was queued after it, so a reversed notch is not lost
+            root._queuedId = id === root._pendingId ? 0 : id
+            return
+        }
+        if (!monitorLive || id === rawActiveId) return
         root._pendingId = id
         _pendingExpiry.restart()
         Compositor.focusWorkspace(id, root.monitorName)
@@ -506,7 +522,7 @@ Item {
     }
 
     function _scrollTarget(delta: int): int {
-        let target = root._pendingId > 0 ? root._pendingId : root.activeId
+        let target = root._queuedId > 0 ? root._queuedId : root._pendingId > 0 ? root._pendingId : root.activeId
         const direction = delta > 0 ? -1 : 1
         const steps = Math.abs(delta)
         const cap = root._idCap

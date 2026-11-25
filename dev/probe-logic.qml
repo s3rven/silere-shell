@@ -3206,6 +3206,17 @@ ShellRoot {
         const roomy = strip._idCap === 0 || strip._idCap >= 3
         root._check(!roomy || (strip._scrollTarget(-1) === 3 && strip._scrollTarget(1) === 1),
             "a wheel notch before the compositor answers counts on from the workspace already asked for")
+        strip.activate(3)
+        const queuedReversal = strip._queuedId === 3 && strip._pendingId === 2
+        strip.activate(1)
+        const queuedLatest = strip._queuedId === 1 && (!roomy || strip._scrollTarget(-1) === 2)
+        strip.activate(2)
+        root._check(queuedReversal && queuedLatest && strip._queuedId === 0 && strip._pendingId === 2,
+            "notches before the compositor answers wait as one target, and a notch back to the one asked for is kept")
+        strip._queuedId = 3
+        strip._settlePending()
+        root._check(strip._pendingId === 0 && strip._queuedId === 0,
+            "the queued workspace goes once the one asked for lands or expires")
         strip._pendingId = 0
         strip.destroy()
         const tick = workspaceUrgentTickFactory.createObject(barFixtureHost, {

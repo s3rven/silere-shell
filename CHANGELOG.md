@@ -141,6 +141,8 @@ settings file carries its own `__version` and migrates separately.
 - The update count follows an update run in a terminal (pacman, an AUR helper, apt) or `flatpak update` within a
   minute, instead of up to an hour later, or six for Flatpak.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
+- Spinning the wheel over the workspaces lands where the notches add up to, also when the spin reverses before
+  Hyprland answers.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.
 
