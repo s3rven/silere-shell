@@ -13418,6 +13418,9 @@ ShellRoot {
                 && SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/c", 500, 1, "/my disk")).alerts[0].mount === "/my disk"
                 && SystemAlerts.diskAlertStep({}, dfHead + "garbage\n/dev/d 0 0 0 0% /\n").alerts.length === 0,
             "a disk warns under both 5% and 2 GB free, names a mount with spaces, and skips rows it cannot read")
+        root._check(SystemAlerts.diskAlertStep({}, dfHead + "composefs 7500 7500 0 100% /\n").alerts.length === 0
+                && SystemAlerts.diskAlertStep({}, dfHead + dfRow("/dev/e", 1, 0.01, "/")).alerts.length === 1,
+            "a read-only image root of a few MB is no disk to warn about; a real 1 GB one still is")
         const bt = (pct) => [{ address: "AA", name: "Headset", pct: pct }]
         let btStep = SystemAlerts.btAlertStep({}, bt(18), 20, 25)
         const btFirst = btStep.alerts.length === 1 && btStep.alerts[0].name === "Headset"

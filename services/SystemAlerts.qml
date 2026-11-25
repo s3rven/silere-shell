@@ -235,7 +235,9 @@ Singleton {
             if (f.length < 6) continue
             // by device: home on the root filesystem, a btrfs subvolume included, is one disk and one warning
             const disk = f[0], size = Number(f[1]), avail = Number(f[3])
-            if (!(size > 0) || !(avail >= 0) || disk in next) continue
+            // under a gigabyte is no disk to fill: Fedora Atomic's root is a read-only composefs image of a few MB with
+            // nothing free, which warned at every login; its updates land on /sysroot
+            if (!(size >= 1048576) || !(avail >= 0) || disk in next) continue
             const limit = Math.min(root.diskLowKb, size * 0.05)
             // a quarter over the mark before it rearms, so a cache filling and emptying around it warns once
             next[disk] = avail < limit || warned[disk] === true && avail < limit * 1.25
