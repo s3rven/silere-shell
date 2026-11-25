@@ -133,6 +133,8 @@ settings file carries its own `__version` and migrates separately.
 - An app starting or stopping sound no longer rebuilds the menu's app volume list, which let go of a slider mid-drag.
 - On Hyprland with two monitors, moving the pointer to the other monitor and back no longer closes an open popup, and a
   menu key pressed just after hovering the other monitor's workspaces opens the menu on the focused one.
+- Popups turn solid as they open when Hyprland's blur was switched off at runtime, instead of showing the desktop
+  through with nothing blurring it.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.

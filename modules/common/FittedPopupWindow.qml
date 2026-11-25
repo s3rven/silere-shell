@@ -35,7 +35,16 @@ PanelWindow {
     // a compositor that grabs outside clicks for the card window needs no full-screen catcher
     readonly property bool _grabsClicks: Compositor.popupGrab !== null
     property QtObject _grab: null
-    Component.onCompleted: if (Compositor.popupGrab) win._grab = Compositor.popupGrab.createObject(win, { popup: win })
+    Component.onCompleted: {
+        if (Compositor.popupGrab) win._grab = Compositor.popupGrab.createObject(win, { popup: win })
+        win._checkBlur()
+    }
+    // a compositor setting changed at runtime sends no event (Hyprland's hl.config): read it as a popup opens, or a
+    // frosted card shows the desktop through with nothing blurring it
+    onOpenChanged: win._checkBlur()
+    function _checkBlur(): void {
+        if (win.open && ShellSettings.surfaceBlur) Compositor.checkBlur()
+    }
 
     // open, or the card still fading out
     readonly property bool shown: win.open || cardWin.visible

@@ -238,13 +238,22 @@ QtObject {
     }
 
     // a blur request does nothing before 0.56, which lacks the protocol, or with decoration:blur:enabled off.
-    // read once at startup and again on a config reload: popups turn solid while nothing frosts them
+    // read at startup, on a config reload and as a popup opens (hl.config turns blur off with no event): popups turn
+    // solid while nothing frosts them
     property string blurBlocker: ""
+    property bool _blurAgain: false
     property BoundedProcess _blurProbe: BoundedProcess {
         timeoutMs: 3000
         command: ["sh", "-c", "hyprctl -j version && hyprctl -j getoption decoration:blur:enabled"]
         stdout: StdioCollector { id: _blurOut }
-        onExited: code => root.blurBlocker = root._blurProbe.completedSuccessfully(code) ? root.blurBlockerFrom(_blurOut.text) : ""
+        onExited: code => {
+            root.blurBlocker = root._blurProbe.completedSuccessfully(code) ? root.blurBlockerFrom(_blurOut.text) : ""
+            // a reload during the read may have changed blur after it
+            if (root._blurAgain) {
+                root._blurAgain = false
+                Qt.callLater(root.checkBlur)
+            }
+        }
     }
     function blurBlockerFrom(out: string): string {
         const v = /"(?:version|tag)":\s*"v?(\d+)\.(\d+)/.exec(out)
@@ -253,7 +262,8 @@ QtObject {
     }
     // hyprctl ships with Hyprland, and a missing one only fails the probe, which blames nothing
     function checkBlur(): void {
-        if (!_blurProbe.running) _blurProbe.running = true
+        if (_blurProbe.running) root._blurAgain = true
+        else _blurProbe.running = true
     }
 
     property Connections _restartWatchRetry: Connections {
