@@ -94,6 +94,8 @@ settings file carries its own `__version` and migrates separately.
 - A long track title in the bar ends in an ellipsis once it stops scrolling, instead of a letter cut in half.
 - Scrolling fast over the workspaces moves one workspace per notch, and no longer bounces back with Hyprland's
   workspace back-and-forth.
+- A new message in a conversation no longer replaces the notification under your pointer, and resting on Clear all
+  or Show more holds the cards as resting on them does.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

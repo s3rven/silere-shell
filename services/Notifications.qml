@@ -927,6 +927,8 @@ Singleton {
     readonly property int _threadLineMax: 3
     // a card with an open reply keeps its own card: folding it would discard the draft
     property int replyingId: -1
+    // the pointer rests on the popup stack (NotificationPopups): threads do not fold a card out from under it
+    property bool stackHeld: false
 
     // a stack tag already replaces by design, a progress sender's earlier lines are stale
     // percentages, and a critical card is never hidden inside another one
@@ -945,7 +947,7 @@ Singleton {
     }
 
     function _foldThread(notification): bool {
-        if (!ShellSettings.notifGroupThreads) return false
+        if (!ShellSettings.notifGroupThreads || root.stackHeld) return false
         const key = root.threadKeyOf(notification)
         if (key.length === 0) return false
         const folded = root.list.filter(e => e.notification && e.id !== notification.id

@@ -471,6 +471,11 @@ PanelWindow {
 
     Item {
         id: outerCol
+        // the chips too: on them the cards went on counting down, and one expiring moved a chip under the pointer
+        HoverHandler { id: _stackHover }
+        // while the pointer rests on the stack, a new message in a thread gets its own card rather than taking the
+        // place of the one about to be clicked
+        Binding { target: Notifications; property: "stackHeld"; value: _stackHover.hovered }
         anchors {
             top:    win._barBottom ? undefined : parent.top
             bottom: win._barBottom ? parent.bottom : undefined
@@ -566,8 +571,6 @@ PanelWindow {
                 win._availableContentH - _clearChip.height - _moreChip.height
                 - outerCol.spacing * ((_clearChip.visible ? 1 : 0)
                     + (_moreChip.visible ? 1 : 0))))
-
-            HoverHandler { id: _stackHover }
 
             ShellFlickable {
                 id: _cardScroll

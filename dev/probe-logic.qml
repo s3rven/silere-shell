@@ -2928,6 +2928,10 @@ ShellRoot {
         root._check(!Notifications._foldThread(a4) && a3.tracked,
             "a card with an open reply is never folded away under the person typing")
         Notifications.replyingId = -1
+        Notifications.stackHeld = true
+        root._check(!Notifications._foldThread(a4) && a3.tracked,
+            "a card under the pointer is never folded away before the click lands")
+        Notifications.stackHeld = false
         foldedIn = []
         root._check(Notifications._foldThread(a4) && !a3.tracked
                 && Notifications.threadFor(a4.id).count === 4
