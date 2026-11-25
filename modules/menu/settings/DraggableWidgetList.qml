@@ -111,7 +111,9 @@ Item {
     function _noteFor(key: string): string {
         switch (key) {
         case "battery":
-            if (Battery.upowerReady && !Battery.present) return "No battery"
+            // with no battery of its own the pill still shows a receiver mouse or keyboard running low
+            if (Battery.upowerReady && !Battery.present)
+                return Battery.peripherals.length > 0 ? "When a device is low" : "No battery"
             return ShellSettings.batteryAutoHide ? "When unplugged" : ""
         case "bluetooth":
             return Bluetooth.available ? "" : "No adapter"

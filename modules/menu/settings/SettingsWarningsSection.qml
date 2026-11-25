@@ -26,16 +26,17 @@ Column {
         ShellSettings.osdBatteryWarn, ShellSettings.underlineBattGlow)
     readonly property string _tempAlertMode: root._alertMode(
         ShellSettings.osdTempWarn, ShellSettings.underlineTempGlow)
-    // the low battery warning also covers Bluetooth devices, so without a battery of its own the switch has to stay reachable
-    readonly property bool _bluetoothOnly: !Battery.available && Bluetooth.available
+    // the low battery warning also covers Bluetooth devices and mice or keyboards on their own receivers, so without a
+    // battery of its own the switch has to stay reachable while either can report one
+    readonly property bool _devicesOnly: !Battery.available && (Bluetooth.available || Battery.peripherals.length > 0)
     readonly property bool _batteryDesktopAlert:
-        (Battery.available || root._bluetoothOnly) && ShellSettings.osdBatteryWarn
+        (Battery.available || root._devicesOnly) && ShellSettings.osdBatteryWarn
     readonly property bool _tempDesktopAlert:
         !CpuTemp.sensorMissing && ShellSettings.osdTempWarn
     readonly property bool _desktopAlertsEnabled:
         root._batteryDesktopAlert || root._tempDesktopAlert
     readonly property bool _hardwareStatusVisible:
-        !Battery.available && !root._bluetoothOnly && CpuTemp.sensorMissing
+        !Battery.available && !root._devicesOnly && CpuTemp.sensorMissing
 
     readonly property var _alertChipModel: ShellSettings.underlineGlow
         ? [
@@ -76,19 +77,19 @@ Column {
         }
     }
 
-    SectionLabel { label: "BATTERY"; first: true; visible: root._bluetoothOnly }
+    SectionLabel { label: "BATTERY"; first: true; visible: root._devicesOnly }
     SettingsCard {
-        visible: root._bluetoothOnly
+        visible: root._devicesOnly
         ToggleRow {
             glyph: "󰥉"; label: "Low battery warning"
-            description: "Bluetooth devices at " + SystemAlerts.btLowPct + "% or less"
+            description: "Wireless devices at " + SystemAlerts.btLowPct + "% or less"
             key: "osdBatteryWarn"
         }
     }
 
     SectionLabel {
         label: "CPU TEMPERATURE"
-        first: !Battery.available && !root._bluetoothOnly
+        first: !Battery.available && !root._devicesOnly
         visible: !CpuTemp.sensorMissing
     }
     SettingsCard {
