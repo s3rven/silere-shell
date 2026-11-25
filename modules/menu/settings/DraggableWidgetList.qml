@@ -42,7 +42,7 @@ Item {
         const m = Object.create(null)
         const items = root.trayItems
         for (let i = 0; i < items.length; i++) {
-            const id = String(items[i]?.id || "")
+            const id = ShellSettings.trayKey(items[i])
             if (id.length > 0 && !m[id]) m[id] = items[i]
         }
         return m
@@ -51,7 +51,7 @@ Item {
         const out = []
         const items = root.trayItems
         for (let i = 0; i < items.length; i++) {
-            const id = String(items[i]?.id || "")
+            const id = ShellSettings.trayKey(items[i])
             if (id.length > 0 && out.indexOf(id) < 0) out.push(id)
         }
         const extra = ShellSettings.trayHiddenIds.concat(root._trayStickyIds)
@@ -839,7 +839,7 @@ Item {
                         readonly property string statusText: !_sub.running ? "Not running"
                             : !_sub.checked ? "Hidden"
                             : !ShellSettings.trayWidget ? "Tray off" : "Shown"
-                        readonly property string label: !running ? modelData
+                        readonly property string label: !running ? ShellSettings.trayKeyLabel(modelData)
                             : SafeText.singleLineText(
                                 String(item.title || "").length > 0 ? item.title
                                 : String(item.tooltipTitle || "").length > 0 ? item.tooltipTitle

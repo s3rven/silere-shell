@@ -47,7 +47,7 @@ AnchoredPopupState {
         target: ShellSettings
         function onTrayWidgetChanged() { if (!ShellSettings.trayWidget) root.close() }
         function onTrayHiddenChanged() {
-            if (root.sourceItem && ShellSettings.trayItemHidden(root.sourceItem.id))
+            if (root.sourceItem && ShellSettings.trayItemHidden(ShellSettings.trayKey(root.sourceItem)))
                 root.close()
         }
     }

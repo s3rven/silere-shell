@@ -42,7 +42,7 @@ Item {
     readonly property var _trayItems: root.trayModel
         ? (Array.isArray(root.trayModel) ? root.trayModel : (root.trayModel.values ?? [])) : []
     readonly property bool show: ShellSettings.trayWidget
-        && root._trayItems.some(i => i && !ShellSettings.trayItemHidden(i.id))
+        && root._trayItems.some(i => i && !ShellSettings.trayItemHidden(ShellSettings.trayKey(i)))
     readonly property bool contentVisible: root.show
     readonly property bool _canInteract: root.enabled && root.visible && root.show && root.barActive && !Idle.isIdle
     readonly property bool layoutVisible: show || implicitWidth > 0.5
@@ -97,7 +97,7 @@ Item {
 
     // an item without its own menu still opens one, holding only the hide entry
     function _openMenu(item, tile, keyboard): void {
-        if (!root._canInteract || !item || ShellSettings.trayItemHidden(item.id)) return
+        if (!root._canInteract || !item || ShellSettings.trayItemHidden(ShellSettings.trayKey(item))) return
         tile.syncMenuAnchor()
         TrayMenuState.toggleAt(
             tile.menuAnchorX,
@@ -131,7 +131,7 @@ Item {
     }
 
     function _activateItem(item, tile): void {
-        if (!root._canInteract || !item || ShellSettings.trayItemHidden(item.id)) return
+        if (!root._canInteract || !item || ShellSettings.trayItemHidden(ShellSettings.trayKey(item))) return
         if (item.onlyMenu) root._openMenu(item, tile)
         else if (!WindowActions.focusTrayItem(item.id, item.title, item.tooltipTitle))
             item.activate()
@@ -167,7 +167,7 @@ Item {
                     && (_tile.iconSource.length === 0 || _icon.status === Image.Error || _tile._fallbackDue)
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
-                readonly property bool hidden: ShellSettings.trayItemHidden(modelData.id)
+                readonly property bool hidden: ShellSettings.trayItemHidden(ShellSettings.trayKey(modelData))
                 readonly property bool _menuOpen: TrayMenuState.open && TrayMenuState.sourceItem === modelData
                 onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
                 // hidden, not filtered out: a filtered model recreates the icon on every un-hide

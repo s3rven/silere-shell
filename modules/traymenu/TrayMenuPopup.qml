@@ -642,7 +642,7 @@ FittedPopupWindow {
 
                 Item {
                     id: _hideRow
-                    readonly property string _liveId: String(TrayMenuState.sourceItem?.id ?? "")
+                    readonly property string _liveId: ShellSettings.trayKey(TrayMenuState.sourceItem)
                     // latched: the source clears on close, and the row must not drop out during the fade
                     property string trayId: ""
                     on_LiveIdChanged: if (TrayMenuState.sourceItem !== null) trayId = _liveId

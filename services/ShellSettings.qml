@@ -279,6 +279,20 @@ Singleton {
             try { return decodeURIComponent(s) } catch (e) { return s }
         })
 
+    // Chromium and Electron number tray items per process, so every such app's first icon is chrome_status_icon_1, and
+    // hiding Discord hid Slack too; their tooltip names the app. Any other id is its own key, as stored before
+    function trayKey(item): string {
+        const id = String(item?.id ?? "")
+        if (!/^chrome_status_icon_[0-9]+$/.test(id)) return id
+        const name = SafeText.singleLineText(String(item.tooltipTitle || item.title || ""), 64).trim()
+        return name.length > 0 ? id + "|" + name : id
+    }
+    // what a key reads as for an app that is not running
+    function trayKeyLabel(key: string): string {
+        const bar = key.indexOf("|")
+        return bar > 0 && /^chrome_status_icon_[0-9]+$/.test(key.slice(0, bar)) ? key.slice(bar + 1) : key
+    }
+
     function trayItemHidden(id: string): bool {
         return root.trayHiddenIds.indexOf(id) >= 0
     }

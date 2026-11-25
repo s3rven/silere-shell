@@ -14385,6 +14385,15 @@ ShellRoot {
         root._check(!ShellSettings.trayItemHidden("launcher")
                 && ShellSettings.trayHiddenIds.length === 1,
             "showing a tray item removes only that id")
+        const discord = { id: "chrome_status_icon_1", title: "", tooltipTitle: "Discord" }
+        const slack = { id: "chrome_status_icon_1", title: "", tooltipTitle: "Slack" }
+        ShellSettings.setTrayItemHidden(ShellSettings.trayKey(discord), true)
+        root._check(ShellSettings.trayItemHidden(ShellSettings.trayKey(discord))
+                && !ShellSettings.trayItemHidden(ShellSettings.trayKey(slack))
+                && ShellSettings.trayKey({ id: "nm-applet", tooltipTitle: "Network" }) === "nm-applet"
+                && ShellSettings.trayKeyLabel(ShellSettings.trayKey(discord)) === "Discord"
+                && ShellSettings.trayKeyLabel("nm-applet") === "nm-applet",
+            "two Electron apps sharing Chromium's tray id hide one at a time, and read by name when not running")
         ShellSettings.trayHidden = trayHiddenWas
 
         root._check(ShellSettings.constraintOf("barShowClock") === "true|false",
