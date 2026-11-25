@@ -135,11 +135,12 @@ PageShell {
         return null
     }
 
+    // a key can sit behind two gates (Match bar shape: OSD on, and Show in bar off), so the one folded now
+    // wins over the first listed
     function revealRowFor(section: string, key: string): string {
-        const gates = ShellSettings.sectionGates[section] || []
-        for (let i = 0; i < gates.length; i++)
-            if (gates[i].hides.indexOf(key) >= 0) return gates[i].master ?? gates[i].any[0].master
-        return ""
+        const gates = (ShellSettings.sectionGates[section] || []).filter(rule => rule.hides.indexOf(key) >= 0)
+        const gate = gates.find(rule => ShellSettings.gateFolded(rule)) ?? gates[0]
+        return gate ? gate.master ?? gate.any[0].master : ""
     }
 
     // a revealed row sits a third of the way down, and never under the header pinned over the viewport's top:

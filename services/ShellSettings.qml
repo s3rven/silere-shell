@@ -763,17 +763,16 @@ Singleton {
         ]
     })
 
-    function _dotHidden(section: string, key: string): bool {
-        const rules = root.sectionGates[section]
-        if (!rules) return false
-        // an any rule folds only while every one of its conditions would fold
+    // whether a sectionGates rule has its keys folded away now; an any rule folds only while every one of its
+    // conditions would
+    function gateFolded(rule): bool {
         const folds = r => r.off !== undefined ? root[r.master] === r.off : r.negate ? !!root[r.master] : !root[r.master]
-        for (let i = 0; i < rules.length; i++) {
-            const rule = rules[i]
-            const collapsed = rule.any ? rule.any.every(folds) : folds(rule)
-            if (collapsed && rule.hides.indexOf(key) >= 0) return true
-        }
-        return false
+        return rule.any ? rule.any.every(folds) : folds(rule)
+    }
+
+    function _dotHidden(section: string, key: string): bool {
+        const rules = root.sectionGates[section] || []
+        return rules.some(rule => rule.hides.indexOf(key) >= 0 && root.gateFolded(rule))
     }
 
     // reassigned, never mutated: the nav reads this through a binding, and a mutation

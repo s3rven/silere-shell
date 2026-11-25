@@ -8986,6 +8986,18 @@ ShellRoot {
         root._check(revealPage._keyRow(sectionFor("media"), "mediaWidgetFormat")?.label === "Artist"
                 && revealPage._keyRow(sectionFor("clock"), "clock12h")?.label === "Format",
             "search reveals a row that writes its setting through its own handler")
+        {
+            const was = { enabled: ShellSettings.osdEnabled, integrated: ShellSettings.osdBarIntegrated }
+            ShellSettings.osdEnabled = true
+            ShellSettings.osdBarIntegrated = true
+            const behindBar = revealPage.revealRowFor("osd", "osdMatchBar")
+            ShellSettings.osdEnabled = false
+            const behindOsd = revealPage.revealRowFor("osd", "osdMatchBar")
+            ShellSettings.osdEnabled = was.enabled
+            ShellSettings.osdBarIntegrated = was.integrated
+            root._check(behindBar === "osdBarIntegrated" && behindOsd === "osdEnabled",
+                "a search for a row behind two switches reveals the one folded now: " + behindBar + " " + behindOsd)
+        }
         const widgets = sectionFor("widgets")
         root._check(Object.keys(ShellSettings.barWidgetMeta).every(id => {
             const setting = ShellSettings.barWidgetMeta[id].setting
