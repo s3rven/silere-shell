@@ -98,7 +98,7 @@ Singleton {
         const out = []
         for (const d of values || []) {
             if (!d || !d.ready || !d.isPresent || d.powerSupply || !(d.type in root._peripheralGlyphs)
-                    || String(d.nativePath || "").startsWith("/org/bluez/") || !root._measurement(d.percentage)) continue
+                    || String(d.nativePath || "").startsWith("/org/bluez/") || !(d.percentage > 0)) continue
             const name = SafeText.singleLineText(d.model || "", 96)
             out.push({ id: String(d.nativePath || name), glyph: root._peripheralGlyphs[d.type],
                 name: name || UPowerDeviceType.toString(d.type), pct: Math.round(root.normalizedPercent(d.percentage)) })

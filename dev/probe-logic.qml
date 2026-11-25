@@ -13657,10 +13657,11 @@ ShellRoot {
             Object.assign({}, mouse, { nativePath: "/org/bluez/hci0/dev_AA", model: "BT Mouse" }),
             Object.assign({}, mouse, { powerSupply: true, type: Up.UPowerDeviceType.Battery, nativePath: "BAT0" }),
             Object.assign({}, mouse, { type: Up.UPowerDeviceType.Keyboard, nativePath: "kbd", model: "", percentage: 0.9 }),
-            Object.assign({}, mouse, { nativePath: "gone", isPresent: false }), null])
+            Object.assign({}, mouse, { nativePath: "gone", isPresent: false }),
+            Object.assign({}, mouse, { nativePath: "unread", percentage: 0 }), null])
         root._check(peripherals.length === 2 && peripherals[0].name === "Wireless Mouse" && peripherals[0].pct === 18
                 && peripherals[0].id === "hidpp_battery_0" && peripherals[1].pct === 90 && peripherals[1].name.length > 0,
-            "receiver mice and keyboards are listed with their charge, leaving system batteries and BlueZ's devices out")
+            "receiver mice and keyboards are listed with their charge, leaving system batteries, BlueZ's devices and unread 0% placeholders out")
         root._check(Battery.lowPeripheralOf([{ pct: 50 }, { pct: 18 }, { pct: 12 }, null]).pct === 12
                 && Battery.lowPeripheralOf([{ pct: 50 }, { pct: 21 }]) === null && Battery.lowPeripheralOf([]) === null,
             "a desktop's bar shows the lowest receiver battery, and only while one is low")
