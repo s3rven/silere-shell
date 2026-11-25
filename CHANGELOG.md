@@ -112,6 +112,7 @@ settings file carries its own `__version` and migrates separately.
 - Turning Bluetooth on when its radio cannot be unblocked says why instead of doing nothing.
 - A Wi-Fi network that takes long to join, such as a work network, reports NetworkManager's own answer instead of
   failing after 20 seconds.
+- A power mode the laptop switches itself as the charger is pulled is no longer remembered as your plugged-in choice.
 - Without pgrep, switching off a night light another program started keeps it shown as on.
 - On a limited network, the internet check stops while nothing shows the network.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.

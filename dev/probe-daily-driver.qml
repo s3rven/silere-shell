@@ -315,8 +315,17 @@ Scope {
         ShellSettings.powerProfileAc = "balanced"
         ShellSettings.powerProfileBattery = "power-saver"
         PowerProfiles._noteProfileChange("balanced", "performance")
+        PowerProfiles._outsideHoldTimer.triggered()
         root.check(ShellSettings.powerProfileAc === "performance" && ShellSettings.powerProfileBattery === "power-saver",
             "a mode changed outside the menu is remembered for the current source only")
+        // firmware switching with the charger can report before UPower's source change: the change is not a choice
+        PowerProfiles._noteProfileChange("performance", "power-saver")
+        Battery.onBattery = true
+        Battery.onBattery = false
+        PowerProfiles._sourceSettleTimer.stop()
+        PowerProfiles._outsideHoldTimer.triggered()
+        root.check(ShellSettings.powerProfileAc === "performance" && ShellSettings.powerProfileBattery === "power-saver",
+            "a mode switch reported just before a charger edge is not remembered for either source")
         PowerProfiles._sourceSettleTimer.restart()
         PowerProfiles._noteProfileChange("performance", "balanced")
         PowerProfiles._sourceSettleTimer.stop()

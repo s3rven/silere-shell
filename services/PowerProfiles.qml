@@ -126,8 +126,22 @@ Singleton {
         if (!ShellSettings.powerProfileRemember || !Battery.available
                 || !root.outsideChoice(was, now, _set.running,
                     _sourceSettle.running || _startSettle.running)) return
-        const key = Battery.onBattery ? "powerProfileBattery" : "powerProfileAc"
-        if (ShellSettings[key] !== now) ShellSettings[key] = now
+        // held a moment: firmware that switches mode with the charger (Legion, some ROG) can report before UPower's
+        // source change, which then lands here and drops it, where saved at once it became the other source's choice
+        root._outsidePending = { name: now, onBattery: Battery.onBattery }
+        _outsideHold.restart()
+    }
+    property var _outsidePending: null
+    property Timer _outsideHoldTimer: Timer {
+        id: _outsideHold
+        interval: 1000
+        onTriggered: {
+            const pending = root._outsidePending
+            root._outsidePending = null
+            if (!pending || pending.onBattery !== Battery.onBattery || _sourceSettle.running) return
+            const key = pending.onBattery ? "powerProfileBattery" : "powerProfileAc"
+            if (ShellSettings[key] !== pending.name) ShellSettings[key] = pending.name
+        }
     }
 
     property string _seenProfile: ""
@@ -145,7 +159,11 @@ Singleton {
 
     Connections {
         target: Battery
-        function onOnBatteryChanged() { _sourceSettle.restart() }
+        function onOnBatteryChanged() {
+            root._outsidePending = null
+            _outsideHold.stop()
+            _sourceSettle.restart()
+        }
     }
     // the daemon restores its last mode at boot, which can be the other source's, and no charger edge follows
     readonly property bool _sourceKnown: root.available && Battery.available
