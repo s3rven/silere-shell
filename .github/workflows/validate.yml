@@ -175,7 +175,8 @@ jobs:
     steps:
       - name: Install UI compatibility dependencies
         run: |
-          pacman -Syu --noconfirm git quickshell fontconfig ttf-jetbrains-mono-nerd util-linux
+          # DejaVu Sans is the second, non-icon font the title measurement check needs to be about anything
+          pacman -Syu --noconfirm git quickshell fontconfig ttf-jetbrains-mono-nerd ttf-dejavu util-linux
           fc-cache -f >/dev/null
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

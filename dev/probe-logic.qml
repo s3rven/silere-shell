@@ -10020,7 +10020,9 @@ ShellRoot {
             host.destroy()
         }
         }
-        {
+        // two real fonts or nothing to tell apart: a missing DejaVu Sans is substituted by fontconfig, as in a container
+        // that carries only the Nerd Font, and the measurement then compares two routes to one face
+        if (Qt.fontFamilies().indexOf("DejaVu Sans") >= 0) {
             const fontWas = ShellSettings.fontFamily
             ShellSettings.fontFamily = "DejaVu Sans"
             const glyphTitle = windowTitleFactory.createObject(root, { widthBudget: 10000 })
