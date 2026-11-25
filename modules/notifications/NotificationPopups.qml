@@ -72,7 +72,7 @@ PanelWindow {
     readonly property bool   _left:     _pos === "top-left"
     readonly property bool   _center:   _pos === "top-center"
     readonly property int    _slideDir: _center ? 0 : (_left ? -1 : 1)
-    readonly property bool   _barBottom: ShellSettings.barPosition === "bottom"
+    readonly property bool   _barBottom: Metrics.barAtBottom
     // the stack reads outward from the bar: newest card first, older ones behind the more chip
     readonly property bool   _newestFirst: !_barBottom
     readonly property int    _lastVisualIndex: {

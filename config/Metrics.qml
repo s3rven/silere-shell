@@ -62,7 +62,7 @@ Singleton {
     // a visualizer stands on the bar's bottom rim instead of painting over it, or the translucent stroke vanishes
     // behind every bar; one device px, only where a line runs along that edge (a docked bottom bar draws its on top)
     function visualizerLiftFor(dpr: real): real {
-        const top = ShellSettings.barPosition !== "bottom"
+        const top = !root.barAtBottom
         const rim = ShellSettings.barBorderVisible && (ShellSettings.barFloating || top)
             || ShellSettings.underlineGlow && top
         return rim && dpr > 0 ? 1 / dpr : 0

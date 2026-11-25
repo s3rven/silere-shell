@@ -595,7 +595,7 @@ Item {
         sourceComponent: FloatingShadow {
             hollow: cardRect.color.a < 0.999
             radius: card._cardRadius
-            atBottom: ShellSettings.barPosition === "bottom"
+            atBottom: Metrics.barAtBottom
         }
     }
 

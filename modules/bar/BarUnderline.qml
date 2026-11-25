@@ -16,7 +16,7 @@ Item {
     readonly property real eventGlow: _lineEffect._eventGlow
 
     // a bottom bar mirrors the whole item vertically in one step; conditional anchor flips leave elements on the stale edge
-    readonly property bool atBottom: ShellSettings.barPosition === "bottom"
+    readonly property bool atBottom: Metrics.barAtBottom
     transform: Scale { origin.y: _ul.height / 2; yScale: _ul.atBottom ? -1 : 1 }
 
     component TrackGlow: GlowLine {
