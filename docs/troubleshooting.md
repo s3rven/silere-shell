@@ -130,8 +130,9 @@ Silere's bar opacity stops at 0.4, so 0.3 never cuts into a card.
 ### No blur behind the bar
 
 Blur needs Hyprland 0.56 or niri 26.04 or newer, and a translucent bar: lower Settings ›
-Appearance › Theme › Bar opacity below 100%. Background blur then appears under it; when
-that row is dimmed, it names what is stopping the blur, and `silere doctor` reports the same.
+Appearance › Theme › Bar opacity below 100%. Background blur then appears under it. On
+Hyprland, when that row is dimmed, it names what is stopping the blur, and `silere doctor`
+reports the same; neither checks niri's version.
 
 Silere tells the compositor where to blur, so it needs no layer rules, but Hyprland's
 `decoration:blur:enabled = false` still turns blur off everywhere. How soft the blur looks
