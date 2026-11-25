@@ -41,13 +41,14 @@ Column {
         _input.focus = false
     }
 
+    // Enter saves and leaves the keyboard in the field; Escape, Revert and leaving the page take it out
     function save(): void {
         if (!root._canEdit || !root.dirty || root.validationMessage.length > 0) return
         ShellSettings.setValue(root.settingKey, root.draft.trim())
-        root.revert()
+        root.draft = root.savedValue
     }
 
-    onSavedValueChanged: root.revert()
+    onSavedValueChanged: root.draft = root.savedValue
     onEditingEnabledChanged: root.revert()
     Connections {
         target: MenuState
@@ -139,16 +140,25 @@ Column {
             anchors.right: parent.right
             anchors.rightMargin: 12
             spacing: 8
+            // each goes disabled once nothing is unsaved, which drops a keyboard focus: it goes back to the field
             ActionButton {
                 label: "Revert"
                 enabled: root._canEdit && root.dirty
-                onTriggered: root.revert()
+                onTriggered: {
+                    const keyboard = activeFocus
+                    root.revert()
+                    if (keyboard) _input.forceActiveFocus(Qt.TabFocusReason)
+                }
             }
             ActionButton {
                 label: "Save"
                 emphasis: true
                 enabled: root._canEdit && root.dirty && root.validationMessage.length === 0
-                onTriggered: root.save()
+                onTriggered: {
+                    const keyboard = activeFocus
+                    root.save()
+                    if (keyboard) _input.forceActiveFocus(Qt.TabFocusReason)
+                }
             }
         }
     }

@@ -91,6 +91,7 @@ settings file carries its own `__version` and migrates separately.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).
 - Settings search shows its results whole at larger interface scales.
+- Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
 
 ## Releases

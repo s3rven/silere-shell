@@ -2027,6 +2027,13 @@ ShellRoot {
             "Escape reverts a command draft before the panel's application shortcut can close Settings")
         host.input.keyClick(Qt.Key_Escape)
         root._check(host.escapes === escapes + 1, "the next Escape can close Settings after discarding a command draft")
+        const lockWas = ShellSettings.lockCommandCustom
+        editor.draft = "swaylock -f -c 000000"
+        if (command) command.forceActiveFocus(Qt.TabFocusReason)
+        host.input.keyClick(Qt.Key_Return)
+        root._check(command !== null && ShellSettings.lockCommandCustom === "swaylock -f -c 000000" && !editor.dirty
+                && command.activeFocus, "Enter saves a command and leaves the keyboard in its field")
+        ShellSettings.lockCommandCustom = lockWas
         editor.destroy()
         editorComponent.destroy()
         Network._wifiFixture = false

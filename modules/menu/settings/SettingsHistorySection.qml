@@ -3,8 +3,15 @@ import "../../../services"
 import "../controls"
 
 Column {
+    id: root
     width: parent ? parent.width : 0
     spacing: 0
+
+    // unmuting removes the row, and a list model rebuilds every row: the keyboard goes on from the row now in its place
+    function _refocusMuted(index: int): void {
+        const row = _mutedRows.count > 0 ? _mutedRows.itemAt(Math.min(index, _mutedRows.count - 1)) : _keepFor
+        if (row) row.forceActiveFocus(Qt.TabFocusReason)
+    }
 
     SectionLabel { label: "HISTORY"; first: true }
     SettingsCard {
@@ -23,6 +30,7 @@ Column {
             commitOnRelease: true
         }
         SelectRow {
+            id: _keepFor
             key: "notifHistoryDays"
             glyph: "󰥔"; label: "Keep history for"
             fallbackLabel: ShellSettings.notifHistoryDays === 0 ? "Until cleared"
@@ -52,15 +60,21 @@ Column {
         }
         // switching one off unmutes it, and the row leaves with it
         Repeater {
+            id: _mutedRows
             model: ShellSettings.notifMutedAppNames
             delegate: ToggleRow {
                 required property string modelData
+                required property int index
                 searchKey: "notifMutedApps"
                 glyph: "󰪑"
                 label: Notifications.appLabel(modelData)
                 checked: true
                 Accessible.name: "Mute popups from " + label
-                onToggled: nextChecked => ShellSettings.setNotifAppMuted(modelData, nextChecked)
+                onToggled: nextChecked => {
+                    const refocus = activeFocus ? index : -1
+                    ShellSettings.setNotifAppMuted(modelData, nextChecked)
+                    if (refocus >= 0) Qt.callLater(root._refocusMuted, refocus)
+                }
             }
         }
     }
