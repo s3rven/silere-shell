@@ -25,7 +25,7 @@ other keybind can run `silere menu`.
 | Workspaces | Switch; on the active one, open the menu | Open Quick Actions on the marked workspace | Send the focused window there | Switch (turn on in Widgets › Workspaces) | |
 | Clock | Calendar | | Add seconds, the date, or both | | The date, while it is off |
 | Window title | | | | | Scroll a title that is cut short |
-| System monitor | Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |
+| System monitor | System readings in Home | Your system monitor app | | | Busiest process and its ID, while the CPU is busy |
 | Media | Play or pause | Now Playing | Jump to the player | Change track | |
 | Network | Ethernet status or Wi-Fi list | nm-connection-editor, or nmtui | | | Network, signal, VPN, problems, traffic |
 | Bluetooth | Bluetooth list | blueman-manager | | | Connected device and its battery |

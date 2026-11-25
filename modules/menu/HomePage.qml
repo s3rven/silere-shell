@@ -120,6 +120,11 @@ PageShell {
             root.controlRequested(_wiredRow, null)
             return
         }
+        if (want === "system") {
+            root.dismissInline()
+            root.controlRequested(_vitals, null)
+            return
+        }
         if (want === "brightness") {
             const slider = root._brightnessAvailable ? _brightnessRow : _externalBrightnessRows.itemAt(0)
             if (!slider) return

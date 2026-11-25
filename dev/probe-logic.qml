@@ -2537,7 +2537,7 @@ ShellRoot {
         const wifiWas = Network.wifiEnabled
         const btWas = Bluetooth.enabled
         const pickers = { NetworkWidget: Network.deviceType === "ethernet" ? "wired" : "wifi",
-            BluetoothWidget: "bt", BrightnessWidget: "brightness", BatteryWidget: "power" }
+            BluetoothWidget: "bt", BrightnessWidget: "brightness", BatteryWidget: "power", SystemWidget: "system" }
         for (const name of Object.keys(pickers)) {
             const component = Qt.createComponent("modules/bar/widgets/" + name + ".qml")
             const widget = component.status === Component.Ready
@@ -2726,6 +2726,13 @@ ShellRoot {
         if (vitals) vitals.batteryShown = Qt.binding(() => Battery.available)
         BatteryLimit.devices = limitsWas
         home._closePicker()
+        home._togglePicker("power")
+        requested = null
+        requestedChoices = undefined
+        MenuState.homePicker = "system"
+        root._check(MenuState.homePicker === "" && home._picker === "" && requested && requested.sizeText !== undefined
+                && requestedChoices === null,
+            "the system monitor's shortcut closes the open picker and reveals the system readings")
         home.controlRequested.disconnect(noteChoices)
 
         SystemTools._tools = Object.assign({}, SystemTools._tools, { powerprofilesctl: false })

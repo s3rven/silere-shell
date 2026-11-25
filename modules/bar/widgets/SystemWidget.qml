@@ -165,7 +165,7 @@ Pill {
 
     interactive: root.show
     pressed: _tap.pressed
-    onActivated: if (root.canActivate) MenuState.showTabAt(MenuState.homeTab, root, root.screen)
+    onActivated: if (root.canActivate) MenuState.showHomeAt("system", root, root.screen)
     hasSecondary: Settings.systemMonitorCommand.length > 0
     onSecondaryActivated: SystemAlerts.runOrNotify(Settings.systemMonitorCommand, "System monitor failed to start")
     TapHandler {
