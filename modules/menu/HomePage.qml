@@ -15,6 +15,9 @@ PageShell {
         Vpn.peek()
         root._takePicker()
     }
+    // a bar icon pressed during the closing fade reopens this page without announcing it again, and its list request
+    // arrived while the page was inactive: take it here, or a later return to Home unfolds it
+    onActiveChanged: if (root.active) Qt.callLater(root._takePicker)
     onPageHidden: {
         _vpnRow.copied = false
         _picker = ""
@@ -160,11 +163,17 @@ PageShell {
         if (root._picker === "") return false
         const parts = root._pickerParts(root._picker)
         if (parts[0] && parts[1]) parts[0].restorePickerFocus(parts[1])
+        else if (root._picker === "battery") _vitals.restoreBatteryFocus()
         root._picker = ""
         return true
     }
 
+    // one level at a time, as on Settings: an open dropdown (Bluetooth's Controller) folds before its list
     function dismissInline(): bool {
+        if (MenuState.settingsSelectOpen) {
+            MenuState.closeSettingsSelect()
+            return true
+        }
         if (_volumeRow.open) {
             _volumeRow.closeInline()
             return true

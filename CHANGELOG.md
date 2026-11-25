@@ -135,6 +135,8 @@ settings file carries its own `__version` and migrates separately.
   menu key pressed just after hovering the other monitor's workspaces opens the menu on the focused one.
 - Popups turn solid as they open when Hyprland's blur was switched off at runtime, instead of showing the desktop
   through with nothing blurring it.
+- On Home, Escape folds an open dropdown before its list, closing the battery details from the keyboard leaves the
+  focus on Battery, and a Wi-Fi or Bluetooth icon clicked while the menu fades out opens its list at once.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.

@@ -124,7 +124,8 @@ SettingsCard {
             : tile.openable ? tile.actionDescription : tile.sub
         Accessible.focusable: tile._canOpen
         Accessible.onPressAction: if (tile._canOpen) tile.activated()
-        KeyboardFocus { interactive: tile._canOpen; onActivated: tile.activated() }
+        KeyboardFocus { id: _tileFocus; interactive: tile._canOpen; onActivated: tile.activated() }
+        function restoreFocusFrom(container: Item): bool { return _tileFocus.restoreFrom(container) }
 
         RowHoverBg {
             anchors.fill: parent
@@ -332,6 +333,10 @@ SettingsCard {
     }
 
     InlinePicker { id: _batteryAbove; mirror: _batteryPicker }
+    // closing the details hands the keyboard back to the tile that opened them, as Home's other lists do
+    function restoreBatteryFocus(): void {
+        _battery.restoreFocusFrom(Metrics.barAtBottom ? _batteryAbove : _batteryPicker)
+    }
 
     property bool batteryShown: Battery.available
     // a battery with no reading to add still opens for its charge limit switch; a battery UPower lost does not
