@@ -423,6 +423,10 @@ Column {
             step: 0.02
             displayValue: Math.round(Theme.panelOpacity * 100) + "%"
         }
+        HintText {
+            visible: Theme.panelOpacity > ShellSettings.barOpacity
+            text: "High contrast keeps the bar at least 90% opaque."
+        }
         CollapsibleSection {
             expanded: Theme.panelOpacity < 1
             ToggleRow {

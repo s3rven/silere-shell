@@ -120,8 +120,9 @@ Item {
         case "brightness":
             if (!SystemTools.ready || Brightness.controllable || DisplayBrightness.hasControl) return ""
             return Brightness.toolAvailable ? "No backlight" : "No brightnessctl"
-        // the one row without a switch says why
+        // the rows without a switch say why
         case "workspaces": return "Always shown"
+        case "indicators": return "When a script sets one"
         case "microphone": return "While in use"
         case "media": return "After playback starts"
         case "system": return SysInfo.monitorHasReadings ? "" : "No readings to show"

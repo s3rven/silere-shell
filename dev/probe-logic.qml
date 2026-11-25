@@ -15931,6 +15931,9 @@ ShellRoot {
         ShellSettings.systemShowCpu = readingsWas[0]
         ShellSettings.systemShowMemory = readingsWas[1]
         ShellSettings.systemShowTemp = readingsWas[2]
+        const switchless = ShellSettings.barWidgetKeys.filter(k => ShellSettings.barWidgetMeta[k].setting === "")
+        root._check(switchless.length >= 2 && switchless.every(k => settings._noteFor(k).length > 0),
+            "every widget row without a switch says why: " + switchless.join(", "))
         const secondRight = ShellSettings.barWidgetOrderRightKeys[1]
         root._check(settings._tabTarget(toggleOf("clock"), true) === gripOf(secondRight)
                 && settings._tabTarget(gripOf(secondRight), false) === toggleOf("clock")

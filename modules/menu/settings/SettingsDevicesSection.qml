@@ -110,7 +110,7 @@ Column {
             glyph: "󰹑"; label: "External brightness"
             key: "ddcBrightnessEnabled"
             available: DisplayBrightness.supported
-            dependsNote: SystemTools.preview ? "Not in the preview" : "Needs ddcutil and timeout"
+            dependsNote: SystemTools.preview ? "Not in the preview" : !SystemTools.ready ? "Checking" : "Needs ddcutil and timeout"
         }
         HintText {
             visible: ShellSettings.ddcBrightnessEnabled && text.length > 0
@@ -174,15 +174,19 @@ Column {
             expanded: ShellSettings.lockProvider === "custom"
             LockCommandEditor {}
         }
+        // one hint at a time, and none while the tools are still being looked for: with no locker the readiness line
+        // only repeated the one below
         HintText {
             visible: text.length > 0
             text: Session.lastError.length > 0 ? Session.lastError
-                : Session.canLockSleep ? "" : Session.readiness
+                : Session.canLockSleep || !SystemTools.ready || Settings.lockCommand.length === 0 ? "" : Session.readiness
         }
         HintText {
-            visible: ShellSettings.lockProvider !== "custom"
+            visible: SystemTools.ready && ShellSettings.lockProvider !== "custom"
                 && Settings.lockCommand.length === 0
-            text: "The chosen lock program is not installed, so the lock action stays off."
+            text: ShellSettings.lockProvider === "auto"
+                ? "No lock program found. Install hyprlock or swaylock, or choose a custom command."
+                : "The chosen lock program is not installed, so the lock action stays off."
         }
         SelectRow {
             key: "nightLightProvider"
@@ -190,7 +194,7 @@ Column {
             model: root._nightLightChoices
         }
         HintText {
-            visible: Settings.nightLightTool.length === 0
+            visible: SystemTools.ready && Settings.nightLightTool.length === 0
             text: ShellSettings.nightLightProvider !== "auto"
                 ? "The chosen program is unavailable. Choose Automatic or install a compatible program."
                 : Compositor.isHyprland

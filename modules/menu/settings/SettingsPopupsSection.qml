@@ -87,6 +87,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰀦"; label: "Let critical through"
+            description: "Past do not disturb, fullscreen and muted apps"
             key: "notifCriticalBypass"
         }
     }

@@ -398,7 +398,7 @@ Singleton {
         { k: "trayHidden",          t: "re",   re: /^[A-Za-z0-9%._~!*'()-]*(,[A-Za-z0-9%._~!*'()-]+)*$/, sec: "widgets" },
         { k: "valuesOnHover",       t: "bool", sec: "surface", l: "Reveal values on hover" },
         { k: "hoverLevelBar",       t: "bool", sec: "surface", l: "Level bars" },
-        { k: "batteryAutoHide",     t: "bool", sec: "indicators", l: "Hide charged battery" },
+        { k: "batteryAutoHide",     t: "bool", sec: "indicators", l: "Hide while plugged in" },
         { k: "barShowBattery",      t: "bool", sec: "widgets" },
         { k: "barShowNetwork",      t: "bool", sec: "widgets" },
         { k: "barShowBluetooth",    t: "bool", sec: "widgets" },

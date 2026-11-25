@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
   before the bar shows.
 - Round buttons, chips, search fields, slider handles and level bars follow Roundness like the cards around them, and
   square off on Flat. The default look is unchanged.
+- Settings › Widgets › Indicators: Hide charged battery is now **Hide while plugged in**, which is what it always did.
 - The installer ends its list of missing optional tools with the one command that installs them on your system, the
   way `silere doctor` does, and stays quiet about matugen's steps when matugen is not installed.
 - The optional user service treats a logout as a clean stop: Quickshell exits 255 only once the compositor is gone,
@@ -89,6 +90,7 @@ settings file carries its own `__version` and migrates separately.
 - The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).
+- Settings › System › Devices shows one accurate hint when no screen locker is found.
 
 ## Releases
 

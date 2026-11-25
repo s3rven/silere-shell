@@ -29,7 +29,7 @@ Column {
     SettingsCard {
         ToggleRow {
             visible: Battery.available
-            glyph: "󱟢"; label: "Hide charged battery"
+            glyph: "󱟢"; label: "Hide while plugged in"
             key: "batteryAutoHide"
         }
         ToggleRow {

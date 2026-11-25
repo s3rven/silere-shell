@@ -59,6 +59,10 @@ Column {
                 onChosen: (v) => ShellSettings.compactDate = v === "compact"
             }
         }
+        HintText {
+            visible: !ShellSettings.barShowClock
+            text: "Seconds and the date show on the bar clock, which is hidden in Show & order."
+        }
     }
 
     SectionLabel { label: "CALENDAR" }
