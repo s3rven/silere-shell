@@ -121,6 +121,8 @@ settings file carries its own `__version` and migrates separately.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
 - Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.
+- With `~/.config/silere-shell` linked into a dotfiles folder, settings, notification history and hooks are saved and
+  run again; the installer installs through such a link, but the shell refused to write there.
 
 ## Releases
 

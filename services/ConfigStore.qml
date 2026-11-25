@@ -74,10 +74,11 @@ Singleton {
         id: _mkdir
         timeoutMs: 10000
         command: ["bash", "-c",
-            // without the exits, the trailing file check's status hides a failed mkdir
-            "umask 077; [ ! -L \"$1\" ] || exit 1; " +
-            "mkdir -m 0700 -p -- \"$1\" || exit $?; " +
-            "chmod 0700 -- \"$1\" || exit $?; " +
+            // without the exits, the trailing file check's status hides a failed mkdir. A linked folder (the installer
+            // follows one, as dotfiles managers make them) is used as it is: never chmod through a link, only refuse
+            // one that leads nowhere or to a folder someone else owns
+            "umask 077; if [ -L \"$1\" ]; then [ -d \"$1\" ] && [ -O \"$1\" ] || exit 1; " +
+            "else mkdir -m 0700 -p -- \"$1\" || exit $?; chmod 0700 -- \"$1\" || exit $?; fi; " +
             "[ ! -e \"$3\" ] || [ -L \"$3\" ] || chmod 0600 -- \"$3\" || exit $?; " +
             // the state folder only holds history: a failure there stops history saving, never settings.
             // History used to live in the config folder; a failed move leaves it there and starts a fresh one
