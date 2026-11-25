@@ -158,6 +158,8 @@ settings file carries its own `__version` and migrates separately.
   Hyprland answers.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.
+- A notification that arrives while your hands are off the keyboard and pointer waits for your next input, then stays
+  at least two seconds, instead of timing out unseen; a playing video keeps cards on their usual timer.
 
 ## Releases
 

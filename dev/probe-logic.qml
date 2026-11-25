@@ -7146,6 +7146,19 @@ ShellRoot {
         criticalIdleCard._handleIdle(false)
         root._check(persistentIdleCard.enabled && criticalIdleCard.enabled,
             "persistent notifications remain available when the session wakes")
+        const handsOffCard = notificationCardFactory.createObject(root, {
+            notification: Object.assign({}, idleTemplate, { expireTimeout: 5000 })
+        })
+        const watchedWhileShown = Idle._handsOffWatch._owners.indexOf(handsOffCard) >= 0
+            && Idle._handsOffWatch._owners.indexOf(persistentIdleCard) < 0
+        handsOffCard.enabled = false
+        const releasedWhenGone = Idle._handsOffWatch._owners.indexOf(handsOffCard) < 0
+        root._check(watchedWhileShown && releasedWhenGone
+                && handsOffCard._returnTopUp(5000, 4800, 0, true) === 1800
+                && handsOffCard._returnTopUp(5000, 4800, 0, false) === 0
+                && handsOffCard._returnTopUp(5000, 1000, 0, true) === 0,
+            "a timed card watches for hands off the keyboard while shown, and after waiting for your return keeps two seconds")
+        handsOffCard.destroy()
         for (const item of [persistentIdleCard, criticalIdleCard, ordinaryIdleCard, timedCriticalIdleCard])
             item.destroy()
         ShellSettings.reduceMotion = idleMotionWas

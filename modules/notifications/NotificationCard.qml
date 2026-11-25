@@ -343,6 +343,7 @@ Item {
     Component.onDestruction: {
         if (Notifications.replyingId === card.notifId) Notifications.replyingId = -1
         card.replyFocusRequested(card, false)
+        Idle.watchHandsOff(card, false)
     }
 
     // the arrival's curve and length: the cards pushing this one out grow on it, so the stack's height moves one way
@@ -401,6 +402,7 @@ Item {
         _updateTime()
         if (card._paused) card._hoverStartMs = Date.now()
         card._arrivedAway = Idle.isQuiet
+        Idle.watchHandsOff(card, card._wantsHandsOff)
     }
     property bool _entryPending: false
     // false while the popup window the card arrived in has not drawn yet: built with it, the card's slide
@@ -456,7 +458,7 @@ Item {
     // an abandoned empty reply lets the card go; one being typed or holding text keeps it. A card also waits while a
     // panel is open: the calendar and a menu opened from the bar's right cover the stack's corner, actions included
     readonly property bool _paused: _cardHover.hovered || card.stackHovered || card._keyboardFocused || Idle.isQuiet
-        || ControlSurfaces.anyOpen
+        || Idle.handsOff || ControlSurfaces.anyOpen
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
@@ -468,7 +470,21 @@ Item {
         } else if (card._hoverStartMs > 0) {
             card._hoverPausedMs += Math.max(0, Date.now() - card._hoverStartMs)
             card._hoverStartMs = 0
+            card._hoverPausedMs += card._returnTopUp(_autoClose.fullInterval, card._shownMs(), card._hoverPausedMs,
+                card._waitedForReturn)
+            card._waitedForReturn = false
         }
+    }
+
+    // arrived while nobody touched the keyboard or pointer (GNOME's banners do the same): the card waits for the next
+    // input, then stays at least two seconds, so it is seen rather than gone by the time someone looks up
+    readonly property bool _wantsHandsOff: card.enabled && _autoClose.shouldRun
+    on_WantsHandsOffChanged: Idle.watchHandsOff(card, card._wantsHandsOff)
+    property bool _waitedForReturn: false
+    readonly property bool _handsOff: Idle.handsOff
+    on_HandsOffChanged: if (card._handsOff && card._wantsHandsOff) card._waitedForReturn = true
+    function _returnTopUp(full: real, shown: real, paused: real, waited: bool): real {
+        return waited ? Math.max(0, 2000 - (full - shown + paused)) : 0
     }
 
     Timer {

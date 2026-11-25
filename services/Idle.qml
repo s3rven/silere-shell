@@ -37,6 +37,19 @@ Singleton {
     }
     readonly property Timer _returned: Timer { interval: 1500 }
 
+    // hands off the keyboard and pointer for a few seconds (reading, listening): a notification card then waits for the
+    // next input instead of timing out unseen. Watched only while a card asks, and an inhibitor (a video playing) keeps
+    // cards on their usual timer
+    readonly property RequestSet _handsOffWatch: RequestSet {}
+    function watchHandsOff(owner, wanted: bool): void { root._handsOffWatch.set(owner, wanted) }
+    readonly property bool handsOff: _handsOff.enabled && _handsOff.isIdle
+    IdleMonitor {
+        id: _handsOff
+        timeout: 3
+        respectInhibitors: true
+        enabled: root._handsOffWatch.active
+    }
+
     // session only: a restart or a crash must never leave the screen awake; shell.qml holds the inhibitor
     property bool keepAwake: false
     function toggleKeepAwake(): void { root.setKeepAwake(!root.keepAwake, 0) }
