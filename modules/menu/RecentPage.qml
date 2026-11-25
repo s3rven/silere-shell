@@ -23,6 +23,8 @@ PageShell {
     property real _heldHeight: 0
     readonly property real wantedHeight: _narrowed && _heldHeight > 0 ? _heldHeight : _fullListHeight
     on_FullListHeightChanged: if (!_narrowed) _heldHeight = _fullListHeight
+    // rows that came or went under a filter relaid out the list while it was narrowed
+    on_NarrowedChanged: if (!_narrowed) _heldHeight = _fullListHeight
     // rows land a frame before the list lays them out; the menu holds its height until then
     readonly property bool contentReady: _filtered.active && (root.rowCount === 0
         || (_historyList.count === root.rowCount && _historyList.contentHeight > 0))
@@ -176,13 +178,14 @@ PageShell {
         interval: 60000
         repeat: true
         running: root.active && MenuState.open && root.rowCount > 0 && !Idle.isIdle
+        // back from idle, "3m" may be an hour old
+        onRunningChanged: if (running) root._touchNow()
         onTriggered: root._touchNow()
     }
 
     onPageHidden: {
         _focusRestore.stop()
         _clearButton.disarm()
-        root._openRows = ({})
         _searchInput.focus = false
         root.searchText = ""
     }
