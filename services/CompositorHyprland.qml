@@ -292,6 +292,10 @@ QtObject {
         const m = Hyprland.monitorFor(screen)
         return m ? m.name : ""
     }
+    function monitorScale(screen): real {
+        const m = Hyprland.monitorFor(screen)
+        return m && isFinite(m.scale) && m.scale > 0 ? m.scale : 0
+    }
 
     function focusWorkspace(wsId, output): void {
         if (output.length > 0) HyprDispatch.dispatchPair("focusmonitor", output, "workspace", wsId)

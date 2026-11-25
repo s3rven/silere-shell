@@ -116,6 +116,11 @@ Singleton {
         if (!screen || !root._be) return ""
         return root._be.monitorName(screen)
     }
+    // the compositor's scale for the monitor, 0 when it has not said
+    function monitorScale(screen): real {
+        if (!screen || !root._be || typeof root._be.monitorScale !== "function") return 0
+        return root._be.monitorScale(screen)
+    }
 
     function activeWorkspace(output): var {
         const ws = root.workspaces

@@ -12003,6 +12003,15 @@ ShellRoot {
                 && Object.keys(niri.serialsFrom("not json")).length === 0
                 && Object.keys(niri.serialsFrom("[1,2]")).length === 0,
             "niri's output list yields each monitor's serial by connector, and nothing from a missing or broken one")
+        const niriScales = niri.scalesFrom(JSON.stringify({
+            "eDP-1": { name: "eDP-1", logical: { x: 0, y: 0, width: 2048, height: 1280, scale: 1.25 } },
+            "DP-1": { name: "DP-1", logical: null },
+            "HDMI-A-1": { name: "HDMI-A-1", logical: { scale: "big" } }
+        }))
+        root._check(JSON.stringify(niriScales) === JSON.stringify({ "eDP-1": 1.25 })
+                && Object.keys(niri.scalesFrom("not json")).length === 0
+                && niri.monitorScale({ name: "eDP-1" }) === 0 && niri.monitorScale(null) === 0,
+            "the diagnostics report takes niri's own output scale, not Qt's rounded one, and nothing it did not give")
         {
             // niri itself is not here: a stand-in prints the list as niri msg --json outputs does
             const reader = niri._outputsReader

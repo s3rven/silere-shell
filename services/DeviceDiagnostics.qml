@@ -14,7 +14,9 @@ Singleton {
     // only an explicit copy or IPC request builds a snapshot; no device polling or identifiers
     function snapshot(): var {
         return { schemaVersion: 1, compositor: Compositor.backend,
-            screens: (Quickshell.screens || []).map(s => ({ width: s.width, height: s.height, scale: s.devicePixelRatio })),
+            // the compositor's scale: a screen's own ratio is Qt's rounded-up buffer scale, 2 on a 1.25 output
+            screens: (Quickshell.screens || []).map(s => ({ width: s.width, height: s.height,
+                scale: Compositor.monitorScale(s) || undefined })),
             audio: { ready: Audio.backendReady, outputReady: Audio.ready, inputReady: Audio.micReady,
                 outputs: Audio.sinkCount, inputs: Audio.sourceCount, recordingApps: Audio.captureCount },
             brightness: { toolAvailable: Brightness.toolAvailable, ready: Brightness.controllable,

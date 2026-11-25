@@ -473,6 +473,23 @@ QtObject {
         }
         return out
     }
+    // the output's own scale: a ShellScreen reports Qt's rounded-up buffer ratio, 2 on a 1.25 output
+    property var monitorScales: ({})
+    function scalesFrom(text: string): var {
+        let outputs = null
+        try { outputs = JSON.parse(text) } catch (e) { return ({}) }
+        const out = {}
+        if (!outputs || typeof outputs !== "object" || Array.isArray(outputs)) return out
+        for (const key in outputs) {
+            const o = outputs[key]
+            const scale = o && o.logical ? Number(o.logical.scale) : NaN
+            if (o && typeof o.name === "string" && isFinite(scale) && scale > 0) out[o.name] = scale
+        }
+        return out
+    }
+    function monitorScale(screen): real {
+        return screen ? (root.monitorScales[screen.name] ?? 0) : 0
+    }
     property bool _serialsAgain: false
     function _askSerials(): void {
         if (root.socketPath.length === 0) return
@@ -488,6 +505,8 @@ QtObject {
             if (_outputsProc.completedSuccessfully(code)) {
                 const next = root.serialsFrom(_outputsOut.text)
                 if (JSON.stringify(next) !== JSON.stringify(root.monitorSerials)) root.monitorSerials = next
+                const scales = root.scalesFrom(_outputsOut.text)
+                if (JSON.stringify(scales) !== JSON.stringify(root.monitorScales)) root.monitorScales = scales
             }
             if (root._serialsAgain) {
                 root._serialsAgain = false
