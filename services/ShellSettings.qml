@@ -284,8 +284,14 @@ Singleton {
     function trayKey(item): string {
         const id = String(item?.id ?? "")
         if (!/^chrome_status_icon_[0-9]+$/.test(id)) return id
-        const name = SafeText.singleLineText(String(item.tooltipTitle || item.title || ""), 64).trim()
+        const name = root.trayAppName(String(item.tooltipTitle || item.title || ""))
         return name.length > 0 ? id + "|" + name : id
+    }
+    // the app's name out of a tooltip some apps keep rewriting: Element's reads "[3] Element | Room", and a key that
+    // followed it brought a hidden icon back with every message
+    function trayAppName(tip: string): string {
+        return SafeText.singleLineText(tip, 64).replace(/^\s*[[(]\d+[\])]\s*/, "")
+            .split(/\s+[|\u2013\u2014-]\s+/)[0].replace(/\s*[[(]\d+[\])]\s*$/, "").trim()
     }
     // what a key reads as for an app that is not running
     function trayKeyLabel(key: string): string {
@@ -293,13 +299,18 @@ Singleton {
         return bar > 0 && /^chrome_status_icon_[0-9]+$/.test(key.slice(0, bar)) ? key.slice(bar + 1) : key
     }
 
+    // a bare Chromium id is how 1.9 stored a hidden Electron icon: it still hides every app behind that id, as it did
     function trayItemHidden(id: string): bool {
-        return root.trayHiddenIds.indexOf(id) >= 0
+        if (root.trayHiddenIds.indexOf(id) >= 0) return true
+        const bar = id.indexOf("|")
+        return bar > 0 && root.trayHiddenIds.indexOf(id.slice(0, bar)) >= 0
     }
 
     function setTrayItemHidden(id: string, hidden: bool): void {
         if (id.length === 0 || root.trayItemHidden(id) === hidden) return
-        const ids = root.trayHiddenIds.filter(k => k !== id)
+        // showing one app ends a bare key that hid it; the others behind it show too, and hide one at a time from then
+        const bare = id.indexOf("|") > 0 ? id.slice(0, id.indexOf("|")) : ""
+        const ids = root.trayHiddenIds.filter(k => k !== id && (hidden || k !== bare))
         if (hidden) ids.push(id)
         root.trayHidden = ids.map(k => encodeURIComponent(k)).join(",")
     }

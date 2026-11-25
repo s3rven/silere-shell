@@ -54,9 +54,10 @@ Item {
             const id = ShellSettings.trayKey(items[i])
             if (id.length > 0 && out.indexOf(id) < 0) out.push(id)
         }
+        // a bare 1.9 key behind a running app is that app's row, not a second one
         const extra = ShellSettings.trayHiddenIds.concat(root._trayStickyIds)
         for (let i = 0; i < extra.length; i++)
-            if (out.indexOf(extra[i]) < 0) out.push(extra[i])
+            if (out.indexOf(extra[i]) < 0 && !out.some(id => id.startsWith(extra[i] + "|"))) out.push(extra[i])
         return out
     }
     readonly property int _trayPanelH: root._trayIds.length > 0

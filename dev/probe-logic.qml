@@ -14494,6 +14494,20 @@ ShellRoot {
                 && ShellSettings.trayKeyLabel(ShellSettings.trayKey(discord)) === "Discord"
                 && ShellSettings.trayKeyLabel("nm-applet") === "nm-applet",
             "two Electron apps sharing Chromium's tray id hide one at a time, and read by name when not running")
+        root._check(ShellSettings.trayAppName("[3] Element | Room") === "Element"
+                && ShellSettings.trayAppName("(12) Signal") === "Signal"
+                && ShellSettings.trayAppName("Slack - 2 new items") === "Slack"
+                && ShellSettings.trayAppName("Element-Nightly") === "Element-Nightly"
+                && ShellSettings.trayKey({ id: "chrome_status_icon_2", tooltipTitle: "[1] Element | General" })
+                    === ShellSettings.trayKey({ id: "chrome_status_icon_2", tooltipTitle: "Element" }),
+            "an Electron tray key keeps the app's name as its tooltip counts messages or follows the window title")
+        ShellSettings.trayHidden = "chrome_status_icon_1"
+        const hiddenBy19 = ShellSettings.trayItemHidden(ShellSettings.trayKey(discord))
+            && ShellSettings.trayItemHidden(ShellSettings.trayKey(slack))
+        ShellSettings.setTrayItemHidden(ShellSettings.trayKey(discord), false)
+        root._check(hiddenBy19 && !ShellSettings.trayItemHidden(ShellSettings.trayKey(discord))
+                && ShellSettings.trayHiddenIds.length === 0,
+            "an Electron icon hidden under 1.9's bare key stays hidden after the update, and showing it ends that key")
         ShellSettings.trayHidden = trayHiddenWas
 
         root._check(ShellSettings.constraintOf("barShowClock") === "true|false",

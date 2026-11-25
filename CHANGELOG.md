@@ -108,7 +108,8 @@ settings file carries its own `__version` and migrates separately.
 - A script that replaces its own notification by tag, such as a volume or brightness script, keeps one row in history
   instead of one per use.
 - Settings search shows its results whole at larger interface scales.
-- Hiding one Chromium or Electron app's tray icon, such as Discord's, no longer hides every other one's.
+- Hiding one Chromium or Electron app's tray icon, such as Discord's, no longer hides every other one's. An icon
+  hidden before stays hidden, and one whose tooltip counts messages, as Element's does, stays hidden as it changes.
 - Day and month names stay in your language after `silere reset`, a reinstall, or an update that restarts the shell
   without the optional service.
 - `silere repair --undo` and `silere reset --undo` leave the checkout as it was when the saved edits conflict, instead
