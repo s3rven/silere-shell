@@ -64,11 +64,12 @@ ShellRoot {
 
     ClockDemand {}
 
-    // the bar's layer sits under a fullscreen window and only the overlay surfaces named here draw above it
+    // the bar's layer sits under a fullscreen window and only the overlay surfaces named here draw above it: every
+    // anchored popup (the tray menu and calendar from a keybind too), the OSD and notification cards
     Binding {
         target: Motion
         property: "unseen"
-        value: Compositor.activeFullscreen && Quickshell.screens.length === 1 && !ControlSurfaces.anyOpen
+        value: Compositor.activeFullscreen && Quickshell.screens.length === 1 && !OverlayCoordinator.anyOpen
             && OsdBarState.activeCount === 0 && Notifications.popupModel.values.length === 0
     }
 

@@ -137,6 +137,7 @@ settings file carries its own `__version` and migrates separately.
   through with nothing blurring it.
 - On Home, Escape folds an open dropdown before its list, closing the battery details from the keyboard leaves the
   focus on Battery, and a Wi-Fi or Bluetooth icon clicked while the menu fades out opens its list at once.
+- The tray menu and calendar fade over a fullscreen window instead of snapping open and shut.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.
