@@ -670,9 +670,15 @@ test_dry_run_writes_nothing() (
         *) fail "dry run did not report the autostart line it would add" ;;
     esac
     case "$out" in
-        *"create $home/.local/bin/silere → "*"create $home/.local/share/bash-completion/completions/silere → "*) ;;
-        *) fail "dry run did not report the command and completion links it would create" ;;
+        *"create $home/.local/bin/silere → "*) ;;
+        *) fail "dry run did not report the command link it would create" ;;
     esac
+    # the completion links depend on the shells installed here: CI's container has no bash-completion
+    local link
+    while IFS=$'\t' read -r _ link; do
+        [[ "$out" == *"create $link → "* ]] || fail "dry run did not report the completion link $link"
+    done < <(HOME="$home" XDG_CONFIG_HOME="$home/.config" bash -c \
+        'source "$1/scripts/lib/xdg.sh"; source "$1/scripts/lib/completions.sh"; _silere_completion_links "$1"' _ "$ROOT")
     case "$out" in
         *"nothing was written"*) ;;
         *) fail "dry run did not report that it wrote nothing" ;;
