@@ -11502,6 +11502,9 @@ ShellRoot {
         SystemAlerts._diskTick.triggered()
         root._check(Updates._restartCheckedAt === restartMark && SystemAlerts._dfAt === diskMark,
             "coming back from idle within the hour asks again neither whether a restart is needed nor how full the disk is")
+        root._check(Updates.restartReasonFrom("kernel\n") === "kernel" && Updates.restartReasonFrom("update") === "update"
+                && Updates.restartReasonFrom("restart") === "" && Updates.restartReasonFrom("") === "",
+            "a restart is named as the kernel's only when the kernel was replaced; Ubuntu's marker for libc or dbus is an update's")
         const repeatSteps = []
         const repeatWatch = () => repeatSteps.push(Updates.count)
         Updates.countChanged.connect(repeatWatch)

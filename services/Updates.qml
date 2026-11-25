@@ -506,18 +506,24 @@ Singleton {
     }
 
     // a kernel replaced under the running one: a module not loaded yet, a USB stick's filesystem say, fails until a
-    // reboot. Arch removes the old modules with the package; Debian and Ubuntu leave a marker of their own
-    property bool restartNeeded: false
+    // reboot. Arch removes the old modules with the package; Debian and Ubuntu leave a marker of their own, which a
+    // libc, dbus or systemd update leaves too, with the packages that asked listed beside it
+    property string restartReason: ""
+    readonly property bool restartNeeded: root.restartReason.length > 0
     readonly property string _restartScript: 'r=$(cat /proc/sys/kernel/osrelease) || exit 0\n'
-        + 'if [ -e /run/reboot-required ]; then echo restart\n'
-        + 'elif [ -d "$1" ] && [ ! -d "$1/$r" ] && [ -n "$(ls -A "$1")" ]; then echo restart; fi'
+        + 'if [ -e "$2" ]; then if grep -qs "^linux-image" "$2.pkgs"; then echo kernel; else echo update; fi\n'
+        + 'elif [ -d "$1" ] && [ ! -d "$1/$r" ] && [ -n "$(ls -A "$1")" ]; then echo kernel; fi'
+    function restartReasonFrom(text: string): string {
+        const word = String(text || "").trim()
+        return word === "kernel" || word === "update" ? word : ""
+    }
     BoundedProcess {
         id: _restartCheck
         timeoutMs: 5000
-        command: ["sh", "-c", root._restartScript, "silere-restart-check", "/usr/lib/modules"]
+        command: ["sh", "-c", root._restartScript, "silere-restart-check", "/usr/lib/modules", "/run/reboot-required"]
         stdout: StdioCollector { id: _restartOut }
         onExited: code => {
-            if (_restartCheck.completedSuccessfully(code)) root.restartNeeded = _restartOut.text.trim() === "restart"
+            if (_restartCheck.completedSuccessfully(code)) root.restartReason = root.restartReasonFrom(_restartOut.text)
         }
     }
     function checkRestart(): void {

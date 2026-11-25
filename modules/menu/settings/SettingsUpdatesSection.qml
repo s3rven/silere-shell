@@ -327,7 +327,7 @@ Column {
             visible: Updates.restartNeeded
             glyph: "󰑐"
             title: "Restart to finish updating"
-            status: "The running kernel was replaced"
+            status: Updates.restartReason === "kernel" ? "The running kernel was replaced" : "An update asked for one"
             passive: true
         }
         ToggleRow {
