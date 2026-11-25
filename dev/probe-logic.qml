@@ -25,6 +25,7 @@ import "modules/notifications"
 import "services/SettingsMigrations.js" as SettingsMigrations
 import "services/NiriEvents.js" as NiriEvents
 import "modules/notifications/StackLayout.js" as StackLayout
+import "services/NotificationHistory.js" as NotificationHistory
 
 // Small behavioral assertions for pure logic that a type-check or construction
 // probe cannot validate. Keep this free of compositor and hardware dependencies.
@@ -2969,7 +2970,7 @@ ShellRoot {
         ShellSettings.notifGroupThreads = false
         root._check(!Notifications._foldThread(a5) && a4.tracked,
             "with grouping off every message keeps its own card")
-        Notifications._forgetState(a4.id)
+        Notifications._dropState([String(a4.id)])
         root._check(Notifications.threadFor(a4.id) === null,
             "forgetting a notification forgets its thread")
 
@@ -8229,13 +8230,13 @@ ShellRoot {
         root._check(boundedHistoryNumbers.id === 12 && boundedHistoryNumbers.urgency === 2
                 && boundedHistoryNumbers.time === 0,
             "history bounds numeric roles before inserting them into the model")
-        const restoredSeen = Notifications._normalizeSeenMap(JSON.parse(
+        const restoredSeen = NotificationHistory.seenMapFrom(JSON.parse(
             '{"1":true,"2":"true","-1":true,"2147483648":true,"__proto__":true}'))
         root._check(Object.getPrototypeOf(restoredSeen) === null
                 && restoredSeen["1"] === true
                 && Object.keys(restoredSeen).length === 1,
             "notification restore accepts only boolean read flags for valid ids")
-        const restoredTimes = Notifications._normalizeTimesMap({
+        const restoredTimes = NotificationHistory.timesMapFrom({
             "1": 1234, "2": "5678", "03": 9, "4": Infinity, "5": -1
         })
         root._check(Object.getPrototypeOf(restoredTimes) === null
@@ -8246,11 +8247,11 @@ ShellRoot {
         const historySchema = ShellSettings.schemaFor("notifHistoryLimit")
         root._check(historySchema !== null && historySchema.max === 100,
             "the notification history limit still declares a schema ceiling")
-        root._check(Notifications._capacityFor(20, 100, false) === 100
-                && Notifications._capacityFor(20, 100, true) === 20,
+        root._check(NotificationHistory.capacityFor(20, 100, false) === 100
+                && NotificationHistory.capacityFor(20, 100, true) === 20,
             "history restores against the schema ceiling until settings load, then the limit")
-        root._check(Notifications._capacityFor(100, 100, false) === 100
-                && Notifications._capacityFor(1, 100, true) === 5,
+        root._check(NotificationHistory.capacityFor(100, 100, false) === 100
+                && NotificationHistory.capacityFor(1, 100, true) === 5,
             "a configured limit is never widened past the ceiling nor trimmed below the floor")
 
         const savedLimit = ShellSettings.notifHistoryLimit
@@ -8739,11 +8740,11 @@ ShellRoot {
 
         // rows are newest first; the app holding the most gives up its oldest, and among equals the
         // one whose oldest row is oldest overall. Names are keyed as the rail keys them
-        root._check(JSON.stringify(Notifications.historyEvictions(
+        root._check(JSON.stringify(NotificationHistory.evictions(
                     ["Chat", "Chat", "Mail", "Chat", "Shot", " Chat "], 4)) === "[5,3]"
-                && JSON.stringify(Notifications.historyEvictions(["A", "B", "A", "B"], 3)) === "[3]"
-                && JSON.stringify(Notifications.historyEvictions(["", "Unknown", "X"], 2)) === "[1]"
-                && Notifications.historyEvictions(["A", "B"], 5).length === 0,
+                && JSON.stringify(NotificationHistory.evictions(["A", "B", "A", "B"], 3)) === "[3]"
+                && JSON.stringify(NotificationHistory.evictions(["", "Unknown", "X"], 2)) === "[1]"
+                && NotificationHistory.evictions(["A", "B"], 5).length === 0,
             "a full history evicts the oldest row of the app holding the most rows")
         root._check(Notifications.caseOnlyLabel("discord", "Discord") === "Discord"
                 && Notifications.caseOnlyLabel("kitty", "kitty") === "kitty"
@@ -14737,7 +14738,7 @@ ShellRoot {
         root._check(Notifications.updateTimeFor(61) > 1,
             "an in-place update to a live notification restarts its card timestamp")
         Notifications.list = Notifications.list.filter(e => e.id !== 61)
-        Notifications._forgetState(61)
+        Notifications._dropState(["61"])
         kept.destroy()
 
         const liveNotification = { id: 53, tracked: true }
@@ -14799,7 +14800,7 @@ ShellRoot {
             "repeating a current notification's close cannot duplicate its history")
         Notifications.clearHistory()
         Notifications.list = []
-        Notifications._forgetState(53)
+        Notifications._dropState(["53"])
 
         let batchDismissed = 0
         const batchOne = {
@@ -15374,13 +15375,13 @@ ShellRoot {
             updates: Notifications._updateTimes, list: Notifications.list, phase: 0 }
         root._check(ShellSettings._discreteKeys["notifHistoryDays"] === true,
             "retention choices save immediately rather than waiting for a slider debounce")
-        root._check(!Notifications.historyExpiredAt(now - day, 0, now, true)
-                && !Notifications.historyExpiredAt(now - day, 1, now, false),
+        root._check(!NotificationHistory.expiredAt(now - day, 0, now, true)
+                && !NotificationHistory.expiredAt(now - day, 1, now, false),
             "history retention stays off by default and waits for settings to load")
-        root._check(Notifications.historyExpiredAt(now - day, 1, now, true)
-                && !Notifications.historyExpiredAt(now - day + 1, 1, now, true)
-                && !Notifications.historyExpiredAt(now + day, 1, now, true)
-                && !Notifications.historyExpiredAt(now, 1, NaN, true),
+        root._check(NotificationHistory.expiredAt(now - day, 1, now, true)
+                && !NotificationHistory.expiredAt(now - day + 1, 1, now, true)
+                && !NotificationHistory.expiredAt(now + day, 1, now, true)
+                && !NotificationHistory.expiredAt(now, 1, NaN, true),
             "history expires at its exact age boundary and leaves recent and future rows intact")
         ShellSettings.notifHistoryDays = 0
         Notifications.clearHistory()

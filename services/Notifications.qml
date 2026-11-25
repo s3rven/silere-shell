@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import "../config"
+import "NotificationHistory.js" as NotificationHistory
 import "NotificationText.js" as NotificationText
 
 Singleton {
@@ -24,16 +25,9 @@ Singleton {
     property var _times: Object.create(null)
     property var _updateTimes: Object.create(null)
     property bool _persistentReady: false
-    // settings.json loads asynchronously: trimming to the default before it lands drops
-    // rows a larger configured limit keeps, and the trim is written straight back.
-    // Arguments, not live state, so the rule is testable
-    function _capacityFor(limit: int, ceiling: int, settingsReady: bool): int {
-        const configured = Math.max(5, limit)
-        return settingsReady ? configured : Math.max(configured, ceiling)
-    }
     readonly property int _historyCapacity: {
         const schema = ShellSettings.schemaFor("notifHistoryLimit")
-        return root._capacityFor(ShellSettings.notifHistoryLimit,
+        return NotificationHistory.capacityFor(ShellSettings.notifHistoryLimit,
             schema ? schema.max : 0, ShellSettings.ready)
     }
     readonly property int _maxIdentityChars: 512
@@ -53,13 +47,8 @@ Singleton {
     onHistoryRevisionChanged: if (ShellSettings.notifHistoryDays > 0)
         Qt.callLater(root._syncHistoryRetention)
 
-    function historyExpiredAt(time: real, days: int, now: real, settingsReady: bool): bool {
-        return settingsReady && days > 0 && isFinite(time) && isFinite(now)
-            && time <= now - days * 86400000
-    }
-
     function _entryExpired(time: real, now: real): bool {
-        return root.historyExpiredAt(time, ShellSettings.notifHistoryDays, now, ShellSettings.ready)
+        return NotificationHistory.expiredAt(time, ShellSettings.notifHistoryDays, now, ShellSettings.ready)
     }
 
     function _expireHistory(now: real): int {
@@ -70,12 +59,12 @@ Singleton {
         // restored rows too, keeping retained delegates and active popups intact
         let end = _history.count - 1
         while (end >= 0) {
-            if (!root.historyExpiredAt(_history.get(end).time, days, now, true)) {
+            if (!NotificationHistory.expiredAt(_history.get(end).time, days, now, true)) {
                 end--
                 continue
             }
             let start = end
-            while (start > 0 && root.historyExpiredAt(_history.get(start - 1).time, days, now, true)) start--
+            while (start > 0 && NotificationHistory.expiredAt(_history.get(start - 1).time, days, now, true)) start--
             for (let i = start; i <= end; i++) dropped.push(String(_history.get(i).id))
             _history.remove(start, end - start + 1)
             end = start - 1
@@ -91,11 +80,9 @@ Singleton {
     function _historyExpiryDelay(now: real): int {
         const days = ShellSettings.notifHistoryDays
         if (!ShellSettings.ready || days <= 0 || !isFinite(now)) return 0
-        let next = Infinity
-        for (let i = 0; i < _history.count; i++)
-            next = Math.min(next, _history.get(i).time + days * 86400000)
-        // Qt timers use a signed 32-bit interval. A distant deadline needs a second one-shot wait, rather than overflow or a background poll
-        return isFinite(next) ? Math.max(1, Math.min(2147483647, Math.ceil(next - now))) : 0
+        const times = []
+        for (let i = 0; i < _history.count; i++) times.push(_history.get(i).time)
+        return NotificationHistory.expiryDelay(times, days, now)
     }
 
     function _syncHistoryRetention(): void {
@@ -208,31 +195,6 @@ Singleton {
         }
     }
 
-    // a full history takes from the app holding the most rows, its oldest first: one busy chat
-    // pushed every other app out of the default 20 rows within the hour. Among equals, the app
-    // whose oldest row is oldest gives way. Rows are newest first; the indices come back highest first
-    function historyEvictions(apps, capacity: int): var {
-        const excess = (apps ? apps.length : 0) - capacity
-        if (excess <= 0) return []
-        // the rail's key, so the app counted here is the app shown there
-        const keys = apps.map(name => String(name ?? "").trim() || "Unknown")
-        const counts = Object.create(null)
-        for (const key of keys) counts[key] = (counts[key] || 0) + 1
-        const gone = keys.map(() => false)
-        const out = []
-        for (let n = 0; n < excess; n++) {
-            let pick = -1
-            let most = 0
-            for (let i = keys.length - 1; i >= 0; i--) {
-                if (!gone[i] && counts[keys[i]] > most) { most = counts[keys[i]]; pick = i }
-            }
-            gone[pick] = true
-            counts[keys[pick]]--
-            out.push(pick)
-        }
-        return out.sort((a, b) => b - a)
-    }
-
     function _trimHistory(): void {
         if (_history.count <= root._historyCapacity) return
         // expired rows must give way before per-app balancing considers any retained rows
@@ -240,7 +202,7 @@ Singleton {
         if (_history.count <= root._historyCapacity) return
         const apps = []
         for (let i = 0; i < _history.count; i++) apps.push(_history.get(i).appName)
-        const drop = root.historyEvictions(apps, root._historyCapacity)
+        const drop = NotificationHistory.evictions(apps, root._historyCapacity)
         const dropped = []
         for (const i of drop) {
             const id = _history.get(i).id
@@ -277,26 +239,19 @@ Singleton {
         if (keys.length === 0) return
         const live = Object.create(null)
         for (let i = 0; i < root.list.length; i++) live[String(root.list[i].id)] = true
+        root._dropState(keys.filter(key => live[key] !== true))
+    }
 
-        const seen = root._cloneMap(root._seen)
-        const times = root._cloneMap(root._times)
-        const updates = root._cloneMap(root._updateTimes)
-        const threads = root._cloneMap(root._threads)
-        let cutSeen = false, cutTimes = false, cutUpdates = false, cutThreads = false
-
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i]
-            if (live[key] === true) continue
-            if (key in seen)    { delete seen[key];    cutSeen = true }
-            if (key in times)   { delete times[key];   cutTimes = true }
-            if (key in updates) { delete updates[key]; cutUpdates = true }
-            if (key in threads) { delete threads[key]; cutThreads = true }
-        }
-
-        if (cutSeen)    root._seen = seen
-        if (cutTimes)   root._times = times
-        if (cutUpdates) root._updateTimes = updates
-        if (cutThreads) root._threads = threads
+    // each per-id map is replaced, never mutated, and only when it held one of the keys
+    function _dropState(keys): void {
+        const seen = NotificationHistory.withoutKeys(root._seen, keys)
+        if (seen) root._seen = seen
+        const times = NotificationHistory.withoutKeys(root._times, keys)
+        if (times) root._times = times
+        const updates = NotificationHistory.withoutKeys(root._updateTimes, keys)
+        if (updates) root._updateTimes = updates
+        const threads = NotificationHistory.withoutKeys(root._threads, keys)
+        if (threads) root._threads = threads
     }
 
     // by arrival, not by close: the popup stack shows the newest first, so a burst closes newest first
@@ -467,47 +422,11 @@ Singleton {
         if (typeof _diskStore !== "undefined" && _diskStore.pending) _diskStore.flush(true)
     }
 
-    function _parsePersistentJson(raw: string, fallback): var {
-        try { return JSON.parse(raw || "") }
-        catch (e) { return fallback }
-    }
-
-    function _validStateId(value): bool {
-        const text = String(value)
-        if (!/^(0|[1-9][0-9]{0,9})$/.test(text)) return false
-        const id = Number(text)
-        return isFinite(id) && id <= 2147483647
-    }
-
-    function _normalizeSeenMap(map): var {
-        const out = Object.create(null)
-        if (!map || typeof map !== "object" || Array.isArray(map)) return out
-        const keys = Object.keys(map)
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i]
-            if (root._validStateId(key) && map[key] === true) out[key] = true
-        }
-        return out
-    }
-
-    function _normalizeTimesMap(map): var {
-        const out = Object.create(null)
-        if (!map || typeof map !== "object" || Array.isArray(map)) return out
-        const keys = Object.keys(map)
-        for (let i = 0; i < keys.length; i++) {
-            const key = keys[i]
-            const value = Number(map[key])
-            if (root._validStateId(key) && isFinite(value)
-                    && value > 0 && value <= 8.64e15) out[key] = value
-        }
-        return out
-    }
-
     function _restorePersistentState(): void {
         const savedHistory = ShellSettings.notifHistoryPersistent
-            ? root._parsePersistentJson(_persist.historyJson, []) : []
-        const savedSeen = root._parsePersistentJson(_persist.seenJson, Object.create(null))
-        const savedTimes = root._parsePersistentJson(_persist.timesJson, Object.create(null))
+            ? NotificationHistory.parseJson(_persist.historyJson, []) : []
+        const savedSeen = NotificationHistory.parseJson(_persist.seenJson, null)
+        const savedTimes = NotificationHistory.parseJson(_persist.timesJson, null)
         _history.clear()
         if (Array.isArray(savedHistory)) {
             const now = Date.now()
@@ -521,8 +440,8 @@ Singleton {
             }
         }
         root.historyRevision++
-        root._seen = root._normalizeSeenMap(savedSeen)
-        root._times = root._normalizeTimesMap(savedTimes)
+        root._seen = NotificationHistory.seenMapFrom(savedSeen)
+        root._times = NotificationHistory.timesMapFrom(savedTimes)
         root._ensurePersistentState()
         root._persistentReady = true
         root._saveHistory()
@@ -567,14 +486,6 @@ Singleton {
     on_SeenChanged:   if (_persistentReady) _persist.seenJson = JSON.stringify(_seen)
     on_TimesChanged:  if (_persistentReady) _persist.timesJson = JSON.stringify(_times)
 
-    function _cloneMap(map): var {
-        const out = Object.create(null)
-        if (!map || typeof map !== "object") return out
-        const keys = Object.keys(map)
-        for (let i = 0; i < keys.length; i++) out[keys[i]] = map[keys[i]]
-        return out
-    }
-
     function _ensureTime(id: int): real {
         root._ensurePersistentState()
         const key = String(id)
@@ -582,35 +493,10 @@ Singleton {
         if (existing !== undefined) return existing
 
         const now = Date.now()
-        const next = root._cloneMap(root._times)
+        const next = NotificationHistory.cloneMap(root._times)
         next[key] = now
         root._times = next
         return now
-    }
-
-    function _forgetState(id: int): void {
-        root._ensurePersistentState()
-        const key = String(id)
-        if (key in root._seen) {
-            const nextSeen = root._cloneMap(root._seen)
-            delete nextSeen[key]
-            root._seen = nextSeen
-        }
-        if (key in root._times) {
-            const nextTimes = root._cloneMap(root._times)
-            delete nextTimes[key]
-            root._times = nextTimes
-        }
-        if (key in root._updateTimes) {
-            const nextUpdates = root._cloneMap(root._updateTimes)
-            delete nextUpdates[key]
-            root._updateTimes = nextUpdates
-        }
-        if (key in root._threads) {
-            const nextThreads = root._cloneMap(root._threads)
-            delete nextThreads[key]
-            root._threads = nextThreads
-        }
     }
 
     function updateTimeFor(id: int): real {
@@ -692,8 +578,7 @@ Singleton {
     // seen and times describe notifications the server still owns, and no server outlives a
     // restart; persisting them only lets a reissued id inherit a dead session's flags
     function _serializeDisk(): string {
-        // historyJson is already compact JSON of the rows; splicing it in skips a parse and a re-stringify
-        return '{"__version":1,"history":' + (_persist.historyJson || "[]") + '}'
+        return NotificationHistory.storeText(_persist.historyJson)
     }
 
     function _restoreFromDisk(raw: string): void {
@@ -701,14 +586,8 @@ Singleton {
         // every read must earn write permission again, even one after a valid older file
         _diskStore.writeAllowed = false
         try {
-            const j = JSON.parse(trimmed || "{}")
-            if (j === null || Array.isArray(j) || typeof j !== "object")
-                throw new Error("notification history root must be an object")
-            // a file written by a newer release is left exactly as it is; its entries may carry fields this schema would drop on the next save
-            const version = Number(j.__version ?? 0)
-            const fromFuture = isFinite(version) && version > 1
-            if (!fromFuture && j.history !== undefined && !Array.isArray(j.history))
-                throw new Error("notification history must be an array")
+            const store = NotificationHistory.readStore(trimmed)
+            const fromFuture = store.fromFuture
             if (fromFuture) {
                 root.storeError = "From a newer version; not saving over it"
                 console.warn("silere-shell: notifications.json is from a newer version; keeping it as it is")
@@ -719,12 +598,12 @@ Singleton {
                 const h = _history.get(i)
                 present[String(h.id) + "\u0001" + String(h.time)] = true
             }
-            if (ShellSettings.notifHistoryPersistent && Array.isArray(j.history)) {
+            if (ShellSettings.notifHistoryPersistent) {
                 // merge at most another history's worth before balancing the combined rows
                 const limit = _history.count + root._historyCapacity
                 const now = Date.now()
-                for (let i = 0; i < j.history.length && _history.count < limit; i++) {
-                    const e = root._normalizeEntry(j.history[i], true)
+                for (let i = 0; i < store.rows.length && _history.count < limit; i++) {
+                    const e = root._normalizeEntry(store.rows[i], true)
                     if (!e || root._entryExpired(e.time, now)) continue
                     const key = String(e.id) + "\u0001" + String(e.time)
                     if (present[key]) continue
@@ -831,7 +710,7 @@ Singleton {
         root._ensurePersistentState()
         const key = String(id)
         if (root._seen[key] === true) return
-        const next = root._cloneMap(root._seen)
+        const next = NotificationHistory.cloneMap(root._seen)
         next[key] = true
         root._seen = next
     }
@@ -970,7 +849,7 @@ Singleton {
             if (body.length > 0) lines.push(body)
         }
         const ids = folded.map(e => String(e.id))
-        const threads = root._cloneMap(root._threads)
+        const threads = NotificationHistory.cloneMap(root._threads)
         for (let i = 0; i < ids.length; i++) delete threads[ids[i]]
         threads[String(notification.id)] = { count: count, lines: lines.slice(-root._threadLineMax) }
         root._threads = threads
@@ -1078,7 +957,7 @@ Singleton {
     }
 
     function _forget(id: int): void {
-        root._forgetState(id)
+        root._dropState([String(id)])
         root._dropFromList([id])
     }
 
