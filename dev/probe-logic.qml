@@ -5842,6 +5842,12 @@ ShellRoot {
                 && !WindowActions.focusIsSourceApp(kittyGuess, [])
                 && !WindowActions.focusIsSourceApp(null, [{ pid: 1, cls: "x", focused: true }]),
             "a notification click keeps the window the app raised itself instead of guessing another")
+        // niri gives every X11 window xwayland-satellite's pid
+        const steam = { pid: 4242, cls: "steam", ref: "s" }
+        root._check(!WindowActions.focusIsSourceApp(steam, [{ pid: 4242, cls: "jetbrains-idea", ref: "i", focused: true }])
+                && WindowActions.focusIsSourceApp(steam, [{ pid: 4242, cls: "", ref: "s2", focused: true }])
+                && WindowActions.raisedSource([{ ref: "0xi", pid: 4242, cls: "jetbrains-idea" }], ["0xi"], [], steam) === null,
+            "two X11 apps sharing one pid are not taken for each other")
         const movedSender = { pid: kittyGuess.pid, cls: kittyGuess.cls, ref: kittyGuess.ref, wsId: 6 }
         root._check(WindowActions._fallbackSource(kittyGuess, [movedSender], "here", "here") === movedSender
                 && WindowActions._fallbackSource(kittyGuess, [movedSender], "here", "somewhere else") === null

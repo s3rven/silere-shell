@@ -255,9 +255,16 @@ Singleton {
         for (let i = 0; i < list.length; i++) {
             const t = list[i]
             if (!t || !t.focused) continue
-            return (c.pid > 0 && t.pid === c.pid) || (!!c.cls && t.cls === c.cls)
+            return root.sameApp(c, t)
         }
         return false
+    }
+    // a pid alone is not one app: on niri every X11 window reports xwayland-satellite's, so two X11 apps matched
+    // and a click on one's notification raised nothing while the other had focus
+    function sameApp(a, b): bool {
+        if (!a || !b) return false
+        const classesAgree = !a.cls || !b.cls || a.cls === b.cls
+        return (a.pid > 0 && b.pid === a.pid && classesAgree) || (!!a.cls && b.cls === a.cls)
     }
 
     property var _pendingSource: null
@@ -298,7 +305,7 @@ Singleton {
             const t = list[i]
             if (!t || urgentRefs.indexOf(t.ref) < 0 || before.indexOf(t.ref) >= 0) continue
             // with the sender's app known, a window of another app pinging in the same quarter second is not it
-            if (source && !((source.pid > 0 && t.pid === source.pid) || (!!source.cls && t.cls === source.cls))) continue
+            if (source && !root.sameApp(source, t)) continue
             return t
         }
         return null
