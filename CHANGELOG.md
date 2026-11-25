@@ -88,6 +88,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere try` stops with the reason when Quickshell is too old or a QML module is missing, instead of opening a
   preview with no bar in it, and its Quickshell and font hints no longer assume Arch.
 - The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
+- Without `ssh-keygen` (Arch's `git` does not pull in openssh), the installer stays on `main` and says why, instead of
+  stopping after the download with a message about your connection.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).
 - The package updates pill no longer appears and folds away at each automatic check while nothing is pending.

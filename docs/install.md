@@ -201,7 +201,7 @@ hides that widget or marks it unavailable.
 | `hyprshutdown` | Log out on Hyprland closes your apps before it ends the session |
 | `notify-send` / `busctl` | battery, temperature and other alerts from the shell; the updater's notifications need `notify-send` |
 | `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
-| `ssh-keygen` | cryptographic verification of Silere release tags |
+| `ssh-keygen` | cryptographic verification of Silere release tags; without it the installer stays on `main` and updates stop |
 
 The installer also reports on `busctl`, `pgrep` and `timeout`. Those ship with
 systemd, procps and coreutils, so they are listed only so a minimal system can see what

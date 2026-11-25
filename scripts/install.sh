@@ -1334,6 +1334,8 @@ if [ -d "$INSTALL_DIR/.git" ]; then
     fi
     if _dry; then
         _would "update $INSTALL_DIR to the latest signed release"
+    elif ! command -v ssh-keygen >/dev/null 2>&1; then
+        _skip "using existing clone: ssh-keygen verifies signed releases, see optional tools above"
     elif _ask "Install the latest signed release?"; then
         spin_start "checking release..."
         if ! _install_checked_release "$INSTALL_DIR"; then
@@ -1406,7 +1408,11 @@ elif $fresh_clone; then
     # a clone this installer made is Silere's to update either way; declining the
     # pin only chooses main over the tag, and main still moves on signed releases
     install_mode=managed
-    if _ask "Install the latest signed release?"; then
+    # the release is checked with ssh-keygen, which git does not pull in on every distro; without it the
+    # pin would fail after the clone, blaming the connection
+    if ! command -v ssh-keygen >/dev/null 2>&1; then
+        _skip "tracking main: ssh-keygen verifies signed releases, see optional tools above"
+    elif _ask "Install the latest signed release?"; then
         spin_start "checking release..."
         if ! GIT_TERMINAL_PROMPT=0 bash "$INSTALL_DIR/scripts/update.sh" --pin-release >/dev/null; then
             spin_stop
