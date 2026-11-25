@@ -170,6 +170,7 @@ settings file carries its own `__version` and migrates separately.
 - A menu opened from a bar icon stays under that icon when the bar is rebuilt beneath it (reordering widgets, moving
   the bar), instead of jumping to the workspaces on its next resize.
 - The calendar stays open when the bar is rebuilt beneath it.
+- Double-clicking a bar Position choice on Hyprland no longer closes the menu as the bar moves.
 
 ## Releases
 

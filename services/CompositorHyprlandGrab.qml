@@ -13,8 +13,10 @@ HyprlandFocusGrab {
 
     windows: [popup.cardWindow]
     active: popup.open && !grab._retaking
+    // so is the click a bar flip lands under the pointer (the second of a double click on Position): the card moved
+    // away from it, and without a grab the tap guard swallows that click
     onCleared: {
-        if (popup.open && OverlayCoordinator.handingOver && grab._retakes < 3) {
+        if (popup.open && (OverlayCoordinator.handingOver || popup.ignoringTaps === true) && grab._retakes < 3) {
             grab._retakes++
             grab._retaking = true
             Qt.callLater(() => grab._retaking = false)

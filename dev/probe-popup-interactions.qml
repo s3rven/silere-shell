@@ -802,6 +802,16 @@ Item {
                 OverlayCoordinator.handingOver = false
                 root._check(kept && capped,
                     "a grab cleared while another popup hands over to " + f.name + " is taken again, three times at most")
+                // a bar flip moves the card from under the pointer: the click landing there is the tap guard's to swallow
+                f.state.open = true
+                const guard = f.popup.data.find(o => o && o.ignoring !== undefined && o.open !== undefined)
+                if (guard) guard.ignoring = true
+                grab.cleared()
+                const guarded = f.state.open && f.popup.ignoringTaps
+                if (guard) guard.ignoring = false
+                grab.cleared()
+                root._check(!!guard && guarded && !f.state.open,
+                    "a click a bar flip lands outside " + f.name + " is swallowed with a grab too, and the next one closes it")
             }
         }
     }

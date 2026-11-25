@@ -73,6 +73,8 @@ PanelWindow {
         id: _tapGuard
         open: win.open
     }
+    // for a compositor grab: its cleared signal comes from the same click the guard swallows here
+    readonly property bool ignoringTaps: _tapGuard.ignoring
 
     Item { id: _fillArea; anchors.fill: parent }
     mask: Region { item: win.open && !win._grabsClicks ? _fillArea : null }
