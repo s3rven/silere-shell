@@ -215,6 +215,9 @@ FittedPopupWindow {
                 || !TrayMenuState.strayRule(_entry.siblings.values ?? [], _entry.index)
 
             readonly property bool flyoutOpen: _flyout.opened
+            // a submenu still waiting for its first entry gives up the focus it would take once the keyboard moves on,
+            // and lets its close timer run
+            onActiveFocusChanged: if (!activeFocus) _flyout._focusPending = false
             function closeFlyout(): void {
                 if (!_flyout.opened) return
                 const hadFocus = TrayMenuState.branchHolds(_flyout, win._focusFlyout)
