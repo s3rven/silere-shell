@@ -200,10 +200,20 @@ QtObject {
         _writeVolume(v)
     }
 
+    // the cap holds per channel: Quickshell scales every channel by one ratio, so with a balance of 1.0 / 0.8 an
+    // average of 100% put the louder channel at 111%
+    function _channelLimit(a): real {
+        const vols = a ? a.volumes : null
+        if (!vols || vols.length < 2 || !(a.volume > 0)) return 1.0
+        let peak = 0
+        for (let i = 0; i < vols.length; i++) peak = Math.max(peak, Number(vols[i]) || 0)
+        return peak > a.volume ? a.volume / peak : 1.0
+    }
+
     function _writeVolume(v: real): void {
         const a = ready ? audio : null
         if (!a) return
-        v = _clampVolume(v)
+        v = Math.min(_clampVolume(v), ctl._channelLimit(a))
         if (Math.abs(v - targetVolume) < _volumeEpsilon && pendingApply) return
         if (!pendingApply && _volumeMatches(a.volume, v)) return
         targetVolume = v

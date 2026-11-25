@@ -10765,6 +10765,11 @@ ShellRoot {
                 && near(Audio._out._stepFrom(0.5027, -0.05), 0.45)
                 && near(Audio._out._stepFrom(0.494, 0.05), 0.50),
             "a level just off a grid line steps past it, so a notch is never swallowed as no change")
+        root._check(near(Audio._out._channelLimit({ volumes: [1.0, 0.8], volume: 0.9 }), 0.9)
+                && Audio._out._channelLimit({ volumes: [0.5, 0.5], volume: 0.5 }) === 1
+                && Audio._out._channelLimit({ volumes: [0.7], volume: 0.7 }) === 1
+                && Audio._out._channelLimit({ volumes: [0, 0], volume: 0 }) === 1,
+            "the volume cap holds for the louder channel of an unbalanced output, not only the average")
         root._check(CpuTemp.temperatureDemand(false, true, false, false)
                 && !CpuTemp.temperatureDemand(false, true, true, false)
                 && CpuTemp.temperatureDemand(true, false, true, false)
