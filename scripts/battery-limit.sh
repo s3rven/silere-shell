@@ -49,8 +49,13 @@ kernel_state() { # $1 = power supply directory
 # one row: object, native path, on or off, and the percentage it stops at
 row() { # $1 = object; 1 on a failed read, 2 for a device with no limit to set
     local reply type supply supported native enabled end state
-    reply="$(busctl --system --timeout=2 get-property "$service" "$1" "$interface" \
-        Type PowerSupply ChargeThresholdSupported NativePath ChargeThresholdEnabled ChargeEndThreshold 2>/dev/null)" || return 1
+    if ! reply="$(busctl --system --timeout=2 get-property "$service" "$1" "$interface" \
+        Type PowerSupply ChargeThresholdSupported NativePath ChargeThresholdEnabled ChargeEndThreshold 2>/dev/null)"; then
+        # upower before 1.90 has no charge threshold properties: a battery it still answers for has no limit to set
+        busctl --system --timeout=2 get-property "$service" "$1" "$interface" Type PowerSupply NativePath \
+            >/dev/null 2>&1 && return 2
+        return 1
+    fi
     { read -r _ type; read -r _ supply; read -r _ supported; read -r _ native; read -r _ enabled; read -r _ end; } <<< "$reply"
     native="${native#\"}"; native="${native%\"}"
     # laptop batteries only: a mouse or headset battery supplies no power and has nothing to limit

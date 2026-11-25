@@ -4631,9 +4631,9 @@ test_battery_limit_helper() (
 set -euo pipefail
 case "$3:$7" in
     call:EnumerateDevices)
-        printf 'ao 9'
+        printf 'ao 10'
         for name in battery_BAT1 battery_BAT0 battery_CMB0 battery_DELL battery_NOSYS line_power_ACAD \
-            battery_hidpp_battery_0 battery_UNSUP battery_BAD; do printf ' "/org/freedesktop/UPower/devices/%s"' "$name"; done
+            battery_hidpp_battery_0 battery_UNSUP battery_BAD battery_OLD; do printf ' "/org/freedesktop/UPower/devices/%s"' "$name"; done
         printf '\n' ;;
     get-property:Type)
         # type, power supply, supported, native path, upower's own flag, the end upower would set
@@ -4647,6 +4647,8 @@ case "$3:$7" in
             battery_hidpp_battery_0) printf 'u 5\nb false\nb false\ns "hidpp_battery_0"\nb false\nu 0\n' ;;
             battery_UNSUP) printf 'u 2\nb true\nb false\ns "UNSUP"\nb false\nu 0\n' ;;
             battery_BAD) printf 'u 2\nb true\nb true\ns "../BAT1"\nb false\nu 0\n' ;;
+            # upower before 1.90: no ChargeThreshold properties, so asking for one fails the whole read
+            battery_OLD) [ "$9" = NativePath ] || exit 1; printf 'u 2\nb true\ns "OLD"\n' ;;
             *) exit 1 ;;
         esac ;;
     call:EnableChargeThreshold)

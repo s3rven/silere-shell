@@ -171,6 +171,7 @@ settings file carries its own `__version` and migrates separately.
   the bar), instead of jumping to the workspaces on its next resize.
 - The calendar stays open when the bar is rebuilt beneath it.
 - Double-clicking a bar Position choice on Hyprland no longer closes the menu as the bar moves.
+- The charge limit row no longer reports a read error on UPower older than 1.90, which has no charge limits.
 
 ## Releases
 
