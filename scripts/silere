@@ -114,7 +114,12 @@ compositor_live() {
 adopt_live_session() {
     local runtime="${XDG_RUNTIME_DIR:-}" line his="" niri="" names=()
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-        [ -n "$runtime" ] && ! compositor_live "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock" || return 0
+        if [ -n "$runtime" ] && compositor_live "$runtime/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket.sock"; then
+            # the shell asks niri first (a niri nested in Hyprland wins), so a dead niri name from an earlier session
+            # would leave it on a backend that never answers
+            [ -z "${NIRI_SOCKET:-}" ] || compositor_live "$NIRI_SOCKET" || unset NIRI_SOCKET
+            return 0
+        fi
     elif [ -n "${NIRI_SOCKET:-}" ]; then
         ! compositor_live "$NIRI_SOCKET" || return 0
     else

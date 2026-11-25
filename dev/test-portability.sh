@@ -3674,7 +3674,8 @@ test_cli_restart_and_log() (
         '    --no-detailed-logs) exit 0 ;;' \
         '    --version) [ -z "${SILERE_TEST_QS_BROKEN-}" ] || { echo "qs: symbol lookup error" >&2; exit 127; }; exit 0 ;;' \
         '    *) echo "launch $* locale=${LC_ALL-<unset>}" >> "$state.calls"; echo 777 > "$state"' \
-        '       [ -z "${SILERE_TEST_SESSION-}" ] || echo "session ${HYPRLAND_INSTANCE_SIGNATURE-} ${WAYLAND_DISPLAY-}" >> "$state.calls" ;;' \
+        '       [ -z "${SILERE_TEST_SESSION-}" ] || echo "session ${HYPRLAND_INSTANCE_SIGNATURE-} ${WAYLAND_DISPLAY-}" >> "$state.calls"' \
+        '       [ -z "${SILERE_TEST_SESSION-}" ] || echo "niri ${NIRI_SOCKET-<unset>}" >> "$state.calls" ;;' \
         'esac' > "$stubs/qs"
     # never the real systemctl: it would restart the live shell of whoever runs the tests
     printf '%s\n' \
@@ -3715,6 +3716,11 @@ test_cli_restart_and_log() (
         SILERE_TEST_SYSTEMD_ENV='HYPRLAND_INSTANCE_SIGNATURE=live\nWAYLAND_DISPLAY=wayland-1\n' \
         cli restart >/dev/null || fail "restart after a compositor crash failed"
     assert_eq "session live wayland-1" "$(grep '^session' "$state.calls")" "a socket left by a crashed Hyprland is dead"
+    # a niri name from an earlier session beside a live Hyprland: the shell, which asks niri first, must not get it
+    echo 4242 > "$state"; : > "$state.calls"
+    XDG_RUNTIME_DIR="$runtime" HYPRLAND_INSTANCE_SIGNATURE=live NIRI_SOCKET="$runtime/niri.wayland-1.4194305.sock" \
+        WAYLAND_DISPLAY=wayland-1 SILERE_TEST_SESSION=1 cli restart >/dev/null || fail "restart beside a dead niri name failed"
+    assert_eq "niri <unset>" "$(grep '^niri' "$state.calls")" "a dead niri name beside a live Hyprland reached the shell"
     echo 4242 > "$state"; : > "$state.calls"
     (unset HYPRLAND_INSTANCE_SIGNATURE
         XDG_RUNTIME_DIR="$runtime" NIRI_SOCKET="$runtime/niri.wayland-1.4194305.sock" WAYLAND_DISPLAY=wayland-old \
