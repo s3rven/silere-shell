@@ -169,6 +169,7 @@ settings file carries its own `__version` and migrates separately.
 - Double-clicking a workspace switches to it without also opening the menu.
 - A menu opened from a bar icon stays under that icon when the bar is rebuilt beneath it (reordering widgets, moving
   the bar), instead of jumping to the workspaces on its next resize.
+- The calendar stays open when the bar is rebuilt beneath it.
 
 ## Releases
 

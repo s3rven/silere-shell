@@ -24,12 +24,20 @@ Item {
         if (root._anchorFallbackBar) CalendarState.anchorX = pt.x
     }
     on_AnchorFallbackBarChanged: root._syncMenuAnchor()
+    // reordering widgets or moving the bar rebuilds this clock under an open calendar, and the anchor it held drops:
+    // the new one takes it back, as the workspace strip does for the menu. Unclaimed, the calendar closed 150 ms later
+    function _reclaimCalendarAnchor(): void {
+        if (!CalendarState.open || CalendarState.anchorSource !== null || !root.screen) return
+        const target = CalendarState.triggerScreen
+        if (target ? target.name === root.screen.name : root._anchorFallbackBar) CalendarState.adoptAnchor(root)
+    }
     Connections {
         target: CalendarState
         // mapToItem sees no ancestor geometry, so the cached x is a stale layout pass by now
         function onOpenChanged() {
             if (CalendarState.open && CalendarState.anchorSource === null) root._syncMenuAnchor()
         }
+        function onAnchorSourceChanged() { root._reclaimCalendarAnchor() }
     }
 
     // a resize is read before the zone lays out around it, so a centred clock gaining or losing its
@@ -38,7 +46,10 @@ Item {
     onXChanged: if (!root._calendarOpen) root._syncMenuAnchor()
     onYChanged: if (!root._calendarOpen) root._syncMenuAnchor()
     onWidthChanged: if (!root._calendarOpen) root._syncMenuAnchor()
-    Component.onCompleted: root._syncMenuAnchor()
+    Component.onCompleted: {
+        root._syncMenuAnchor()
+        root._reclaimCalendarAnchor()
+    }
     Connections {
         target: root.Window.window
         enabled: root._calendarOpen

@@ -9214,6 +9214,18 @@ ShellRoot {
         root._check(CalendarState.effectiveAnchorX === 73,
             "calendar follows popup anchor movement")
         CalendarState.close()
+        probeAnchor.menuAnchorX = 42
+        const calendarScreen = Quickshell.screens[0] ?? null
+        if (calendarScreen) {
+            CalendarState.toggleAt(probeAnchor.menuAnchorX, calendarScreen, probeAnchor)
+            // the clock it opened from rebuilt: destruction nulls the anchor with no assignment behind it
+            CalendarState.anchorSource = null
+            const rebuiltClock = clockFactory.createObject(root, { screen: calendarScreen })
+            root._check(CalendarState.open && CalendarState.anchorSource === rebuiltClock,
+                "a rebuilt clock takes back the open calendar's anchor instead of letting it close")
+            CalendarState.close()
+            rebuiltClock.destroy()
+        }
 
         // reordering bar widgets hands the zone a new array, so its Repeater destroys and
         // rebuilds the widget this anchor points at; assigning null here is what that leaves
