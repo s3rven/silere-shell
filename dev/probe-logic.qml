@@ -9478,6 +9478,13 @@ ShellRoot {
             hypr._acceptKeyboardSnapshot(keyboardSnapshot, hypr._keyboardRevision)
             root._check(hypr.keyboardLayout === "French",
                 "the keyboard snapshot selects the main keyboard and tolerates a missing entry")
+            let activations = 0
+            const onActivated = () => activations++
+            hypr.workspaceActivated.connect(onActivated)
+            hypr._eventConn.onRawEvent({ name: "focusedmonv2", data: String(hypr.focusedMonitor) + ",1" })
+            hypr.workspaceActivated.disconnect(onActivated)
+            root._check(activations === 0,
+                "the pointer moving to another monitor is not a workspace switch, so the popup open there stays")
             const submapWas = hypr.submap
             hypr._eventConn.onRawEvent({ name: "submap", data: "resize" })
             const submapEntered = hypr.submap === "resize" && Compositor.submap === "resize"

@@ -328,8 +328,9 @@ ShellRoot {
         }
         warm: !root.smokeTest && MenuState.warmRequested
         wantOpen: !root.smokeTest && MenuState.open
+        // a hover only prepares a monitor: a keybind open inside its release window belongs to the focused one
         requestedScreen: root.smokeTest ? null : MenuState.triggerScreen
-            ?? MenuState.warmScreen
+            ?? (MenuState.open ? null : MenuState.warmScreen)
             ?? root.anchoredPopupScreen
         onLatchedScreenChanged: MenuState.surfaceScreen = latchedScreen
         surfaceFile: "modules/menu/MenuWindow.qml"

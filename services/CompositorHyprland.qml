@@ -877,9 +877,9 @@ QtObject {
             }
             // quickshell 0.3.2 resolves focusedmon's workspace by name and drops a named numbered one (quickshell#1427)
             if (n === "focusedmon") Hyprland.refreshMonitors()
-            if (n === "workspacev2" || n === "focusedmon"
-                || n === "focusedmonv2" || n === "activemon")
-                root.workspaceActivated(root.focusedMonitor)
+            // only a switch: the pointer crossing to another monitor sends focusedmon too, and coming back closed
+            // the popup left open there. A switch that changes monitor still sends workspacev2
+            if (n === "workspacev2") root.workspaceActivated(root.focusedMonitor)
             root._layoutTick++
         }
     }
