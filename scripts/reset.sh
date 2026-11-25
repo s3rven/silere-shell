@@ -343,8 +343,10 @@ _undo() {
         done
     fi
     if [ -n "$stash" ]; then
+        # the checkout was clean: a conflict goes back to it, or the restarted shell would load conflict markers
         git -C "$ROOT" stash apply --quiet "$stash" 8>&- \
-            || _die "could not restore edits from stash $stash; the reset backup and stash were kept"
+            || { git -C "$ROOT" reset -q --hard && git -C "$ROOT" clean -fdq
+                 _die "could not restore edits from stash $stash; the reset backup and stash were kept"; }
     elif [ "$manifest" = repaired=1 ]; then
         printf 'This older reset did not record a stash ID. Find its edited files in git stash list.\n' >&2
     fi

@@ -120,6 +120,8 @@ case "$action" in
         if git stash pop "$stash_ref" >/dev/null; then
             printf 'Restored edits from %s.\n' "$stash_ref"
         else
+            # the checkout was clean: back to it, or the shell would load files full of conflict markers
+            git reset -q --hard && git clean -fdq
             _die "the edits conflict with this revision; Git kept $stash_ref so nothing is lost"
         fi
         ;;

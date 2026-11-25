@@ -104,6 +104,8 @@ settings file carries its own `__version` and migrates separately.
 - Hiding one Chromium or Electron app's tray icon, such as Discord's, no longer hides every other one's.
 - Day and month names stay in your language after `silere reset`, a reinstall, or an update that restarts the shell
   without the optional service.
+- `silere repair --undo` and `silere reset --undo` leave the checkout as it was when the saved edits conflict, instead
+  of files full of conflict markers.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
 - Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.

@@ -2221,6 +2221,18 @@ test_repair_workflow() (
     assert_eq "new widget" "$(<"$repo/custom.qml")" "repair undo untracked file"
     assert_eq '{"barHeight":40}' "$(<"$repo/settings.json")" "repair undo personal settings"
 
+    # an undo whose edits conflict with a release since: the checkout goes back to that release, without markers
+    bash "$repo/scripts/repair.sh" --apply --yes >/dev/null
+    printf 'next release\n' > "$repo/tracked.qml"
+    git -C "$repo" commit -qam "next release"
+    if bash "$repo/scripts/repair.sh" --undo --yes >/dev/null 2>&1; then fail "repair undo reported success over a conflict"; fi
+    assert_eq "next release" "$(<"$repo/tracked.qml")" "repair undo after a conflict"
+    [ -z "$(git -C "$repo" status --short --untracked-files=normal)" ] \
+        || fail "a conflicting repair undo left the checkout changed"
+    grep -qF 'silere-repair ' <<<"$(git -C "$repo" stash list)" || fail "a conflicting repair undo lost its stash"
+    git -C "$repo" reset -q --hard HEAD~1
+    git -C "$repo" stash drop -q
+
     git -C "$repo" worktree add -qb repair-linked "$linked"
     [ -f "$linked/.git" ] || fail "repair fixture did not create a linked worktree"
     printf 'linked customization\n' > "$linked/tracked.qml"
