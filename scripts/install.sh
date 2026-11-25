@@ -1346,7 +1346,13 @@ if [ -d "$INSTALL_DIR/.git" ]; then
             _die "signed release update failed — check the connection or update manually"
         fi
         install_mode=managed
-        spin_stop; _ok "up to date"
+        spin_stop
+        # the updater never moves a checkout back, so one already past the release stays where it is
+        if [ -n "$(git -C "$INSTALL_DIR" tag --points-at HEAD 'v*' 2>/dev/null)" ]; then
+            _ok "up to date"
+        else
+            _ok "up to date: this checkout is past the latest signed release"
+        fi
     else
         _skip "using existing clone"
     fi
