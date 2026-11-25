@@ -215,10 +215,26 @@ exit 1
 EOS
         chmod +x "$tmp/qmllint-batch.sh"
 
-        printf 'checking QML imports (%s files, %s jobs)\n' "${#QML_FILES[@]}" "$jobs_n"
+        # Qt 6.12.1's qmllint cannot read Quickshell 0.3.2's Quickshell.Hyprland umbrella module, though each of its
+        # _ submodules reads fine, and so calls every file importing it broken. While a probe shows that, those files
+        # keep the bytecode check above and skip this one; a Qt or Quickshell that reads it again brings them back.
+        # A module that is not installed at all still fails here
+        lint_files=("${QML_FILES[@]}")
+        printf 'import QtQuick\nimport Quickshell.Hyprland\nItem {}\n' > "$tmp/hyprland-probe.qml"
+        hyprland_installed=false
+        for ((i = 1; i < ${#qml_import_args[@]}; i += 2)); do
+            [ -f "${qml_import_args[i]}/Quickshell/Hyprland/qmldir" ] && hyprland_installed=true
+        done
+        if $hyprland_installed && ! "$QMLLINT" --import error "${qml_import_args[@]}" "$tmp/hyprland-probe.qml" >/dev/null 2>&1; then
+            lint_files=()
+            for f in "${QML_FILES[@]}"; do grep -q '^import Quickshell\.Hyprland *$' "$f" || lint_files+=("$f"); done
+            printf 'note: this qmllint cannot read Quickshell.Hyprland; %s files importing it keep the bytecode check only\n' \
+                "$(( ${#QML_FILES[@]} - ${#lint_files[@]} ))"
+        fi
+        printf 'checking QML imports (%s files, %s jobs)\n' "${#lint_files[@]}" "$jobs_n"
         # qmllint takes a batch per process, so the run costs jobs × startup, not files × startup
         rc=0
-        printf '%s\0' "${QML_FILES[@]}" \
+        printf '%s\0' "${lint_files[@]}" \
             | xargs -0 -P "$jobs_n" -n 8 "$tmp/qmllint-batch.sh" || rc=$?
         [ "$rc" -eq 130 ] && exit 130
         [ "$rc" -ne 0 ] && had_failure=1
