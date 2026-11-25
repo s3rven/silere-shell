@@ -303,6 +303,9 @@ _recover_interrupted_apply() {
         || _quiet_fail "checkout moved during an interrupted update — inspect $APPLY_JOURNAL"
     if [ "$JOURNAL_PHASE" = validated ] || [ "$JOURNAL_PHASE" = restart-failed ]; then
         if _updated_shell_is_running; then
+            # an update applied by an older updater (1.9 and before) left the service as it was; this release's first
+            # run brings it up to date. On stderr: the shell reads a check's stdout
+            bash "$ROOT/scripts/service.sh" refresh >&2 || true
             _clear_apply_transaction \
                 || _quiet_fail "could not clear the completed update recovery journal"
             echo "silere-update: confirmed the shell is running the signed update" >&2

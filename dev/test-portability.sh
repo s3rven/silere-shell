@@ -1482,8 +1482,13 @@ EOF
     _write_apply_journal restart-failed "$old_rev" "$new_rev" v1.0.1
     PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$old_rev" _recover_interrupted_apply 2>/dev/null
     [ -e "$APPLY_JOURNAL" ] || fail "a failed restart lost its rollback journal while the old shell was running"
+    mkdir -p "$repo/scripts"
+    printf 'printf "%%s\\n" "$*" >> %q\n' "$TMP/update-refresh-calls" > "$repo/scripts/service.sh"
     PATH="$stub_dir:$PATH" SILERE_TEST_LAUNCH_REVISION="$new_rev" _recover_interrupted_apply 2>/dev/null
     [ ! -e "$APPLY_JOURNAL" ] || fail "a supervised restart on the new revision kept its recovery journal"
+    grep -qx refresh "$TMP/update-refresh-calls" 2>/dev/null \
+        || fail "a confirmed update left the service an older updater had not refreshed"
+    rm -rf -- "$repo/scripts" "$TMP/update-refresh-calls"
     git -C "$repo" show-ref --quiet --verify refs/silere/update-transaction \
         && fail "a cleared transaction left its release pin behind"
 
