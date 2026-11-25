@@ -312,10 +312,12 @@ Singleton {
         _proc.exec(root._checkCommand(automatic))
     }
 
-    // apps only, as `flatpak update` would list them; a tab marks a result row, so a terminal escape is never counted
+    // with an app installed, what `flatpak update` would list, runtimes too; a tab marks a result row, so a terminal
+    // escape is never counted. The id leads: flatpak drops an empty last column's tab, and with name,version a
+    // runtime without a version (GL drivers, codecs, the GNOME platform) went uncounted, 2 of 7 here
     function _flatpakPart(): string {
         return "\nif [ -n \"$(flatpak list --app --columns=application 2>/dev/null | head -n 1)\" ]; then "
-            + "fp=$(" + root._limit(90, "flatpak remote-ls --updates --columns=name,version") + " </dev/null 2>/dev/null) && "
+            + "fp=$(" + root._limit(90, "flatpak remote-ls --updates --columns=application,name,version") + " </dev/null 2>/dev/null) && "
             + "{ echo \"FLATPAK $(printf '%s\\n' \"$fp\" | grep -c \"$(printf '\\t')\")\"; "
             + "printf '%s\\n' \"$fp\" | grep \"$(printf '\\t')\" | " + root._head(root._maxDetail) + "; }; fi"
     }
@@ -336,7 +338,8 @@ Singleton {
         const rows = []
         for (let i = 1; i < lines.length && rows.length < root._maxDetail; i++) {
             const cols = lines[i].split("\t")
-            if (cols.length >= 2) root._detail(rows, cols[0].trim(), "", cols[1].trim() || "update", false)
+            if (cols.length >= 2)
+                root._detail(rows, (cols[1] || cols[0]).trim(), "", (cols[2] || "").trim() || "update", false)
         }
         root.flatpakCount = Number(m[1])
         root._flatpakRows = rows
