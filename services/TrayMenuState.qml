@@ -171,11 +171,13 @@ AnchoredPopupState {
             return
         }
         // close first: a menu-less item is a valid destination, and the old app's menu must not linger
-        if (root.open) root.close()
-        sourceItem = source ?? null
-        barBottom = bottom
-        menuHandle = handle
-        keyboardEntry = keyboard === true
-        openAt(x, screen, anchor)
+        OverlayCoordinator.swap(() => {
+            if (root.open) root.close()
+            sourceItem = source ?? null
+            barBottom = bottom
+            menuHandle = handle
+            keyboardEntry = keyboard === true
+            openAt(x, screen, anchor)
+        })
     }
 }

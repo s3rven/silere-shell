@@ -19,7 +19,14 @@ Singleton {
     // a card arriving over an open popup lands on top of it, so new ones wait for it to close; cards already showing stay, and a critical one releases them
     // set on edges only: bound to the popup's own load, it re-entered while the loader opened
     property bool notificationsHeld: false
-    onAnyOpenChanged: root.notificationsHeld = root.anyOpen && Notifications.activeCount === 0
+    onAnyOpenChanged: if (!root._swapping) root.notificationsHeld = root.anyOpen && Notifications.activeCount === 0
+    // a popup closing and reopening in one call (the tray stepping to the next app) keeps the hold it had
+    property bool _swapping: false
+    function swap(step): void {
+        root._swapping = root.anyOpen
+        try { step() } finally { root._swapping = false }
+        if (!root.anyOpen) root.notificationsHeld = false
+    }
 
     function registerPopup(state): void {
         if (!state || root._popups.indexOf(state) >= 0) return

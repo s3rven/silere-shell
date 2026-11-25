@@ -7135,6 +7135,22 @@ ShellRoot {
         root._check(heldWhileEmpty && heldOnArrival && releasedOnClose && showingStays
                 && heldAfterLast && criticalReleases,
             "a new notification waits for an open popup unless cards are already showing or it is critical")
+        const traySourceA = Qt.createQmlObject("import QtQuick; QtObject {}", root)
+        const traySourceB = Qt.createQmlObject("import QtQuick; QtObject {}", root)
+        OverlayCoordinator._openCount = 0
+        Notifications.list = []
+        TrayMenuState.toggleAt(100, null, null, false, null, traySourceA)
+        Notifications.list = [{ notification: { id: 92 }, id: 92, time: 1000 }]
+        const trayHolds = OverlayCoordinator.notificationsHeld
+        TrayMenuState.toggleAt(140, null, null, false, null, traySourceB)
+        const stepKeepsHold = OverlayCoordinator.notificationsHeld && TrayMenuState.open
+            && TrayMenuState.sourceItem === traySourceB
+        TrayMenuState.close()
+        root._check(trayHolds && stepKeepsHold && !OverlayCoordinator.notificationsHeld,
+            "a notification waiting for a tray menu keeps waiting while the menu steps to the next app, and shows once it closes")
+        traySourceA.destroy(); traySourceB.destroy()
+        OverlayCoordinator._openCount = holdOpenWas
+        Notifications.list = holdListWas
         root._check(!OverlayCoordinator._environmentBlocksControls(false, false)
                 && OverlayCoordinator._environmentBlocksControls(true, false)
                 && OverlayCoordinator._environmentBlocksControls(false, true),
