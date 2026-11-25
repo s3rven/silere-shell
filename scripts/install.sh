@@ -1783,6 +1783,15 @@ while IFS=$'\t' read -r other_start other_where; do
 done < <(_silere_config_autostarts \
     "$CONFIG_HOME/hypr" "$CONFIG_HOME/niri" ${HYPR_CONFIG:+"$(dirname -- "$HYPR_CONFIG")"} \
     ${NIRI_CONFIG:+"$(dirname -- "$NIRI_CONFIG")"} | sort -u)
+# with its start line gone, mako, dunst or swaync still start themselves when an app notifies before Silere is up
+while IFS=$'\t' read -r notif_daemon notif_unit; do
+    [ -n "$notif_daemon" ] || continue
+    if [ -n "$notif_unit" ]; then
+        _warn "$notif_daemon can start itself before Silere: systemctl --user mask $notif_unit"
+    else
+        _warn "$notif_daemon can start itself before Silere: uninstall it to keep Silere's notifications"
+    fi
+done < <(_silere_notification_autostarters)
 
 # ── menu keybind ────────────────────────────────────────────────────────────────
 _section "menu keybind"

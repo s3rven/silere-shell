@@ -90,6 +90,8 @@ settings file carries its own `__version` and migrates separately.
 - The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
 - Without `ssh-keygen` (Arch's `git` does not pull in openssh), the installer stays on `main` and says why, instead of
   stopping after the download with a message about your connection.
+- The installer no longer offers to start Silere on a Quickshell older than it needs, and says which version to
+  install; it also names mako, dunst or swaync when D-Bus would start one before Silere, with the command that stops it.
 - `silere doctor` stops telling you to mask a notification daemon you already masked.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).

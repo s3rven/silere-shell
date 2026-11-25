@@ -75,7 +75,8 @@ you set an absolute config root. The interactive installer lets you choose anoth
 Inside your Hyprland or niri session, stop your old bar and notification daemon,
 such as waybar and mako or dunst, or another Quickshell shell, then run the line below.
 It names any other bar it finds still running. The installer and `silere doctor` also name
-each line of your Hyprland or niri config that starts one at login, so it doesn't come back.
+each line of your Hyprland or niri config that starts one at login, and a notification daemon
+D-Bus would start on its own with the command that keeps it off, so neither comes back.
 
 ```bash
 silere run
