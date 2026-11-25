@@ -7085,8 +7085,14 @@ ShellRoot {
         timedCriticalIdleCard.dismissRequested.connect((id, note, expired) => { if (expired) timedIdleDismissals++ })
         persistentIdleCard.beginReply()
         criticalIdleCard.beginReply()
+        const missedWas = Notifications.missedCount
+        ordinaryIdleCard._arrivedAway = true
+        persistentIdleCard._arrivedAway = true
         for (const item of [persistentIdleCard, criticalIdleCard, ordinaryIdleCard, timedCriticalIdleCard])
             item._handleIdle(true)
+        root._check(MenuState.recentActive || Notifications.missedCount === missedWas + 1,
+            "a card that came while you were away and is filed at idle counts as missed; one you were there for does not")
+        Notifications.missedCount = missedWas
         root._check(persistentIdleCard.enabled && criticalIdleCard.enabled && persistentIdleDismissals === 0,
             "entering idle preserves zero-timeout and default-critical notifications")
         root._check(!persistentIdleCard._replyOpen && !criticalIdleCard._replyOpen,

@@ -399,6 +399,7 @@ Item {
     Component.onCompleted: {
         _updateTime()
         if (card._paused) card._hoverStartMs = Date.now()
+        card._arrivedAway = Idle.isQuiet
     }
     property bool _entryPending: false
     // false while the popup window the card arrived in has not drawn yet: built with it, the card's slide
@@ -556,9 +557,13 @@ Item {
             _autoClose.restart()
     }
 
+    // arrived after you stepped away, so idle files it unread: the bell counts it as missed, as a held-back arrival
+    property bool _arrivedAway: false
+
     function _handleIdle(idle: bool): void {
         if (idle) {
             card.cancelReply()
+            if (_autoClose.shouldRun && card._arrivedAway) Notifications.noteMissedAway()
             // this can remove the delegate synchronously: keep it last
             if (_autoClose.shouldRun) card.dismiss(true)
             return

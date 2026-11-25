@@ -96,6 +96,7 @@ settings file carries its own `__version` and migrates separately.
   workspace back-and-forth.
 - A new message in a conversation no longer replaces the notification under your pointer, and resting on Clear all
   or Show more holds the cards as resting on them does.
+- Notifications that arrive while you are away and are put away when the screen goes idle count as missed.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

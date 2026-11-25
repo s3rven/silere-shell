@@ -152,6 +152,11 @@ Singleton {
 
     // a silenced notification is missed unless its row lands on the History page in front of you;
     // one history does not keep is missed only when it is transient and leaves no trace at all
+    // a card that came while you were away and was filed at idle, unread
+    function noteMissedAway(): void {
+        if (!MenuState.recentActive) root.missedCount++
+    }
+
     function missedOnArrival(archived: bool, isTransient: bool, appName): bool {
         if (!archived) return isTransient
         if (!MenuState.recentActive) return true
