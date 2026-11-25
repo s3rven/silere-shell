@@ -120,6 +120,8 @@ settings file carries its own `__version` and migrates separately.
 - A Wi-Fi network that takes long to join, such as a work network, reports NetworkManager's own answer instead of
   failing after 20 seconds.
 - A power mode the laptop switches itself as the charger is pulled is no longer remembered as your plugged-in choice.
+- A Wi-Fi network that failed to join after you closed the list no longer replaces the network you are on in Home's
+  Wi-Fi row.
 - Without pgrep, switching off a night light another program started keeps it shown as on.
 - The audio visualizer keeps moving when a fullscreen window covers a monitor whose bar it is not on.
 - On niri, clicking an X11 app's notification raises it when another X11 app has the focus.

@@ -617,7 +617,13 @@ Singleton {
         Qt.callLater(root._settleWifiLink)
         if (root.wifiError.length === 0) return
         const network = root._findWifiNetwork(root.wifiError)
-        if (network && network.connected) root.clearWifiError()
+        if (root.wifiErrorOutlived(!!(network && network.connected), root.wifiConnected, root._scanRequests.active))
+            root.clearWifiError()
+    }
+    // a failed join's error answers the list that asked. Once that network joins after all, or with the list closed
+    // Wi-Fi settles on another, Home's row says where you are again instead of the failure, for good
+    function wifiErrorOutlived(failedJoined: bool, wifiConnected: bool, listOpen: bool): bool {
+        return failedJoined || (wifiConnected && !listOpen)
     }
     on_VpnWantedChanged: {
         if (_vpnWanted) queueVpnRefresh()

@@ -12238,6 +12238,9 @@ ShellRoot {
         Network.wifiErrorReason = Net.ConnectionFailReason.WifiNetworkLost
         root._check(Network.wifiErrorText === "Out of range" && !Network.wifiErrorNeedsSecret,
             "a lost Wi-Fi network says it is out of range rather than offering a password retry")
+        root._check(Network.wifiErrorOutlived(true, true, true) && Network.wifiErrorOutlived(false, true, false)
+                && !Network.wifiErrorOutlived(false, true, true) && !Network.wifiErrorOutlived(false, false, false),
+            "a failed join's error goes once Wi-Fi settles elsewhere with the list closed, and stays while it is open")
         Network.wifiErrorReason = Net.ConnectionFailReason.WifiClientDisconnected
         root._check(Network.wifiErrorText === "Failed" && !Network.wifiErrorNeedsSecret,
             "an interrupted Wi-Fi connection reports a plain failure")
