@@ -120,6 +120,8 @@ settings file carries its own `__version` and migrates separately.
 - A Wi-Fi network that takes long to join, such as a work network, reports NetworkManager's own answer instead of
   failing after 20 seconds.
 - A power mode the laptop switches itself as the charger is pulled is no longer remembered as your plugged-in choice.
+- A power mode change that failed or timed out stops showing as failed in Home, Quick Actions and the power menu once
+  the mode does change.
 - A Wi-Fi network that failed to join after you closed the list no longer replaces the network you are on in Home's
   Wi-Fi row.
 - Without pgrep, switching off a night light another program started keeps it shown as on.

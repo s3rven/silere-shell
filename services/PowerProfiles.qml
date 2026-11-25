@@ -149,6 +149,9 @@ Singleton {
     onProfileChanged: {
         const was = root._seenProfile
         root._seenProfile = root.profile
+        // a mode that moved (a timed-out change landing late, the mode key) ends the last failure, which Home, Quick
+        // Actions and the power rail would otherwise keep showing; a write of Silere's own starts with none
+        root.lastError = ""
         root._noteProfileChange(was, root.profile)
     }
     property Timer _startSettleTimer: Timer {

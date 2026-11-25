@@ -12719,6 +12719,10 @@ ShellRoot {
             "a power-mode failure without stderr still has an explanation")
         PowerProfiles._acceptSetResult(0, false, "old error")
         root._check(PowerProfiles.lastError === "", "a successful power change clears its previous error")
+        PowerProfiles._acceptSetResult(0, true, "")
+        PowerProfiles.profileChanged()
+        root._check(PowerProfiles.lastError === "",
+            "a power mode that moves after a timed-out change, or by the mode key, clears the failure")
         SystemTools._tools = { "@powerprofiles": true }
         root._check(!PowerProfiles.available, "a detected daemon without a write tool does not advertise a usable control")
         SystemTools._tools = { busctl: true, powerprofilesctl: true }
