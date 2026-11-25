@@ -3059,6 +3059,14 @@ test_unit_identity() (
         PATH="$stubs:$PATH" _silere_unit_runs_checkout "$root" \
             && fail "a unit running '$exec_start' was taken for this checkout"
     done
+    local spaced="$TMP/unit root"
+    mkdir -p "$spaced/scripts"
+    printf '#!/bin/sh\n' > "$spaced/scripts/silere"
+    chmod +x "$spaced/scripts/silere"
+    : > "$spaced/shell.qml"
+    unit_says "{ path=$spaced/scripts/silere ; argv[]=$spaced/scripts/silere run ; ignore_errors=no ; }"
+    [ "$(PATH="$stubs:$PATH" _silere_unit_checkout)" = "$(readlink -f -- "$spaced")" ] \
+        || fail "the unit's checkout was cut short at a space in its path"
     for exec_start in 'QSG_TRANSIENT_IMAGES=1' 'QSG_TRANSIENT_IMAGES=0' \
             'QSG_TRANSIENT_IMAGES=' 'PATH=/usr/bin "QSG_TRANSIENT_IMAGES=1"'; do
         unit_says "$exec_start"

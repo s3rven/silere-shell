@@ -41,12 +41,16 @@ _silere_unit_owns_shell() {
 
 # the checkout the user unit starts: a silere launcher (or a link to one), or qs -p <dir|shell.qml>
 _silere_unit_checkout() {
-    local exec_start argv prog root=""
+    local exec_start argv prog path root=""
     exec_start="$(systemctl --user show silere-shell.service -p ExecStart --value 2>/dev/null)" || return 1
     case "$exec_start" in *"argv[]="*) ;; *) return 1 ;; esac
     argv="${exec_start#*"argv[]="}"
     argv="${argv%% ;*}"
     prog="${argv%% *}"
+    # argv[] is joined with spaces and unquoted, so a checkout whose path has one was cut there; path= is whole
+    path="${exec_start#*"path="}"
+    path="${path%% ;*}"
+    case "$exec_start:$path" in *"path="*:*/silere) prog="$path" ;; esac
     case "$prog" in
         */silere) prog="$(readlink -f -- "$prog" 2>/dev/null)" || return 1
             root="${prog%/scripts/silere}" ;;
