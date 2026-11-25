@@ -28,6 +28,8 @@ Item {
         : PowerProfiles.profile !== "" ? PowerProfiles.label
         : "Unavailable"
 
+    // the rail is built on each open with active already set, which runs no change handler
+    Component.onCompleted: if (active) Session.refresh()
     onActiveChanged: {
         if (active) { Session.refresh(); return }
         _powOut.disarm()
