@@ -92,6 +92,8 @@ settings file carries its own `__version` and migrates separately.
   warnings from Silere (about 90 a week here).
 - The package updates pill no longer appears and folds away at each automatic check while nothing is pending.
 - A long track title in the bar ends in an ellipsis once it stops scrolling, instead of a letter cut in half.
+- Scrolling fast over the workspaces moves one workspace per notch, and no longer bounces back with Hyprland's
+  workspace back-and-forth.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

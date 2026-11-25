@@ -344,6 +344,16 @@ Item {
 
     onRawActiveIdChanged: {
         if (rawActiveId > 0) _lastNormalActiveId = rawActiveId
+        if (rawActiveId === root._pendingId) root._pendingId = 0
+    }
+
+    // a wheel spin outruns the compositor's reply: notches before it lands count on from the workspace already asked
+    // for, and asking again for that one would bounce back where workspace back-and-forth is on
+    property int _pendingId: 0
+    Timer {
+        id: _pendingExpiry
+        interval: 400
+        onTriggered: root._pendingId = 0
     }
 
     // one input event can emit several compositor updates; coalesce to one hand-off
@@ -484,7 +494,9 @@ Item {
 
     function activate(id: int): void {
         if (!monitorLive) return
-        if (id < 1 || id === rawActiveId || root._knownOnOtherMonitor(id)) return
+        if (id < 1 || id === rawActiveId || id === root._pendingId || root._knownOnOtherMonitor(id)) return
+        root._pendingId = id
+        _pendingExpiry.restart()
         Compositor.focusWorkspace(id, root.monitorName)
     }
 
@@ -494,7 +506,7 @@ Item {
     }
 
     function _scrollTarget(delta: int): int {
-        let target = root.activeId
+        let target = root._pendingId > 0 ? root._pendingId : root.activeId
         const direction = delta > 0 ? -1 : 1
         const steps = Math.abs(delta)
         const cap = root._idCap

@@ -3173,6 +3173,11 @@ ShellRoot {
                 "large workspace icons leave room for state indicators and the Line marker at " + scale + "x")
             measure.destroy()
         }
+        strip._pendingId = 2
+        const roomy = strip._idCap === 0 || strip._idCap >= 3
+        root._check(!roomy || (strip._scrollTarget(-1) === 3 && strip._scrollTarget(1) === 1),
+            "a wheel notch before the compositor answers counts on from the workspace already asked for")
+        strip._pendingId = 0
         strip.destroy()
         const tick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
             liveId: 17, rowHeight: 24, barActive: true, before: true
