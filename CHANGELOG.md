@@ -98,6 +98,8 @@ settings file carries its own `__version` and migrates separately.
   or Show more holds the cards as resting on them does.
 - Notifications that arrive while you are away and are put away when the screen goes idle count as missed.
 - A notification kept open for a reply is no longer counted as hidden behind Show more.
+- A script that replaces its own notification by tag, such as a volume or brightness script, keeps one row in history
+  instead of one per use.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

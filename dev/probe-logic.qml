@@ -2872,6 +2872,31 @@ ShellRoot {
         Notifications._consumeClosing(9001, same)
         Notifications.list = listWas
         for (const n of [same, plain, other, next]) n.destroy()
+        {
+            // two bursts of a volume script, each shown and timed out: one history row, the latest
+            const rows = Notifications.historyModel
+            const count = rows.count
+            const listWas2 = Notifications.list
+            const burst = (id, summary) => Qt.createQmlObject("import QtQuick; QtObject { property int id: " + id
+                + "; property string appName: \"volscript\"; property string summary: \"" + summary + "\""
+                + "; property string body: \"\"; property string appIcon: \"\"; property string image: \"\""
+                + "; property string desktopEntry: \"\"; property int urgency: 1"
+                + "; property bool tracked: true; property var hints: ({ \"x-dunst-stack-tag\": \"volume\" })"
+                + "; function expire() { tracked = false } function dismiss() { tracked = false } }", root)
+            const bursts = [burst(99501, "Volume 40%"), burst(99502, "Volume 45%")]
+            for (let i = 0; i < bursts.length; i++) {
+                Notifications.list = [{ notification: bursts[i], id: bursts[i].id, time: Date.now() - 2000 + i * 1000 }]
+                Notifications._dismissObject(bursts[i].id, bursts[i], true, true)
+                Notifications._consumeClosing(bursts[i].id, bursts[i])
+            }
+            const kept = []
+            for (let i = 0; i < rows.count; i++) if (rows.get(i).appName === "volscript") kept.push(rows.get(i).summary)
+            root._check(rows.count === count + 1 && kept.length === 1 && kept[0] === "Volume 45%",
+                "a script's stacked notifications keep one history row per app and tag, the latest")
+            for (let i = rows.count - 1; i >= 0; i--) if (rows.get(i).appName === "volscript") rows.remove(i)
+            Notifications.list = listWas2
+            for (const b of bursts) b.destroy()
+        }
 
         const a = { n: "a" }, b = { n: "b" }, c = { n: "c" }, d = { n: "d" }
         const merged = Notifications.popupsWithLeaving([a, b, c], [a, c, d], [b])

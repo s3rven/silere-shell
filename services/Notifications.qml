@@ -1001,21 +1001,30 @@ Singleton {
         return root._notificationHistoryEntry(e.notification, e.id, root._times[e.id] ?? e.time)
     }
 
-    function _archiveNotification(notification, id: int, time: real,
-            saveHistory): bool {
-        const entry = root._notificationHistoryEntry(notification, id, time)
+    // one row per app and stack tag this session (a volume or brightness script), as it had one card; with the same
+    // id, a replaces_id update. Popups shown or held back alike: shown, each burst had left a row of its own
+    function _replaceSessionRow(entry): bool {
         if (!entry) return false
         let replaced = false
-        const app = root.identityText(notification.appName)
+        const app = root.identityText(entry.appName)
+        const tag = String(entry.stackTag ?? "")
         for (let i = _history.count - 1; i >= 0; i--) {
             const previous = _history.get(i)
-            if (previous.sessionCurrent === true && (previous.id === id
-                    || (entry.stackTag.length > 0 && previous.stackTag === entry.stackTag && previous.appName === app))) {
+            if (previous.sessionCurrent === true && (previous.id === entry.id
+                    || (tag.length > 0 && previous.stackTag === tag && previous.appName === app))) {
                 _history.remove(i)
                 root.historyRevision++
                 replaced = true
             }
         }
+        return replaced
+    }
+
+    function _archiveNotification(notification, id: int, time: real,
+            saveHistory): bool {
+        const entry = root._notificationHistoryEntry(notification, id, time)
+        if (!entry) return false
+        const replaced = root._replaceSessionRow(entry)
         root._prependHistory(entry)
         if (saveHistory !== false) root._saveHistory()
         return !replaced
@@ -1167,6 +1176,7 @@ Singleton {
         // expire = timed out, dismiss = user closed
         if (expired === true) n.notification.expire()
         else                  n.notification.dismiss()
+        if (entry && String(entry.stackTag ?? "").length > 0) root._replaceSessionRow(entry)
         if (entry) root._prependHistory(entry)
         if (immediate !== false) {
             if (entry) root._saveHistory()
@@ -1206,6 +1216,7 @@ Singleton {
         if (!n) return
         const entry = root._historyEntry(n)
         root._beginWithdrawal(notification)
+        if (entry && String(entry.stackTag ?? "").length > 0) root._replaceSessionRow(entry)
         if (entry) { root._prependHistory(entry); root._saveHistory() }
         root._forget(id)
     }
