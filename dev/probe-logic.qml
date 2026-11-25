@@ -13252,10 +13252,14 @@ ShellRoot {
         root._check(KeybindList.chord(64, "Q") === "Super + Q" && KeybindList.chord(69, "q") === "Super + Ctrl + Shift + Q"
                 && KeybindList.chord(8, "mouse:272") === "Alt + Left click" && KeybindList.chord(0, "mouse_down") === "Scroll down"
                 && KeybindList.chord(0, "XF86AudioRaiseVolume") === "Audio Raise Volume"
-                && KeybindList.chord(1, "XF86MonBrightnessUp") === "Shift + Mon Brightness Up"
+                && KeybindList.chord(1, "XF86MonBrightnessUp") === "Shift + Brightness Up"
+                && KeybindList.chord(64, "Page_Up") === "Super + Page Up" && KeybindList.chord(64, "Prior") === "Super + Page Up"
+                && KeybindList.chord(0, "Caps_Lock") === "Caps Lock" && KeybindList.chord(64, "left") === "Super + Left"
+                && KeybindList.chord(64, "period") === "Super + ." && KeybindList.chord(64, "slash") === "Super + /"
+                && KeybindList.chord(64, "Backspace") === "Super + Backspace"
                 && KeybindList.chord(64, "code:10") === "Super + 1" && KeybindList.chord(64, "code:19") === "Super + 0"
                 && KeybindList.chord(0, "code:65") === "Key 65",
-            "a keybind's keys read as people say them: modifiers in order, mouse buttons and media keys by name")
+            "a keybind's keys read as people say them: modifiers in order, mouse buttons, media keys and keysyms by name")
         const binds = JSON.stringify([
             { modmask: 64, key: "Q", has_description: true, description: "terminal", dispatcher: "HL.Dispatcher(exec_cmd)", arg: "57", submap: "" },
             { modmask: 64, key: "E", has_description: false, description: "", dispatcher: "function: 0x5600", arg: "58", submap: "" },
@@ -13323,7 +13327,7 @@ ShellRoot {
         const offer = (list, isLua, globals, launcher) => KeybindList.suggest(list, isLua, globals, launcher)
         const fresh = offer(stock, true, true)
         const byCall = (list, call) => list.find(s => s.call === call)
-        root._check(fresh.length === 6 && byCall(fresh, "menu toggle").bound === "Super + slash"
+        root._check(fresh.length === 6 && byCall(fresh, "menu toggle").bound === "Super + /"
                 && byCall(fresh, "quickActions toggle").bound === "" && byCall(fresh, "quickActions toggle").free
                 && byCall(fresh, "quickActions toggle").line
                     === 'hl.bind("SUPER + A", hl.dsp.exec_cmd("silere quick"), { description = "Open or close quick actions" })'
@@ -13336,7 +13340,7 @@ ShellRoot {
                 && byCall(busy, "calendar toggle").free && byCall(busy, "calendar toggle").keys === "Super + Alt + C"
                 && byCall(busy, "calendar toggle").line === "bindd = SUPER ALT, C, Open or close the calendar, exec, silere calendar"
                 && byCall(busy, "tray toggle").line === "bindd = SUPER SHIFT, slash, Open the first tray app's menu, exec, silere tray"
-                && byCall(old, "menu toggle") === undefined && byCall(offer(old, false, true), "menu toggle").bound === "Super + slash"
+                && byCall(old, "menu toggle") === undefined && byCall(offer(old, false, true), "menu toggle").bound === "Super + /"
                 && byCall(offer(old, false, true), "calendar toggle").bound === "Super + D",
             "keys taken in the main keymap are skipped (a submap's are not), all taken is said, hyprlang gets bindd lines, "
                 + "and a shell that does not own the global shortcuts is reached through the launcher's short words")

@@ -8,14 +8,22 @@ var mouseNames = {
     "mouse_down": "Scroll down", "mouse_up": "Scroll up", "mouse_left": "Scroll left", "mouse_right": "Scroll right"
 }
 
+// keysyms as the key's face: "Super + period" and "Page_Up" read as config, not as the key
+var keyFaces = {
+    period: ".", comma: ",", minus: "-", equal: "=", grave: "`", slash: "/", backslash: "\\", semicolon: ";",
+    apostrophe: "'", bracketleft: "[", bracketright: "]", prior: "Page Up", next: "Page Down"
+}
+
 function keyName(key) {
     var k = String(key || "")
     if (mouseNames[k]) return mouseNames[k]
-    // XF86AudioRaiseVolume reads as Audio Raise Volume
-    if (k.indexOf("XF86") === 0 && k.length > 4) return k.slice(4).replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    if (keyFaces[k.toLowerCase()]) return keyFaces[k.toLowerCase()]
+    // XF86AudioRaiseVolume reads as Audio Raise Volume, XF86MonBrightnessUp as Brightness Up
+    if (k.indexOf("XF86") === 0 && k.length > 4)
+        return k.slice(4).replace(/^Mon(?=Brightness)/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     // the number row by keycode (evdev + 8), as layout-independent workspace binds use it
     if (k.indexOf("code:") === 0) return /^1[0-9]$/.test(k.slice(5)) ? String((Number(k.slice(5)) - 9) % 10) : "Key " + k.slice(5)
-    return k.length === 1 ? k.toUpperCase() : k
+    return k.length === 1 ? k.toUpperCase() : (k.charAt(0).toUpperCase() + k.slice(1)).replace(/_/g, " ")
 }
 
 function chord(modmask, key) {
