@@ -912,17 +912,29 @@ Singleton {
     // unloading the popup window destroys every card timer, but it does not
     // untrack the notifications held by the server. If popups are enabled
     // again those timerless cards otherwise return as stale notifications
-    function _retireActiveNotifications(): void {
+    function _retireActiveNotifications(): void { root._retireActive(null) }
+
+    // do not disturb from a key, or quiet hours starting, takes the cards already up as well (GNOME and COSMIC do too),
+    // but only those that would time out anyway: a critical or resident card, or one with a reply being typed, stays
+    onEffectiveDndChanged: if (root.effectiveDnd) root._retireActive(e => root._keptThroughDnd(e))
+    function _keptThroughDnd(e): bool {
+        const n = e ? e.notification : null
+        return !n || n.urgency === NotificationUrgency.Critical || n.expireTimeout === 0 || e.id === root.replyingId
+    }
+
+    // with a keep test, only the cards it turns away go
+    function _retireActive(keeps): void {
         const active = Array.isArray(root.list) ? root.list.slice() : []
-        if (active.length === 0) return
+        const kept = keeps ? active.filter(e => keeps(e)) : []
+        if (kept.length === active.length) return
 
         // clear first: expiring emits closed synchronously, and the close handler must not archive the same object a second time
-        root.list = []
-        root.lastCritical = false
+        root.list = kept
+        if (kept.length === 0) root.lastCritical = false
         const retiredIds = []
         for (let i = 0; i < active.length; i++) {
             const e = active[i]
-            if (!e) continue
+            if (!e || kept.indexOf(e) >= 0) continue
             if (e.notification) {
                 root._archiveNotification(e.notification, e.id,
                     root._times[e.id] ?? e.time ?? Date.now(), false)

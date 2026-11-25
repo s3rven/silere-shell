@@ -160,6 +160,8 @@ settings file carries its own `__version` and migrates separately.
 - Raising the volume of an output with unequal left and right levels stops when the louder side reaches 100%.
 - A notification that arrives while your hands are off the keyboard and pointer waits for your next input, then stays
   at least two seconds, instead of timing out unseen; a playing video keeps cards on their usual timer.
+- Turning on Do Not Disturb, or quiet hours starting, also clears the cards already on screen into history, except
+  critical ones, ones that stay until dismissed, and one you are replying to.
 
 ## Releases
 

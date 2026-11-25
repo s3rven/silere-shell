@@ -15303,6 +15303,28 @@ ShellRoot {
             "a notification retired with the popup window remains in history")
         Notifications.clearHistory()
 
+        const dndCards = [
+            { urgency: 1, expireTimeout: -1, summary: "Timed" },
+            { urgency: 2, expireTimeout: -1, summary: "Critical" },
+            { urgency: 1, expireTimeout: 0, summary: "Resident" },
+            { urgency: 1, expireTimeout: 5000, summary: "Being answered" }
+        ]
+        for (const n of dndCards) Object.assign(n, { transient: false, tracked: true, appName: "Probe", appIcon: "",
+            desktopEntry: "", body: "", expire() { this.reason = "expired"; this.tracked = false } })
+        const dndWas = ShellSettings.dnd
+        const replyingWas = Notifications.replyingId
+        ShellSettings.dnd = false
+        Notifications.list = dndCards.map((n, i) => ({ notification: n, id: 71 + i, time: Date.now() }))
+        Notifications.replyingId = 74
+        ShellSettings.dnd = true
+        root._check(Notifications.activeCount === 3 && dndCards[0].reason === "expired"
+                && dndCards.slice(1).every(n => n.tracked),
+            "turning on do not disturb retires the cards that would time out anyway; critical, resident and answered ones stay")
+        Notifications.replyingId = replyingWas
+        ShellSettings.dnd = dndWas
+        Notifications.list = []
+        Notifications.clearHistory()
+
         const privateCards = [
             { transient: false, tracked: true, resident: true, urgency: 2,
                 appName: "Probe", appIcon: "", desktopEntry: "",
