@@ -125,7 +125,8 @@ EOF
     grep -qE 'values left at their defaults: notifDefaultTimeout = "soon" .*; notifMaxVisbile \(not a setting\)' "$scratch/shell.log" \
         || { printf 'FAIL: a hand-edited settings file was not named in the log\n' >&2; exit 1; }
     test "$(qs ipc -p "$ROOT/shell.qml" call settings get notifDefaultTimeout)" = 5000
-    cmp -s "$scratch/settings.hand" "$XDG_CONFIG_HOME/silere-shell/settings.json" \
+    # not cmp: CI's container has no diffutils
+    [ "$(cat -- "$scratch/settings.hand"; printf x)" = "$(cat -- "$XDG_CONFIG_HOME/silere-shell/settings.json"; printf x)" ] \
         || { printf 'FAIL: starting rewrote a hand-edited settings file\n' >&2; exit 1; }
     # Read-only and rejected calls verify the audio target without touching host audio.
     audio_status="$(qs ipc -p "$ROOT/shell.qml" call audio status)"

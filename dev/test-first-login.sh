@@ -68,7 +68,7 @@ if [ "${1:-}" = --inner ]; then
     cp "$home/.config/hypr/hyprland.lua" "$scratch/after-install.lua"
     "${home_env[@]}" bash "$installed/scripts/install.sh" --yes --no-start </dev/null >> "$scratch/install.log" 2>&1 \
         || fail "running the installer again failed"
-    cmp -s "$home/.config/hypr/hyprland.lua" "$scratch/after-install.lua" \
+    [ "$(cat -- "$home/.config/hypr/hyprland.lua"; printf x)" = "$(cat -- "$scratch/after-install.lua"; printf x)" ] \
         || fail "running the installer again changed the config"
 
     kwin_wayland --virtual --no-lockscreen --no-global-shortcuts --width 1280 --height 900 --socket login-parent \

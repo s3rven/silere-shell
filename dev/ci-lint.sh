@@ -335,6 +335,17 @@ else
   structural_skip "lua syntax" "luac not installed"
 fi
 
+section "tools outside base"
+# cmp lives in diffutils, which neither Arch's base nor CI's containers carry: a missing cmp reads as "different".
+# Compare with "$(cat -- a; printf x)" = "$(cat -- b; printf x)" instead
+cmp_uses="$(grep -rnE '(^|[[:space:];&|(!])cmp[[:space:]]' scripts dev --include='*.sh' --include=silere 2>/dev/null \
+  | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$cmp_uses" ]; then
+  fail "cmp is not in every base install: ${cmp_uses//$'\n'/; }"
+else
+  ok "cmp" "no script relies on diffutils' cmp"
+fi
+
 section "early-exit greps under pipefail"
 # grep -q exits at its first match, and bash's printf writes a line per write(), so the writer can die of SIGPIPE
 # on a later line and pipefail fails the check that matched; the 1.4.3 release run lost its updater test this way
