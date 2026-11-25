@@ -358,17 +358,22 @@ Singleton {
         target: root._present["idle-changed"] === true ? Idle : null
         function onIsIdleChanged() { root._idleChanged() }
     }
-    // a new track changes title and artist one after the other: one run for the pair, read a tick later
+    // a new track changes title and artist one after the other, and the network's devices empty for a frame on resume
+    Timer {
+        id: _settle
+        interval: 1000
+        onTriggered: { root._mediaChanged(); root._networkChanged() }
+    }
     Connections {
         target: root._present["media-changed"] === true ? Media : null
-        function onPlayingChanged() { Qt.callLater(root._mediaChanged) }
-        function onTitleChanged() { Qt.callLater(root._mediaChanged) }
-        function onArtistChanged() { Qt.callLater(root._mediaChanged) }
+        function onPlayingChanged() { _settle.restart() }
+        function onTitleChanged() { _settle.restart() }
+        function onArtistChanged() { _settle.restart() }
     }
     Connections {
         target: root._present["network-changed"] === true ? Network : null
-        function onConnectedChanged() { Qt.callLater(root._networkChanged) }
-        function onConnectionNameChanged() { Qt.callLater(root._networkChanged) }
+        function onConnectedChanged() { _settle.restart() }
+        function onConnectionNameChanged() { _settle.restart() }
     }
     Connections {
         target: root._present["power-source-changed"] === true ? Battery : null
