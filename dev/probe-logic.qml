@@ -11460,6 +11460,16 @@ ShellRoot {
             && Updates.packages[3].name === "GNOME Application Platform version 50" && Updates.packages[3].to === "update"
             && Updates._flatpakPart().includes("--columns=application,name,version")
             && Updates.sourcesText === "2 from repos, 2 from Flatpak"
+        const flatpakCheckedWas = Updates._flatpakCheckedMs
+        Updates._flatpakCheckedMs = Date.now()
+        Updates._noteLocalChange(true)
+        const localNoted = Updates._localChangeTimer.running && Updates._flatpakCheckedMs === 0
+        Updates._localChangeTimer.stop()
+        Updates._flatpakCheckedMs = flatpakCheckedWas
+        const watched = Updates.enabled && (Updates.manager !== "pacman" || Updates._localLog === "/var/log/pacman.log")
+            && Updates._userFlatpakMark.endsWith("/flatpak/.changed")
+        root._check(localNoted && watched,
+            "an update run in a terminal or by flatpak queues one check with Flatpak's part, off the files the run writes")
         Updates._restartCheckedAt = Date.now() - 1000
         const restartMark = Updates._restartCheckedAt
         Updates._restartTick.triggered()

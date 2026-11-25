@@ -551,6 +551,47 @@ Singleton {
         onTriggered: root._refreshBackground()
     }
 
+    // an update run outside Silere (pacman or an AUR helper in a terminal, apt, flatpak update) left the count up to an
+    // hour behind, Flatpak's six. The files those runs write are watched, never read (no preload; pacman.log runs to
+    // megabytes), and one check follows once the run has gone quiet. Silere's own checks write neither
+    readonly property string _localLog: !root.enabled ? ""
+        : root.manager === "pacman" || root.manager === "aur" ? "/var/log/pacman.log"
+        : root.manager === "apt" ? "/var/log/dpkg.log" : ""
+    readonly property string _dataHome: XdgPaths.resolveHome(
+        Quickshell.env("XDG_DATA_HOME"), Quickshell.env("HOME"), ".local/share")
+    readonly property string _userFlatpakMark: root.enabled && root._dataHome.length > 0
+        ? root._dataHome + "/flatpak/.changed" : ""
+    function _noteLocalChange(flatpak: bool): void {
+        if (flatpak) root._flatpakCheckedMs = 0
+        _localChange.restart()
+    }
+    readonly property Timer _localChangeTimer: Timer {
+        id: _localChange
+        interval: 30000
+        onTriggered: root._refreshBackground()
+    }
+    FileView {
+        path: root._localLog
+        preload: false
+        watchChanges: true
+        printErrors: false
+        onFileChanged: root._noteLocalChange(false)
+    }
+    FileView {
+        path: root.enabled ? "/var/lib/flatpak/.changed" : ""
+        preload: false
+        watchChanges: true
+        printErrors: false
+        onFileChanged: root._noteLocalChange(true)
+    }
+    FileView {
+        path: root._userFlatpakMark
+        preload: false
+        watchChanges: true
+        printErrors: false
+        onFileChanged: root._noteLocalChange(true)
+    }
+
     Timer {
         id: _retry
         // double the wait per consecutive failure, up to the regular poll cadence
