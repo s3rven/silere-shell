@@ -213,7 +213,11 @@ Item {
                     anchors.fill: parent
                     source: _railMedia.visible ? Media.stableArtUrl : ""
                     onSourceChanged: if (String(source).length === 0) _shown = false
-                    onStatusChanged: if (status === Image.Ready) _shown = true
+                    // a cover that fails to decode moves Media to the next candidate, as Now Playing does
+                    onStatusChanged: {
+                        if (status === Image.Ready) _shown = true
+                        else if (status === Image.Error) { _shown = false; Media.artFailed(Media.stableArtUrl) }
+                    }
                     retainWhileLoading: true
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
