@@ -823,6 +823,16 @@ if [ "${SILERE_SCRIPT_LIB_ONLY:-0}" = "1" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
+# any other word, a typo of --apply or a --help, would run a plain check as if nothing had been asked. Refused before
+# the checkout is read: a package install answered a typo with "not a git checkout", as did a checkout git will not
+# open for another owner
+case "${1:-}" in
+    ""|--apply|--rollback|--pin-release|--scheduled|--version|--transaction-status|--recent|--timer-status \
+        |--timer-enable|--timer-disable) ;;
+    *) printf 'silere-update: unknown option %s; silere update checks, --apply installs, --rollback undoes\n' "$1" >&2
+        exit 2 ;;
+esac
+
 trap _cleanup_candidate_stage EXIT
 trap 'exit 130' INT TERM
 
@@ -892,13 +902,6 @@ case "${1:-}" in
         _set_timer 0
         exit $?
         ;;
-esac
-
-# any other word, a typo of --apply or a --help, would otherwise run a plain check as if nothing had been asked
-case "${1:-}" in
-    ""|--apply|--rollback|--pin-release|--scheduled) ;;
-    *) printf 'silere-update: unknown option %s; silere update checks, --apply installs, --rollback undoes\n' "$1" >&2
-        exit 2 ;;
 esac
 
 _acquire_update_lock

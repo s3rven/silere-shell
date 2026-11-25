@@ -4393,6 +4393,11 @@ test_script_options() (
     [ "$rc" = 2 ] || fail "uninstall.sh ran with an unknown option: rc $rc, $out"
     rc=0; out="$(run update.sh --aply)" || rc=$?
     case "$rc:$out" in "2:silere-update: unknown option --aply"*) ;; *) fail "update.sh took --aply: rc $rc, $out" ;; esac
+    # a copy git cannot open, as a package or a checkout of another owner (CI's container) looks, refuses it the same way
+    local copy="$TMP/script-options-copy"
+    mkdir -p "$copy" && cp -r "$ROOT/scripts" "$copy/" && cp "$ROOT/release.json" "$copy/"
+    rc=0; out="$(env HOME="$home" GIT_CEILING_DIRECTORIES="$TMP" bash "$copy/scripts/update.sh" --aply </dev/null 2>&1)" || rc=$?
+    case "$rc:$out" in "2:silere-update: unknown option --aply"*) ;; *) fail "a copy's update.sh took --aply: rc $rc, $out" ;; esac
 )
 
 # an install and an uninstall hand the home back as it was, but for the state kept in case Silere comes back: the
