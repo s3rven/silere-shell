@@ -44,9 +44,16 @@ Singleton {
     on_TopWantedChanged: {
         if (root._topWanted) {
             root._topRelease.stop()
-            root._sampleTop()
-            _topPrime.restart()
+            root._startTop()
         } else root._topRelease.restart()
+    }
+    // the table costs a spawn and a ~100 KB parse (30 ms cold): read only while a name could show
+    property int _cpuCount: 1
+    readonly property bool _topPossible: root.topPossible(root.cpuReady, root.cpuPct, root._cpuCount)
+    on_TopPossibleChanged: {
+        if (!root._topWanted) return
+        if (root._topPossible) root._startTop()
+        else root._clearTop()
     }
 
     readonly property real memPct:     memTotalKb > 0 ? (memTotalKb - memAvailKb) / memTotalKb : 0
@@ -139,7 +146,7 @@ Singleton {
 
     Timer { id: _startDelay; interval: 120; onTriggered: root._activate() }
     Timer { id: _cpuPrime; interval: 250; onTriggered: if (root._active && root._cpuWanted) _statFile.reload() }
-    Timer { id: _topPrime; interval: 1000; onTriggered: if (root._topWanted) root._sampleTop() }
+    property Timer _topPrime: Timer { interval: 1000; onTriggered: if (root._topWanted) root._sampleTop() }
     Timer { id: _uptimePoll; onTriggered: if (root._active && root._homeWanted) _uptimeFile.reload() }
 
     Timer {
@@ -340,6 +347,8 @@ Singleton {
         root.cpuPct = Math.max(0, load)
         root._lastCpuTotal = sample.total
         root._lastCpuIdle = sample.idle
+        const cores = raw.match(/^cpu[0-9]+ /gm)
+        root._cpuCount = cores ? cores.length : 1
         root._updateCpuLoad()
     }
 
@@ -395,6 +404,10 @@ Singleton {
         if (!busiest) return 0
         if (cpuPct >= 0.5 || busiest.cores >= 0.9) return Math.min(2, samples + 1)
         return samples >= 2 && (cpuPct >= 0.35 || busiest.cores >= 0.6) ? 2 : 0
+    }
+    // a process uses at most what the whole machine does, so under topSamplesAfter's lower line no name can show or stay
+    function topPossible(ready: bool, cpuPct: real, cpus: int): bool {
+        return ready && (cpuPct >= 0.35 || cpuPct * Math.max(1, cpus) >= 0.6)
     }
 
     // comm is cut at 15 and Node and Firefox rename their main threads ("node-MainThread"); a whole comm stays,
@@ -477,13 +490,20 @@ Singleton {
         root.topPid = root.topShown ? busiest.pid : 0
     }
 
-    function _sampleTop(): void {
-        if (_topProc.running) return
+    function _startTop(): void {
+        if (!root._topPossible) return
+        root._sampleTop()
+        root._topPrime.restart()
+    }
+
+    function _sampleTop(): bool {
+        if (_topProc.running || !root._topPossible) return false
         _topProc.exec(["sh", "-c", "exec cat /proc/stat /proc/[0-9]*/stat 2>/dev/null"])
+        return true
     }
 
     function _clearTop(): void {
-        _topPrime.stop()
+        root._topPrime.stop()
         if (_topProc.running) _topProc.running = false
         root._topLast = null
         root._topSamples = 0

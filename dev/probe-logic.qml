@@ -3395,6 +3395,11 @@ ShellRoot {
                 SysInfo.topSamplesAfter(lightTop, 0.6, 0), SysInfo.topSamplesAfter(easingTop, 0.1, 1),
                 SysInfo.topSamplesAfter(null, 0.9, 2)].join() === "1,2,2,0,1,0,0",
             "a busy machine or a process holding a core is named after two samples and let go under a lower line")
+        root._check(!SysInfo.topPossible(true, 0.03, 16) && SysInfo.topPossible(true, 0.04, 16)
+                && SysInfo.topPossible(true, 0.35, 1) && !SysInfo.topPossible(true, 0.34, 1)
+                && SysInfo.topPossible(true, 0.3, 2) && !SysInfo.topPossible(false, 0.9, 16)
+                && !SysInfo.topPossible(true, 0, 0),
+            "the process table is worth reading only while the machine uses at least 0.6 of a core or 35% of itself")
         SysInfo.cpuReady = true
         SysInfo.cpuPct = 0.62
         SysInfo._topLast = null
@@ -3421,6 +3426,27 @@ ShellRoot {
         root._check(topQuietOff && topWantedOn && topHeld && !SysInfo._topWanted && !SysInfo.topShown
                 && SysInfo.topName === "" && w._parts[0].detail === "62%",
             "the busiest process is read only while a view asks for it, and forgotten once that view has faded out")
+        const cpuCountWas = SysInfo._cpuCount
+        SysInfo._cpuCount = 16
+        SysInfo.requestTopProcess(topOwner, true)
+        const busyStarts = SysInfo._topWanted && SysInfo._topPrime.running
+        SysInfo._topLast = thirdTop
+        SysInfo._topSamples = 2
+        SysInfo.topShown = true
+        SysInfo.topName = "ffmpeg"
+        SysInfo.cpuPct = 0.02
+        const idleDrops = !SysInfo._topPossible && !SysInfo._topPrime.running && SysInfo._topLast === null
+            && !SysInfo.topShown && SysInfo.topName === ""
+        const idleSkips = !SysInfo._sampleTop()
+        SysInfo.cpuPct = 0.06
+        const busyResumes = SysInfo._topPossible && SysInfo._topPrime.running
+        SysInfo.requestTopProcess(topOwner, false)
+        SysInfo._topRelease.stop()
+        SysInfo._topRelease.triggered()
+        SysInfo.cpuPct = 0.62
+        SysInfo._cpuCount = cpuCountWas
+        root._check(busyStarts && idleDrops && idleSkips && busyResumes && !SysInfo._topPrime.running,
+            "an idle machine reads no process table for an open Home or hover, and a busy one starts again at once")
         SysInfo._topLast = thirdTop
         SysInfo._topSamples = 2
         SysInfo._applyTop(SysInfo.processSample(statAt(1620, 1580, [procLine(41, "ffmpeg", 410, 80)])))
