@@ -79,7 +79,7 @@ PanelWindow {
         if (!_newestFirst) return stack.count - 1
         const older = win._olderThanShown
         for (let i = 0; i < older; i++)
-            if (win._isCritical(Notifications.popupModel.values[i])) return i
+            if (win._isPinned(Notifications.popupModel.values[i])) return i
         return stack.count - _visibleCards
     }
 
@@ -267,17 +267,21 @@ PanelWindow {
     function _isCritical(n): bool {
         return !!n && n.urgency === NotificationUrgency.Critical
     }
+    // loaded past the limit: a critical card until dismissed, and one with a reply being typed
+    function _isPinned(n): bool {
+        return win._isCritical(n) || (!!n && n.id === Notifications.replyingId)
+    }
     // a critical card stays until dismissed, so newer ones must not fold it behind the more chip
     readonly property int _olderThanShown: win._showAll || ShellSettings.notifMaxVisible <= 0
         ? 0 : Math.max(0, Notifications.popupModel.values.length - ShellSettings.notifMaxVisible)
-    readonly property int _pinnedCritical: {
+    readonly property int _pinnedOlder: {
         const values = Notifications.popupModel.values
         let n = 0
-        for (let i = 0; i < win._olderThanShown; i++) if (win._isCritical(values[i])) n++
+        for (let i = 0; i < win._olderThanShown; i++) if (win._isPinned(values[i])) n++
         return n
     }
     readonly property int _visibleCards: win._showAll || ShellSettings.notifMaxVisible <= 0
-        ? stack.count : Math.min(stack.count, ShellSettings.notifMaxVisible + win._pinnedCritical)
+        ? stack.count : Math.min(stack.count, ShellSettings.notifMaxVisible + win._pinnedOlder)
 
     function _noteLeaving(): void {
         win._quietPaint = true
@@ -762,7 +766,7 @@ PanelWindow {
             y: outerCol._topOf(_moreChip)
             readonly property int _extra: !win._showAll && ShellSettings.notifMaxVisible > 0
                 ? Math.max(0, Notifications.activeCount - ShellSettings.notifMaxVisible
-                    - win._pinnedCritical) : 0
+                    - win._pinnedOlder) : 0
             // the chip collapses after the count reaches zero, so it keeps the last count it showed
             property int _label: 1
             on_ExtraChanged: if (_extra > 0) _label = _extra
