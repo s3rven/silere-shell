@@ -202,7 +202,12 @@ EOF
     signal "ActionInvoked (uint32 $acted, 'default')"
     newest="$(notify 0 'newest' '[]')"
     # shown counts a notification as soon as the server has it; its card is up a little later, more on a slow runner
-    for _ in $(seq 1 50); do [[ "$(notifications status)" == *"\"newest\":$newest}"* ]] && break; sleep 0.1; done
+    for _ in $(seq 1 150); do [[ "$(notifications status)" == *"\"newest\":$newest}"* ]] && break; sleep 0.1; done
+    [[ "$(notifications status)" == *"\"newest\":$newest}"* ]] || {
+        printf 'FAIL: notification %s never came up as the newest card: %s\n' "$newest" "$(notifications status)" >&2
+        tail -n 40 "$scratch/shell.log" >&2
+        exit 1
+    }
     test "$(notifications dismiss)" = ok
     signal "NotificationClosed (uint32 $newest, uint32 2)"
     test "$(notifications dismissAll)" = ok
