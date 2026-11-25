@@ -107,7 +107,8 @@ under **Feedback › Notifications**. A reply field appears when the sender supp
 | To | Use |
 |---|---|
 | Hold back one app | **Mute** on its history page. Its popups go straight to history. Unmute there or under **Feedback › History › Muted apps**. |
-| Hold back everything | **Do Not Disturb** in Home. Its options end it after an hour or at the end of quiet hours, and **Scheduled do not disturb** under **Feedback › Notifications** turns it on between the hours you choose. **Let critical through** decides about critical ones, for muted apps too. |
+| Hold back everything | **Do Not Disturb** in Home. Its options end it after an hour or at the end of quiet hours, and **Scheduled do not disturb** under **Feedback › Notifications** turns it on between the hours you choose. **Let critical through** decides about critical ones, for muted apps too. From a keybind: `silere toggle dnd`. |
+| Clear the popups at once | **Clear all**, shown with two or more popups, or `silere dismiss all` from a keybind. History keeps them. |
 | Hide content while presenting | **Presentation Mode**, in Quick Actions or under Do Not Disturb's options. It hides notification content, critical ones and cards already on screen included, and keeps the screen awake until you turn it off. |
 | Keep popups off a shared screen | On by default where Hyprland or niri send cast events. A red mark sits beside the clock while you share. Turn off with **Hide while sharing screen** under **Feedback › Notifications**. |
 | Not be interrupted in a game or a call | On by default: popups wait in history while a window is fullscreen or an app is in a call, recording and playing at once. Turn off with **Hide in fullscreen and calls** under **Feedback › Notifications**. |
