@@ -93,6 +93,7 @@ settings file carries its own `__version` and migrates separately.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.
+- Choosing Alert for a battery or temperature warning no longer turns off a glow chosen on the Underline page.
 
 ## Releases
 

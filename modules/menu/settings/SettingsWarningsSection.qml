@@ -14,10 +14,11 @@ Column {
         const g = glowEnabled === true && ShellSettings.underlineGlow
         return o && g ? "both" : o ? "osd" : g ? "glow" : "off"
     }
+    // with the reactive underline off the chips offer no glow, so its choice from the Underline page is left alone
     function _setAlertMode(v, osdKey, glowKey): void {
         ShellSettings.batch(() => {
             ShellSettings[osdKey] = (v === "osd" || v === "both")
-            ShellSettings[glowKey] = (v === "glow" || v === "both")
+            if (ShellSettings.underlineGlow) ShellSettings[glowKey] = (v === "glow" || v === "both")
         })
     }
 
