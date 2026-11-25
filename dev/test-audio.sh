@@ -216,6 +216,14 @@ set_volume lab-a 0.61
 expect "the replacement is the live node" 'vol=61 muted=0 osd=.*61%'
 replace_node lab-mic Audio/Source
 expect "a default input replaced under its name stays the input" 'source=lab-mic '
+# the shell pulls an output's level back to 100%, but a microphone boosted in another mixer keeps its boost
+level_of() { wait_node "$1"; timeout 4 wpctl get-volume "$id" 2>/dev/null; }
+set_volume lab-mic 1.5; set_volume lab-a 1.5
+for _ in $(seq 1 30); do [[ "$(level_of lab-a)" == "Volume: 1.00"* ]] && break; sleep 0.1; done
+[[ "$(level_of lab-a)" == "Volume: 1.00"* ]] || fail "an output boosted elsewhere kept its boost: $(level_of lab-a)"
+[[ "$(level_of lab-mic)" == "Volume: 1.50"* ]] || fail "a microphone boosted elsewhere was pulled back: $(level_of lab-mic)"
+checks=$((checks + 2))
+set_volume lab-mic 1.0; set_volume lab-a 0.61
 
 # pavucontrol's level meters reach PipeWire as monitor streams; only a recording is an app listening
 pw-record --target lab-mic -P '{ node.name = lab-meter stream.monitor = true }' "$scratch/meter.wav" > /dev/null 2>&1 &

@@ -188,6 +188,8 @@ QtObject {
         const a = ready ? audio : null
         if (!a || !isFinite(delta) || delta === 0) return
         if (_pendingMuted && delta > 0) unmute()
+        // a boost set elsewhere reads as 100% here: a notch up would pull it down to that
+        if (delta > 0 && !pendingApply && a.volume > 1.0) return
         const v = pendingApply ? targetVolume : _clampVolume(a.volume)
         _writeVolume(ctl._stepFrom(v, delta))
     }

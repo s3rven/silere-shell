@@ -129,6 +129,7 @@ settings file carries its own `__version` and migrates separately.
 - Volume keys and the bar's wheel no longer stop at a level set elsewhere just off a 5% step, as a headset's own
   buttons leave it.
 - No volume popup at login when PipeWire starts after the shell, after a PipeWire restart, or when an output comes back.
+- A microphone boosted above 100% in another mixer keeps its boost.
 - `silere set` and `silere toggle` fail and say why when the change cannot be saved, instead of printing the value.
 - The volume OSD says 0% at volume 0, and Muted only when the output is muted.
 

@@ -60,6 +60,9 @@ Singleton {
     readonly property PwVolumeControl _in: PwVolumeControl {
         node: root.source
         enabled: Pipewire.ready && !root.profileSwitching
+        // a quiet microphone boosted in another mixer, or by the level WirePlumber restores, stays boosted: the cap
+        // guards ears on outputs, and pulling the boost back made calls quiet every session
+        capExternal: false
         onMutedExternally: root.micMutedExternally()
     }
 
