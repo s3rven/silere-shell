@@ -90,6 +90,7 @@ settings file carries its own `__version` and migrates separately.
 - The installer no longer lists an AUR helper among the optional tools outside Arch and its derivatives.
 - External monitor brightness no longer fills the system journal with ddcutil's own diagnostics, which showed up as
   warnings from Silere (about 90 a week here).
+- The package updates pill no longer appears and folds away at each automatic check while nothing is pending.
 - Settings search shows its results whole at larger interface scales.
 - Unmuting an app in Settings, or saving a lock command with Enter, keeps the keyboard where it was.
 - Settings › System › Devices shows one accurate hint when no screen locker is found.

@@ -6,7 +6,7 @@ StatusActionPill {
     id: root
     property var screen: null
 
-    show: Updates.available || Updates.isChecking || Updates.checkBroken
+    show: Updates.available || Updates.manualCheck || Updates.checkBroken
     busy: Updates.isChecking
     // a running check blocks another refresh, not the package details
     interactive: show

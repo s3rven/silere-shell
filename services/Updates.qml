@@ -67,6 +67,8 @@ Singleton {
     readonly property bool   available:  enabled && supported && count > 0
     readonly property bool   checkBroken: enabled && supported && lastFailed && _failStreak >= 2
     readonly property bool   isChecking: _proc.running
+    // a check someone asked for; the startup and hourly ones run unseen until they find something
+    readonly property bool   manualCheck: _proc.running && !root._automaticCheck
     readonly property string icon:      (manager === "pacman" || manager === "aur") ? "󰮯" : "󰚰"
     readonly property string label:     count + (count === 1 ? " update" : " updates")
     readonly property string managerLabel: {
