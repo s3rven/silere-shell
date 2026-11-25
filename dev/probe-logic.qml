@@ -11380,6 +11380,8 @@ ShellRoot {
         const meteredScript = "busctl() { [ \"$kind\" = fallback ] && return 1; printf 'v u %s\\n' \"$kind\"; }; "
             + "nmcli() { printf 'yes (guessed)\\n'; }; "
             + "checkupdates() { printf 'core 1-1 -> 1-2\\n'; }; "
+            // the Flatpak part would fetch flathub's summary for real on a machine with Flatpak apps
+            + "flatpak() { :; }; "
             + "check() { out=$(" + automatic[2] + "); [ \"${out%%$'\\n'*}\" = \"$expect\" ]; }; "
             + "kind=1 expect='DEFER metered' check \"$1\" && kind=3 expect='DEFER metered' check \"$1\" "
             + "&& kind=fallback expect='DEFER metered' check \"$1\" "
