@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import random
+import re
 import shutil
 import signal
 import socket
@@ -146,6 +147,16 @@ def read_process(pid):
             gtt += int(info.get("drm-memory-gtt", "0 KiB").split()[0])
     out["gpu"] = (vram + gtt) / 1024
     return out
+
+
+def launcher_allocator(tree):
+    # the allocator `silere run` gives the shell in that tree; trees from before the default had none, as they shipped
+    try:
+        with open(tree + "/scripts/silere") as f:
+            found = re.search(r'export MALLOC_CONF="\$\{MALLOC_CONF-([^}"]*)\}"', f.read())
+    except OSError:
+        return {}
+    return {"MALLOC_CONF": found.group(1)} if found else {}
 
 
 class Arm(str):
@@ -297,6 +308,9 @@ context.objects = [
     def start_shell(self, tree, env=None):
         self.tree = tree
         launch = dict(self.env, SILERE_WATCH_FILES="0", QS_PIPEWIRE_IMMEDIATE_RECONNECT="1")
+        # started as the launcher starts it, a value already set winning: jemalloc's own defaults hold ~50 MB more
+        if "MALLOC_CONF" not in launch:
+            launch.update(launcher_allocator(tree))
         launch.update(getattr(tree, "env", {}))
         launch.update(env or {})
         self._settings_file(dict(self.base_settings, **getattr(tree, "settings", {})))

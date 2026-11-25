@@ -108,7 +108,8 @@ bash dev/bench-lab.sh cycles --arm-env threaded=mesa_glthread=true \
     --arm-env threaded=GALLIUM_THREAD=1                                         # any test takes --arm-env
 ```
 
-Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
+Each checkout starts with the allocator setting its own `silere run` gives it, so an older tree runs as it
+shipped. Results are the median and 95th percentile, from trials in a shuffled order. Latency runs from starting the
 IPC client, as a keybind does, to the surface's first frame in the compositor. A `cycles` or `soak` run judges
 growth on `Pss_Anon`, the shell's own heap, because another Quickshell running at the same time moves shared
 pages out of its PSS. A `cycles` run also reports the shell's CPU per open and close, its fades included.
