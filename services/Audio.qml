@@ -253,7 +253,6 @@ Singleton {
         return out
     }
     readonly property int sinkCount: sinks.length
-    readonly property var sinkModel: sinks.map(n => ({ value: n, label: root.sinkLabel(n) }))
 
     readonly property var sources: {
         const out = []
@@ -265,7 +264,6 @@ Singleton {
         return out
     }
     readonly property int sourceCount: sources.length
-    readonly property var sourceModel: sources.map(n => ({ value: n, label: root.sinkLabel(n) }))
 
     // type only, like _inputStreams below: this is what gets tracked, and filtering the tracked set on a property is a binding loop through PwObjectTracker
     readonly property var _outputStreams: {
@@ -354,10 +352,6 @@ Singleton {
         return c.length + " apps listening"
     }
 
-    readonly property var playbackModel:
-        playbackStreams.map(n => ({ value: n, label: root.streamLabel(n) }))
-    readonly property var captureModel:
-        captureStreams.map(n => ({ value: n, label: root.streamLabel(n) }))
 
     function trackedNodes(defaultSink, defaultSource, sinks, sources, playback, capture): var {
         const out = []

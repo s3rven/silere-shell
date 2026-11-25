@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import "../../config"
 import "../../services"
 import "../common"
@@ -227,23 +228,26 @@ Item {
                     text: AudioMode.switching ? "Changing headset mode…" : AudioMode.lastError
                 }
 
+                // diffed by node, so a device or app coming or going leaves the other rows (and a drag) where they are
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "output" && !Audio.profileSwitching ? Audio.sinkModel : []
+                    model: ScriptModel {
+                        values: root._optionsShown && root._shownTab === "output" && !Audio.profileSwitching ? Audio.sinks : []
+                    }
                     delegate: InlineOptionRow {
                         id: _out
                         required property var modelData
-                        readonly property bool active: modelData.value === Audio.sink
+                        readonly property bool active: modelData === Audio.sink
 
                         width: _optCol.width
-                        glyph: Audio.deviceClass(modelData.value) === "headset" ? "󰋋" : "󰓃"
-                        label: modelData.label
-                        status: Audio.feedsNothing(modelData.value) ? "No device"
+                        glyph: Audio.deviceClass(modelData) === "headset" ? "󰋋" : "󰓃"
+                        label: Audio.sinkLabel(modelData)
+                        status: Audio.feedsNothing(modelData) ? "No device"
                             : active ? "Current" : ""
                         selected: active
                         accessiblePrefix: "Output"
 
                         onTriggered: {
-                            Audio.setSink(_out.modelData.value)
+                            Audio.setSink(_out.modelData)
                             root.closeInline()
                         }
                     }
@@ -267,33 +271,35 @@ Item {
                 }
 
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "input" && !Audio.profileSwitching ? Audio.sourceModel : []
+                    model: ScriptModel {
+                        values: root._optionsShown && root._shownTab === "input" && !Audio.profileSwitching ? Audio.sources : []
+                    }
                     delegate: InlineOptionRow {
                         id: _src
                         required property var modelData
-                        readonly property bool active: modelData.value === Audio.source
+                        readonly property bool active: modelData === Audio.source
 
                         width: _optCol.width
-                        glyph: Audio.deviceClass(modelData.value) === "headset" ? "󰋎" : "󰍬"
-                        label: modelData.label
+                        glyph: Audio.deviceClass(modelData) === "headset" ? "󰋎" : "󰍬"
+                        label: Audio.sinkLabel(modelData)
                         status: active ? "Current" : ""
                         selected: active
                         accessiblePrefix: "Input"
 
-                        onTriggered: Audio.setSource(_src.modelData.value)
+                        onTriggered: Audio.setSource(_src.modelData)
                     }
                 }
 
                 // the bar indicator says the microphone is open; this says which app has it
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "input" ? Audio.captureModel : []
+                    model: ScriptModel { values: root._optionsShown && root._shownTab === "input" ? Audio.captureStreams : [] }
                     delegate: InlineOptionRow {
                         id: _cap
                         required property var modelData
 
                         width: _optCol.width
                         glyph: Audio.micMuted ? "󰍭" : "󰍬"
-                        label: modelData.label
+                        label: Audio.streamLabel(modelData)
                         status: Audio.micMuted ? "Muted" : "Listening"
                         accentColor: Theme.error
                         highlighted: !Audio.micMuted
@@ -303,12 +309,13 @@ Item {
 
                 // the value slot is measured for "100%", so the app name cannot live there
                 Repeater {
-                    model: root._optionsShown && root._shownTab === "apps" ? Audio.playbackModel : []
+                    model: ScriptModel { values: root._optionsShown && root._shownTab === "apps" ? Audio.playbackStreams : [] }
                     delegate: Column {
                         id: _app
                         required property var modelData
-                        readonly property PwVolumeControl ctl: PwVolumeControl { node: _app.modelData.value; capExternal: false }
-                        readonly property string icon: Audio.streamIcon(_app.modelData.value)
+                        readonly property string label: Audio.streamLabel(_app.modelData)
+                        readonly property PwVolumeControl ctl: PwVolumeControl { node: _app.modelData; capExternal: false }
+                        readonly property string icon: Audio.streamIcon(_app.modelData)
 
                         width: _optCol.width
 
@@ -316,7 +323,7 @@ Item {
                             x: 14
                             width: Math.max(1, parent.width - 28)
                             topPadding: 6
-                            text: _app.modelData.label
+                            text: _app.label
                             elide: Text.ElideRight
                             // the app is what the row is for; it should not be the faintest thing in it
                             color: Theme.withAlpha(Theme.text, 0.88)
@@ -327,7 +334,7 @@ Item {
                             width: _app.width
                             glyph: _app.ctl.muted ? "󰝟" : "󰝚"
                             glyphSource: _app.ctl.muted ? "" : _app.icon
-                            accessibleName: _app.modelData.label
+                            accessibleName: _app.label
                             wheelKey: "appvolume"
                             interactionKey: _app.ctl.node ? String(_app.ctl.node.id) : ""
                             value: _app.ctl.uiVolume
