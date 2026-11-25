@@ -181,8 +181,9 @@ EOF
         exit 1
     }
     signal() { # $1 = the signal line gdbus monitor prints
-        for _ in $(seq 1 30); do grep -qF -- "$1" "$scratch/signals.log" && return 0; sleep 0.1; done
-        printf 'FAIL: the server never sent %s\n' "$1" >&2
+        for _ in $(seq 1 100); do grep -qF -- "$1" "$scratch/signals.log" && return 0; sleep 0.1; done
+        printf 'FAIL: the server never sent %s; status %s\n' "$1" "$(notifications status)" >&2
+        tail -n 25 "$scratch/signals.log" "$scratch/shell.log" >&2
         exit 1
     }
     gdbus monitor --session --dest org.freedesktop.Notifications > "$scratch/signals.log" 2>&1 &
