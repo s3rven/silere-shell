@@ -5,13 +5,13 @@ Hidden menus and popups unload their content after closing.
 
 ## Reference numbers
 
-These are the 1.9.0 release measurements on reference machine A in
+These are the 1.10.0 release measurements on reference machine A in
 [performance history](perf-history.md), not a memory limit for the current checkout.
 
 | State | PSS | What it is |
 |---|---|---|
-| cold | ~96 MB | Freshly started, menu never opened. Only the bar has drawn. |
-| warm | ~105 MB | The same session after opening and closing the menu once. |
+| cold | ~91 MB | Freshly started, menu never opened. Only the bar has drawn. |
+| warm | ~100 MB | The same session after opening and closing the menu once. |
 
 Popups and the menu's large pages compile the first time they are wanted, off the GUI thread,
 which starts the bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles
@@ -33,7 +33,7 @@ Underline event animations stop during quiet idle; a critical temperature warnin
 stays lit but still.
 
 Use PSS to compare Silere's memory use. RSS, shown by `top` and `htop`, counts shared Qt,
-Mesa and font pages in full. The same 1.9.0 runs reported 217 MB cold and 226 MB warm RSS.
+Mesa and font pages in full. The same 1.10.0 runs reported 209 MB cold and 219 MB warm RSS.
 
 Results vary with hardware, drivers, fonts and which widgets you enable. To measure your own
 setup, close other heavy programs first:

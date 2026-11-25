@@ -2,7 +2,7 @@
 
 pkgname=silere-shell-git
 _pkgname=silere-shell
-pkgver=1.9.0.r0.g44d1977
+pkgver=1.10.0.r0.gaaec3d5
 pkgrel=1
 pkgdesc="Quickshell desktop shell for Hyprland and niri: bar, notifications, OSD and tray in one process"
 arch=('any')
