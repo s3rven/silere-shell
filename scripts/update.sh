@@ -351,7 +351,10 @@ _rollback_applied_update() {
     _clear_flag
     _clear_update_error
     rm -f -- "$CHECKED"
-    bash "$ROOT/scripts/service.sh" refresh || true
+    # the release restored here may predate refresh (1.9 and before), and its usage line would land mid-rollback
+    if grep -q '^[[:space:]]*refresh)' "$ROOT/scripts/service.sh" 2>/dev/null; then
+        bash "$ROOT/scripts/service.sh" refresh || true
+    fi
     # Only restart a unit that actually runs this checkout; the test suite and a
     # throwaway checkout share one user manager, where being in use alone would
     # reach whatever shell is live.
