@@ -56,6 +56,15 @@ Singleton {
     readonly property var playerList: root._players.values
     readonly property int playerCount: playerList.length
 
+    // a web browser takes its video wake lock through the D-Bus screensaver, which an idle daemon such as hypridle owns,
+    // so the compositor never hears of it and neither do Silere's idle monitors. A browser's playing player stands in
+    readonly property bool browserPlaying: root.playerList.some(p => p && p.isPlaying
+        && root.isBrowserEntry(String(p.desktopEntry ?? "").trim().length > 0
+            ? DesktopEntries.byId(String(p.desktopEntry).trim()) : null))
+    function isBrowserEntry(entry): bool {
+        return !!entry && Array.from(entry.categories ?? []).indexOf("WebBrowser") >= 0
+    }
+
     onPlayerListChanged: {
         if (root.preferredPlayer.length === 0) return
         for (let i = 0; i < root.playerList.length; i++)

@@ -7172,6 +7172,13 @@ ShellRoot {
         })
         const watchedWhileShown = Idle._handsOffWatch._owners.indexOf(handsOffCard) >= 0
             && Idle._handsOffWatch._owners.indexOf(persistentIdleCard) < 0
+        handsOffCard._browserPlaying = true
+        const releasedForBrowser = Idle._handsOffWatch._owners.indexOf(handsOffCard) < 0 && !handsOffCard._handsOff
+        handsOffCard._browserPlaying = false
+        root._check(releasedForBrowser && Idle._handsOffWatch._owners.indexOf(handsOffCard) >= 0
+                && Media.isBrowserEntry({ categories: ["Network", "WebBrowser"] })
+                && !Media.isBrowserEntry({ categories: ["AudioVideo", "Player"] }) && !Media.isBrowserEntry(null),
+            "a card keeps its timer while a web browser plays, whose wake lock the compositor never sees")
         handsOffCard.enabled = false
         const releasedWhenGone = Idle._handsOffWatch._owners.indexOf(handsOffCard) < 0
         root._check(watchedWhileShown && releasedWhenGone

@@ -15,6 +15,9 @@ settings file carries its own `__version` and migrates separately.
   command's usage in one line, as the control commands do, instead of printing the whole help.
 - With several monitors on Hyprland, moving the pointer to another monitor asks Hyprland for its monitor list only
   when that monitor shows a workspace named other than its number, the one case Quickshell 0.3.2 loses track of.
+- A notification that arrives while a web browser plays video keeps its usual timer instead of waiting over the video
+  for the pointer to move. Browsers hold their wake lock through the idle daemon (hypridle), which the compositor and
+  so the shell never hear of; a browser's playing media now counts as that lock.
 
 ## Releases
 

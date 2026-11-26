@@ -458,7 +458,7 @@ Item {
     // an abandoned empty reply lets the card go; one being typed or holding text keeps it. A card also waits while a
     // panel is open: the calendar and a menu opened from the bar's right cover the stack's corner, actions included
     readonly property bool _paused: _cardHover.hovered || card.stackHovered || card._keyboardFocused || Idle.isQuiet
-        || Idle.handsOff || ControlSurfaces.anyOpen
+        || card._handsOff || ControlSurfaces.anyOpen
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
@@ -478,11 +478,14 @@ Item {
 
     // arrived while nobody touched the keyboard or pointer (GNOME's banners do the same): the card waits for the next
     // input, then stays at least two seconds, so it is seen rather than gone by the time someone looks up
-    readonly property bool _wantsHandsOff: card.enabled && _autoClose.shouldRun
+    // not while a browser plays: its video holds a wake lock Silere cannot see (Media.browserPlaying), and a card would
+    // otherwise sit over the video until the pointer moved
+    property bool _browserPlaying: Media.browserPlaying
+    readonly property bool _wantsHandsOff: card.enabled && _autoClose.shouldRun && !card._browserPlaying
     on_WantsHandsOffChanged: Idle.watchHandsOff(card, card._wantsHandsOff)
     property bool _waitedForReturn: false
-    readonly property bool _handsOff: Idle.handsOff
-    on_HandsOffChanged: if (card._handsOff && card._wantsHandsOff) card._waitedForReturn = true
+    readonly property bool _handsOff: Idle.handsOff && card._wantsHandsOff
+    on_HandsOffChanged: if (card._handsOff) card._waitedForReturn = true
     function _returnTopUp(full: real, shown: real, paused: real, waited: bool): real {
         return waited ? Math.max(0, 2000 - (full - shown + paused)) : 0
     }
