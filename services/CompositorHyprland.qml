@@ -583,6 +583,17 @@ QtObject {
         Hyprland.refreshWorkspaces()
     }
 
+    // quickshell 0.3.2 resolves focusedmon's workspace by name, and since Hyprland 0.57 the event names it by its id, so a
+    // workspace named otherwise is dropped (quickshell#1427). Every pointer crossing to another monitor sends one: only that
+    // case pays for a monitors request, which also opens a request socket (quickshell#1538 crashes in one)
+    function focusedMonLosesWorkspace(data, workspaces): bool {
+        const text = String(data ?? "")
+        const comma = text.indexOf(",")
+        if (comma < 0) return true
+        const name = text.slice(comma + 1)
+        return !Array.from(workspaces || []).some(w => w && String(w.name ?? "") === name)
+    }
+
     // hyprland 0.57 replaces a window's workspace id with a string address; like quickshell, only a numbered one keeps its id
     function _wsNumber(ws): int {
         if (!ws) return -1
@@ -889,8 +900,9 @@ QtObject {
                 root._refreshKeyboard()
                 root.configReloaded()
             }
-            // quickshell 0.3.2 resolves focusedmon's workspace by name and drops a named numbered one (quickshell#1427)
-            if (n === "focusedmon") Hyprland.refreshMonitors()
+            if (n === "focusedmon" && root.focusedMonLosesWorkspace(event.data,
+                    Hyprland.workspaces ? Hyprland.workspaces.values ?? [] : []))
+                Hyprland.refreshMonitors()
             // only a switch: the pointer crossing to another monitor sends focusedmon too, and coming back closed
             // the popup left open there. A switch that changes monitor still sends workspacev2
             if (n === "workspacev2") root.workspaceActivated(root.focusedMonitor)

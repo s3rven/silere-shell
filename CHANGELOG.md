@@ -13,6 +13,8 @@ settings file carries its own `__version` and migrates separately.
 
 - A mistyped option to `silere update`, `status`, `log`, `stop`, `restart`, `use`, `link` or `uninstall` names that
   command's usage in one line, as the control commands do, instead of printing the whole help.
+- With several monitors on Hyprland, moving the pointer to another monitor asks Hyprland for its monitor list only
+  when that monitor shows a workspace named other than its number, the one case Quickshell 0.3.2 loses track of.
 
 ## Releases
 

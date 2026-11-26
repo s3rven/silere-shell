@@ -9567,6 +9567,12 @@ ShellRoot {
             hypr.workspaceActivated.disconnect(onActivated)
             root._check(activations === 0,
                 "the pointer moving to another monitor is not a workspace switch, so the popup open there stays")
+            root._check(!hypr.focusedMonLosesWorkspace("DP-2,3", [{ name: "1" }, { name: "3" }])
+                    && hypr.focusedMonLosesWorkspace("DP-2,26", [{ name: "d2" }])
+                    && hypr.focusedMonLosesWorkspace("DP-2,26", [])
+                    && hypr.focusedMonLosesWorkspace("DP-2", [{ name: "DP-2" }])
+                    && !hypr.focusedMonLosesWorkspace("HDMI-A-1,name:web", [{ name: "name:web" }]),
+                "focusedmon asks for the monitors only when no workspace carries the name it gives (quickshell#1427)")
             const submapWas = hypr.submap
             hypr._eventConn.onRawEvent({ name: "submap", data: "resize" })
             const submapEntered = hypr.submap === "resize" && Compositor.submap === "resize"
