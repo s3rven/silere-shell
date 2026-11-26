@@ -11,6 +11,9 @@ settings file carries its own `__version` and migrates separately.
 
 ## [Unreleased]
 
+- A mistyped option to `silere update`, `status`, `log`, `stop`, `restart`, `use`, `link` or `uninstall` names that
+  command's usage in one line, as the control commands do, instead of printing the whole help.
+
 ## Releases
 
 - [1.10.0](docs/releases/1.10.0.md) — 2026-11-25

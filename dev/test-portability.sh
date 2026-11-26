@@ -4009,7 +4009,9 @@ STUB
     # wrong words name the verb's own grammar and exit 2, the way bad arguments to other commands do
     local bad
     for bad in "volume -5" "volume loud" "mic up down" "tray x" "dismiss x" "menu a b" "get" "set osdTimeout" \
-            "settings --x" "toggle a b" "osd x" "osd x y 101" "osd x y loud" "osd x y 5 6"; do
+            "settings --x" "toggle a b" "osd x" "osd x y 101" "osd x y loud" "osd x y 5 6" \
+            "stop x" "restart x" "status x" "link x" "uninstall x" "log x" "use --x" "version x" "help x" \
+            "update --check"; do
         # shellcheck disable=SC2086 # each case is its own word list
         out="$(cli $bad 2>&1)" && fail "silere $bad succeeded"
         case "$out" in *"usage: silere ${bad%% *}"*) ;; *) fail "silere $bad did not name its usage: $out" ;; esac

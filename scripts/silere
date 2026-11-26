@@ -561,8 +561,8 @@ use_checkout() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
             --dry-run) dry=1 ;;
-            -*) usage >&2; exit 2 ;;
-            *) [ "$target_set" -eq 0 ] || { usage >&2; exit 2; }
+            -*) bad_usage "use [--dry-run] [checkout]" ;;
+            *) [ "$target_set" -eq 0 ] || bad_usage "use [--dry-run] [checkout]"
                 target_set=1
                 target="$(cd -- "$1" 2>/dev/null && pwd -P)" || die "$1 is not a directory" ;;
         esac
@@ -811,11 +811,11 @@ adopt_live_session
 
 case "$command_name" in
     help|-h|--help)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "help"
         usage
         ;;
     version|-V|-v|--version)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "version"
         human_version
         ;;
     run)
@@ -825,11 +825,11 @@ case "$command_name" in
         exec bash "$ROOT/scripts/service.sh" "$@"
         ;;
     stop)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "stop"
         stop_shell
         ;;
     restart)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "restart"
         restart_shell
         ;;
     use)
@@ -838,10 +838,10 @@ case "$command_name" in
     log)
         follow=()
         case "${1:-}" in
-            "") [ "$#" -eq 0 ] || { usage >&2; exit 2; } ;;
-            -f|--follow) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
+            "") [ "$#" -eq 0 ] || bad_usage "log [--follow]" ;;
+            -f|--follow) [ "$#" -eq 1 ] || bad_usage "log [--follow]"
                 follow=(--follow) ;;
-            *) usage >&2; exit 2 ;;
+            *) bad_usage "log [--follow]" ;;
         esac
         command -v qs >/dev/null 2>&1 || die "Quickshell is not installed"
         log_qml="$ROOT/shell.qml"
@@ -861,7 +861,7 @@ case "$command_name" in
         exec qs log "${color[@]}" -p "$log_qml" "${follow[@]}"
         ;;
     status)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "status"
         info="$(version_info)" || die "could not read updater state"
         human_version
         if shell_pid="$(running_pid)"; then
@@ -993,12 +993,17 @@ case "$command_name" in
         esac
         ;;
     update)
+        # a mistyped option is answered before the installation is read, as update.sh does
+        case "${1:-}:$#" in
+            :0|--apply:1|--rollback:1) ;;
+            *) bad_usage "update [--apply | --rollback]" ;;
+        esac
         mode="$(sed -n 's/^mode=//p' <<<"$(version_info 2>/dev/null)")"
         [ "$mode" != package ] \
             || die "updates are managed by $(package_manager); Silere will not modify package-owned files"
         [ "$mode" != copy ] || die "nothing updates this copy; scripts/install.sh sets up one that can update itself"
         case "${1:-}" in
-            "") [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+            "")
                 # the check itself stays silent for the timer and the menu; say what it found here
                 rc=0; bash "$ROOT/scripts/update.sh" || rc=$?
                 human_version || true
@@ -1006,11 +1011,8 @@ case "$command_name" in
                 [ ! -s "$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)/silere-shell/update-pending" ] \
                     || printf 'silere update --apply installs it\n'
                 exit "$rc" ;;
-            --apply) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
-                exec bash "$ROOT/scripts/update.sh" --apply ;;
-            --rollback) [ "$#" -eq 1 ] || { usage >&2; exit 2; }
-                exec bash "$ROOT/scripts/update.sh" --rollback ;;
-            *) usage >&2; exit 2 ;;
+            --apply) exec bash "$ROOT/scripts/update.sh" --apply ;;
+            --rollback) exec bash "$ROOT/scripts/update.sh" --rollback ;;
         esac
         ;;
     try)
@@ -1029,7 +1031,7 @@ case "$command_name" in
         exec bash "$ROOT/scripts/repair.sh" "$@"
         ;;
     link)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "link"
         [ "${HOME#/}" != "$HOME" ] || die "HOME must be absolute"
         if is_packaged; then
             die "the $(package_manager) package already puts silere on PATH"
@@ -1054,7 +1056,7 @@ case "$command_name" in
         esac
         ;;
     uninstall)
-        [ "$#" -eq 0 ] || { usage >&2; exit 2; }
+        [ "$#" -eq 0 ] || bad_usage "uninstall"
         if is_packaged; then
             die "this installation is managed by $(package_manager); remove its package there"
         fi
