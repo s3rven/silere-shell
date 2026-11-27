@@ -292,7 +292,7 @@ Item {
             if (button === Qt.MiddleButton)
                 Media.focusPlayer()
             else if (button === Qt.RightButton)
-                MenuState.toggleMediaAt(root, root.screen)
+                MenuState.toggleTabAt(MenuState.mediaTab, root, root.screen)
             else
                 Media.togglePlay()
         }

@@ -275,6 +275,18 @@ Item {
         onTapped: root._openCalendar()
     }
 
+    // the missed bell sits here, so the clock is where its History opens
+    TapHandler {
+        enabled: root._canInteract
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        acceptedButtons: Qt.RightButton
+        onTapped: {
+            if (!root._canInteract) return
+            root._syncMenuAnchor()
+            MenuState.toggleTabAt(MenuState.recentTab, root, root.screen)
+        }
+    }
+
     TapHandler {
         id: _cycleTap
         enabled: root._canInteract

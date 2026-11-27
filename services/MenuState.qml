@@ -393,12 +393,12 @@ AnchoredPopupState {
         root.showTabAt(root.settingsTab, source, screen)
     }
 
-    function toggleMediaAt(source, screen): void {
-        if (root.open && root.activeTab === root.mediaTab) {
+    function toggleTabAt(tab: int, source, screen): void {
+        if (root.open && root.activeTab === tab) {
             root.close()
             return
         }
-        root.showTabAt(root.mediaTab, source, screen)
+        root.showTabAt(tab, source, screen)
     }
 
     // a page compiled after its files changed can fail against types compiled at start; only a new engine clears them
