@@ -185,15 +185,9 @@ FittedPopupWindow {
         property bool _recentRetained:  false
         property bool _mediaRetained:   false
         property bool _settingsNavRetained: false
-        // closing unloads Settings and History, so a reopen builds them again: the panel opens at the height it closed at
-        // instead of growing from the placeholder's while the page fades in
-        property real _settingsClosedH: 0
-        property string _settingsClosedSection: ""
-        property real _recentClosedH: 0
-        property real _settingsNavClosedH: 0
         // the nav floors the settings panel and is unloaded with the page, so it stands in at its closing height too
         readonly property real _settingsNavH: _compactSettingsNav ? 0 : rail.settingsNavHeight > 0 ? rail.settingsNavHeight
-            : panel._settingsClosedSection === MenuState.settingsSection ? panel._settingsNavClosedH : 0
+            : MenuState.settingsClosedSection === MenuState.settingsSection ? MenuState.settingsNavClosedHeight : 0
 
         Component.onCompleted: {
             if (activeTab !== 0) _loadedDeferred = true
@@ -388,12 +382,12 @@ FittedPopupWindow {
                 } else {
                     rail.stopWarmDelays()
                     if (settingsLoader.item?.contentReady === true) {
-                        panel._settingsClosedH = settingsLoader.item.implicitHeight
-                        panel._settingsClosedSection = MenuState.settingsSection
-                        panel._settingsNavClosedH = rail.settingsNavHeight
+                        MenuState.settingsClosedHeight = settingsLoader.item.implicitHeight
+                        MenuState.settingsClosedSection = MenuState.settingsSection
+                        MenuState.settingsNavClosedHeight = rail.settingsNavHeight
                     }
                     if (recentLoader.item?.contentReady === true)
-                        panel._recentClosedH = recentLoader.item.implicitHeight
+                        MenuState.recentClosedHeight = recentLoader.item.implicitHeight
                     _closedUnload.restart()
                 }
             }
@@ -772,9 +766,9 @@ FittedPopupWindow {
                         width: parent.width
                         height: implicitHeight
                         implicitHeight: Math.max(1,
-                            panel.activeTab === 1 && panel._settingsClosedSection === MenuState.settingsSection
-                                && panel._settingsClosedH > 0 ? panel._settingsClosedH
-                            : panel.activeTab === 2 && panel._recentClosedH > 0 ? panel._recentClosedH
+                            panel.activeTab === 1 && MenuState.settingsClosedSection === MenuState.settingsSection
+                                && MenuState.settingsClosedHeight > 0 ? MenuState.settingsClosedHeight
+                            : panel.activeTab === 2 && MenuState.recentClosedHeight > 0 ? MenuState.recentClosedHeight
                             : panel.idealMinH - panel.pageTopInset - panel.pageBottomInset)
                         readonly property bool _shown:
                             tabContent._pageSlow || tabContent._pageError

@@ -29,6 +29,13 @@ AnchoredPopupState {
     readonly property bool recentActive: open && activeTab === recentTab
     readonly property bool mediaActive: open && activeTab === mediaTab
 
+    // the heights Settings, its nav and History closed at: the menu's window unloads a moment after it closes, so a
+    // reopen builds them again and opens at these instead of growing from the placeholder's while the page fades in
+    property real settingsClosedHeight: 0
+    property string settingsClosedSection: ""
+    property real settingsNavClosedHeight: 0
+    property real recentClosedHeight: 0
+
     // empty means every app; the rail owns the value, the page only reads it
     property string recentFilter: ""
     function setRecentFilter(name: string): void {

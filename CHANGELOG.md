@@ -36,6 +36,8 @@ settings file carries its own `__version` and migrates separately.
   while newer ones went to History.
 - A key or wheel step on the Night Light, display brightness or seek slider still applies when Escape or closing the
   menu follows it at once.
+- Settings and History reopen at the height they closed at again; the heights were lost as soon as the menu finished
+  closing.
 
 ## Releases
 
