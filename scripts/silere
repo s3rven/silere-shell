@@ -822,6 +822,8 @@ case "$command_name" in
         run_shell "$@"
         ;;
     service)
+        # start imports this environment into the user manager: the C locale kept for parsing would follow
+        [ "${1:-}" != start ] || restore_locale
         exec bash "$ROOT/scripts/service.sh" "$@"
         ;;
     stop)
