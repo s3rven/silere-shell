@@ -122,7 +122,7 @@ complete -c silere -n '__fish_seen_subcommand_from reset' -l history -d 'Also cl
 complete -c silere -n '__fish_seen_subcommand_from reset' -l yes -d 'Skip the confirmation'
 complete -c silere -n '__fish_seen_subcommand_from repair' -l apply -d 'Save local changes, restore shipped files'
 complete -c silere -n '__fish_seen_subcommand_from repair' -l undo -d 'Restore the latest repair stash'
-complete -c silere -n '__fish_seen_subcommand_from repair' -l yes -d 'Skip the confirmation'
+complete -c silere -n '__fish_seen_subcommand_from repair; and __fish_seen_subcommand_from --apply --undo' -l yes -d 'Skip the confirmation'
 
 complete -c silere -n '__silere_ipc_at 0' -a '(__silere_ipc_targets)'
 complete -c silere -n '__silere_ipc_at 1' -a '(__silere_ipc_functions)'

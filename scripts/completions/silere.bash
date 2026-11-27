@@ -38,7 +38,10 @@ _silere() {
                         fi
                     done < <(command silere ipc settings list '' 2>/dev/null)
                 fi ;;
-            run) [ "$COMP_CWORD" -eq 2 ] && words=(--startup --supervised) ;;
+            # the two flags go in either order, each once
+            run) for flag in --startup --supervised; do
+                    [[ " ${COMP_WORDS[*]:2:COMP_CWORD-2} " == *" $flag "* ]] || words+=("$flag")
+                done ;;
             use)
                 words=(--dry-run)
                 # readline adds directories and quotes names containing spaces
@@ -47,7 +50,11 @@ _silere() {
             log) [ "$COMP_CWORD" -eq 2 ] && words=(--follow) ;;
             doctor) [ "$COMP_CWORD" -eq 2 ] && words=(--json --help) ;;
             update) [ "$COMP_CWORD" -eq 2 ] && words=(--apply --rollback) ;;
-            repair) words=(--apply --undo --yes) ;;
+            # --yes only confirms an --apply or --undo, and only after it
+            repair) if [ "$COMP_CWORD" -eq 2 ]; then words=(--apply --undo)
+                elif [ "$COMP_CWORD" -eq 3 ] && [[ "${COMP_WORDS[2]}" == --apply || "${COMP_WORDS[2]}" == --undo ]]; then
+                    words=(--yes)
+                fi ;;
             reset) words=(--apply --undo --history --yes) ;;
             service)
                 # one of its words, then --dry-run only after install

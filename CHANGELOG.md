@@ -73,6 +73,7 @@ settings file carries its own `__version` and migrates separately.
   update that does not load.
 - `silere service start` keeps your locale for the shell and the session, instead of starting them in the C locale.
 - The updater's repair and rollback hints work when copied for a checkout whose path has a space.
+- Shell completion offers `--yes` only after `repair --apply` or `--undo`, and `run`'s two flags in either order.
 
 ## Releases
 
