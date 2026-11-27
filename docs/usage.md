@@ -109,7 +109,7 @@ oldest one first.
 | To | Use |
 |---|---|
 | Hold back one app | Mute on its history page. Its popups go straight to history. Unmute there or under Muted apps in Settings › Feedback › History. |
-| Hold back everything | Do Not Disturb in Home or Quick actions, or `silere toggle dnd`. It can end after an hour or when quiet hours end, and Scheduled do not disturb in Settings › Feedback › Notifications sets quiet hours. Let critical through decides whether critical ones still show. |
+| Hold back everything | Do Not Disturb in Home or Quick actions, or `silere toggle dnd`. It can end after an hour or when quiet hours end, and Scheduled Do Not Disturb in Settings › Feedback › Notifications sets quiet hours. Let critical through decides whether critical ones still show. |
 | Clear the popups at once | Clear all, shown with two or more popups, or `silere dismiss all`. History keeps them. |
 | Hide content while presenting | Presentation Mode, in Quick actions or Do Not Disturb's options. It hides every notification's content, critical ones included, and keeps the screen awake until you turn it off. |
 | Keep popups off a shared screen | On by default where the compositor reports screen sharing; a red mark sits beside the clock while you share. Hide while sharing screen turns it off. |

@@ -194,7 +194,7 @@ ddcutil --bus 7 getvcp 10 --brief
 - If both commands work but Silere still misses the monitor, include their output and the connector name in a
   [bug report](#reporting-a-problem).
 
-### Night light is unavailable on niri
+### Night Light is unavailable on niri
 
 Install `wlsunset`. `hyprsunset` needs Hyprland and cannot set niri's display gamma.
 

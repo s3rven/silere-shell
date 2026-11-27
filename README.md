@@ -45,7 +45,7 @@ Idle, it uses about 100 MB of memory and well under 1% of one core
 Silere fits if you run Hyprland or niri and want the bar, notifications and quick settings from one program,
 set up in its menu instead of config files. You bring the rest of the desktop: a launcher, a lock screen and
 idle daemon, a wallpaper tool, and Matugen for colours from the wallpaper. [Companions](docs/companions.md)
-shows how they connect. I run Silere on Hyprland; on niri it is tested in CI.
+shows how they connect. I run Silere on Hyprland; on niri, CI checks its panels and popups.
 
 <p align="center">
   <img src="assets/shot-themes.webp" alt="One desktop shown in colours Matugen takes from the wallpaper and in the neutral theme" width="100%"/>
