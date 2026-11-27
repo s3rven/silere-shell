@@ -70,8 +70,10 @@ MenuRow {
 
     height: Math.max(Metrics.rowHeightFor(48), Metrics.snap4Up(_textCol.implicitHeight + 16))
 
-    // visibility gates input, but should not change the resting appearance
-    opacity: root.passive || (root.enabled && root.available) ? 1.0 : Theme.disabledOpacity
+    // visibility gates input, but should not change the resting appearance. A row that says why it cannot be used (the
+    // hardware switch) stays readable, as Quick Actions and Settings keep theirs; only its switch dims
+    readonly property bool _explainsUnavailable: root.enabled && !root.available && root.statusColor.a > 0
+    opacity: root.passive || (root.enabled && root.available) || root._explainsUnavailable ? 1.0 : Theme.disabledOpacity
     MotionBehavior on opacity {NumberAnimation { duration: Motion.medium } }
 
     Accessible.role: root.showSwitch ? Accessible.CheckBox
@@ -239,6 +241,7 @@ MenuRow {
             anchors.right:          parent.right
             anchors.verticalCenter: parent.verticalCenter
             checked:     root.active
+            opacity:     root._explainsUnavailable ? Theme.disabledOpacity : 1.0
             highlighted: _hover.hovered && root._canTap
             pressed: _tap.pressed
             accentColor: root.accentColor
