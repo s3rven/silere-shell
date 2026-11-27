@@ -2757,10 +2757,17 @@ ShellRoot {
         home.controlRequested.disconnect(noteChoices)
 
         SystemTools._tools = Object.assign({}, SystemTools._tools, { powerprofilesctl: false })
+        if (vitals) vitals.batteryShown = false
         requested = null
         MenuState.homePicker = "power"
         root._check(home._picker === "" && requested && requested.sizeText !== undefined,
-            "without power profiles the battery shortcut closes inline controls and reveals system readings")
+            "without power profiles or a battery the battery shortcut closes inline controls and reveals system readings")
+        if (vitals) vitals.batteryShown = true
+        MenuState.homePicker = "power"
+        root._check(home._picker === "battery",
+            "without power profiles the battery shortcut opens the battery's details instead")
+        home._closePicker()
+        if (vitals) vitals.batteryShown = Qt.binding(() => Battery.available)
 
         Brightness._device = brightnessWas.device
         Brightness.maxBrightness = brightnessWas.max

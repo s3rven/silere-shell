@@ -47,6 +47,7 @@ settings file carries its own `__version` and migrates separately.
 - On a computer without Wi-Fi, clicking the network widget with the cable unplugged shows Ethernet as Disconnected
   instead of a Home page with no network row.
 - On a desktop, hovering the battery pill for a low mouse or keyboard names the device.
+- On a laptop without power modes (TLP, auto-cpufreq), clicking the battery opens its details in Home.
 
 ## Releases
 

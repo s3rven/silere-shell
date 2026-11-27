@@ -143,6 +143,12 @@ PageShell {
             : want === "bt" && root._btAvailable ? _btRow : null
         const allowed = radioRow ? radioRow.expandable
             : want === "power" && PowerProfiles.available && PowerProfiles.choices.length > 1
+        // no power modes to pick (TLP, auto-cpufreq): the battery's own details are what the click was for
+        if (!allowed && want === "power" && _vitals.batteryOpenable) {
+            if (root._picker !== "battery") root._togglePicker("battery")
+            else root.controlRequested(_vitals, null)
+            return
+        }
         // an already open picker is still brought into view
         if (allowed && root._picker !== want) root._togglePicker(want)
         else if (allowed) {
