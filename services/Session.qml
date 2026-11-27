@@ -21,8 +21,8 @@ Singleton {
     readonly property bool canLockSleep: root.lockStateKnown && root._probeAvailable
         && Settings.lockCommand.length > 0 && Settings.suspendCommand.length > 0
     readonly property string readiness: root.canLockSleep
-        ? "Lock and Sleep waits for the session to confirm it is locked."
-        : "Lock and Sleep needs a locker and a login session that reports its lock state."
+        ? "Lock & sleep waits for the session to confirm it is locked."
+        : "Lock & sleep needs a locker and a login session that reports its lock state."
 
     function refresh(): void {
         if (!root._probeAvailable) return
@@ -83,7 +83,7 @@ Singleton {
         onExited: code => {
             const current = root._waitGeneration === root._generation && root.canLockSleep
             if (!current) {
-                root._cancelSleep("Session readiness changed. Sleep was cancelled.")
+                root._cancelSleep("Something changed while locking. Try Lock & sleep again.")
                 return
             }
             // a cached hint may predate an unlock, so request the lock on every action
@@ -122,7 +122,7 @@ Singleton {
             const current = root._waitGeneration === root._generation && root.canLockSleep
             if (!_wait.completedSuccessfully(code) || !current) {
                 root._cancelSleep(current ? "Could not confirm screen lock. Sleep was cancelled."
-                    : "Session readiness changed. Sleep was cancelled.")
+                    : "Something changed while locking. Try Lock & sleep again.")
                 return
             }
             root.busy = false

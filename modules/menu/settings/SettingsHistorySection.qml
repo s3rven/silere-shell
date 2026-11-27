@@ -54,7 +54,7 @@ Column {
             searchKey: "notifMutedApps"
             glyph: "󰂜"
             title: "No muted apps"
-            status: "Mute one from its page in history"
+            status: "Pick an app in the Notifications tab, then Mute"
             passive: true
         }
         // switching one off unmutes it, and the row leaves with it

@@ -101,7 +101,7 @@ Column {
             else add(repaired ? optional : attention, "󰉦", "Wallpaper palette",
                 SystemTools.matugenRepairState === "working" ? "Rewiring Matugen…"
                     : SystemTools.matugenRepairState === "done" ? "Rewired. Run your wallpaper or Matugen command."
-                    : SystemTools.matugenRepairState === "failed" ? "Could not rewire; run scripts/install.sh"
+                    : SystemTools.matugenRepairState === "failed" ? "Could not rewire; scripts/install.sh --repair-matugen shows why"
                     : MatugenTheme.loadState === "invalid" ? "Palette has missing or invalid colors"
                     : MatugenTheme.paletteStale ? "Palette removed; showing the last colors"
                     : "Matugen has not written one yet",
@@ -116,7 +116,7 @@ Column {
 
         if (NotifWatch.conflict.length > 0)
             add(attention, "󰂛", "Notifications blocked",
-                "Another daemon owns notifications", NotifWatch.conflict, false,
+                "Another daemon owns notifications; silere doctor shows how to stop it", NotifWatch.conflict, false,
                 "", Theme.warning)
 
         const tool = (g, n, v) => add(optional, g, n,
@@ -124,9 +124,9 @@ Column {
         if (!SystemTools.hasBrightnessctl)     tool("󰃟", "Brightness control", "brightnessctl")
         if (Settings.nightLightTool.length === 0) {
             if (ShellSettings.nightLightProvider === "auto")
-                tool("󰖙", "Night light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
+                tool("󰖙", "Night Light", Compositor.isHyprland ? "hyprsunset" : "wlsunset")
             else
-                add(attention, "󰖙", "Night light unavailable",
+                add(attention, "󰖙", "Night Light unavailable",
                     "Selected program cannot run", "Choose", false, "devices", Theme.warning)
         }
         if (Settings.soundSettingsCommand.length === 0)

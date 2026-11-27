@@ -4813,14 +4813,14 @@ ShellRoot {
             root._check(diagnostics._attentionIssues.some(issue =>
                     issue.n === "Screen lock unavailable" && issue.a === "devices")
                     && diagnostics._attentionIssues.some(issue =>
-                        issue.n === "Night light unavailable" && issue.a === "devices"),
+                        issue.n === "Night Light unavailable" && issue.a === "devices"),
                 "unavailable selected programs link to the page that can fix them")
             ShellSettings.lockProvider = "auto"
             ShellSettings.nightLightProvider = "auto"
             root._check(!diagnostics._attentionIssues.some(issue =>
-                    issue.n === "Screen lock unavailable" || issue.n === "Night light unavailable")
+                    issue.n === "Screen lock unavailable" || issue.n === "Night Light unavailable")
                     && diagnostics._optionalIssues.some(issue => issue.n === "Screen lock")
-                    && !diagnostics._optionalIssues.some(issue => issue.n === "Night light"),
+                    && !diagnostics._optionalIssues.some(issue => issue.n === "Night Light"),
                 "automatic providers keep missing add-ons optional and use installed alternatives")
             const lockToolsWas = SystemTools._tools
             SystemTools._tools = Object.assign({}, lockToolsWas, { loginctl: true })

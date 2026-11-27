@@ -122,7 +122,7 @@ Singleton {
         if (root.pending && !root.targetVerified) return "The release signature has not been verified"
         if (root.branch === "HEAD") return "The checkout is on a detached HEAD"
         if (root.branch.length > 0 && root.branch !== "main") return "The checkout is on branch " + root.branch
-        if (root.localChanges) return "The checkout has local changes; scripts/repair.sh --apply clears them"
+        if (root.localChanges) return "The checkout has local changes; silere repair --apply sets them aside"
         return ""
     }
 

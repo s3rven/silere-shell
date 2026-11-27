@@ -56,6 +56,8 @@ settings file carries its own `__version` and migrates separately.
   as at 100% instead of a third less.
 - Battery and temperature alerts read in sentence case, the same in a notification as on the OSD, and an app that fails
   to start says to run it in a terminal instead of blaming permissions.
+- Settings hints point at pages and commands that exist (the screenshot folder, a blocked update, Matugen repair,
+  another notification daemon), and Night Light and Do Not Disturb are named in Settings as on Home.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you

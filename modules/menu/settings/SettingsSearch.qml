@@ -240,7 +240,7 @@ Column {
                         ShellText {
                             anchors.fill: parent
                             visible: _input.text.length === 0
-                            text: "Find a setting…"
+                            text: "Find a setting"
                             color: Theme.menuTextDetail
                             font.pixelSize: Settings.fontSize
                             elide: Text.ElideRight

@@ -189,7 +189,7 @@ Column {
         }
         SelectRow {
             key: "nightLightProvider"
-            glyph: "󰖙"; label: "Night light"
+            glyph: "󰖙"; label: "Night Light"
             model: root._nightLightChoices
         }
         HintText {
@@ -197,8 +197,8 @@ Column {
             text: ShellSettings.nightLightProvider !== "auto"
                 ? "The chosen program is unavailable. Choose Automatic or install a compatible program."
                 : Compositor.isHyprland
-                    ? "Install hyprsunset or wlsunset to enable night light."
-                    : "Install wlsunset to enable night light on this compositor."
+                    ? "Install hyprsunset or wlsunset to enable Night Light."
+                    : "Install wlsunset to enable Night Light on this compositor."
         }
     }
 }

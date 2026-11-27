@@ -135,7 +135,7 @@ Column {
                         }
                         HintText {
                             visible: SystemTools.hasInotifywait && Screenshot.watcherRetired && !Compositor.isNiri
-                            text: "Create a screenshot folder, then recheck tools under Maintenance."
+                            text: "Create ~/Pictures/Screenshots, then press Refresh in Settings › System › Overview."
                         }
                         HintText {
                             // the base glow line is drawn either way; what is missing here is anything to react to

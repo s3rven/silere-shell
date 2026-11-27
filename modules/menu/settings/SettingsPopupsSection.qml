@@ -64,7 +64,7 @@ Column {
     SectionLabel { label: "QUIET HOURS" }
     SettingsCard {
         ToggleRow {
-            glyph: "󰂛"; label: "Scheduled do not disturb"
+            glyph: "󰂛"; label: "Scheduled Do Not Disturb"
             key: "dndSchedule"
         }
         CollapsibleSection {
@@ -86,7 +86,7 @@ Column {
         }
         ToggleRow {
             glyph: "󰀦"; label: "Let critical through"
-            description: "Past do not disturb, fullscreen and muted apps"
+            description: "Past Do Not Disturb, fullscreen and muted apps"
             key: "notifCriticalBypass"
             available: ShellSettings.notifPopupEnabled
             dependsNote: "Popups are off"

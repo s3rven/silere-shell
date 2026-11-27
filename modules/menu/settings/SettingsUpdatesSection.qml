@@ -319,13 +319,13 @@ Column {
             HintText {
                 visible: Updates.backgroundDeferred && Updates.supported
                     && (Updates.ready || Updates.isChecking || Updates.lastFailed)
-                text: "Automatic checks paused on metered connection"
+                text: "Automatic checks are paused on a metered connection."
             }
         }
         ControlRow {
             visible: Updates.restartNeeded
             glyph: "󰑐"
-            title: "Restart to finish updating"
+            title: "Reboot to finish updating"
             status: Updates.restartReason === "kernel" ? "The running kernel was replaced" : "An update asked for one"
             passive: true
         }
@@ -333,7 +333,7 @@ Column {
             glyph: "󰚰"; label: "Track package updates"
             key: "updatesWidget"
             available: !SystemTools.ready || Updates.supported
-            dependsNote: Updates.canConfigureAur ? "Enable AUR packages below" : "No supported checker"
+            dependsNote: Updates.canConfigureAur ? "Include AUR packages below" : "No supported checker"
         }
         // under tracking like any dependent row, except where it is the switch that makes tracking possible
         CollapsibleSection {

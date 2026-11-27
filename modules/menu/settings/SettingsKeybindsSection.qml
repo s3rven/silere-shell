@@ -196,7 +196,7 @@ Column {
             : root.rows.length === 0 ? "Hyprland reports no keybinds."
             : root.shown.length === 0 ? "No keybind matches."
             : root.query.trim().length > 0 ? root.shown.length + " of " + root.rows.length + " keybinds"
-            : root.rows.length + " keybinds, as your Hyprland config sets them"
+            : root.rows.length + (root.rows.length === 1 ? " keybind" : " keybinds") + ", as your Hyprland config sets them"
         textColor: root.failure.length > 0 ? Theme.menuTextWarning : Theme.menuTextDetail
     }
     HintText {
