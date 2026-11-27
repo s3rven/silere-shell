@@ -162,6 +162,8 @@ Item {
         card._folding = false
         if (card.collapseOnDismiss) _collapseAnim.restart()
         _exitTimer.start()
+        // a dismiss-all batch closes together at its end
+        if (card.collapseOnDismiss) Notifications.closeLeaving(card.notifId, card.notification, card._expired)
     }
 
     // pushed past the stack's visible limit by newer cards: it folds and fades where it stands, then its slot lets it go.

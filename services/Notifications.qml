@@ -1101,6 +1101,17 @@ Singleton {
         root._dismissObject(notifId, notification, expired, true)
     }
 
+    // a card closes its notification as its exit starts, unmarked, so _onClosed archives it and holds the card as a
+    // withdrawal: the sender hears at once, and a card whose exit timer never fires (nothing drawing) still closes it
+    // A sender's close reaches here too, from inside its closed signal while still tracked: its withdrawal is recorded
+    // first
+    function closeLeaving(notifId: int, notification, expired): void {
+        if (!notification?.tracked || root._withdrawalOf(notification)
+                || !root.list.some(e => e.id === notifId && e.notification === notification)) return
+        if (expired === true) notification.expire()
+        else notification.dismiss()
+    }
+
     function dismissObjects(items, expired): void {
         const pending = Array.isArray(items) ? items : []
         const retired = []

@@ -379,6 +379,19 @@ ShellRoot {
             "an action that closes its notification still lets the card slide out")
         root.check(root.waitFor(() => notifStack.count === 0, 1000), "and then the card leaves the stack")
 
+        // dismissed by hand, the notification closes as the card starts to leave, not when its exit timer ends
+        const dismissedId = root.sendNotification("Dismissed by hand", "[]")
+        root.waitFor(() => notifStack.count === 1 && notifStack.itemAt(0).card !== null, 1000)
+        input.wait(400)
+        const dismissed = notifStack.count === 1 ? notifStack.itemAt(0).card : null
+        if (dismissed) dismissed.dismiss(false)
+        root.check(dismissed !== null && dismissed._leaving && notifStack.count === 1
+                && !Notifications.list.some(e => e.id === dismissedId),
+            "a dismissed notification is closed as its card starts to leave, so a stalled exit cannot keep it open")
+        root.check(root.waitFor(() => notifStack.count === 0, 1000) && Notifications._withdrawals.length === 0
+                && Notifications.historyModel.get(0).summary === "Dismissed by hand",
+            "and the card still finishes its exit, archived once")
+
         ShellSettings.reduceMotion = true
         const quick = root.sendNotification("Withdrawn under reduced motion", "[]")
         root.waitFor(() => notifStack.count === 1, 1000)
