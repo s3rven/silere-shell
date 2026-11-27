@@ -168,7 +168,9 @@ Item {
                 on_ProvidedIconSourceChanged: _tile._providedIconFailed = false
                 readonly property bool needsAttention: modelData.status === Status.NeedsAttention
                 readonly property bool hidden: ShellSettings.trayItemHidden(ShellSettings.trayKey(modelData))
+                // this bar's icon only, as the clock lights only the bar its calendar opened from
                 readonly property bool _menuOpen: TrayMenuState.open && TrayMenuState.sourceItem === modelData
+                    && TrayMenuState.anchorSource === _tile
                 onHiddenChanged: if (!_tile.hidden) _tile._providedIconFailed = false
                 // hidden, not filtered out: a filtered model recreates the icon on every un-hide
                 visible: !hidden

@@ -18553,6 +18553,8 @@ ShellRoot {
                     && item.color !== undefined && item.width === trayTile.width)
                 f.input.mouseMove(f.contentItem, 390, 85)
                 TrayMenuState.sourceItem = app
+                // the tile is the anchor, as _openMenu passes it: only its own bar lights
+                TrayMenuState.anchorSource = trayTile
                 TrayMenuState.open = true
                 root._check(cap && cap.height === Metrics.barRowHeight
                         && Math.abs(cap.y + cap.height / 2 - trayTile.height / 2) < 0.01

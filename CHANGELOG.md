@@ -85,6 +85,7 @@ settings file carries its own `__version` and migrates separately.
 - The menu opened from its keybind puts the focus on its tab, so the arrow keys move at once, as in Quick Actions
   and tray menus.
 - Wi-Fi or Bluetooth blocked by the hardware switch keeps its row readable in Home; only the switch dims.
+- With a bar on each monitor, an open tray menu lights its app's icon only on the bar it opened from.
 
 ## Releases
 
