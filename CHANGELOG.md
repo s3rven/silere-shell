@@ -19,6 +19,8 @@ settings file carries its own `__version` and migrates separately.
   for the pointer to move. Browsers hold their wake lock through the idle daemon (hypridle), which the compositor and
   so the shell never hear of; a browser's playing media now counts as that lock.
 - Settings > System > Keybinds reads a hyprlang `workspace, -1` bind as going to the previous workspace, not to workspace -1.
+- On niri, the workspace arrow points to a window that needs you on a monitor whose bar is off, as it does on
+  Hyprland.
 
 ## Releases
 

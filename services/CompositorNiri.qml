@@ -186,10 +186,12 @@ QtObject {
             const w = wins[i]
             if (!w) continue
             const home = byId[w.workspace_id] || null
+            // ref: the bar's urgent arrow matches urgentRefs against these
             out.push({
                 appId: root._identity(w.app_id),
                 wsId: home ? home.idx : -1,
-                output: home ? (home.output ?? "") : ""
+                output: home ? (home.output ?? "") : "",
+                ref: w.id
             })
         }
         return out

@@ -12228,6 +12228,9 @@ ShellRoot {
         root._check(niri.workspaces.length === 1 && niri.workspaces[0].occupied
                 && niri.activeToplevel.ref === 92 && niri.focusedMonitor === "DP-2",
             "fresh niri snapshots repopulate state after a disconnect")
+        root._check(niri.workspaceToplevels.length === 1 && niri.workspaceToplevels[0].ref === 92
+                && niri.workspaceToplevels[0].output === "DP-2",
+            "niri workspace windows carry the id the urgent arrow matches on a bar-less monitor")
 
         niri.destroy()
 
