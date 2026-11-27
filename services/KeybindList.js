@@ -166,10 +166,10 @@ function keyDirection(key) {
     return keyDirections.hasOwnProperty(k) ? keyDirections[k] : ""
 }
 
-// a workspace argument as words: `2` workspace 2, `e+1` the next workspace, `special:scratch` special workspace scratch
+// a workspace argument as words: `2` workspace 2, `e+1` or `+1` the next workspace, `special:scratch` special workspace scratch
 function workspace(arg) {
     var a = String(arg || "").trim()
-    if (/^-?\d+$/.test(a)) return "workspace " + a
+    if (/^\d+$/.test(a)) return "workspace " + a
     if (/^[emr]?\+\d+$/.test(a)) return "the next workspace"
     if (/^[emr]?-\d+$/.test(a)) return "the previous workspace"
     if (a === "previous" || a === "previous_per_monitor") return "the previous workspace"

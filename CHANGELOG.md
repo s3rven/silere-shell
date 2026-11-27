@@ -18,6 +18,7 @@ settings file carries its own `__version` and migrates separately.
 - A notification that arrives while a web browser plays video keeps its usual timer instead of waiting over the video
   for the pointer to move. Browsers hold their wake lock through the idle daemon (hypridle), which the compositor and
   so the shell never hear of; a browser's playing media now counts as that lock.
+- Settings > System > Keybinds reads a hyprlang `workspace, -1` bind as going to the previous workspace, not to workspace -1.
 
 ## Releases
 

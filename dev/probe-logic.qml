@@ -13618,6 +13618,9 @@ ShellRoot {
                 && old[9].silere === "" && old[13].silere === "calendar toggle" && old[13].own,
             "a hyprlang bind reads from its dispatcher and argument, past a launcher wrapper; a Silere call or global in "
                 + "Silere's words, another shell's call as written, and a description carrying Silere's words counts as its call")
+        root._check(KeybindList.workspace("-1") === "the previous workspace" && KeybindList.workspace("+2") === "the next workspace"
+                && KeybindList.workspace("3") === "workspace 3",
+            "hyprlang's bare -1 and +1 are relative workspaces, not ids")
 
         // Silere's calls worth a key: bound ones say where, the rest offer the first free keys as a line for that config
         const offer = (list, isLua, globals, launcher) => KeybindList.suggest(list, isLua, globals, launcher)
