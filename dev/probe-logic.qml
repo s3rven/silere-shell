@@ -15616,6 +15616,20 @@ ShellRoot {
             "a hook waiting on a busy runner keeps its place and takes the newest arguments")
         Hooks._queued = ({})
         Hooks._queueOrder = []
+        const budgetPresentWas = Hooks._present
+        const budgetTimesWas = Hooks._runTimes
+        Hooks._present = { "dnd-changed": true, "notification": true }
+        Hooks._runTimes = Array(Hooks.maxRunsPerSecond).fill(Date.now())
+        Hooks.fire("dnd-changed", ["on"])
+        Hooks.fire("notification", ["Probe"])
+        root._check(Hooks._queueOrder.length === 1 && Hooks._queued["dnd-changed"] !== undefined
+                && Hooks._drainLater.running,
+            "a state hook refused by a notification flood runs once the flood passes, a notification does not")
+        Hooks._drainLater.stop()
+        Hooks._queued = ({})
+        Hooks._queueOrder = []
+        Hooks._present = budgetPresentWas
+        Hooks._runTimes = budgetTimesWas
 
         root._startHistoryRetentionProbe()
     }

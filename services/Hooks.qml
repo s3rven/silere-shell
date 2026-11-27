@@ -81,6 +81,11 @@ Singleton {
 
     function fire(event: string, args): void {
         if (root._present[event] !== true) return
+        const argv = [root.directory + "/" + event]
+        const list = args || []
+        const n = Math.min(list.length, root.maxArgs)
+        for (let i = 0; i < n; i++)
+            argv.push(SafeText.singleLineText(String(list[i]), root.maxArgChars))
         if (!root._budgetAllows()
                 && !(event === "battery-critical" && root._criticalAllows())) {
             if (!root._throttled) {
@@ -88,16 +93,15 @@ Singleton {
                 console.warn("silere-shell: hooks exceeded "
                     + root.maxRunsPerSecond + " runs/s; dropping until it settles")
             }
+            // a state change is recorded as seen before it fires, so a refused one would never come back; a
+            // notification is the flood itself
+            if (event !== "notification") { root._queue(event, argv); root._drainLater.restart() }
             return
         }
         root._throttled = false
-        const argv = [root.directory + "/" + event]
-        const list = args || []
-        const n = Math.min(list.length, root.maxArgs)
-        for (let i = 0; i < n; i++)
-            argv.push(SafeText.singleLineText(String(list[i]), root.maxArgChars))
         if (!root._claimRunner(argv)) root._queue(event, argv)
     }
+    readonly property Timer _drainLater: Timer { interval: 1000; onTriggered: root._drain() }
 
     // execDetached reports no exit, so a rate cap alone cannot bound how many are alive at once
     component HookRunner: BoundedProcess {
