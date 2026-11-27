@@ -618,9 +618,12 @@ Singleton {
             const accent = root.accentFrom(colors)
             root._themeImage = ""
             if (accent.length === 0) return
-            ShellSettings.neutralAccent = accent
-            ShellSettings.neutralAccentAuto = false
-            ShellSettings.neutralTheme = true
+            // one write, not three
+            ShellSettings.batch(() => {
+                ShellSettings.neutralAccent = accent
+                ShellSettings.neutralAccentAuto = false
+                ShellSettings.neutralTheme = true
+            })
         }
     }
     readonly property IpcHandler _themeIpc: IpcHandler {

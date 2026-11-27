@@ -93,6 +93,7 @@ settings file carries its own `__version` and migrates separately.
 - Quick Actions lights Power Mode for Power Saver as well as Performance, as Home does.
 - Without JetBrainsMono Nerd Font, opening Settings no longer switches the shell to the first font installed (often a
   serif); another Nerd Font stands in.
+- `silere theme` saves its accent and mode in one write instead of two.
 
 ## Releases
 
