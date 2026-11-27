@@ -1457,7 +1457,7 @@ elif [ -L "$CLI_LINK" ] \
     had_cli=true
 elif [ -e "$CLI_LINK" ] || [ -L "$CLI_LINK" ]; then
     _warn "$CLI_LINK already exists and is not owned by this Silere install"
-    _skip "left it untouched; run $CLI_TARGET directly"
+    _skip "left it untouched; run $(_silere_pasteable "$CLI_TARGET") directly"
 elif _ask "Install the silere command (menu, toggle, volume, status, update and more)?"; then
     if _dry; then
         _would "create $CLI_LINK → $CLI_TARGET"
@@ -1470,7 +1470,7 @@ elif _ask "Install the silere command (menu, toggle, volume, status, update and 
         did_cli=true
     fi
 else
-    _skip "run it directly, or add it later with: $CLI_TARGET link"
+    _skip "run it directly, or add it later with: $(_silere_pasteable "$CLI_TARGET") link"
 fi
 # a dry run only plans the command link, and the completions follow it
 if $cli_planned || { [ -L "$CLI_LINK" ] \
@@ -1984,7 +1984,7 @@ elif _ask_no "Install daily update-check timer (flags pending updates in the bar
         _warn "units installed but enable failed — run: systemctl --user enable --now silere-update.timer"
     fi
 else
-    _skip "skipped — enable later with: $ROOT/scripts/update.sh --timer-enable"
+    _skip "skipped — enable later with: $(_silere_pasteable "$ROOT/scripts/update.sh") --timer-enable"
 fi
 
 # ── summary ──────────────────────────────────────────────────────────────────────

@@ -69,8 +69,8 @@ settings file carries its own `__version` and migrates separately.
   back over yours later.
 - Updates install where an older qmllint is present (Fedora's Qt tools, Qt 6.10), instead of being refused as an
   update that does not load.
-- The hints that the updater, the installer and `repair.sh` print quote the checkout's path, so they paste into bash,
-  zsh or fish even with spaces or accented letters in it.
+- The hints that the updater, the installer, `silere try` and `repair.sh` print quote the checkout's path, so they
+  paste into bash, zsh or fish even with spaces or accented letters in it.
 - Shell completion offers `--yes` only after `repair --apply` or `--undo`, and `run`'s two flags in either order.
 - A notification that times out while you are away with browser music playing counts on the bell as missed.
 - The menu opened from its keybind puts the focus on its tab, so the arrow keys move at once, as in Quick Actions

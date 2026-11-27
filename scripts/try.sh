@@ -259,5 +259,5 @@ wait "$inner_pid" || status=$?
 [ "$status" = 0 ] || exit "$status"
 printf 'Preview ended and its files are gone. Your Silere settings and compositor config are as they were.\n'
 if [ ! -x "$(command -v silere 2>/dev/null || true)" ]; then
-    printf 'To install it: bash %s/scripts/install.sh\n' "$ROOT"
+    printf 'To install it: bash %s\n' "$(_sh_word "$ROOT/scripts/install.sh")"
 fi
