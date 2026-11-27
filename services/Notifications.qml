@@ -1217,6 +1217,8 @@ Singleton {
                 } else root._adoptKept(n)
                 return
             }
+            // one reaching this server proves Silere owns the name: a daemon shown as blocking it has gone
+            if (NotifWatch.conflict.length > 0) NotifWatch.recheck()
             root._ensurePersistentState()
             // a muted app is quiet by choice, not missed: it goes to history without counting.
             // Urgency follows the same critical setting as do not disturb

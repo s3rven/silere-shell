@@ -102,6 +102,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere doctor` warns when a Bluetooth adapter is present but bluetooth.service is not running, which hides
   Bluetooth everywhere, and `silere toggle bluetooth` asks whether it is running.
 - On a computer without a keyboard light, the open menu no longer looks for one every 15 seconds.
+- After you stop another notification daemon, the warning that it owns notifications clears with the first
+  notification Silere receives, instead of at the next tool scan.
 
 ## Releases
 
