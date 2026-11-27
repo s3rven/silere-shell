@@ -919,14 +919,15 @@ Singleton {
 
     // do not disturb from a key, or quiet hours starting, takes the cards already up as well (GNOME and COSMIC do too),
     // but only those that would time out anyway: a critical or resident card, or one with a reply being typed, stays
-    onEffectiveDndChanged: if (root.effectiveDnd) root._retireActive(e => root._keptThroughDnd(e))
+    onEffectiveDndChanged: if (root.effectiveDnd) root._retireActive(e => root._keptThroughDnd(e), e => !root.isSeen(e.id))
     function _keptThroughDnd(e): bool {
         const n = e ? e.notification : null
         return !n || n.urgency === NotificationUrgency.Critical || n.expireTimeout === 0 || e.id === root.replyingId
     }
 
-    // with a keep test, only the cards it turns away go
-    function _retireActive(keeps): void {
+    // with a keep test, only the cards it turns away go; those the missed test picks count as missed, as a silenced
+    // arrival would: do not disturb picks the ones never shown (waiting behind an open panel or the more chip)
+    function _retireActive(keeps, missed): void {
         const active = Array.isArray(root.list) ? root.list.slice() : []
         const kept = keeps ? active.filter(e => keeps(e)) : []
         if (kept.length === active.length) return
@@ -939,8 +940,11 @@ Singleton {
             const e = active[i]
             if (!e || kept.indexOf(e) >= 0) continue
             if (e.notification) {
-                root._archiveNotification(e.notification, e.id,
+                const archived = root._archiveNotification(e.notification, e.id,
                     root._times[e.id] ?? e.time ?? Date.now(), false)
+                if (missed && missed(e)
+                        && root.missedOnArrival(archived, e.notification.transient, e.notification.appName))
+                    root.missedCount++
                 // untracking closes as dismissed by the user, which an app can take as read
                 e.notification.expire()
             }

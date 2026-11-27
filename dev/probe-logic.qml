@@ -15416,7 +15416,8 @@ ShellRoot {
             { urgency: 1, expireTimeout: -1, summary: "Timed" },
             { urgency: 2, expireTimeout: -1, summary: "Critical" },
             { urgency: 1, expireTimeout: 0, summary: "Resident" },
-            { urgency: 1, expireTimeout: 5000, summary: "Being answered" }
+            { urgency: 1, expireTimeout: 5000, summary: "Being answered" },
+            { urgency: 1, expireTimeout: -1, summary: "Shown" }
         ]
         for (const n of dndCards) Object.assign(n, { transient: false, tracked: true, appName: "Probe", appIcon: "",
             desktopEntry: "", body: "", expire() { this.reason = "expired"; this.tracked = false } })
@@ -15425,10 +15426,17 @@ ShellRoot {
         ShellSettings.dnd = false
         Notifications.list = dndCards.map((n, i) => ({ notification: n, id: 71 + i, time: Date.now() }))
         Notifications.replyingId = 74
+        const dndSeenWas = Notifications._seen
+        Notifications._seen = ({ "75": true })
+        const dndMissedWas = Notifications.missedCount
         ShellSettings.dnd = true
         root._check(Notifications.activeCount === 3 && dndCards[0].reason === "expired"
-                && dndCards.slice(1).every(n => n.tracked),
+                && dndCards.slice(1, 4).every(n => n.tracked) && dndCards[4].reason === "expired",
             "turning on do not disturb retires the cards that would time out anyway; critical, resident and answered ones stay")
+        root._check(MenuState.recentActive || Notifications.missedCount === dndMissedWas + 1,
+            "a card do not disturb retires before it was ever shown counts as missed; one already shown does not")
+        Notifications.missedCount = dndMissedWas
+        Notifications._seen = dndSeenWas
         Notifications.replyingId = replyingWas
         ShellSettings.dnd = dndWas
         Notifications.list = []
