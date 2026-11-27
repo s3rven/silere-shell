@@ -14772,6 +14772,12 @@ ShellRoot {
         NotifWatch.recheck()
         root._check(ownerKept && !NotifWatch._checked && NotifWatch.conflict === "",
             "a tool rescan keeps the known notification owner until the bus answers, so its alert does not fire again")
+        NotifWatch.conflict = "mako"
+        const ownedGeneration = NotifWatch._generation
+        NotifWatch.owned()
+        root._check(NotifWatch.conflict === "" && NotifWatch._checked && NotifWatch._generation > ownedGeneration,
+            "a notification reaching Silere clears another daemon's conflict at once and ignores a check in flight")
+        NotifWatch._checked = false
     }
 
     function _checksAccentBalanceAndAnchors(): void {

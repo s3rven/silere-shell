@@ -30,6 +30,14 @@ Singleton {
         if (!root._checked) root.conflict = ""
     }
 
+    // a notification reaching Silere's own server proves it holds the name: clear at once, ignore a check in flight
+    function owned(): void {
+        root._generation++
+        _delay.stop()
+        root._checked = true
+        root.conflict = ""
+    }
+
     Component.onCompleted: _check()
     Connections {
         target: SystemTools
