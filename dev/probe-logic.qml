@@ -13500,6 +13500,12 @@ ShellRoot {
                 && Audio.captureSummaryOf([stream("firefox", "Firefox"), stream("obs", "OBS")]) === "2 apps listening"
                 && Audio.captureSummaryOf([]) === "",
             "the microphone names one app recording twice (two browser tabs) as that app, not as two apps")
+        const capStream = { isStream: true }, mutedMic = { isStream: false, audio: { muted: true } }
+        const liveMic = { isStream: false, audio: { muted: false } }
+        root._check(Audio.streamHeard(capStream, [{ source: liveMic, target: capStream }], true)
+                && !Audio.streamHeard(capStream, [{ source: mutedMic, target: capStream }], false)
+                && Audio.streamHeard(capStream, [], false) && !Audio.streamHeard(capStream, [], true),
+            "an app recording from an unmuted microphone is heard though the default one is muted, and the other way round")
         const indicatorsWas = Indicators.items
         Indicators.items = []
         const indicatorSet = Indicators.set("vpn-work", "󰦝", "office") === "ok" && Indicators.set("build", "󰔟", "") === "ok"

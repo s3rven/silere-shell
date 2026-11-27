@@ -345,6 +345,20 @@ Singleton {
     readonly property int playbackCount: playbackStreams.length
     readonly property int captureCount: captureStreams.length
     readonly property bool micActive: captureCount > 0
+    // an app pinned to another microphone is heard through that one, whatever the default's mute says; before its link
+    // shows, the default decides
+    function streamHeard(stream, links, defaultMuted: bool): bool {
+        let linked = false
+        for (let i = 0; i < links.length; i++) {
+            const l = links[i]
+            if (!l || l.target !== stream || !l.source || l.source.isStream) continue
+            linked = true
+            if (!(l.source.audio && l.source.audio.muted)) return true
+        }
+        return !linked && !defaultMuted
+    }
+    function heard(stream): bool { return root.streamHeard(stream, root._linkGroups, root.micMuted) }
+    readonly property bool micHeard: root.captureStreams.some(s => root.heard(s))
     readonly property string captureSummary: root.captureSummaryOf(root.captureStreams)
     // by app, not stream: two browser tabs recording are one app listening
     function captureSummaryOf(nodes): string {

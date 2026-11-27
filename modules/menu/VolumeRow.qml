@@ -296,13 +296,14 @@ Item {
                     delegate: InlineOptionRow {
                         id: _cap
                         required property var modelData
+                        readonly property bool _heard: Audio.heard(modelData)
 
                         width: _optCol.width
-                        glyph: Audio.micMuted ? "󰍭" : "󰍬"
+                        glyph: _cap._heard ? "󰍬" : "󰍭"
                         label: Audio.streamLabel(modelData)
-                        status: Audio.micMuted ? "Muted" : "Listening"
+                        status: _cap._heard ? "Listening" : "Muted"
                         accentColor: Theme.error
-                        highlighted: !Audio.micMuted
+                        highlighted: _cap._heard
                         interactive: false
                     }
                 }

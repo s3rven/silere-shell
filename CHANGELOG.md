@@ -50,6 +50,8 @@ settings file carries its own `__version` and migrates separately.
 - On a laptop without power modes (TLP, auto-cpufreq), clicking the battery opens its details in Home.
 - With the OSD off, a low battery sends a notification instead of nothing; only the critical level used to.
 - Two browser tabs recording read as one app listening on the microphone widget, not two.
+- The microphone widget and the apps under Input follow the microphone each app records from, so they no longer read
+  Muted while an app hears an unmuted one.
 
 ## Releases
 

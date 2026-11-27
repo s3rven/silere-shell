@@ -9,7 +9,7 @@ Pill {
     readonly property bool show: ShellSettings.barShowMic && Audio.micActive
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
-    readonly property bool _live: Audio.micActive && !Audio.micMuted
+    readonly property bool _live: Audio.micHeard
     readonly property bool _canSwitch: Audio.sourceCount > 1
 
     collapsed: !show
@@ -36,7 +36,7 @@ Pill {
     reserveText: "00%"
     accessibleName: {
         if (!Audio.micReady) return "Microphone"
-        const parts = [Audio.micMuted ? "Microphone muted" : "Microphone in use"]
+        const parts = [root._live ? "Microphone in use" : "Microphone muted"]
         if (Audio.captureSummary.length > 0) parts.push(Audio.captureSummary)
         if (!Audio.micMuted) parts.push(Math.round(Audio.micVolume * 100) + "%")
         if (Audio.sourceName.length > 0) parts.push(Audio.sourceName)
