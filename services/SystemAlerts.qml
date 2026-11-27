@@ -14,6 +14,7 @@ Singleton {
     readonly property bool canAlert: SystemTools.hasNotifySend || SystemTools.hasBusctl
 
     property bool _battCritSent: false
+    property bool _battLowSent: false
 
     // one channel per alert: the OSD carries the low tiers, and a critical one comes here because it stays on screen and
     // in history until dealt with. The OSD stands in only when this popup would not appear
@@ -115,6 +116,14 @@ Singleton {
                 "critical", "battery-caution")) _battCritSent = true
         }
     }
+    // the OSD carries the low tier; with the OSD off it comes here, or a low battery said nothing at all
+    function _checkBattLow(): void {
+        if (Battery.available && Battery.low && Battery.alertWarning === "low" && ShellSettings.osdBatteryWarn
+                && !ShellSettings.osdEnabled && !_battLowSent) {
+            if (_send("Battery Low", Math.round(Battery.pct) + "%" + (Battery.timeLabel ? " · " + Battery.timeLabel : ""),
+                "normal", "battery-low")) _battLowSent = true
+        }
+    }
     function _checkCpuCrit(): void {
         if (CpuTemp.critical && ShellSettings.osdTempWarn && !_cpuCritSent) {
             if (_send("CPU Critical Temperature",
@@ -125,6 +134,7 @@ Singleton {
 
     function _checkCurrentWarnings(): void {
         if (Battery.alertWarning === "critical") _checkBattCrit()
+        else if (Battery.alertWarning === "low") _checkBattLow()
         _checkCpuCrit()
         _checkBtBatteries()
     }
@@ -169,7 +179,8 @@ Singleton {
     function _rearmBattery(): void {
         const state = root.batteryRearmState(Battery.available, Battery.onBattery,
             Battery.pct, ShellSettings.batteryLowThreshold, Battery.criticalPct,
-            false, root._battCritSent)
+            root._battLowSent, root._battCritSent)
+        root._battLowSent = state.low
         root._battCritSent = state.critical
     }
 
@@ -321,8 +332,10 @@ Singleton {
         target: ShellSettings
 
         function onOsdBatteryWarnChanged(): void {
-            if (Battery.alertWarning === "critical") root._checkBattCrit()
-            root._checkBtBatteries()
+            root._checkCurrentWarnings()
+        }
+        function onOsdEnabledChanged(): void {
+            if (Battery.alertWarning === "low") root._checkBattLow()
         }
         function onOsdTempWarnChanged(): void {
             root._checkCpuCrit()
