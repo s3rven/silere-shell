@@ -78,6 +78,7 @@ Item {
     HoverCap {
         hot: root._canInteract && _rootHover.hovered && ShellSettings.barHoverHighlight
         pressed: root._canInteract && _tap.pressed
+        selected: MenuState.open && MenuState.anchorSource === root
         gate: root._animatable
     }
 

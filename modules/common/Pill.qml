@@ -295,6 +295,8 @@ Item {
         // the cursor's own test: a reading nothing answers a click on gets no capsule
         hot: root.hovered && (root.interactive || root.adjustable) && ShellSettings.barHoverHighlight
         pressed: root.visualPressed
+        // the page it opened is showing, as the clock marks its calendar and the tray its menu
+        selected: MenuState.open && MenuState.anchorSource === root
     }
 
     Item {

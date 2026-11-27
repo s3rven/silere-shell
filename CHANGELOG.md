@@ -89,6 +89,7 @@ settings file carries its own `__version` and migrates separately.
 - Greyed tray menu entries follow High contrast like every other disabled row.
 - With Reduce motion on, Clear history and the widget reset show no ring that never drains, and every confirm says
   Press again.
+- A bar widget stays marked while the menu page it opened is showing, as the clock and the tray already were.
 
 ## Releases
 
