@@ -11,6 +11,7 @@ Column {
     spacing: 0
 
     readonly property bool _usesPalette: !ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto
+    readonly property string _paletteStatus: ({ missing: "Missing", invalid: "Invalid", unreadable: "Unreadable" })[MatugenTheme.loadState] ?? ""
     readonly property string _paletteNote: {
         switch (MatugenTheme.loadState) {
         case "invalid":
@@ -349,14 +350,12 @@ Column {
             }
         }
 
+        // only when it has something to say: a loaded palette is watched live, so reloading it did nothing
         InlineOptionRow {
-            visible: root._usesPalette && MatugenTheme.palettePath.length > 0
+            visible: root._usesPalette && MatugenTheme.palettePath.length > 0 && root._paletteStatus.length > 0
             glyph: "󰑓"
             label: "Reload palette"
-            status: ({
-                loading: "Loading…", missing: "Missing", invalid: "Invalid",
-                unreadable: "Unreadable", ready: "Loaded"
-            })[MatugenTheme.loadState]
+            status: root._paletteStatus
             warning: MatugenTheme.loadState === "invalid" || MatugenTheme.loadState === "unreadable"
             onTriggered: MatugenTheme.reload()
         }

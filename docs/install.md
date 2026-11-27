@@ -218,8 +218,9 @@ package under `/usr/share`. Packaged installs print the one-time command that do
 same thing, `install.sh --repair-matugen`.
 
 In **Settings › Appearance › Theme**, choose **Wallpaper** or use the **Auto** accent
-with Neutral to see the palette status. **Accent role** picks a primary, secondary,
-or tertiary color for both sources. **Reload palette** rereads the file.
+with Neutral. **Accent role** picks a primary, secondary, or tertiary color for both
+sources. A palette that is missing or invalid shows **Reload palette**, which rereads
+the file; a working one is followed as it changes.
 After repairing the template, run your normal wallpaper or Matugen command to
 generate a fresh palette. If the file is invalid, Silere keeps the last working
 colors, or uses the built-in colors until the first valid palette arrives.
