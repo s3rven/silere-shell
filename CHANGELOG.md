@@ -101,6 +101,8 @@ settings file carries its own `__version` and migrates separately.
 - On niri, the `workspace-changed` hook gets a named workspace's name, as documented, not its number.
 - On niri, the installer's closing "or bind it" hint prints a niri bind instead of a command that breaks the config
   when pasted.
+- With one monitor, the bar's system, network and temperature readers rest while a fullscreen game or film covers the
+  bar, as they do in the overview.
 
 ## Releases
 

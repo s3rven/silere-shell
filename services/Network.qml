@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Networking
+import "../config"
 
 Singleton {
     id: root
@@ -113,7 +114,7 @@ Singleton {
     property bool _vpnRefreshPending: false
     // the Home page lists the VPN too, so a hidden network pill must not hide the tunnel there
     readonly property bool _vpnWanted: !Idle.isIdle && available
-        && (ShellSettings.barShowNetwork || MenuState.homeActive) && SystemTools.hasNmcli
+        && ((ShellSettings.barShowNetwork && !Motion.unseen) || MenuState.homeActive) && SystemTools.hasNmcli
 
     function signalTier(s: int): int {
         return s > 75 ? 3 : s > 50 ? 2 : s > 25 ? 1 : 0
@@ -761,8 +762,9 @@ Singleton {
         && deviceName.indexOf("/") < 0
         && deviceName.indexOf("..") < 0
     readonly property bool statsWanted: ShellSettings.barShowNetwork && ShellSettings.networkTrafficStats
+    // Motion.unseen: a fullscreen window covers the only bar that shows it
     readonly property bool _trafficWanted: root.statsWanted && root.statsDeviceReady
-        && !Idle.isIdle && !OverviewState.active
+        && !Idle.isIdle && !OverviewState.active && !Motion.unseen
     property bool _trafficLatch: false
     readonly property bool trafficActive: statsWanted && connected && _trafficLatch
     readonly property string trafficLabel: "󰁅 " + formatRate(downBps) + " 󰁝 " + formatRate(upBps)

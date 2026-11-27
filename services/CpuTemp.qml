@@ -27,7 +27,7 @@ Singleton {
         ShellSettings.osdTempWarn,
         ShellSettings.underlineGlow && ShellSettings.underlineTempGlow,
         OverviewState.active,
-        ShellSettings.barShowSystem && ShellSettings.systemShowTemp && !OverviewState.active)
+        ShellSettings.barShowSystem && ShellSettings.systemShowTemp && !OverviewState.active && !Motion.unseen)
     readonly property bool _wanted: _started && (_persistentNeed || needed) && !Idle.isIdle
     property string _sensorPath: ""
     property bool _reading: false
