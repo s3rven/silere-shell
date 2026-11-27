@@ -21,6 +21,7 @@ settings file carries its own `__version` and migrates separately.
 - Settings > System > Keybinds reads a hyprlang `workspace, -1` bind as going to the previous workspace, not to workspace -1.
 - On niri, the workspace arrow points to a window that needs you on a monitor whose bar is off, as it does on
   Hyprland.
+- A Hyprland submap entered on a monitor whose bar is off shows its name on the bar that is on.
 
 ## Releases
 

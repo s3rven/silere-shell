@@ -744,9 +744,15 @@ Item {
 
     // a Hyprland submap holding the keyboard, on the bar of the monitor that has it: nothing else shows that keys now
     // do something else. Its name, as the config spells it; a click leaves it
+    // a focused monitor whose bar is off shows it on the fallback bar, as the urgent arrow does
     property string _mode: Compositor.submap.length > 0
-        && (Compositor.focusedMonitor.length === 0 || Compositor.focusedMonitor === root.monitorName)
+        && (Compositor.focusedMonitor.length === 0 || Compositor.focusedMonitor === root.monitorName
+            || (root._anchorFallbackBar && root._focusedMonitorBarless))
         ? Compositor.submap : ""
+    readonly property bool _focusedMonitorBarless: {
+        const s = (Quickshell.screens || []).find(x => x.name === Compositor.focusedMonitor)
+        return !!s && !Monitors.barEnabled(s)
+    }
     on_ModeChanged: if (root._mode.length > 0) modeChip._lastMode = root._mode
     // its own condition, not the chip's effective visibility: shown, or still folding away
     readonly property bool _modeShown: root._mode.length > 0 || modeChip.implicitWidth > 0.5
