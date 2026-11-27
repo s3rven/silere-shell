@@ -8360,8 +8360,8 @@ ShellRoot {
         const countAtCap = Notifications.historyCount
         Notifications._prependHistory({ id: 99, appName: "probe", summary: "s99", time: 1 })
         root._check(Notifications.historyCount === countAtCap
-                && Notifications.historyRevision !== revAtCap,
-            "a full history reports a revision even when its count cannot move")
+                && Notifications.historyRevision === revAtCap + 1,
+            "a full history reports one revision per insert even when its count cannot move")
         Notifications.clearHistory()
         Notifications._prependHistory({ id: 251, appName: "Chat", summary: "third", time: 30 })
         Notifications._prependHistory({ id: 250, appName: "Chat", summary: "second", time: 20 })

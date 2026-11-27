@@ -285,8 +285,9 @@ Singleton {
             if (repeated !== String(e.id)) root._forgetTrimmed([repeated])
         }
         _history.insert(at, e)
-        root.historyRevision++
-        root._trimHistory()
+        // a full history trims in the same turn, and that trim is the insert's one revision: two walked every view twice
+        if (_history.count > root._historyCapacity) root._trimHistory()
+        else root.historyRevision++
     }
 
     property int _serializedHistoryRevision: -1
