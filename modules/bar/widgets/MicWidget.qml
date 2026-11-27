@@ -9,7 +9,9 @@ Pill {
     readonly property bool show: ShellSettings.barShowMic && Audio.micActive
     property real _baseOpacity: show ? 1.0 : 0.0
     readonly property bool layoutVisible: show || _baseOpacity > 0.001
-    readonly property bool _live: Audio.micHeard
+    // muted as the apps hear it while one records; with none, the default's own mute
+    readonly property bool _heardMuted: Audio.micActive ? !Audio.micHeard : Audio.micMuted
+    readonly property bool _live: Audio.micActive && Audio.micHeard
     readonly property bool _canSwitch: Audio.sourceCount > 1
 
     collapsed: !show
@@ -29,28 +31,29 @@ Pill {
         }
     }
 
-    glyph:      Audio.micIcon
+    // all of it follows what the apps hear, not the default's mute alone: a red glyph struck through read both ways
+    glyph:      !Audio.micReady || root._heardMuted ? "󰍭" : "󰍬"
     glyphColor: root._live ? Theme.barError : Theme.barSubtext
     textColor:  Theme.barSubtext
     interactive: Audio.micReady
     reserveText: "00%"
     accessibleName: {
         if (!Audio.micReady) return "Microphone"
-        const parts = [root._live ? "Microphone in use" : "Microphone muted"]
+        const parts = [root._heardMuted ? "Microphone muted" : "Microphone in use"]
         if (Audio.captureSummary.length > 0) parts.push(Audio.captureSummary)
-        if (!Audio.micMuted) parts.push(Math.round(Audio.micVolume * 100) + "%")
+        if (!root._heardMuted) parts.push(Math.round(Audio.micVolume * 100) + "%")
         if (Audio.sourceName.length > 0) parts.push(Audio.sourceName)
         return parts.join(", ")
     }
     readonly property string _level: Math.round(Audio.micVolume * 100) + "%"
     text: !Audio.micReady || (ShellSettings.valuesOnHover && !expanded) ? ""
-        : (expanded && Audio.micMuted ? "Muted" : root._level)
+        : (expanded && root._heardMuted ? "Muted" : root._level)
             + (expanded && Audio.captureSummary.length > 0 ? " · " + Audio.captureSummary : "")
     maxTextWidth: compact ? 150 : 260
     levelValue: Audio.micReady ? Audio.micVolume : -1
     levelVisible: Audio.micReady && ShellSettings.valuesOnHover
         && ShellSettings.hoverLevelBar && !expanded
-    levelColor: Audio.micMuted ? Theme.barSubtext : Theme.barError
+    levelColor: root._heardMuted ? Theme.barSubtext : Theme.barError
 
     wheelKey: "microphone:" + root + ":" + (Audio.source ? String(Audio.source.id) : "")
 

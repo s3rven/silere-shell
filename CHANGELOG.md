@@ -75,6 +75,8 @@ settings file carries its own `__version` and migrates separately.
 - The updater's repair and rollback hints work when copied for a checkout whose path has a space.
 - Shell completion offers `--yes` only after `repair --apply` or `--undo`, and `run`'s two flags in either order.
 - Behind a sign-in page the package check waits for the network to clear instead of rerunning every three minutes.
+- The microphone widget's glyph, colour, text and level all follow whether an app hears you, instead of mixing the
+  default microphone's mute in.
 
 ## Releases
 
