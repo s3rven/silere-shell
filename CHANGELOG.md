@@ -38,6 +38,7 @@ settings file carries its own `__version` and migrates separately.
   menu follows it at once.
 - Settings and History reopen at the height they closed at again; the heights were lost as soon as the menu finished
   closing.
+- An empty Wi-Fi list says No networks found instead of switching back to Searching every eight seconds.
 
 ## Releases
 

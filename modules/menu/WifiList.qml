@@ -93,6 +93,7 @@ Item {
         _syncNetworks()
     }
     onOpenChanged: {
+        if (root.open) root._searched = false
         _syncScanState()
         if (!open) {
             _selected = ""
@@ -107,6 +108,8 @@ Item {
         Network.requestWifiScan(root, false)
     }
 
+    // only the first scan searches: each 8 s rescan otherwise flipped an empty list back to Searching
+    property bool _searched: false
     Timer {
         id: _rescan
         interval: 8000
@@ -127,8 +130,9 @@ Item {
         function onWifiConnectingChanged() {
             if (Network.wifiConnecting === "" && Network.wifiError === "") root._selected = ""
         }
-        function onWifiEnabledChanged() { root._syncScanState() }
+        function onWifiEnabledChanged() { root._searched = false; root._syncScanState() }
         function onToolAvailableChanged() { root._syncScanState() }
+        function onWifiScanningChanged() { if (!Network.wifiScanning) root._searched = true }
         // a rescan that lands while the device is re-enumerating disarms the scanner for good
         function onHasWifiDeviceChanged() { root._syncScanState() }
     }
@@ -162,7 +166,7 @@ Item {
             text: !Network.toolAvailable ? "Wi-Fi unavailable"
                 : Network.wifiHardBlocked ? "Blocked by the hardware switch"
                 : !Network.wifiEnabled   ? "Wi-Fi is off"
-                : Network.wifiScanning   ? "Searching for networks…"
+                : Network.wifiScanning && !root._searched ? "Searching for networks…"
                 :                          "No networks found"
             color: Theme.menuTextDetail
             font.pixelSize: Settings.fontLabel
