@@ -712,7 +712,7 @@ Singleton {
     // together left every glow key dotting Underline whenever the bar border alone was on.
     // A master, and anything that stays visible beside it, belongs in no rule. `negate` flips
     // a rule to fire while its master is ON, for a key nested behind "expanded: !master";
-    // `off` names the enum value that collapses the rule
+    // `off` names the enum value that collapses the rule, `on` the only one that keeps it open
     readonly property var sectionGates: ({
         underline: [
             { master: "underlineGlow", hides: ["underlineIdleGlow", "underlineFullWidth",
@@ -720,6 +720,10 @@ Singleton {
                 "underlineTempGlow", "underlineScreenshotGlow",
                 "glowStrength"] },
             { master: "barBorderVisible", hides: ["barLineStrength"] }
+        ],
+        devices: [
+            { master: "ddcBrightnessEnabled", hides: ["ddcDisabledDisplays"] },
+            { master: "lockProvider", on: "custom", hides: ["lockCommandCustom"] }
         ],
         osd: [
             { master: "osdEnabled", hides: ["osdTimeout",
@@ -777,7 +781,8 @@ Singleton {
     // whether a sectionGates rule has its keys folded away now; an any rule folds only while every one of its
     // conditions would
     function gateFolded(rule): bool {
-        const folds = r => r.off !== undefined ? root[r.master] === r.off : r.negate ? !!root[r.master] : !root[r.master]
+        const folds = r => r.on !== undefined ? root[r.master] !== r.on : r.off !== undefined ? root[r.master] === r.off
+            : r.negate ? !!root[r.master] : !root[r.master]
         return rule.any ? rule.any.every(folds) : folds(rule)
     }
 

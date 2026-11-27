@@ -3675,6 +3675,10 @@ ShellRoot {
             "a ring moves in whole percents, stays between empty and full, and fits inside its box")
         ring.destroy()
         const entry = ShellSettings.schemaFor("systemRings")
+        root._check(ShellSettings.gateFolded({ master: "lockProvider", on: "custom" }) === (ShellSettings.lockProvider !== "custom")
+                && !ShellSettings.gateFolded({ master: "lockProvider", on: ShellSettings.lockProvider })
+                && ShellSettings.sectionGates.devices.some(g => g.hides.indexOf("lockCommandCustom") >= 0),
+            "a custom lock command folded away with Automatic chosen no longer dots Devices")
         root._check(entry && entry.t === "bool" && entry.sec === "indicators"
                 && ShellSettings.sectionGates.indicators.some(g => g.master === "barShowSystem"
                     && g.hides.indexOf("systemRings") !== -1)

@@ -62,6 +62,7 @@ settings file carries its own `__version` and migrates separately.
 - Behind a sign-in page or with no internet, the updates widget no longer reports the package check as broken.
 - A settings file Silere cannot change the mode of (root's, after a run under sudo) no longer leaves notification
   history and hooks off for the session.
+- Settings no longer marks Devices as changed for a custom lock command or a display list that is folded out of sight.
 
 ## Releases
 
