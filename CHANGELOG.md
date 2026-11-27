@@ -34,6 +34,8 @@ settings file carries its own `__version` and migrates separately.
 - Turning on Do not disturb counts the notifications it files before they were ever shown on the bell as missed.
 - Notifications waiting behind Show more while you are away are filed at idle with the rest, instead of staying up
   while newer ones went to History.
+- A key or wheel step on the Night Light, display brightness or seek slider still applies when Escape or closing the
+  menu follows it at once.
 
 ## Releases
 

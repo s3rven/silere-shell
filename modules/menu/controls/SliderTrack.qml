@@ -106,7 +106,13 @@ Item {
     onMinChanged: root.cancelInteraction()
     onMaxChanged: root.cancelInteraction()
     onStepChanged: root.cancelInteraction()
-    on_CanInteractChanged: if (!root._canInteract) root.cancelInteraction()
+    // a key or wheel step already taken still lands: Escape or a closing fold inside the rest otherwise dropped it
+    on_CanInteractChanged: if (!root._canInteract) {
+        _stepRest.stop()
+        root._keyHeld = false
+        root._settleSteps()
+        root.cancelInteraction()
+    }
     Component.onCompleted: root._previousWheelKey = root.wheelKey
 
     function cancelInteraction(): void {
