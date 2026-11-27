@@ -80,6 +80,8 @@ settings file carries its own `__version` and migrates separately.
 - A notification that times out while you are away with browser music playing counts on the bell as missed.
 - Cards filed from behind Show more at idle count as missed only if they came after your last input.
 - The updater's repair and rollback hints quote the path so bash, zsh and fish all read it, accented names included.
+- History opened from the clock stays centred on it as the missed bell folds, and the clock is marked while it is
+  open, as for the calendar.
 
 ## Releases
 

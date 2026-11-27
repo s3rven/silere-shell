@@ -42,17 +42,18 @@ Item {
 
     // a resize is read before the zone lays out around it, so a centred clock gaining or losing its
     // date put the open calendar half that width off. While it is open only afterAnimating measures,
-    // once the frame is laid out
-    onXChanged: if (!root._calendarOpen) root._syncMenuAnchor()
-    onYChanged: if (!root._calendarOpen) root._syncMenuAnchor()
-    onWidthChanged: if (!root._calendarOpen) root._syncMenuAnchor()
+    // once the frame is laid out. History opened here too: opening it folds the missed bell
+    readonly property bool _anchoring: root._calendarOpen || (MenuState.open && MenuState.anchorSource === root)
+    onXChanged: if (!root._anchoring) root._syncMenuAnchor()
+    onYChanged: if (!root._anchoring) root._syncMenuAnchor()
+    onWidthChanged: if (!root._anchoring) root._syncMenuAnchor()
     Component.onCompleted: {
         root._syncMenuAnchor()
         root._reclaimCalendarAnchor()
     }
     Connections {
         target: root.Window.window
-        enabled: root._calendarOpen
+        enabled: root._anchoring
         function onAfterAnimating() { root._syncMenuAnchor() }
     }
 
@@ -132,7 +133,7 @@ Item {
     HoverCap {
         hot: root._hov
         pressed: root._pressed
-        selected: root._calendarOpen
+        selected: root._anchoring
         gate: root._animatable
     }
 
