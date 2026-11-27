@@ -707,7 +707,6 @@ Item {
                 cellWidth:    root._btnW(wsId)
                 rowHeight:    root.btnH
                 barActive:    root.barActive
-                initialized:  root._initialized
                 paging:       root._paging
                 markerCovers: root.markerCovers
                 hitTop:       root._rowY

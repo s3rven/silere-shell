@@ -424,7 +424,7 @@ ShellRoot {
                 wsId: 2; monitorReady: true; active: false; occupied: true
                 urgent: false; apps: []; compact: false; iconSize: 12
                 cellWidth: 26; rowHeight: 24; barActive: true
-                initialized: true; paging: false; markerCovers: true
+                paging: false; markerCovers: true
                 onHoverReported: (id, on) => fixture.reports = fixture.reports.concat(id + ":" + on)
             }
             Pill {
@@ -1237,7 +1237,7 @@ ShellRoot {
             wsId: 2, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 12,
             cellWidth: 26, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true
+            paging: false, markerCovers: true
         })
         let switches = 0
         workspace.activateRequested.connect(() => switches++)
@@ -3131,7 +3131,7 @@ ShellRoot {
             wsId: 12, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 14,
             cellWidth: 100, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true,
+            paging: false, markerCovers: true,
             workspaceName: "Research"
         })
         const dot = root._findTrayNode(cell, item => item.objectName === "workspace-dot")
@@ -3212,7 +3212,7 @@ ShellRoot {
             wsId: 13, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 14,
             cellWidth: 100, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true, workspaceName: ""
+            paging: false, markerCovers: true, workspaceName: ""
         })
         const fadeDot = root._findTrayNode(fadeCell, item => item.objectName === "workspace-dot")
         const ringShown = fadeDot && fadeDot.visible && fadeCell._iconsIn === 0
@@ -6166,7 +6166,7 @@ ShellRoot {
             wsId: 3, monitorReady: true, active: false, occupied: true,
             urgent: false, apps: [], compact: false, iconSize: 14,
             cellWidth: 26, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true,
+            paging: false, markerCovers: true,
             hitTop: 6, hitBottom: 6, hitGap: 3
         })
         const hit = root._findTrayNode(hitCell, item => item.objectName === "workspace-hit")
@@ -6227,7 +6227,7 @@ ShellRoot {
                 wsId: 7, monitorReady: true, active: false, occupied: true,
                 urgent: true, apps: [], compact: false, iconSize: 14,
                 cellWidth: 26, rowHeight: 24, barActive: true,
-                initialized: true, paging: false, markerCovers: true
+                paging: false, markerCovers: true
             })
             const number = root._findTrayNode(urgentCell, item => item.text === "7" && item.font !== undefined)
             const urgentTick = workspaceUrgentTickFactory.createObject(barFixtureHost, {
@@ -6681,7 +6681,7 @@ ShellRoot {
                 wsId: 2, monitorReady: true, active: true, occupied: true,
                 urgent: false, apps: [], compact: false, iconSize: 14,
                 cellWidth: 26, rowHeight: 24, barActive: true,
-                initialized: true, paging: false, markerCovers: false
+                paging: false, markerCovers: false
             })
             const activeDot = root._findTrayNode(activeCell, item => item.objectName === "workspace-dot")
             root._check(!Qt.colorEqual(Theme.barAccentMark, Theme.barAccent)
@@ -7610,7 +7610,7 @@ ShellRoot {
             wsId: 2, monitorReady: true, active: false, occupied: false,
             urgent: false, apps: [], compact: false, iconSize: 12,
             cellWidth: 26, rowHeight: 24, barActive: true,
-            initialized: true, paging: false, markerCovers: true
+            paging: false, markerCovers: true
         })
         crossingCell.playMarkerPass(0)
         root._check(crossingCell && crossingCell.markerPassActive,

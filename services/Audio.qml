@@ -372,7 +372,6 @@ Singleton {
         return apps.length === 1 ? root.streamLabel(c[0]) : apps.length + " apps listening"
     }
 
-
     function trackedNodes(defaultSink, defaultSource, sinks, sources, playback, capture): var {
         const out = []
         function add(node) {

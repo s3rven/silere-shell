@@ -20,7 +20,6 @@ Item {
     required property real cellWidth
     required property real rowHeight
     required property bool barActive
-    required property bool initialized
     required property bool paging
     required property bool markerCovers
     property bool markerHere: root.active

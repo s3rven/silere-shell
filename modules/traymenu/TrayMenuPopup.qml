@@ -32,9 +32,7 @@ FittedPopupWindow {
     function _trigger(entry): void {
         if (entry === null || entry === undefined) return
         try {
-            if (typeof entry.triggered === "function") entry.triggered()
-            else if (typeof entry.sendTriggered === "function") entry.sendTriggered()
-            else console.warn("silere-shell: tray menu entry has no triggered signal")
+            entry.triggered()
         } catch (error) {
             console.warn("silere-shell: tray menu signal failed:", String(error))
         }

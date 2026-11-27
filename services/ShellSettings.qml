@@ -366,7 +366,6 @@ Singleton {
     property string _readError: ""
     readonly property string readError: _readError
     property string _writeError: ""
-    property string _diskText: ""
     property string _appliedText: ""
     readonly property bool ready: _loaded
     property bool _firstRun: false
@@ -963,7 +962,6 @@ Singleton {
         writeAllowed: false
         serialize: () => root._serialize()
         onLoaded: raw => {
-            root._diskText = raw
             root._applyText(raw)
         }
         onLoadFailed: error => {

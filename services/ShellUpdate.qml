@@ -15,7 +15,6 @@ Singleton {
     readonly property int maxStatusTextChars: 512
     readonly property int maxVersionTextChars: 128
 
-
     property int    count: 0
     property string summary: ""
     property bool   applying: false
