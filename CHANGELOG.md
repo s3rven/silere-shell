@@ -23,6 +23,8 @@ settings file carries its own `__version` and migrates separately.
   Hyprland.
 - A Hyprland submap entered on a monitor whose bar is off shows its name on the bar that is on.
 - Two quick middle clicks on the volume or microphone widget step two outputs or inputs, not one.
+- With Hover highlight on, widgets a click does nothing on (one keyboard layout, the indicators) no longer light up
+  under the pointer.
 
 ## Releases
 

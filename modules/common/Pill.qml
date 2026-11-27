@@ -292,7 +292,8 @@ Item {
     clip: _contentScan.active || _ghostEl.visible || row.x < 0 || row.x + row.width > width
 
     HoverCap {
-        hot: root.hovered && ShellSettings.barHoverHighlight
+        // the cursor's own test: a reading nothing answers a click on gets no capsule
+        hot: root.hovered && (root.interactive || root.adjustable) && ShellSettings.barHoverHighlight
         pressed: root.visualPressed
     }
 
