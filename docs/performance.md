@@ -1,7 +1,9 @@
 # Performance
 
-The visualizer, animations and system readings pause when the session goes idle.
-Hidden menus and popups unload their content after closing.
+[All docs](README.md) · [Performance history](perf-history.md) · [Testing](testing.md)
+
+The visualizer, animations and system readings pause when the session goes idle, and menus and popups unload
+their content after closing.
 
 ## Reference numbers
 
@@ -13,41 +15,29 @@ These are the 1.10.0 release measurements on reference machine A in
 | cold | ~91 MB | Freshly started, menu never opened. Only the bar has drawn. |
 | warm | ~100 MB | The same session after opening and closing the menu once. |
 
-Popups and the menu's large pages compile the first time they are wanted, off the GUI thread,
-which starts the bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles
-three seconds after startup, so its first open is as quick as later ones. A popup that fails to
-compile leaves the bar running and shows an alert. Menu and popup instances unload after closing. The first open also loads code, font and
-driver caches that can remain warm, so closing a menu does not return the process to its
-startup footprint. An earlier empty Quickshell panel measurement was about 57 MB on the same machine.
+Popups and the menu's large pages compile the first time they are wanted, off the GUI thread, which starts the
+bar about 120 ms sooner with about 7 MB less memory. The menu itself compiles three seconds after startup, so its
+first open is as quick as later ones. The first open also loads code, font and driver caches that can stay warm,
+so closing a menu does not return the process to its startup footprint. An empty Quickshell panel measured about
+57 MB on the same machine.
 
-Dropdown rows are created around the visible viewport and reused while scrolling. A
-workspace hover can prepare the menu for 2.5 seconds; leaving it unused releases that
-instance. The logic suite checks both lifetimes, including a thousand-option dropdown.
+Dropdown rows are created around the visible viewport and reused while scrolling, and a menu a workspace hover
+prepared is released after 2.5 seconds unused; the logic suite checks both, down to a thousand-option dropdown.
+Cover art downloads only while the menu shows its media rail or Now Playing, and pauses during quiet idle, as do
+the underline's event animations (a critical temperature warning stays lit but still).
 
-Remote cover downloads begin only while the menu shows its media rail or Now Playing
-page, and pause during quiet idle. The bar's text and progress display needs no cover
-downloads. A hidden Now Playing page also stops cover decoding, retries and unfinished
-animations.
-
-Underline event animations stop during quiet idle; a critical temperature warning
-stays lit but still.
-
-Use PSS to compare Silere's memory use. RSS, shown by `top` and `htop`, counts shared Qt,
-Mesa and font pages in full. The same 1.10.0 runs reported 209 MB cold and 219 MB warm RSS.
-
-Results vary with hardware, drivers, fonts and which widgets you enable. To measure your own
-setup, close other heavy programs first:
+Use PSS to compare Silere's memory use. RSS, shown by `top` and `htop`, counts shared Qt, Mesa and font pages in
+full: the same 1.10.0 runs reported 209 MB cold and 219 MB warm RSS. Results vary with hardware, drivers, fonts
+and the widgets you enable. To measure your own setup, close other heavy programs first:
 
 ```bash
 bash scripts/bench.sh 30            # as you left it
 bash scripts/bench.sh 30 --warm     # after one menu open and close
 ```
 
-The number is how many seconds to sample. Quote the `per-second` median rather than the
-`cpu` average, which folds a single keystroke or menu open into the idle figure.
-CPU percentages use the measured elapsed time, including collection overhead, rather
-than assuming every sample takes exactly one second. JSON reports include both the
-requested `sample_seconds` and the measured `elapsed_seconds`.
+The number is how many seconds to sample. Quote the `per-second` median rather than the `cpu` average, which
+folds a single keystroke or menu open into the idle figure. CPU percentages divide by the measured elapsed time
+(`elapsed_seconds` in the JSON report, beside the requested `sample_seconds`).
 
 ## Memory allocator
 

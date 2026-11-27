@@ -168,6 +168,13 @@ say which change made the difference.
 Raw reports: [cold](perf/1.9.0-cold.json) · [warm](perf/1.9.0-warm.json). They were collected
 from runtime commit `44d19770` with uncommitted release preparation in the tree.
 
+The 1.10.0 runs use reference-A hardware on a newer stack, kernel `7.3.6-1-cachyos`, Quickshell 0.3.2 and
+Qt 6.12.0, while two terminal windows animated their titles: both runs flag "noisy" on one 3.9% second, which
+moves CPU, not PSS.
+
+Raw reports: [cold](perf/1.10.0-cold.json) · [warm](perf/1.10.0-warm.json). They were collected
+from runtime commit `aaec3d5b` with uncommitted release preparation in the tree.
+
 ## Reference B
 
 A 2015 laptop, run the way the installer set it up: started by Hyprland, KDE platform theme
@@ -181,9 +188,6 @@ Quickshell running.
 | B | 1.7.0 | 2026-11-13 | warm | default | 179 MB | 231 MB | 0.1% | 18 | 54 |
 | B | 1.7.0 | 2026-11-13 | cold | one pool, 1 s decay | 106 MB | — | — | 17 | 53 |
 | B | 1.7.0 | 2026-11-13 | warm | one pool, 1 s decay | 121 MB | — | — | 18 | 54 |
-
-The 1.10.0 rows ran on machine A's newer stack (kernel 7.3.6, Quickshell 0.3.2, Qt 6.12.0) while two terminal agents
-animated their window titles: both runs flag "noisy" on one 3.9% second, which moves CPU, not PSS.
 
 "One pool, 1 s decay" is the `MALLOC_CONF` that `silere run` sets from the release after 1.7.0;
 the 1.7.0 rows above it ran with jemalloc's defaults.
