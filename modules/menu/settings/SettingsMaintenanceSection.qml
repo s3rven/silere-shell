@@ -294,7 +294,7 @@ Column {
                 ? ShellSettings.modifiedTotal + (ShellSettings.modifiedTotal === 1
                     ? " setting will be reset" : " settings will be reset")
                 : "No changed settings to restore"
-            valueText: root._armed ? "Tap again" : ""
+            valueText: root._armed ? "Press again" : ""
             accentColor: root._armed ? Theme.error : Theme.accent
             statusColor: root._armed ? Theme.error : "transparent"
             active: root._armed

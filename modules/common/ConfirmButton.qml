@@ -60,7 +60,8 @@ Rectangle {
         _drain.stop()
     }
 
-    // the confirm window, drained around the outline like a notification's countdown; reduced motion keeps it full
+    // the confirm window, drained around the outline like a notification's countdown. Reduced motion draws none, as
+    // the power rows do: a ring sitting full for the whole window read as nothing expiring
     property real _armLeft: 1
     NumberAnimation { id: _drain; target: root; property: "_armLeft"; from: 1; to: 0; duration: _armTimer.interval }
 
@@ -168,7 +169,7 @@ Rectangle {
     Loader {
         id: _confirmArc
         anchors.fill: parent
-        active: root._armed
+        active: root._armed && Motion.ms(1) > 0
         opacity: root._armT
         sourceComponent: PerimeterProgress {
             inset: 1
