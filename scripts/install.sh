@@ -2071,7 +2071,9 @@ if $did_keybind || $had_keybind; then
 else
     printf "  click the active workspace to open the menu and settings; right-click it for quick actions\n"
     case "$receipt_compositor:$HYPR_CONFIG" in
-        niri:*|*:) bind_hint="$MENU_BIND_SHOWN" ;;
+        # niri's goes inside its binds block; the bare command pasted there is a config error
+        niri:*) bind_hint="$NIRI_BIND_SHOWN" ;;
+        *:) bind_hint="$MENU_BIND_SHOWN" ;;
         *.lua) bind_hint="$LUA_BIND_SHOWN" ;;
         *) bind_hint="$HYPR_BIND" ;;
     esac

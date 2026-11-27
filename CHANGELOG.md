@@ -99,6 +99,8 @@ settings file carries its own `__version` and migrates separately.
 - On niri, the window title stays while a Silere popup or a launcher holds the keyboard instead of folding away.
 - Opening niri's overview no longer resizes every window into the bar's space and back.
 - On niri, the `workspace-changed` hook gets a named workspace's name, as documented, not its number.
+- On niri, the installer's closing "or bind it" hint prints a niri bind instead of a command that breaks the config
+  when pasted.
 
 ## Releases
 
