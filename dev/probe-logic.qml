@@ -9505,7 +9505,10 @@ ShellRoot {
                 && IconResolver.senderIconSource("file:///usr/share/icons/%2e%2e/%2e%2e/%2e%2e/dev/zero") === ""
                 && IconResolver.senderIconSource("file://host/usr/share/icons/app.png") === ""
                 && IconResolver.senderIconSource("/usr/sharex/app.png") === ""
-                && IconResolver.senderIconSource("/tmp/usr/share/icons/app.png") === "",
+                && IconResolver.senderIconSource("/tmp/usr/share/icons/app.png") === ""
+                && IconResolver.senderIconSource("../../../../../../tmp/fifo") === ""
+                && IconResolver.senderImageSource("image://icon/../../../../tmp/fifo") === ""
+                && IconResolver.iconSource("apps/kitty") === "",
             "a notification icon path cannot climb or reach past the root-owned system folders")
         root._check(IconResolver.localSource("/tmp/icon #?.png")
                 === "file:///tmp/icon%20%23%3F.png",

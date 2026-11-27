@@ -133,6 +133,8 @@ Singleton {
         // raw text skips the theme-existence check iconPath() applies below
         if (value.startsWith("/") || root._scheme.test(value))
             return root.safeLocalSource(value)
+        // a theme name never holds a slash, and Qt's theme lookup follows a ../ out of the icon folders to a planted fifo
+        if (value.indexOf("/") >= 0) return ""
         return root.localSource(Quickshell.iconPath(value, true))
     }
 
@@ -156,7 +158,7 @@ Singleton {
         if (hinted) {
             const name = hinted[1]
             if (name.startsWith("/")) return root._systemIconFile(name)
-            return name.length > 0 && name.indexOf("/") < 0 ? root.iconSource(name) : ""
+            return root.iconSource(name)
         }
         const source = root.localSource(value)
         if (source.startsWith("qrc:")) return source
