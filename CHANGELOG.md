@@ -67,6 +67,8 @@ settings file carries its own `__version` and migrates separately.
 - Let critical through is greyed while popup notifications are off, since nothing can pop up past them.
 - Switch animation and Notification pulse say they are off while Reduce motion is on.
 - Icon size says it sizes the tray and workspace app icons.
+- Undoing a settings reset in the menu removes its backup, so `silere reset --undo` no longer puts the older settings
+  back over yours later.
 
 ## Releases
 

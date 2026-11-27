@@ -882,6 +882,8 @@ Singleton {
         const saved = root._resetBackupText
         if (saved.length === 0) return
         root._resetBackupText = ""
+        // the copy on disk is spent too: silere reset --undo would later put that older state back over these
+        if (root._resetBackupPath.length > 0) Quickshell.execDetached(["rm", "-f", "--", root._resetBackupPath])
         root._applyText(saved)
         // _applyText takes its text as what is on disk, which still holds the defaults: without this the flush skips
         _store.lastSavedText = ""
