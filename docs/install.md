@@ -1,16 +1,22 @@
 # Installing Silere
 
-[All docs](README.md) · [Everyday use](usage.md) · [Troubleshooting](troubleshooting.md)
+[All docs](README.md) · [Everyday use](usage.md) · [Companions](companions.md) · [Troubleshooting](troubleshooting.md)
 
 ## Requirements
 
-You need Hyprland or niri, `git`, and Quickshell 0.3.2 or newer, built against at least
-Qt 6.10. The one-line installer below also needs `curl`; installing from a clone does not.
-On Arch and its derivatives, use `sudo pacman -S --needed quickshell git curl`.
-Debian 14 and unstable, Ubuntu 27.04 and Void package a recent enough one as `quickshell`; on Debian and Ubuntu, add
-`qml6-module-qtquick-effects`, which it does not pull in. Fedora's own package is older, so use the
-`errornointernet/quickshell` COPR there.
-For other distributions, see [Quickshell's install guide](https://quickshell.org/docs/v0.3.2/guide/install-setup/).
+You need Hyprland or niri, `git`, and Quickshell 0.3.2 or newer, built against at least Qt 6.10. The one-line
+installer also needs `curl`.
+
+```bash
+sudo pacman -S --needed quickshell git curl ttf-jetbrains-mono-nerd   # Arch and its derivatives
+sudo apt install quickshell qml6-module-qtquick-effects git curl      # Debian 14 and unstable, Ubuntu 27.04
+sudo dnf copr enable errornointernet/quickshell && sudo dnf install quickshell git curl   # Fedora
+sudo xbps-install -S quickshell git curl                               # Void
+```
+
+Debian and Ubuntu's `quickshell` package does not pull in `qml6-module-qtquick-effects`, which Silere needs.
+Debian 13 backports and Ubuntu 26.10 ship Quickshell 0.3.0, which is too old, and Fedora's own package is older
+still, hence the COPR. Elsewhere, follow [Quickshell's install guide](https://quickshell.org/docs/v0.3.2/guide/install-setup/).
 
 ## Try it without installing
 
@@ -19,24 +25,24 @@ git clone --depth 1 https://github.com/s3rven/silere-shell
 bash silere-shell/scripts/silere try
 ```
 
-This opens Hyprland or niri in a window, on a private session bus with private settings, state,
-cache and runtime directories. It needs `dbus-run-session` and `setsid`. Alt+1 to Alt+5 change workspace,
-Alt+Return opens a terminal and Alt+/ opens the menu. Sound, network and Bluetooth are your real
-ones, so their controls work. It can't lock or suspend your session, and it leaves keyboard
-lighting, external display brightness and the battery's charge limit alone. Closing the window ends it
-and removes its files. Once Silere is installed, the same preview is `silere try`.
+This opens Hyprland or niri in a window, with Silere inside it on a private session bus and with its own
+settings, state, cache and runtime folders. It needs `dbus-run-session` and `setsid`. Inside the window, Alt+1
+to Alt+5 change workspace, Alt+Return opens a terminal and Alt+/ opens the menu. Sound, network and Bluetooth
+are your real ones, so their controls work. The preview can't lock or suspend your session, and it leaves
+keyboard lighting, external monitor brightness and the battery's charge limit alone. Closing the window ends it
+and deletes its files. Once Silere is installed, the same preview is `silere try`.
 
 ## Install
 
-Run the installer as your normal user. You can also install from a TTY when your
-Hyprland or niri configuration already exists:
+Run the installer as your normal user, inside your Hyprland or niri session or from a TTY once their config
+exists:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash
 ```
 
-Piped like this, the installer downloads a temporary copy of Silere, runs its installer and
-deletes the copy afterwards. To read it first, run it from a clone instead:
+Piped like this, it downloads a temporary copy of Silere, runs that copy's installer and deletes it afterwards.
+To read the installer first, run it from a clone:
 
 ```bash
 git clone https://github.com/s3rven/silere-shell
@@ -44,249 +50,166 @@ cd silere-shell
 bash scripts/install.sh
 ```
 
-After its checks, the installer asks once whether to use the recommended setup: yes takes the
-default answer to each question that follows and prints each one, no asks at every step.
-The installer:
+After its checks, the installer asks once whether to use the recommended setup. Yes takes the default answer to
+each question that follows and prints it; no asks at every step. It:
 
 - checks every QML module Silere imports and names any that are missing
-- puts a checkout in your XDG config directory, or another path you choose
-- backs up files before editing them, and asks before touching compositor autostart
+- offers to download JetBrainsMono Nerd Font when no copy is installed
+- puts a checkout in `~/.config/silere-shell` (or `$XDG_CONFIG_HOME/silere-shell`), or a path you choose, and
+  offers to leave it on the latest signed release
+- offers to link the `silere` command into `~/.local/bin`, with bash and fish completions
+- offers to wire Silere's template into Matugen's config, if Matugen is installed
+- backs up each file before it edits it
+- offers the autostart line: `hl.on("hyprland.start", ...)` in `hyprland.lua` (`exec-once` in a `.conf`), or
+  `spawn-at-startup` in niri's config. A Lua edit is checked with `Hyprland --verify-config` and taken back if
+  Hyprland rejects it; niri's edit is checked with `niri validate` before it is written. A Lua config ending in
+  `return` gets the line to add yourself
+- on Hyprland, offers Super + / for the menu unless that key is taken, and offers to turn off Hyprland's fade on
+  Silere's popups, which animate themselves, unless your config already sets how Silere's layers animate. On
+  niri it prints the menu bind to put inside your `binds` block
+- with a Lua config, offers Silere's window motion (default no): `hyprland/silere-motion.lua` sets the window,
+  workspace and focus animations to the shell's pace and works around two Hyprland 0.57 animation faults.
+  Anything your config sets after that line wins
 - names each line of your Hyprland or niri config that still starts another bar or notification daemon
-- offers autostart and a menu shortcut for Hyprland. It preserves combinations already in use
-  and checks Lua edits with `Hyprland --verify-config`, restoring the backup if verification fails.
-  A Lua config ending in `return` gets instructions for adding the lines yourself
-- offers to add `spawn-at-startup` to an existing niri config, or prints the line if that
-  config is missing. It checks the edited config with `niri validate` before writing it and leaves
-  the file alone if niri rejects it. It also prints a menu shortcut to add inside your `binds` block
-- offers to turn off Hyprland's layer fade for Silere's popups, which animate themselves, the same way,
-  unless your config already has a layer rule that sets how Silere's layers animate
-- with a Lua config, offers Silere's window motion (asked, default no): `hyprland/silere-motion.lua` sets
-  Hyprland's window, workspace and focus animations to the shell's pace and works around two 0.57 animation
-  faults. It sets nothing else, and anything your config sets after its line wins
-- offers to leave the checkout on the latest signed release
-- prints the final install path when it's done
-- offers to start Silere right away in a Wayland session
-
-The default path is `~/.config/silere-shell`, or `$XDG_CONFIG_HOME/silere-shell` if
-you set an absolute config root. The interactive installer lets you choose another path.
+- offers a daily update-check timer (default no)
+- offers to start Silere, when it runs inside a Wayland session
 
 ## First start
 
-Inside your Hyprland or niri session, stop your old bar and notification daemon,
-such as waybar and mako or dunst, or another Quickshell shell, then run the line below.
-It names any other bar it finds still running. The installer and `silere doctor` also name
-each line of your Hyprland or niri config that starts one at login, and a notification daemon
-D-Bus would start on its own with the command that keeps it off, so neither comes back.
+Stop your old bar and notification daemon (waybar and mako or dunst, for example, or another Quickshell shell),
+then run:
 
 ```bash
 silere run
 ```
 
-If `silere` is not found, use the path printed by the installer:
+`silere run` names any other bar it finds still running. The installer and `silere doctor` also name the lines
+in your compositor config that start one at login, and a notification daemon D-Bus would start on its own, with
+the command that keeps it off.
 
-```bash
-~/.config/silere-shell/scripts/silere run
-```
+If `silere` is not found, run it by its full path, `~/.config/silere-shell/scripts/silere run`, or the path the
+installer printed. The bar should appear; click the active workspace for the menu, or the clock for the
+calendar. [Everyday use](usage.md) covers the rest. `silere stop` stops it and `silere restart` starts it again.
+If it does not appear, run `silere doctor` and see [troubleshooting](troubleshooting.md).
 
-For a custom install, replace `~/.config/silere-shell` with that path. The bar should
-appear on your desktop. Click the active workspace to open the menu, or the clock
-to open the calendar. [Everyday use](usage.md) covers the other controls.
-
-Use `silere stop` to stop it and `silere restart` to start it again. If it does not
-appear, run `silere doctor` and follow [troubleshooting](troubleshooting.md).
-
-## Installation options
+## Installer options
 
 | Option | What it does |
 |---|---|
-| `--dry-run` | Preview the changes without writing files. |
-| `--dir PATH` | Choose a directory; quote paths containing spaces. |
-| `--yes` or `-y` | Accept the default answers without a terminal. |
-| `--no-start` | Leave starting or restarting Silere for later. |
+| `--dry-run` | Lists every file it would create or edit and every line it would add, then exits without writing anything. It answers as an unattended install does, so it shows the fullest plan. |
+| `--dir PATH` | Installs to another directory. Quote a path with spaces. |
+| `--yes` or `-y` | Accepts the default answers without a terminal. |
+| `--no-start` | Leaves starting Silere for later. |
+| `--check` | Runs the read-only diagnostics, as `silere doctor` does. Use it alone. |
+| `--repair-matugen` | Rewires Matugen without reinstalling, writing only Silere's template and its marked block in `config.toml`. Use it alone. |
 
-Options can be combined in any order. For example, preview a custom installation,
-then install to the same place:
-
-```bash
-bash scripts/install.sh --dry-run --dir "$HOME/Desktop tools/silere-shell"
-bash scripts/install.sh --dir "$HOME/Desktop tools/silere-shell" --no-start
-```
-
-Run `bash scripts/install.sh --help` for the full list. `--check` and
-`--repair-matugen` are separate maintenance modes and must be used on their own.
-
-## Previewing the install
-
-`bash scripts/install.sh --dry-run` lists every file the install would create or edit and
-the autostart, keybind, layer rule and window motion lines it would add, then exits without writing anything. It
-answers the prompts the way an unattended install does, so it shows the fullest plan.
-
-## Unattended installs
-
-For a dotfiles script or another unattended setup, use:
+For a dotfiles script or another unattended setup:
 
 ```bash
 bash scripts/install.sh --yes --dir "$HOME/.config/silere-shell" --no-start
-```
-
-`--yes` accepts the default answers and backs up edited files. Opt-in prompts keep
-their default **No**, including the update timer and installing for an unsupported
-compositor. Unattended installs leave the shell stopped until you choose to start it.
-
-With the one-line installer, pass options to `bash`:
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/s3rven/silere-shell/main/scripts/install.sh | bash -s -- --yes --no-start
 ```
 
-Existing scripts using `SILERE_ASSUME_YES=1` continue to work.
-
-## Using another checkout
-
-With an installed copy and a development clone, `silere status` shows which one is
-running. To switch, run the target copy's command:
-
-```bash
-/path/to/other-copy/scripts/silere use --dry-run
-/path/to/other-copy/scripts/silere use
-```
-
-This updates the command link and its shell completions, points an existing service at that copy
-through a drop-in, and restarts the shell. Compositor startup lines keep their own paths;
-follow the command's reminder to update yours. `silere use /path/to/copy` switches back.
-Tab completes checkout directories in bash and fish, including paths containing spaces.
-Before applying a switch, Silere checks the runtime, session and service override.
-If these checks fail, it leaves the command link and service unchanged. The preview
-still works without a live desktop session.
-
-Normal launches keep the loaded QML steady during updates. For a development
-checkout, `SILERE_WATCH_FILES=1 silere run` enables live QML reloads.
+`--yes` still backs up what it edits. Questions that default to no stay no, including the update timer and
+installing on a session that is neither Hyprland nor niri, and an unattended install never starts the shell.
+`SILERE_ASSUME_YES=1` works the same as `--yes`. `bash scripts/install.sh --help` lists the environment
+variables, such as `SILERE_MENU_BIND_KEY` for another menu key.
 
 ## Fonts
 
-Silere draws its glyphs from JetBrainsMono Nerd Font. When it is missing, the
-installer offers to download it and skips the step if you decline. The release is pinned
-to a version and checked against a known SHA-256, and a mismatch refuses the install. Fonts
-go to `~/.local/share/fonts/JetBrainsMono`.
-
-Any other Nerd Font you have installed appears in the picker under
+Silere draws its glyphs from JetBrainsMono Nerd Font. If it is missing, the installer offers to download a
+pinned release, checks it against a known SHA-256 and refuses a mismatch. The font goes to
+`~/.local/share/fonts/JetBrainsMono`. Any other Nerd Font you have shows up in the font picker under
 Settings › Appearance › Interface.
 
 ## Optional tools
 
-None of these are required. Installing one turns on the matching feature; skipping it
-hides that widget or marks it unavailable.
+None of these are required. Installing one turns on its feature; without it, that widget or control is hidden
+or marked unavailable, and `silere doctor` prints the install command for your distribution (it never runs it).
+[Companions](companions.md) covers the launcher, lock screen, idle and wallpaper tools.
 
-| tool | enables |
+| Tool | Enables |
 |---|---|
-| `pipewire` + `wireplumber` | volume, output picker |
-| `upower` | battery details, the charge limit and supported keyboard lighting; the charge limit and lighting also use `busctl` |
+| `pipewire` + `wireplumber` | volume, outputs and inputs, per-app volume |
+| `upower` | battery details, the charge limit and keyboard lighting where supported; the last two also use `busctl` |
 | NetworkManager | the network widget and Wi-Fi controls; Quickshell reads networks only through it, so iwd or systemd-networkd alone hide them |
-| `nmcli` | VPN indicator, name and address |
+| `nmcli` | the VPN indicator and saved VPN connections |
 | `brightnessctl` | brightness |
-| `ddcutil` | external monitor brightness over DDC/CI; enable **External brightness** in Settings › System › Devices |
-| `hyprsunset` / `wlsunset` | night light (`hyprsunset` on Hyprland, `wlsunset` elsewhere) |
-| `matugen` | wallpaper theming |
-| `cava` | media visualizer |
+| `ddcutil` | external monitor brightness over DDC/CI; turn on External brightness under Settings › System › Devices |
+| `hyprsunset` or `wlsunset` | Night Light (`hyprsunset` on Hyprland only) |
+| `matugen` | colours from the wallpaper |
+| `cava` | the audio visualizer; Silere writes its own temporary profile and leaves `~/.config/cava` alone |
 | `curl` | cover art from the web, when that setting is on |
-| `wpctl` + `pw-dump` | Listening / Calls modes on compatible Bluetooth headsets |
-| `powerprofilesctl` | power profiles; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
-| `inotifywait` | screenshot feedback on the underline (niri reports its own screenshots without it), and restarting the shell onto a restarted Hyprland when the systemd user service runs this checkout |
-| `checkupdates` / `apt` / `dnf` / `zypper` / `xbps-install` | package update badge; `checkupdates` also needs `fakeroot` |
-| `paru` / `yay` | AUR update count on Arch Linux |
-| `hyprlock` / `swaylock` / `gtklock` | lock action; without one, Lock asks `loginctl lock-session`, which locks only if an idle daemon such as hypridle answers it with a locker |
-| `pwvucontrol` / `pavucontrol` | Sound settings, reached from the volume control |
-| `nm-connection-editor` / `nmtui` | advanced network settings; `nmtui` opens in a terminal |
-| `blueman-manager` + a Bluetooth pairing agent | passkey or PIN pairing; see [Bluetooth troubleshooting](troubleshooting.md#bluetooth-pairing-fails-for-a-passkey-device) |
-| `systemctl` / `loginctl` | suspend, reboot, and shutdown actions |
-| `hyprshutdown` | Log out on Hyprland closes your apps before it ends the session |
-| `notify-send` / `busctl` | battery, temperature and other alerts from the shell; the updater's notifications need `notify-send` |
-| `fc-list` (fontconfig) | installed Nerd Font detection and font picker |
-| `ssh-keygen` | cryptographic verification of Silere release tags; without it the installer stays on `main` and updates stop |
+| `wpctl` + `pw-dump` | Listening and Calls modes on Bluetooth headsets |
+| `powerprofilesctl` | power modes; a daemon on the same D-Bus API, such as `tuned-ppd`, works without it |
+| `inotifywait` | the underline's screenshot flash (niri reports its own screenshots), and restarting a supervised shell onto a restarted Hyprland |
+| `checkupdates`, `apt`, `dnf`, `zypper` or `xbps-install` | the package update count; `checkupdates` also needs `fakeroot` |
+| `paru` or `yay` | AUR updates in that count |
+| `hyprlock`, `swaylock` or `gtklock` | the Lock action; without one, Lock asks `loginctl lock-session`, which locks only if an idle daemon answers it |
+| `pwvucontrol` or `pavucontrol` | sound settings, from a right-click on the volume widget |
+| `nm-connection-editor` or `nmtui` | advanced network settings; `nmtui` opens in a terminal |
+| `blueman-manager` and a pairing agent | PIN and passkey pairing; see [Bluetooth pairing](troubleshooting.md#bluetooth-pairing-fails-for-a-passkey-device) |
+| `systemctl` or `loginctl` | sleep, hibernate, reboot and power off |
+| `hyprshutdown` | Log out on Hyprland closes your apps before the session ends |
+| `notify-send` | the updater's notifications; the shell's own alerts also go through `busctl` |
+| `fc-list` (fontconfig) | finding installed Nerd Fonts for the font picker |
+| `ssh-keygen` | verifying signed release tags; without it the installer stays on `main` and updates stop |
 
-The installer also reports on `busctl`, `pgrep` and `timeout`. Those ship with
-systemd, procps and coreutils, so they are listed only so a minimal system can see what
-is missing.
+The installer also checks for `busctl`, `pgrep` and `timeout`. They ship with systemd, procps and coreutils,
+and are listed only so a minimal system can see what is missing.
 
 ## Matugen
 
-The interactive installer configures Matugen when it is installed. It copies Silere's
-template into Matugen's template directory and makes Matugen write
-`$XDG_CONFIG_HOME/matugen/silere-shell.json`; the shell watches that user-writable
-palette and reloads colours live. This works for both a Git checkout and a read-only
-package under `/usr/share`. Packaged installs print the one-time command that does the
-same thing, `install.sh --repair-matugen`.
+When Matugen is installed, the installer copies Silere's template into Matugen's templates folder and adds an
+entry to `~/.config/matugen/config.toml` that writes `~/.config/matugen/silere-shell.json`. Silere watches that
+file and recolours as it changes. Choose Wallpaper under Settings › Appearance › Theme, then run Matugen on your
+wallpaper as usual. If the file breaks, Silere keeps the last good colours, and Reload palette on the Theme page
+reads it again. A package install prints the one command that sets this up, `install.sh --repair-matugen`.
 
-In **Settings › Appearance › Theme**, choose **Wallpaper** or use the **Auto** accent
-with Neutral. **Accent role** picks a primary, secondary, or tertiary color for both
-sources. A palette that is missing or invalid shows **Reload palette**, which rereads
-the file; a working one is followed as it changes.
-After repairing the template, run your normal wallpaper or Matugen command to
-generate a fresh palette. If the file is invalid, Silere keeps the last working
-colors, or uses the built-in colors until the first valid palette arrives.
+## The silere command
 
-## Cava
-
-Cava needs no configuration step. Silere writes a private temporary raw-output profile
-under `$XDG_RUNTIME_DIR`, starts Cava only while the visualizer is actually needed, and
-leaves `~/.config/cava` untouched.
-
-## Maintenance command
-
-The installer offers a link at `~/.local/bin/silere`. It runs the scripts in your
-checkout. `~/.local/bin` must be on your `PATH`; run `scripts/silere link` from the
-checkout if you skipped creating the link.
-
-| Task | Command |
-|---|---|
-| Start, stop or restart | `silere run`, `silere stop`, `silere restart` |
-| See which copy is running | `silere status` |
-| Follow the running shell's log | `silere log --follow` |
-| Diagnose setup problems | `silere doctor` |
-| Show the installed version | `silere version` |
-| Check, install or undo an update | [Update commands](updates.md) |
-| Preview, apply or undo a repair | `silere repair`, `silere repair --apply`, `silere repair --undo` |
-| Control the shell from a keybind or script | `silere menu`, `silere toggle dnd`, `silere volume up`, `silere set <key> <value>` — [scripting guide](scripting.md) |
-| Remove installer integrations | `silere uninstall` |
-
-`silere` alone lists its commands, and `silere ipc` alone lists every call the running
-shell answers. `silere --version` also prints the installed version. The link adds fish
-and bash completions, down to setting names and their values.
-
-`silere doctor` and `bash scripts/install.sh --check` are read-only. They check the
-runtime, compositor IPC, required QML modules, which program owns notifications, the Nerd
-Font, audio services, optional features, autostart, settings, update timer, and release
-trust key. Missing optional packages are
-reported with a command for the detected package family; Silere prints that command but
-never runs it or elevates privileges.
-
-See [updates and recovery](updates.md) for signed releases, rollback, timers and
-development checkouts.
+The installer links `~/.local/bin/silere` to `scripts/silere` in your checkout, with bash and fish completions
+down to setting names and values. `~/.local/bin` must be on your `PATH`; if you skipped the link, run
+`scripts/silere link` from the checkout. `silere` alone lists every command, and `silere ipc` alone lists every
+call the running shell answers. The [scripting guide](scripting.md) covers the commands that control the shell,
+and [updates and recovery](updates.md) the ones that update it. `silere doctor`, the same check as
+`bash scripts/install.sh --check`, looks over the whole setup and changes nothing.
 
 ## Crash recovery
 
-To restart Silere automatically after a crash, install its user service:
+To have Silere restarted after a crash, install its user service:
 
 ```bash
 silere service install --dry-run
 silere service install
 ```
 
-Replace your compositor's existing Silere startup command with
-`silere run --supervised --startup`. Keep only one startup command.
+Then replace the Silere line in your compositor's startup with `silere run --supervised --startup`, so only one
+start line remains; installing the service does not edit your compositor config. The service restarts a failed
+run after a short delay, up to three times a minute. `silere service status` shows its state and
+`silere service remove` stops and removes it. `silere stop` stops the service too, and it stays stopped until
+`silere run --supervised`. To move a shell you started by hand under the service, run `silere stop`, then
+`silere run --supervised`.
 
-The service restarts failed runs with a delay and a retry limit.
-`silere service status` shows its state; `silere service remove` stops and removes
-the generated service. Installation does not edit compositor startup settings.
-`silere stop` also stops the service, so it stays stopped until you start it again.
-Use `silere run --supervised` to start through the service again. To switch a
-currently unsupervised shell, run `silere stop` first, then `silere run --supervised`.
+## Using another checkout
+
+With an installed copy and a development clone side by side, `silere status` shows which one is running. To
+switch, run the other copy's command:
+
+```bash
+/path/to/other-copy/scripts/silere use --dry-run
+/path/to/other-copy/scripts/silere use
+```
+
+This moves the command link and its completions to that copy, points an existing service at it through a
+drop-in, and restarts the shell. It checks the runtime, the session and the service first and changes nothing
+if one fails. Your compositor's start line keeps its own path, so update it as the command reminds you.
+`silere use /path/to/copy` switches back. A normal start keeps the loaded QML as it is while files change;
+`SILERE_WATCH_FILES=1 silere run` reloads on every save, for development.
 
 ## Removing it
 
-Run `bash scripts/uninstall.sh` from the installed checkout. That clears autostart, the
-menu keybind, the layer rule, theme and update-timer integrations, but keeps the checkout, your settings,
-your notification history and the installed font.
-
-A package install has no `uninstall.sh`. Remove the package instead; it prints what is
-left in your home directory to clean up by hand.
+Run `silere uninstall`, or `bash scripts/uninstall.sh` from the checkout. It asks before removing each thing
+the installer added: the blocks in your compositor config, the Matugen wiring, the update timer and the
+`silere` command. Your checkout, settings, notification history and the font stay. A package install has no
+uninstaller: remove the package, and it prints what is left in your home folder to delete by hand.
