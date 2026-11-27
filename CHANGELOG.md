@@ -52,6 +52,7 @@ settings file carries its own `__version` and migrates separately.
 - Two browser tabs recording read as one app listening on the microphone widget, not two.
 - The microphone widget and the apps under Input follow the microphone each app records from, so they no longer read
   Muted while an app hears an unmuted one.
+- `silere mic mute` shows the same Microphone · Muted OSD as the mute key, so the OSD keeps its width.
 
 ## Releases
 

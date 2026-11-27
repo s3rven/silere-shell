@@ -529,7 +529,7 @@ Singleton {
 
     function _ipcMicFeedback(): void {
         OsdBarState.show("microphone", root.micIcon, root.micVolume,
-            root.micMuted ? "Microphone muted" : "Microphone · " + root.micLabel, root.micMuted)
+            "Microphone · " + (root.micMuted ? "Muted" : root.micLabel), root.micMuted)
     }
 
     readonly property IpcHandler _ipc: IpcHandler {
