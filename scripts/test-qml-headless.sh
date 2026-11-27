@@ -190,9 +190,12 @@ else
             unsupported_lint_args+=("${qmllint_args[i]}")
         fi
     done
-    # the minimum-runtime job runs the floor's own tools, whose qmllint has no error level at all.
-    # Everywhere else an old qmllint would quietly weaken the check, so it fails
-    if [ "${#unsupported_lint_args[@]}" -gt 0 ] && [ "${SILERE_ALLOW_OLD_QMLLINT:-0}" = 1 ]; then
+    # the minimum-runtime job runs the floor's own tools, whose qmllint has no error level at all. Required tools
+    # (CI) fail on an old one, which would quietly weaken the check. Otherwise it is skipped as a missing one is: the
+    # updater runs the next release's copy of this check, and with an older qmllint (Fedora's, the floor's) every
+    # update was refused
+    if [ "${#unsupported_lint_args[@]}" -gt 0 ] && { [ "${SILERE_ALLOW_OLD_QMLLINT:-0}" = 1 ] \
+            || [ "${SILERE_REQUIRE_QML_TOOLS:-0}" != 1 ]; }; then
         echo "note: this qmllint is too old for the import check; skipped"
     elif [ "${#unsupported_lint_args[@]}" -gt 0 ]; then
         printf 'FAIL: installed qmllint is too old for required diagnostics: %s\n' \

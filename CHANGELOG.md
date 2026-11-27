@@ -69,6 +69,8 @@ settings file carries its own `__version` and migrates separately.
 - Icon size says it sizes the tray and workspace app icons.
 - Undoing a settings reset in the menu removes its backup, so `silere reset --undo` no longer puts the older settings
   back over yours later.
+- Updates install where an older qmllint is present (Fedora's Qt tools, Qt 6.10), instead of being refused as an
+  update that does not load.
 
 ## Releases
 
