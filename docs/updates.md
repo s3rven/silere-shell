@@ -4,100 +4,69 @@
 
 ## Install a release
 
-Open **Settings › System › Overview**, check for a Silere release, read the release
-notes, then choose **Install** and **Confirm**.
-
+Open Settings › System › Overview, check for a Silere release, read its notes, then choose Install and Confirm.
 From a terminal:
 
 ```bash
-silere update
-silere update --apply
+silere update            # check
+silere update --apply    # install
 ```
 
-The first command checks; the second installs. Silere verifies the release signature
-and validates the new version before replacing the installed files. Applying an
-update needs an internet connection to confirm the release is still published.
+Silere verifies the release's signature and validates the new version before it replaces anything, and it
+needs an internet connection to confirm the release is still published. The menu installs the release you
+reviewed; if a background check finds a newer one before you confirm, review that one first.
 
-The menu installs the release you reviewed. If a background check changes the
-release before you confirm, review it again before installing.
-
-The updater restarts the running shell, so a new release never runs beside the old one.
-If no shell is running, the next start uses it. `silere version` shows the installed version;
-`silere status` shows which checkout is running and the updater state.
-
-If the release installs but the service manager rejects its restart, the updater
-reports the failure and keeps rollback available. Run `silere restart` to retry, or
-`silere update --rollback` to restore the previous revision.
-The next update check clears the recovery record once the shell started by
-`silere restart` reports the updated revision.
+The updater restarts the running shell, so a new release never runs beside the old one; with no shell running,
+the next start uses it. `silere version` shows the installed version, and `silere status` which checkout is
+running and the updater's state. If the release installs but the service manager refuses the restart, the
+updater says so and keeps rollback available: run `silere restart` to retry, or roll back.
 
 ## Restore the previous version
-
-If an update breaks something, run:
 
 ```bash
 silere update --rollback
 ```
 
-This restores the revision the update replaced and restarts the running shell. You can run
-rollback from a terminal even when the bar and menu will not open.
+This restores the revision the update replaced and restarts the running shell. It works from a terminal even
+when the bar and menu will not open. Rollback clears the last release check, so run `silere update` when you are
+ready to look at releases again.
 
-Rollback clears the previous release check. Run `silere update` when you're ready
-to review available releases again.
+## Local edits and development checkouts
 
-## Local edits or development checkouts
+The updater refuses to overwrite local edits. `silere repair` previews them, `silere repair --apply` saves them
+in a Git stash and restores the shipped files, and `silere repair --undo` brings the latest saved edits back.
 
-The updater refuses to overwrite local edits. Preview them with:
+A checkout marked as a development install, or on a branch other than `main`, is yours to manage with Git, and
+self-update stays off there. A package install is updated by its package manager.
 
-```bash
-silere repair
-```
+## Automatic checks and package updates
 
-`silere repair --apply` saves the edits in a reversible Git stash and restores the
-shipped files. `silere repair --undo` restores the latest saved repair. Review the
-preview before applying it.
+The installer's optional timer checks for Silere releases once a day and marks one on the bar. It never installs
+on its own. If turning the timer on or off fails, Settings shows the error and the switch follows the timer's
+real state.
 
-A checkout marked as a development install, or a checkout on a branch other than
-`main`, is managed with Git. Self-update is disabled there. Package installations
-are updated through the system package manager.
+On a connection NetworkManager marks as metered, Silere skips the automatic package checks and the daily release
+check. Package checks retry after a network change or within five minutes while the session is awake, the
+release timer on its next daily run, and Check in Overview checks at once.
 
-## Automatic checks and system packages
-
-The installer's optional update timer checks for Silere releases. Installing one
-still needs confirmation. It does not silently install a new shell version.
-If a timer change fails, Settings shows the error and refreshes the switch to
-match the timer's actual state.
-
-When NetworkManager marks the active connection as metered, Silere skips automatic
-package checks and the daily release check. Package checks retry after switching
-networks or within five minutes while the session is awake. The release timer tries
-again on its next daily run. Use **Check** in Overview to check immediately.
-
-The bar's package update badge counts distribution and AUR packages separately
-from Silere releases. Use your package manager to install those updates.
-On Arch with `paru` or `yay` as the only available checker, enable **Include AUR packages**
-in **Settings › System › Overview** before switching on **Track package updates**.
+The bar's package update count covers your distribution, Flatpak and AUR packages, apart from Silere's own
+releases; install those updates with your package manager. On Arch with `paru` or `yay` as the only checker,
+turn on Include AUR packages in Settings › System › Overview before Track package updates.
 
 ## Interrupted updates
 
-If power is lost or the updater is killed, the next update run checks its saved
-transaction and either keeps the validated revision or restores the previous one.
-Recovery stops if switching revisions would replace local edits or collide with
-an untracked file. This includes ignored files and file-to-directory changes.
-
-If recovery reports damaged state, run `silere doctor`. Silere preserves the
-damaged journal under your XDG state directory and reports its location. That
-failed run leaves the checkout alone; later update checks can run again.
+If power is lost or the updater is killed, the next update run reads its saved transaction and either keeps the
+validated revision or restores the previous one. It stops instead if switching would replace local edits or
+collide with an untracked file, ignored files and file-to-directory changes included. If it reports damaged
+state, run `silere doctor`: the damaged journal is kept under your XDG state folder and its location reported.
+That run leaves the checkout alone, and later checks can run again.
 
 ## How validation works
 
-The updater stages the signed release in a separate, detached Git worktree. It
-checks QML types and starts the staged shell in a sandbox against a copy of your
-settings before changing the live checkout. A staged shell that exits early
-fails validation. If the display is unreachable, the updater reports that it
-skipped the startup check.
+The updater checks out the signed release in a separate Git worktree, type-checks its QML and starts the staged
+shell in a sandbox against a copy of your settings, all before it touches the live checkout. A staged shell that
+exits early fails validation; if the display is unreachable, the updater says it skipped that start.
 
-A private transaction journal records that validation passed. Recovery authenticates
-it against a snapshot of the previously installed release key. The journal remains
-until the running shell reports the Git revision captured by the Silere launcher.
-If the check cannot reach a running shell with that revision, rollback stays available.
+A private transaction journal records that validation passed, and recovery authenticates it against a snapshot of
+the previously installed release key. The journal stays until the running shell reports the revision the update
+installed, so rollback stays available until then.
