@@ -497,7 +497,7 @@ Singleton {
         { k: "barFloating",         t: "bool", sec: "surface", l: "Floating bar" },
         { k: "barGap",              t: "int",  min: 0,    max: 24, step: 4, sec: "surface", l: "Edge gap" },
         { k: "barWidth",            t: "real", min: 0.5,  max: 1.0, sec: "surface", l: "Width" },
-        { k: "barRadius",           t: "int",  min: 0,    max: 22, sec: "surface" },
+        { k: "barRadius",           t: "int",  min: 0,    max: 22, sec: "surface", l: "Roundness" },
         { k: "barShadow",           t: "bool", sec: "theme", l: "Shell shadows" },
         { k: "barShadowStrength",   t: "real", min: 0.3,  max: 1.6, sec: "theme", l: "Depth" },
         { k: "barAccentPills",      t: "bool", sec: "theme", l: "Accent widget icons" },
