@@ -374,16 +374,18 @@ Singleton {
                 offer(directory + "/" + root.sidecarArtNames[i])
         return out
     }
-    // a player's local cover reaches an Image only once stat calls it a regular file: a fifo behind one held Qt's
-    // single image thread, so no icon in the shell loaded again and the shell could not quit. A hung mount did the same
+    // a player's local cover reaches an Image only as Silere's own copy: a fifo behind one held Qt's single image
+    // thread, so no icon in the shell loaded again and the shell could not quit, and a file checked before Qt opened it
+    // could be swapped for one. A hung mount did the same
     function shownArt(offers, checked): var {
-        return offers.filter(o => !o.check || checked[o.source] === true).map(o => o.source)
+        return offers.map(o => !o.check ? o.source : typeof checked[o.source] === "string" ? checked[o.source] : "")
+            .filter(source => source.length > 0)
     }
     readonly property var artCandidates: root.shownArt(root._artOffers, root._localArt)
     property var _localArt: ({})
     function keptLocalArt(checked): var {
         const out = {}
-        for (const source in checked) if (checked[source] === true) out[source] = true
+        for (const source in checked) if (typeof checked[source] === "string") out[source] = checked[source]
         return out
     }
     property var _localArtChecking: []
@@ -396,14 +398,26 @@ Singleton {
         if (!match) return ""
         try { return decodeURIComponent(match[1]) } catch (error) { return "" }
     }
-    // test stats without opening, so a fifo cannot hold it; prints the 1-based index of each readable regular file
-    readonly property string _localArtScript: 'i=0; for p; do i=$((i+1)); [ -f "$p" ] && [ -r "$p" ] && echo "$i"; done; exit 0'
+    // copies each readable regular file into Silere's own folder, the only file Qt then opens: a fifo swapped in after
+    // the test blocks head here, inside the bounded check. Prints the 1-based index of each copy made
+    readonly property string _localArtScript: 'd=$1; w=$2; shift 2; [ "$w" = 1 ] && rm -rf -- "$d"; '
+        + 'mkdir -p -m 700 -- "$d" || exit 0; i=0; while [ $# -ge 2 ]; do i=$((i+1)); p=$1; n=$2; shift 2; '
+        + '[ -f "$p" ] && [ -r "$p" ] && head -c 10485760 -- "$p" > "$d/.$n" 2>/dev/null '
+        + '&& mv -f -- "$d/.$n" "$d/$n" && echo "$i"; rm -f -- "$d/.$n"; done; exit 0'
+    readonly property string _coverDir: XdgPaths.cacheHome.length > 0 ? XdgPaths.cacheHome + "/silere-shell/covers" : ""
+    // the folder starts over with each session and after 96 copies, and so do the verdicts pointing into it
+    property int _coversMade: 0
+    property bool _wipeCovers: true
     function _checkLocalArt(): void {
-        if (!root._artWanted || _localArtCheck.running) return
+        if (!root._artWanted || _localArtCheck.running || root._coverDir.length === 0) return
+        if (root._coversMade >= 96) { root._coversMade = 0; root._wipeCovers = true; root._localArt = ({}) }
         const sources = root._localArtUnchecked
         if (sources.length === 0) return
         root._localArtChecking = sources
-        _localArtCheck.exec(["sh", "-c", root._localArtScript, "silere-art-check"].concat(sources.map(root.localArtPath)))
+        const args = [root._coverDir, root._wipeCovers ? "1" : "0"]
+        root._wipeCovers = false
+        for (const source of sources) args.push(root.localArtPath(source), Qt.md5(source))
+        _localArtCheck.exec(["sh", "-c", root._localArtScript, "silere-art-check"].concat(args))
     }
     readonly property BoundedProcess _localArtProbe: BoundedProcess {
         id: _localArtCheck
@@ -414,8 +428,11 @@ Singleton {
             root._localArtChecking = []
             const regular = _localArtOut.text.trim().split(/\s+/)
             const next = Object.keys(root._localArt).length > 200 ? ({}) : Object.assign({}, root._localArt)
-            for (let i = 0; i < checked.length; i++)
-                next[checked[i]] = !_localArtCheck.timedOut && regular.indexOf(String(i + 1)) >= 0
+            for (let i = 0; i < checked.length; i++) {
+                const copied = !_localArtCheck.timedOut && regular.indexOf(String(i + 1)) >= 0
+                next[checked[i]] = copied ? IconResolver.safeLocalSource(root._coverDir + "/" + Qt.md5(checked[i])) : false
+                if (copied) root._coversMade++
+            }
             root._localArt = next
             Qt.callLater(root._checkLocalArt)
         }

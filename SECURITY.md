@@ -50,7 +50,8 @@ any app on the session bus can set a cover url. The shell never fetches it itsel
 `curl` downloads it over HTTPS only, capped at 10 MB and 10 seconds, into
 `~/.cache/silere-shell/art`, and the shell shows the saved file. Turning the setting
 off deletes that folder. A local cover a player names, or one beside its track, is shown
-only once it checks out as a readable regular file.
+from Silere's own copy in `~/.cache/silere-shell/covers`, made only from a readable
+regular file, so the image the shell opens is never one a player can swap out.
 
 The first install is a different matter. `git clone` followed by
 `scripts/install.sh` runs code from `main` before any signature has been checked,

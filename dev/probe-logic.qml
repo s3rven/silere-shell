@@ -10300,25 +10300,28 @@ ShellRoot {
             "media artwork resolves a local album directory without climbing out of it")
         const offered = [{ source: "file:///a.jpg", check: true }, { source: "file:///b.jpg", check: true },
             { source: "file:///saved.img", check: false }, { source: "image://qsimage/1", check: false }]
-        root._check(JSON.stringify(Media.shownArt(offered, { "file:///a.jpg": true, "file:///b.jpg": false }))
-                === JSON.stringify(["file:///a.jpg", "file:///saved.img", "image://qsimage/1"])
+        root._check(JSON.stringify(Media.shownArt(offered, { "file:///a.jpg": "file:///covers/a", "file:///b.jpg": false }))
+                === JSON.stringify(["file:///covers/a", "file:///saved.img", "image://qsimage/1"])
                 && Media.shownArt(offered, {}).indexOf("file:///b.jpg") < 0,
-            "a player's local cover shows only once it was found to be a regular file; saved downloads need no check")
+            "a player's local cover shows only as Silere's own copy of a regular file; saved downloads need no check")
         root._check(Media.localArtPath("file:///home/u/A%20B/cover.jpg") === "/home/u/A B/cover.jpg"
                 && Media.localArtPath("file:/x.png") === "/x.png" && Media.localArtPath("file:///bad%E0") === ""
                 && Media.localArtPath("image://qsimage/1") === "",
             "a local cover url maps back to the path that is checked")
-        root._check(JSON.stringify(Media.keptLocalArt({ "file:///a.jpg": true, "file:///b.jpg": false })) === '{"file:///a.jpg":true}',
-            "a cover found missing is looked at again on the next opening, a found one is kept")
-        // the check, run as written: a regular file passes; a fifo, a directory, an unreadable or missing file do not
+        root._check(JSON.stringify(Media.keptLocalArt({ "file:///a.jpg": "file:///covers/a", "file:///b.jpg": false }))
+                === '{"file:///a.jpg":"file:///covers/a"}',
+            "a cover found missing is looked at again on the next opening, a copied one is kept")
+        // the check, run as written: a regular file is copied; a fifo, a directory, an unreadable or missing file are not
         const artRun = processFactory.createObject(root, { command: ["bash", "-c",
             "d=$(mktemp -d) || exit 1; trap 'chmod 600 \"$d/locked\" 2>/dev/null; rm -rf \"$d\"' EXIT; "
             + "printf x > \"$d/ok\"; mkfifo \"$d/fifo\"; mkdir \"$d/dir\"; printf x > \"$d/locked\"; chmod 000 \"$d/locked\"; "
-            + "out=$(timeout 5 sh -c \"$1\" check \"$d/fifo\" \"$d/ok\" \"$d/dir\" \"$d/locked\" \"$d/none\" | tr '\\n' ,); "
-            + "[ \"$out\" = 2, ] || { [ \"$(id -u)\" = 0 ] && [ \"$out\" = 2,4, ]; }",
+            + "mkdir \"$d/c\"; printf old > \"$d/c/stale\"; "
+            + "out=$(timeout 5 sh -c \"$1\" check \"$d/c\" 1 \"$d/fifo\" f1 \"$d/ok\" f2 \"$d/dir\" f3 \"$d/locked\" f4 "
+            + "\"$d/none\" f5 | tr '\\n' ,); [ \"$(cat \"$d/c/f2\")\" = x ] && [ ! -e \"$d/c/stale\" ] "
+            + "&& { [ \"$out\" = 2, ] || { [ \"$(id -u)\" = 0 ] && [ \"$out\" = 2,4, ]; }; }",
             "check", Media._localArtScript] })
         artRun.exited.connect(function(code) {
-            root._check(code === 0, "the cover check passes a regular file and refuses a fifo, a directory and an unreadable file")
+            root._check(code === 0, "the cover check copies a regular file into a fresh folder and refuses a fifo, a directory and an unreadable file")
             root._localArtDone = true
             artRun.destroy()
         })
