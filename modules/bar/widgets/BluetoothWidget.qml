@@ -38,7 +38,7 @@ Pill {
     glyphColor: root._batteryLow ? Theme.barWarning : root._linked ? Theme.barText : Theme.barSubtext
     textColor:  Theme.barSubtext
     animateText: false
-    maxTextWidth: compact ? 130 : 220
+    maxTextWidth: Math.round((compact ? 130 : 220) * Metrics.typeGain)
 
     // with values shown at rest, the charge reads beside the glyph as the volume's level does
     function restText(valuesOnHover: bool, battery: int): string {

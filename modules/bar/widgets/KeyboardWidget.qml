@@ -17,7 +17,7 @@ Pill {
     text: [root.expanded ? InputState.layout : InputState.shortLayout, InputState.capsLock ? "CAPS" : ""]
         .filter(part => part.length > 0).join(" ")
     // the hover shows the full layout name, as long as the other widgets' details get
-    maxTextWidth: compact ? 150 : 260
+    maxTextWidth: Math.round((compact ? 150 : 260) * Metrics.typeGain)
     accessibleName: ["Keyboard", InputState.layout,
         InputState.capsAvailable ? (InputState.capsLock ? "Caps Lock on" : "Caps Lock off") : ""]
         .filter(part => part.length > 0).join(", ")

@@ -12,6 +12,8 @@ Singleton {
     readonly property int confirmGuardMs: 400
     readonly property int glyphSlotWidth: Math.max(18,
         Settings.iconSize + (ShellSettings.uiScale > 1.15 ? 6 : 0))
+    // what the type gained over UI scale 1.0: a width that holds text grows by it, or it holds less text at 150%
+    readonly property real typeGain: Math.max(1, Settings.fontSize / Math.max(1, Settings.fontSizeBase))
     readonly property int menuTypeGain: root.snap4(
         13 * 0.6 * Math.max(0, Settings.fontSize - Settings.fontSizeBase))
     readonly property int menuContentGrowth: root.snap4Up(

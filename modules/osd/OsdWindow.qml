@@ -88,10 +88,8 @@ PanelWindow {
                 required property int serial
                 required property var fillColor
 
-                // what the type gained over UI scale 1.0: a frame fixed in px kept its 1.0 size while the glyph and the level grew inside it
-                readonly property real _typeGain: Math.max(1, Settings.fontSize / Math.max(1, Settings.fontSizeBase))
                 readonly property int glyphW: Math.max(20, Metrics.iconCellFor(Settings.fontSize + 4))
-                readonly property int _preferredTrackW: Metrics.snap4(136 * _typeGain)
+                readonly property int _preferredTrackW: Metrics.snap4(136 * Metrics.typeGain)
                 // the wider readout in both states: a slot that followed mute recentred the glyph and track on every press
                 readonly property real _levelW: Math.max(_valueMetrics.advanceWidth, _mutedMetrics.advanceWidth)
                 readonly property int _minimumLabelW: Math.ceil(_levelW) + 2
@@ -100,7 +98,7 @@ PanelWindow {
                 readonly property int pillH: ShellSettings.osdMatchBar ? Math.max(28, Metrics.barHeight) : Metrics.rowHeightFor(36)
                 readonly property int _preferredChromeW: glyphW + (hasBar ? _preferredTrackW + 20 : 10) + 40
                 readonly property int pillW: Math.min(osd._pillLimit, 2 * Metrics.snap4(
-                    Math.max(Math.round(268 * _typeGain), Math.min(520, _preferredChromeW + _labelW)) / 2))
+                    Math.max(Math.round(268 * Metrics.typeGain), Math.min(520, _preferredChromeW + _labelW)) / 2))
                 readonly property int _sideSpace: Math.min(40, Math.floor(pillW / 5))
                 readonly property int _levelRoom: Math.max(0, pillW - _sideSpace - glyphW - 20)
                 // give the readout most of the remaining room when its full device label cannot fit

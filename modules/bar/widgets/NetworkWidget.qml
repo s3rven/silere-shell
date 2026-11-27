@@ -76,7 +76,7 @@ Pill {
         enabled: root.canActivate
         onTapped: root.activated()
     }
-    maxTextWidth:   compact ? 150 : 260
+    maxTextWidth:   Math.round((compact ? 150 : 260) * Metrics.typeGain)
     // above the 2s traffic-stats poll: shrinkDelay:0 re-animated the pill's width on every single tick
     shrinkDelay:    2400
 

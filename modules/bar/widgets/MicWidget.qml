@@ -49,7 +49,7 @@ Pill {
     text: !Audio.micReady || (ShellSettings.valuesOnHover && !expanded) ? ""
         : (expanded && root._heardMuted ? "Muted" : root._level)
             + (expanded && Audio.captureSummary.length > 0 ? " · " + Audio.captureSummary : "")
-    maxTextWidth: compact ? 150 : 260
+    maxTextWidth: Math.round((compact ? 150 : 260) * Metrics.typeGain)
     levelValue: Audio.micReady ? Audio.micVolume : -1
     levelVisible: Audio.micReady && ShellSettings.valuesOnHover
         && ShellSettings.hoverLevelBar && !expanded

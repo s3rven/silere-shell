@@ -769,7 +769,7 @@ Item {
         glyph: "󰌌"
         glyphColor: Theme.barAccentMark
         text: root._mode.length > 0 ? root._mode : modeChip._lastMode
-        maxTextWidth: compact ? 140 : 220
+        maxTextWidth: Math.round((compact ? 140 : 220) * Metrics.typeGain)
         accessibleName: "Keyboard mode " + (root._mode.length > 0 ? root._mode : modeChip._lastMode) + ", press to leave it"
         interactive: show
         onActivated: if (modeChip.canActivate) Compositor.leaveSubmap()

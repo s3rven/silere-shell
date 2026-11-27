@@ -14,7 +14,7 @@ Item {
     property bool   interactive: false
     // scroll-only: still a control under the pointer, but no button to a screen reader
     property bool   adjustable: false
-    property int    maxTextWidth: 150
+    property int    maxTextWidth: Math.round(150 * Metrics.typeGain)
     property bool   compact: ShellSettings.barCompact
     readonly property int horizontalPadding: Metrics.pillPadFor(compact)
     property bool   barActive: true

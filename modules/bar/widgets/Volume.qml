@@ -45,7 +45,7 @@ Pill {
         : (ShellSettings.valuesOnHover && !expanded) ? ""
         : (expanded && Audio.muted ? "Muted" : root._level)
             + (expanded && root._outputLow ? " · " + root._outputNote : "")
-    maxTextWidth: compact ? 150 : 260
+    maxTextWidth: Math.round((compact ? 150 : 260) * Metrics.typeGain)
     levelValue: Audio.ready ? Audio.uiVolume : -1
     levelVisible: Audio.ready && ShellSettings.valuesOnHover && ShellSettings.hoverLevelBar && !expanded
     levelColor: Audio.muted ? Theme.barSubtext : Theme.barAccentMark
