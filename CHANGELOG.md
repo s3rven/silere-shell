@@ -77,6 +77,7 @@ settings file carries its own `__version` and migrates separately.
 - Behind a sign-in page the package check waits for the network to clear instead of rerunning every three minutes.
 - The microphone widget's glyph, colour, text and level all follow whether an app hears you, instead of mixing the
   default microphone's mute in.
+- A notification that times out while you are away with browser music playing counts on the bell as missed.
 
 ## Releases
 

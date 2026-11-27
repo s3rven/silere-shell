@@ -503,7 +503,12 @@ Item {
         }
         interval: Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs)
         running: card.enabled && shouldRun && !card._paused && !card._folding
-        onTriggered: card.dismiss(true)
+        // past the quiet stage only a playing browser keeps this running (it may be music with nobody there): what
+        // runs out then was not read either, and the bell says so
+        onTriggered: {
+            if (Idle.isQuiet) Notifications.noteMissedAway()
+            card.dismiss(true)
+        }
     }
 
     // a start stamped before the wall clock stepped back reads as just shown, not hours away
