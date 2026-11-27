@@ -89,7 +89,7 @@ Pill {
     function _physicalLabel(): string {
         if (Network.isWifi) return Network.connectionName || "Wi-Fi"
         const name = Network.connectionName || Network.deviceName
-        return name.length === 0 || root.genericWiredName(name) ? "Wired" : name
+        return name.length === 0 || root.genericWiredName(name) ? "Ethernet" : name
     }
     // NetworkManager's default profile names and systemd's interface names (eno1, ens3, enp2s0, enx<mac>, end0, eth0)
     function genericWiredName(name: string): bool {

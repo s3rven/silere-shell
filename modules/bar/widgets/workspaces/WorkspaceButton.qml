@@ -132,7 +132,7 @@ Item {
         if (root.urgent) parts.push("Needs attention")
         const shownApps = root.compact ? root.apps.slice(0, 1) : root.apps
         if (shownApps.length > 0) parts.push(shownApps.map(app => app.name).join(", "))
-        if (root.hiddenAppCount > 0) parts.push(root.hiddenAppCount + " more applications")
+        if (root.hiddenAppCount > 0) parts.push(root.hiddenAppCount + (root.hiddenAppCount === 1 ? " more application" : " more applications"))
         return parts.join(". ")
     }
     Accessible.selected: root.active

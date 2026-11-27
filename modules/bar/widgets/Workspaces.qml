@@ -197,7 +197,7 @@ Item {
     property var urgentElsewhere: null
     readonly property string _urgentElsewhereLabel: !root.urgentElsewhere ? ""
         : root.urgentElsewhere.wsId > 0 ? String(root.urgentElsewhere.wsId)
-        : String(root.urgentElsewhere.wsName ?? "").replace(/^special:/, "").slice(0, 12)
+        : SafeText.singleLineText(String(root.urgentElsewhere.wsName ?? "").replace(/^special:/, ""), 12)
     readonly property bool _tickWanted: root.urgentOffPage > 0 || root._urgentElsewhereLabel.length > 0
 
     function _syncUrgentOffPage(): void {

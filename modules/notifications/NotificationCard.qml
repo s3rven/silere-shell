@@ -393,7 +393,7 @@ Item {
     function _updateTime(): void {
         const secs = (Date.now() - card._createdAt) / 1000
         if (secs < 60)        _timeLabel = "just now"
-        else if (secs < 3600) _timeLabel = Math.floor(secs / 60) + "m ago"
+        else if (secs < 3600) _timeLabel = Math.floor(secs / 60) + " min ago"
         else {
             _timeLabel = DateTime.clockText(new Date(card._createdAt))
             _timeLive = false
