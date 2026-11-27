@@ -165,11 +165,17 @@ Singleton {
         root._startSensorDetection()
     }
 
+    // a machine whose sensors never match (a VM, a board with only GPU or NVMe hwmon) is looked over for five minutes,
+    // then again at each wake (on_WantedChanged), not with a scan every minute all session
+    property int _sensorRetries: 0
     property Timer _sensorRetry: Timer {
         interval: 60000
         repeat: true
-        running: root._wanted && root.sensorMissing
-        onTriggered: root._retryMissingSensor()
+        running: root._wanted && root.sensorMissing && root._sensorRetries < 5
+        onTriggered: {
+            root._sensorRetries++
+            root._retryMissingSensor()
+        }
     }
 
     on_WantedChanged: {
@@ -183,6 +189,7 @@ Singleton {
             return
         }
         root._warmedUp = false
+        root._sensorRetries = 0
         _warmup.restart()
         if (root._needsSensorDetection()) root._startSensorDetection()
     }

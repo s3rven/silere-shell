@@ -103,6 +103,7 @@ settings file carries its own `__version` and migrates separately.
   when pasted.
 - With one monitor, the bar's system, network and temperature readers rest while a fullscreen game or film covers the
   bar, as they do in the overview.
+- A computer with no CPU sensor Silere can read stops scanning for one every minute after five minutes.
 
 ## Releases
 
