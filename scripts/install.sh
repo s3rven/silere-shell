@@ -1100,6 +1100,7 @@ _optdep_result() {
 
 _optdep() {
     if command -v "$1" >/dev/null 2>&1; then _optdep_result found "$1" "$2"
+    elif [ "$1" = powerprofilesctl ] && _silere_power_profiles_on_bus; then _optdep_result found "$1" "$2 (over D-Bus)"
     else _optdeps_missing_tools+=("$1"); _optdep_result missing "$1" "$2"
     fi
 }

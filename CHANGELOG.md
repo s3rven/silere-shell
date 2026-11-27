@@ -97,6 +97,8 @@ settings file carries its own `__version` and migrates separately.
 - A computer with no CPU sensor Silere can read stops scanning for one every minute after five minutes.
 - On a network without internet (a LAN-only one), the bar stops rechecking every 30 seconds after five minutes;
   opening the menu, or keeping Home open, still rechecks.
+- On Fedora with tuned-ppd, the installer no longer lists power-profiles-daemon as missing and puts it in its
+  install command, where it conflicts with tuned-ppd.
 
 ## Releases
 

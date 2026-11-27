@@ -200,6 +200,14 @@ _silere_config_autostarts() {
     return 0
 }
 
+# power profiles served over D-Bus without powerprofilesctl: tuned-ppd (Fedora's default), which conflicts with
+# power-profiles-daemon, so installing that package beside it would fail the whole transaction
+_silere_power_profiles_on_bus() {
+    ! command -v powerprofilesctl >/dev/null 2>&1 && command -v busctl >/dev/null 2>&1 \
+        && busctl --system --no-pager --timeout=2 get-property net.hadess.PowerProfiles \
+            /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile >/dev/null 2>&1
+}
+
 # who holds org.freedesktop.Notifications, for doctor and its shareable report: sets notif_owner (the bus name, empty
 # when no one holds it), notif_comm and notif_cmd. Needs busctl
 # shellcheck disable=SC2034

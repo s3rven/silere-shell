@@ -302,9 +302,7 @@ if command -v busctl >/dev/null 2>&1; then
 fi
 optional_tool brightnessctl "brightness control"
 optional_tool matugen "wallpaper theming"
-if ! command -v powerprofilesctl >/dev/null 2>&1 && command -v busctl >/dev/null 2>&1 \
-        && busctl --system --no-pager --timeout=2 get-property net.hadess.PowerProfiles \
-            /net/hadess/PowerProfiles net.hadess.PowerProfiles ActiveProfile >/dev/null 2>&1; then
+if _silere_power_profiles_on_bus; then
     ok "power profiles" "served over D-Bus (tuned-ppd or similar)"
 else
     optional_tool powerprofilesctl "power profiles"
