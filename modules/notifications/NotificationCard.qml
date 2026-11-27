@@ -577,13 +577,18 @@ Item {
             _autoClose.restart()
     }
 
-    // arrived after you stepped away, so idle files it unread: the bell counts it as missed, as a held-back arrival
+    // arrived after you stepped away, so idle files it unread: the bell counts it as missed, as a held-back arrival.
+    // So does one still waiting for your return that came after the last input (shown for less than the idle time)
     property bool _arrivedAway: false
+    function unseenAtIdle(arrivedAway: bool, waiting: bool, shownMs: real): bool {
+        return arrivedAway || (waiting && shownMs < Idle.idleSeconds * 1000)
+    }
 
     function _handleIdle(idle: bool): void {
         if (idle) {
             card.cancelReply()
-            if (_autoClose.shouldRun && card._arrivedAway) Notifications.noteMissedAway()
+            if (_autoClose.shouldRun && card.unseenAtIdle(card._arrivedAway, card._handsOff, card._shownMs()))
+                Notifications.noteMissedAway()
             // this can remove the delegate synchronously: keep it last
             if (_autoClose.shouldRun) card.dismiss(true)
             return

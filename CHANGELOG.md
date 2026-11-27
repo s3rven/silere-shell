@@ -25,6 +25,8 @@ settings file carries its own `__version` and migrates separately.
 - Two quick middle clicks on the volume or microphone widget step two outputs or inputs, not one.
 - With Hover highlight on, widgets a click does nothing on (one keyboard layout, the indicators) no longer light up
   under the pointer.
+- A notification that comes in your first minutes away and is still waiting when the session goes idle counts on the
+  bell as missed.
 
 ## Releases
 

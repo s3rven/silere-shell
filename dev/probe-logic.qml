@@ -7186,6 +7186,9 @@ ShellRoot {
                 && handsOffCard._returnTopUp(5000, 4800, 0, false) === 0
                 && handsOffCard._returnTopUp(5000, 1000, 0, true) === 0,
             "a timed card watches for hands off the keyboard while shown, and after waiting for your return keeps two seconds")
+        root._check(handsOffCard.unseenAtIdle(false, true, 60000) && !handsOffCard.unseenAtIdle(false, true, 601000)
+                && !handsOffCard.unseenAtIdle(false, false, 60000) && handsOffCard.unseenAtIdle(true, false, 601000),
+            "a card still waiting for your return at idle that came after the last input counts as missed")
         handsOffCard.destroy()
         for (const item of [persistentIdleCard, criticalIdleCard, ordinaryIdleCard, timedCriticalIdleCard])
             item.destroy()

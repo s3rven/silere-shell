@@ -21,9 +21,11 @@ Singleton {
         respectInhibitors: true
     }
 
+    // seconds, aligned with hypridle's screen-blank stage: shown for less at the edge, a card came after the last input
+    readonly property int idleSeconds: 600
     IdleMonitor {
         id: _monitor
-        timeout: 600              // seconds — aligned with hypridle's screen-blank stage
+        timeout: root.idleSeconds
         respectInhibitors: true
     }
 
