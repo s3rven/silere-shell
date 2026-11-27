@@ -11,6 +11,9 @@ Singleton {
 
     // set by shell.qml while a fullscreen window hides all the shell draws: an animation in flight then stops every Timer
     property bool unseen: false
+    // set by shell.qml while a fullscreen window covers the only bar: the bar's own readers rest, even while an OSD, a
+    // card or a popup draws above the window (those make unseen false, the bar stays covered)
+    property bool barCovered: false
 
     function ms(base: int): int { return _rm ? 0 : base }
 

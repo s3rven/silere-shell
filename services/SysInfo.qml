@@ -89,10 +89,10 @@ Singleton {
     readonly property bool monitorHasReadings: ShellSettings.systemShowCpu || ShellSettings.systemShowMemory
         || (ShellSettings.systemShowTemp && !CpuTemp.sensorMissing)
     // the bar's monitor reads only /proc; disk and uptime stay with Home, so the bar never spawns df
-    // Motion.unseen: a fullscreen window covers the only bar, and a game's input keeps the session from idling for hours
+    // Motion.barCovered: a fullscreen window covers the only bar, and a game's input keeps the session from idling for hours
     readonly property bool _barWanted: ShellSettings.barShowSystem
         && (ShellSettings.systemShowCpu || ShellSettings.systemShowMemory)
-        && !Idle.isIdle && !OverviewState.active && !Motion.unseen
+        && !Idle.isIdle && !OverviewState.active && !Motion.barCovered
     readonly property bool _wanted: _homeWanted || _barWanted
     readonly property bool _cpuWanted: _homeWanted || (_barWanted && ShellSettings.systemShowCpu)
     readonly property bool _memoryWanted: _homeWanted || (_barWanted && ShellSettings.systemShowMemory)

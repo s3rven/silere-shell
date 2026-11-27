@@ -68,8 +68,13 @@ ShellRoot {
     // anchored popup (the tray menu and calendar from a keybind too), the OSD and notification cards
     Binding {
         target: Motion
+        property: "barCovered"
+        value: Compositor.activeFullscreen && Quickshell.screens.length === 1
+    }
+    Binding {
+        target: Motion
         property: "unseen"
-        value: Compositor.activeFullscreen && Quickshell.screens.length === 1 && !OverlayCoordinator.anyOpen
+        value: Motion.barCovered && !OverlayCoordinator.anyOpen
             && OsdBarState.activeCount === 0 && Notifications.popupModel.values.length === 0
     }
 
