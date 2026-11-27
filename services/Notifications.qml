@@ -108,6 +108,8 @@ Singleton {
             root._syncHistoryRetention()
             root.missedCount = 0
         }
+        // the expiry timer runs no time in suspend: after a weekend asleep the rail's count held expired rows
+        function onOpenChanged() { if (MenuState.open) root._syncHistoryRetention() }
     }
     Connections {
         target: Idle

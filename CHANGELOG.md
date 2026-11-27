@@ -47,6 +47,7 @@ settings file carries its own `__version` and migrates separately.
 - A card folded away behind newer ones and back keeps its countdown instead of starting it over.
 - Automatic update checks look at Flatpak apps again after the clock was set back, instead of waiting for it to catch
   up with the last check.
+- After a long sleep, the menu's History count drops notifications past Keep history for as the menu opens.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
