@@ -10082,6 +10082,7 @@ ShellRoot {
         }
         root._check(Settings.fallbackTextFont(["Hack Nerd Font", "Symbols Nerd Font"]) === "Hack Nerd Font"
                 && Settings.fallbackTextFont(["Symbols Nerd Font"]) === Settings.defaultFont
+                && Settings.fallbackTextFont(["Symbols Nerd Font Mono", "Hack Nerd Font"]) === "Hack Nerd Font"
                 && Settings.fallbackTextFont([]) === Settings.defaultFont,
             "without the default font another Nerd Font stands in, never the symbols-only one or the first font installed")
         // two real fonts or nothing to tell apart: a missing DejaVu Sans is substituted by fontconfig, as in a container

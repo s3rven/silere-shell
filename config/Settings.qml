@@ -21,7 +21,7 @@ Singleton {
         return root.fallbackTextFont(FontScan.iconFamilies)
     }
     function fallbackTextFont(nerdFonts): string {
-        const found = (nerdFonts || []).find(f => f !== "Symbols Nerd Font")
+        const found = (nerdFonts || []).find(f => !String(f).startsWith("Symbols Nerd Font"))
         return found || root.defaultFont
     }
     readonly property string iconFont: {
