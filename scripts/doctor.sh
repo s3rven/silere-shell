@@ -299,6 +299,13 @@ if command -v busctl >/dev/null 2>&1; then
         warn "NetworkManager" "not running: network widget + Wi-Fi controls hidden (optional)"
         optional_missing=$((optional_missing + 1))
     fi
+    # an adapter without bluetoothd (Arch ships bluetooth.service disabled) hides Bluetooth without a word
+    if compgen -G '/sys/class/bluetooth/hci*' >/dev/null \
+            && [ "$(busctl --system --no-pager --timeout=2 call org.freedesktop.DBus /org/freedesktop/DBus \
+                org.freedesktop.DBus NameHasOwner s org.bluez 2>/dev/null)" = "b false" ]; then
+        warn "Bluetooth" "adapter found, bluetooth.service not running: Bluetooth hidden (optional)"
+        optional_missing=$((optional_missing + 1))
+    fi
 fi
 optional_tool brightnessctl "brightness control"
 optional_tool matugen "wallpaper theming"

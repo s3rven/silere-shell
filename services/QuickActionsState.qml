@@ -87,7 +87,7 @@ AnchoredPopupState {
             if (!root.btControllable)
                 return Bluetooth.hardBlocked
                     ? "error: the Bluetooth radio is blocked in hardware"
-                    : "error: no Bluetooth adapter"
+                    : "error: BlueZ lists no Bluetooth adapter; is bluetooth.service running?"
             const next = !Bluetooth.enabled
             Bluetooth.toggle()
             return next ? "on" : "off"

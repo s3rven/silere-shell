@@ -99,6 +99,8 @@ settings file carries its own `__version` and migrates separately.
   opening the menu, or keeping Home open, still rechecks.
 - On Fedora with tuned-ppd, the installer no longer lists power-profiles-daemon as missing and puts it in its
   install command, where it conflicts with tuned-ppd.
+- `silere doctor` warns when a Bluetooth adapter is present but bluetooth.service is not running, which hides
+  Bluetooth everywhere, and `silere toggle bluetooth` asks whether it is running.
 
 ## Releases
 
