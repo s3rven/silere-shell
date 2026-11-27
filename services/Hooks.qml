@@ -317,7 +317,7 @@ Singleton {
             return [idle, [idle]]
         }
         case "media-changed": {
-            const state = Media.playing ? "playing" : Media.title.length > 0 ? "paused" : "stopped"
+            const state = Media.playing ? "playing" : !Media.stopped && Media.title.length > 0 ? "paused" : "stopped"
             return [state + "\n" + Media.title + "\n" + Media.artist, [state, Media.title, Media.artist]]
         }
         case "network-changed": {
@@ -367,6 +367,7 @@ Singleton {
     Connections {
         target: root._present["media-changed"] === true ? Media : null
         function onPlayingChanged() { _settle.restart() }
+        function onStoppedChanged() { _settle.restart() }
         function onTitleChanged() { _settle.restart() }
         function onArtistChanged() { _settle.restart() }
     }

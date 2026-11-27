@@ -121,6 +121,8 @@ Singleton {
     readonly property bool available: player !== null
         && (player.playbackState !== MprisPlaybackState.Stopped || title.length > 0)
     readonly property bool playing: player ? player.isPlaying : false
+    // a stopped player can keep its track loaded, and still reads as stopped, not paused
+    readonly property bool stopped: !player || player.playbackState === MprisPlaybackState.Stopped
 
     readonly property bool canTogglePlaying: player ? player.canTogglePlaying : false
     readonly property bool canGoNext:        player ? player.canGoNext : false

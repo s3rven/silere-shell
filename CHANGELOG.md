@@ -55,6 +55,8 @@ settings file carries its own `__version` and migrates separately.
 - `silere mic mute` shows the same Microphone · Muted OSD as the mute key, so the OSD keeps its width.
 - On Hyprland with `workspace_back_and_forth`, jumping to a window on the current workspace (a notification click,
   Now Playing) no longer flips to the previous workspace and back.
+- The `media-changed` hook reports `stopped` for a player that stopped with its track loaded, and runs when a paused
+  player stops.
 
 ## Releases
 

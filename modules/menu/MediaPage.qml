@@ -143,7 +143,7 @@ PageShell {
                 id: _source
                 anchors { top: _heading.bottom; topMargin: 2; left: parent.left; right: _open.left; rightMargin: 12 }
                 text: [Media.sourceLabel, Media.playing ? ""
-                    : Media.player?.playbackState === MprisPlaybackState.Stopped ? "Stopped" : "Paused"]
+                    : Media.stopped ? "Stopped" : "Paused"]
                     .filter(s => s.length > 0).join(" · ")
                 color: Theme.menuTextDetail
                 font.pixelSize: Settings.fontLabel
