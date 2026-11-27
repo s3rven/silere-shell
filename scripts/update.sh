@@ -10,6 +10,13 @@ _silere_refuse_elevated silere-update
 source "$ROOT/scripts/lib/qml-modules.sh"
 source "$ROOT/scripts/lib/unit.sh"
 source "$ROOT/scripts/lib/instances.sh"
+
+# a path for a hint to paste: single quotes read the same in bash, zsh and fish, where printf %q under this script's
+# C locale wrote a non-ASCII name as $'\303\251', which fish cannot read
+_pasteable() {
+    local s="$1"
+    printf "'%s'" "${s//\'/\'\\\'\'}"
+}
 cd "$ROOT"
 
 CACHE_HOME="$(_silere_xdg_home "${XDG_CACHE_HOME:-}" .cache)" || {
@@ -342,7 +349,7 @@ _rollback_applied_update() {
     [ "$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)" = "$JOURNAL_TO" ] \
         || _fail "the checkout moved since the update — roll back manually"
     _has_local_changes \
-        && _fail "local changes block the rollback — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
+        && _fail "local changes block the rollback — run: bash $(_pasteable "$ROOT/scripts/repair.sh") --apply"
     _reset_preserving_user_files "$JOURNAL_FROM" \
         || _fail "could not restore $JOURNAL_FROM"
     _clear_apply_transaction \
@@ -930,7 +937,7 @@ if [ "${1:-}" = "--pin-release" ]; then
     [ "$pin_branch" = main ] \
         || _fail "checkout is on ${pin_branch:-a detached HEAD} — switch to main before pinning a release"
     if _has_local_changes; then
-        _fail "local changes block pinning a release — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
+        _fail "local changes block pinning a release — run: bash $(_pasteable "$ROOT/scripts/repair.sh") --apply"
     fi
     _fetch_main || _fail "git fetch failed (check network / connectivity)"
     _resolve_trusted_release pin
@@ -981,7 +988,7 @@ if [ "${1:-}" = "--apply" ]; then
         _fail "$release_tag is not the release that was confirmed ($cached_tag) — check for updates again"
     fi
     if _has_local_changes; then
-        _fail "local changes block the update — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
+        _fail "local changes block the update — run: bash $(_pasteable "$ROOT/scripts/repair.sh") --apply"
     fi
     # after a Qt upgrade qs can fail to start, and the gate below would blame the release
     if command -v qs >/dev/null 2>&1 && ! env -u LC_ALL qs --version >/dev/null 2>&1; then
@@ -1032,7 +1039,7 @@ if [ "${1:-}" = "--apply" ]; then
             && _fail "fast-forward merge failed — local branch diverged"
         # git lists offending paths tab-indented on the next lines
         merge_file="$(awk 'sub(/^\t/, "") { print; exit }' <<<"$merge_err")"
-        _fail "$merge_line${merge_file:+ $merge_file} — bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply clears blocking files"
+        _fail "$merge_line${merge_file:+ $merge_file} — bash $(_pasteable "$ROOT/scripts/repair.sh") --apply clears blocking files"
     fi
     # Retain the validated recovery journal until the moved checkout reaches
     # stable storage; otherwise a failed sync can erase the only rollback path.
@@ -1052,8 +1059,8 @@ if [ "${1:-}" = "--apply" ]; then
         # The journal stays until a later run sees the shell up on the new revision, so
         # a release that fails to come back can be restored with --rollback.
         if systemctl --user --no-block restart silere-shell.service; then
-            printf 'silere-update: the shell was restarted; if it does not come back, run: bash %q --rollback\n' \
-                "$ROOT/scripts/update.sh" >&2
+            printf 'silere-update: the shell was restarted; if it does not come back, run: bash %s --rollback\n' \
+                "$(_pasteable "$ROOT/scripts/update.sh")" >&2
         else
             _write_apply_journal restart-failed "$local_rev" "$remote_rev" "$release_tag" \
                 || _fail "$release_tag was installed, but the restart failed and its recovery state could not be updated — run silere update --rollback"
@@ -1062,8 +1069,8 @@ if [ "${1:-}" = "--apply" ]; then
     # no unit: the journal stays here too, or a release that fails to start could never be rolled back. The next
     # run of this script clears it
     elif _restart_unsupervised_shell; then
-        printf 'silere-update: the shell is restarting; if it does not come back, run: bash %q --rollback\n' \
-            "$ROOT/scripts/update.sh" >&2
+        printf 'silere-update: the shell is restarting; if it does not come back, run: bash %s --rollback\n' \
+            "$(_pasteable "$ROOT/scripts/update.sh")" >&2
         _notify "Silere Shell updated" "$count new $plural$note_suffix"
     else
         _notify "Silere Shell updated" "$count new $plural$note_suffix — restart the shell to use it"
