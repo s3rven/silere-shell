@@ -125,12 +125,6 @@ _extract_silere_fonts() {
         --wildcards --no-anchored "${SILERE_FONT_FILES[@]}"
 }
 
-_shell_quote() {
-    local s="$1"
-    s="${s//\'/\'\\\'\'}"
-    printf "'%s'" "$s"
-}
-
 _shell_printf_bytes() {
     local LC_ALL=C s="$1" out="" ch oct i
     for ((i = 0; i < ${#s}; i++)); do
@@ -1333,7 +1327,7 @@ if [ -d "$INSTALL_DIR/.git" ]; then
         install_has_changes=true
         _warn "local Silere edits detected; the installer will not remove them"
         [ -x "$INSTALL_DIR/scripts/repair.sh" ] \
-            && _warn "preview a safe restore with: bash $(printf '%q' "$INSTALL_DIR/scripts/repair.sh")"
+            && _warn "preview a safe restore with: bash $(_silere_pasteable "$INSTALL_DIR/scripts/repair.sh")"
     fi
     if _dry; then
         _would "update $INSTALL_DIR to the latest signed release"
@@ -1440,7 +1434,7 @@ did_keybind=false did_layers=false did_motion=false
 had_tmpl=false had_toml=false had_update=false had_cli=false had_keybind=false had_layers=false had_motion=false
 cli_planned=false
 autostart_ready=false
-ROOT_PRINTF_BYTES="$(_shell_quote "$(_shell_printf_bytes "$ROOT")")"
+ROOT_PRINTF_BYTES="$(_silere_pasteable "$(_shell_printf_bytes "$ROOT")")"
 # compositor lines spell out an ordinary path; one holding anything hyprlang or sh would reinterpret (#, $, quotes, spaces) is written byte-encoded
 if [[ "$ROOT" =~ ^[A-Za-z0-9/._-]+$ ]]; then
     ROOT_EXEC="\"$ROOT"
@@ -1599,7 +1593,7 @@ fi
 LAUNCH_CMD="exec $ROOT_EXEC/scripts/silere\" run --startup"
 LAUNCH_CMD_LUA="$(_lua_string "$LAUNCH_CMD")"
 # a line printed for someone to copy always uses a plain quoted path
-LAUNCH_SHOWN="exec $(_shell_quote "$ROOT/scripts/silere") run --startup"
+LAUNCH_SHOWN="exec $(_silere_pasteable "$ROOT/scripts/silere") run --startup"
 LAUNCH_SHOWN_LUA="$(_lua_string "$LAUNCH_SHOWN")"
 
 _already_present() { grep -qF 'silere-shell begin' "$1" 2>/dev/null; }
@@ -1803,7 +1797,7 @@ MENU_BIND_KEY="${SILERE_MENU_BIND_KEY:-slash}"
     || _die "menu keybind modifiers contain unsupported characters"
 [[ "$MENU_BIND_KEY" =~ ^[A-Za-z0-9_:-]+$ ]] \
     || _die "menu keybind key contains unsupported characters"
-MENU_BIND_SHOWN="qs ipc -p $(_shell_quote "$ROOT/shell.qml") call menu toggle"
+MENU_BIND_SHOWN="qs ipc -p $(_silere_pasteable "$ROOT/shell.qml") call menu toggle"
 # the shell silere run starts answers this global shortcut, so a press starts no qs process; niri has none
 HYPR_BIND="bind = $MENU_BIND_MODS, $MENU_BIND_KEY, global, silere:menu"
 # a Lua bind lists no arguments in hyprctl, so only its description names it on the Keybinds page
@@ -2027,7 +2021,7 @@ if { $did_cli || $had_cli; } && $cli_on_path; then
 elif [[ "$CLI_TARGET" =~ ^[A-Za-z0-9/._-]+$ ]]; then
     SILERE_CMD="$CLI_TARGET"
 else
-    SILERE_CMD="$(_shell_quote "$CLI_TARGET")"
+    SILERE_CMD="$(_silere_pasteable "$CLI_TARGET")"
 fi
 # a missing runtime and an unwired autostart are independent, so report them
 # separately — chaining them tells a user to restart into a shell nothing launches

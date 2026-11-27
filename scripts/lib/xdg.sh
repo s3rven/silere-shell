@@ -1,6 +1,13 @@
 # shellcheck shell=bash
 # Shared by install.sh, uninstall.sh, update.sh, and check.sh: one XDG path rule
 
+# a path for a hint to paste: single quotes read the same in bash, zsh and fish, where printf %q under the scripts'
+# C locale writes a non-ASCII name as $'\303\251', which fish cannot read
+_silere_pasteable() {
+    local s="$1"
+    printf "'%s'" "${s//\'/\'\\\'\'}"
+}
+
 # sudo and doas run a script as root with root's home and user services, none of which the person's session reads, and
 # leave root-owned files in their checkout that their own updates then cannot replace. Root without them (CI) is fine
 _silere_refuse_elevated() { # $1 = the script's name in its messages
