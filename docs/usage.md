@@ -8,7 +8,7 @@
 |---|---|
 | Main menu | Click the active workspace |
 | Settings | Open the menu and choose **Settings** |
-| Notification history | Open the menu and choose **Notifications** |
+| Notification history | Right-click the clock, or open the menu and choose **Notifications** |
 | Quick actions | Right-click the active workspace |
 | Calendar | Click the clock |
 | Now Playing | Right-click the media widget |
@@ -33,7 +33,7 @@ other keybind can run `silere menu`.
 | Volume | Mute | pwvucontrol or pavucontrol | Next output | Volume | Volume level and low Bluetooth battery |
 | Microphone | Mute | pwvucontrol or pavucontrol | Next input | Input level | Input level and listening apps |
 | Brightness | Brightness sliders in Home | | | Step all controllable displays | |
-| Battery | Power Mode in Home, for the system battery | | | | Time left or charging state; on a desktop it shows only while a receiver battery is low |
+| Battery | Power Mode in Home for the system battery, or its details where there are no power modes | | | | Time left or charging state; on a desktop it shows only while a receiver battery is low, and names that device |
 | Script indicators | | | | | Shown only while a script has set one with `silere indicator set` |
 | Updates | Package details | Check again | | | Status, and the error of a failed check |
 | Shell update | Settings › System › Overview | | | | |
@@ -41,7 +41,7 @@ other keybind can run `silere menu`.
 
 - **Optional widgets:** the system monitor and the window title's app icon are under **Settings › Widgets › Indicators**, where the monitor's **Style** can draw each reading as a ring around its icon. The microphone appears while an app is listening.
 - **Warnings in amber:** the system monitor turns amber or red while a reading stays high. Bluetooth charge at 20% or less turns the Bluetooth glyph amber while one device is connected, and the volume glyph for headphones it plays through when the Bluetooth widget doesn't show their charge.
-- **Workspaces:** rings are empty workspaces and dots have windows. In **Settings › Widgets › Workspaces**, enable **Show app icons**. Turn on **Numbers** to show them alongside the icons. Choose **Line** to keep both visible on the active workspace. With icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page, or to a window that needs you in the scratchpad or on a monitor whose bar is off. On Hyprland, a submap you enter shows its name after the workspaces on the focused monitor; click it to leave.
+- **Workspaces:** rings are empty workspaces and dots have windows. In **Settings › Widgets › Workspaces**, enable **Show app icons**. Turn on **Numbers** to show them alongside the icons. Choose **Line** to keep both visible on the active workspace. With icons on, `+N` counts the extra apps and an amber underline marks urgency. An arrow points to an urgent workspace on another page, or to a window that needs you in the scratchpad or on a monitor whose bar is off. On Hyprland, a submap you enter shows its name after the workspaces on the focused monitor, or on the bar popups use while that monitor's bar is off; click it to leave.
 - **Hover:** a widget shows the table's last column when the pointer rests on it. **Reveal values on hover** under **Bar › Layout**, on by default, also keeps plain readings such as the volume and battery percentages hidden until then; off, they show all the time, and the clock's date, the tray's app names and the workspace numbers no longer peek out on hover. A detail stays open while the pointer moves on over the same part of the bar (left, centre or right), so the widgets beside it don't slide as you move along. It folds when the pointer rests on another widget, a moment after you leave that part of the bar, or when a menu opened from it closes.
 - **Crowded bar:** window and media titles shorten first. **Compact widgets** and **Auto tighten** under **Bar › Spacing** set the density, and the bar grows when larger text needs it.
 - **Reduced motion:** hover a shortened window or media title to read its ending without scrolling it.
@@ -114,7 +114,7 @@ under **Feedback › Notifications**. A reply field appears when the sender supp
 | Not be interrupted in a game or a call | On by default: popups wait in history while a window is fullscreen or an app is in a call, recording and playing at once. Turn off with **Hide in fullscreen and calls** under **Feedback › Notifications**. |
 
 When a notification arrives while popups are held back, the bell beside the clock takes the accent colour and stays
-until you open History, with a badge once popups are back, as after a fullscreen game.
+until you open History (right-click the clock), with a badge once popups are back, as after a fullscreen game.
 
 ## Home
 
