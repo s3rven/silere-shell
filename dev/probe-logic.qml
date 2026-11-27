@@ -3769,6 +3769,15 @@ ShellRoot {
         const unwanted = !SysInfo._homeWanted && !CpuTemp._wanted
         ShellSettings.systemShowCpu = true
         ShellSettings.barShowSystem = true
+        const coveredWas = Motion.barCovered, unseenWas = Motion.unseen
+        Motion.unseen = false
+        Motion.barCovered = false
+        const openBarWanted = SysInfo._barWanted
+        Motion.barCovered = true
+        root._check(openBarWanted && !SysInfo._barWanted,
+            "the bar's system reader rests while a fullscreen window covers the only bar, even with an OSD drawn above it")
+        Motion.barCovered = coveredWas
+        Motion.unseen = unseenWas
         // active by hand, as in _checkSystemWidget: activating for real would read /proc after this check restores
         SysInfo._active = true
         SysInfo.cpuReady = true
@@ -7559,6 +7568,11 @@ ShellRoot {
         CpuTemp._started = true
         root._check(CpuTemp._sensorRetry.running,
             "missing CPU sensors schedule recovery while temperature warnings need readings")
+        CpuTemp._sensorRetries = 5
+        CpuTemp._reading = true
+        CpuTemp._finishSensorRead("45000")
+        root._check(CpuTemp._sensorRetries === 0 && !CpuTemp._reading,
+            "a CPU sensor that reads again gets its five retries back")
         CpuTemp._started = false
         root._check(!CpuTemp._sensorRetry.running,
             "stopping temperature monitoring cancels the sensor recovery timer")
@@ -12287,6 +12301,16 @@ ShellRoot {
         niri._onLine(JSON.stringify({ WindowFocusChanged: { id: null } }))
         root._check(niri.activeToplevel !== null && niri.activeToplevel.ref === 92,
             "with a layer surface holding niri's keyboard (a popup, a launcher) the window in front keeps the title")
+        const liveTitlesWas = ShellSettings.showWindowTitle
+        ShellSettings.showWindowTitle = true
+        niri._titleSyncTimer.stop()
+        niri._backgroundTitleSyncTimer.stop()
+        niri._onLine(JSON.stringify({ WindowOpenedOrChanged: { window:
+            { id: 92, workspace_id: 30, app_id: "probe.reconnected", title: "renamed", is_focused: false } } }))
+        root._check(niri._titleSyncTimer.running && !niri._backgroundTitleSyncTimer.running,
+            "the window kept in front syncs a new title on the focused window's pace, not the background one")
+        niri._titleSyncTimer.stop()
+        ShellSettings.showWindowTitle = liveTitlesWas
         niri._onLine(JSON.stringify({ WorkspaceActiveWindowChanged: { workspace_id: 30, active_window_id: null } }))
         root._check(niri.activeToplevel === null, "an empty focused niri workspace has no active window")
 
