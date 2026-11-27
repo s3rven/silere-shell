@@ -86,6 +86,7 @@ settings file carries its own `__version` and migrates separately.
   and tray menus.
 - Wi-Fi or Bluetooth blocked by the hardware switch keeps its row readable in Home; only the switch dims.
 - With a bar on each monitor, an open tray menu lights its app's icon only on the bar it opened from.
+- Greyed tray menu entries follow High contrast like every other disabled row.
 
 ## Releases
 

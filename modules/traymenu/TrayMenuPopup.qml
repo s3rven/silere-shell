@@ -317,7 +317,7 @@ FittedPopupWindow {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
-                opacity: _entry.on ? 1.0 : 0.4
+                opacity: _entry.on ? 1.0 : Theme.disabledOpacity
 
                 Item {
                     id: _lead
