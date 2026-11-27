@@ -32,6 +32,8 @@ settings file carries its own `__version` and migrates separately.
 - Notification timeouts wait while the calendar or a tray menu is open too, not only the menu and quick actions.
 - A volume or brightness script replacing its notification no longer makes the cards below it dip and slide back.
 - Turning on Do not disturb counts the notifications it files before they were ever shown on the bell as missed.
+- Notifications waiting behind Show more while you are away are filed at idle with the rest, instead of staying up
+  while newer ones went to History.
 
 ## Releases
 

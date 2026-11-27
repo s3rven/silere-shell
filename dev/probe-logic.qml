@@ -15437,6 +15437,29 @@ ShellRoot {
             "a card do not disturb retires before it was ever shown counts as missed; one already shown does not")
         Notifications.missedCount = dndMissedWas
         Notifications._seen = dndSeenWas
+        {
+            // what is still timed after the idle edge (cards behind the more chip load as the shown ones file) goes too
+            const idleCards = [
+                { urgency: 1, expireTimeout: -1, summary: "Behind the chip" },
+                { urgency: 1, expireTimeout: 0, summary: "Resident" },
+                { urgency: 2, expireTimeout: -1, summary: "Critical" },
+                { urgency: 2, expireTimeout: 5000, summary: "Timed critical" }
+            ]
+            for (const n of idleCards) Object.assign(n, { transient: false, tracked: true, appName: "Probe",
+                appIcon: "", desktopEntry: "", body: "", expire() { this.reason = "expired"; this.tracked = false } })
+            const listBefore = Notifications.list
+            Notifications.list = idleCards.map((n, i) => ({ notification: n, id: 81 + i, time: Date.now() }))
+            const idleMissedWas = Notifications.missedCount
+            Notifications._retireAtIdle(false)
+            const untouchedAwake = Notifications.activeCount === 4
+            Notifications._retireAtIdle(true)
+            root._check(untouchedAwake && Notifications.activeCount === 2 && idleCards[0].reason === "expired"
+                    && idleCards[3].reason === "expired" && idleCards[1].tracked && idleCards[2].tracked
+                    && (MenuState.recentActive || Notifications.missedCount === idleMissedWas + 2),
+                "timed cards still up once the idle edge settles are filed as missed; resident and critical ones stay")
+            Notifications.missedCount = idleMissedWas
+            Notifications.list = listBefore
+        }
         Notifications.replyingId = replyingWas
         ShellSettings.dnd = dndWas
         Notifications.list = []

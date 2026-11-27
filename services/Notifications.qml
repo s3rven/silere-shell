@@ -111,7 +111,19 @@ Singleton {
     }
     Connections {
         target: Idle
-        function onIsIdleChanged() { if (!Idle.isIdle) root._syncHistoryRetention() }
+        function onIsIdleChanged() {
+            if (!Idle.isIdle) root._syncHistoryRetention()
+            else Qt.callLater(() => root._retireAtIdle(Idle.isIdle))
+        }
+    }
+    // each timed card files itself at the idle edge; one behind the more chip loaded as they went, once the edge had
+    // passed it by, and waited out the whole absence over newer ones filed. Whatever timed card is left goes too, unseen
+    function _retireAtIdle(idle: bool): void {
+        if (!idle) return
+        root._retireActive(e => {
+            const n = e ? e.notification : null
+            return !n || (n.urgency === NotificationUrgency.Critical ? !(n.expireTimeout > 0) : n.expireTimeout === 0)
+        }, e => true)
     }
 
     // history is newest-first, so first-seen order is recency order: the app that spoke
