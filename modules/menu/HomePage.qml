@@ -44,7 +44,8 @@ PageShell {
     readonly property int _rowTextX: 14 + Metrics.glyphSlotWidth + 10
     property bool _wifiAvailable: Network.toolAvailable && Network.hasWifiDevice
     property bool _btAvailable: Bluetooth.available
-    property bool _wiredShown: Network.deviceType === "ethernet"
+    // a machine with no Wi-Fi keeps its Ethernet row unplugged too: the network icon had nothing to open to
+    property bool _wiredShown: Network.deviceType === "ethernet" || (Network.available && !Network.hasWifiDevice)
     readonly property bool _signInShown: Network.signInNeeded && Network.canOpenSignIn
     readonly property bool _brightnessAvailable: Brightness.controllable
     readonly property bool _wifiPickerOpen: _picker === "wifi"
@@ -328,10 +329,11 @@ PageShell {
                 ControlRow {
                     id: _wiredRow
                     visible: root._wiredShown
-                    active: true
+                    active: Network.connected
                     glyph: Network.connectivityText.length > 0 ? Network.issueGlyph(false, 0) : "󰈀"
                     title: "Ethernet"
-                    status: Network.connectivityText || Network.connectionName || "Connected"
+                    status: !Network.connected ? "Disconnected"
+                        : Network.connectivityText || Network.connectionName || "Connected"
                     statusColor: Network.connectivityText.length > 0 ? Theme.warning : "transparent"
                     passive: Settings.networkSettingsCommand.length === 0
                     onActivated: {
