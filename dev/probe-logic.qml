@@ -9340,6 +9340,9 @@ ShellRoot {
         const wine = IconResolver.appMeta("ProbeTool.exe")
         root._check(mc.fallback === "M" && rdns.name === "ProbeTool" && wine.name === "ProbeTool",
             "an app without an icon is named by a reverse-DNS id's last part, never by a version or .exe")
+        root._check(IconResolver.appMeta("/tmp/silere-probe-fifo").icon === ""
+                && IconResolver.appMeta("file:///tmp/silere-probe-fifo").icon === "",
+            "a window, stream or tray id that is a path is never loaded as an image (a FIFO stalls the image thread)")
         // the desktop entries load off this thread; before they land an empty lookup finds nothing either way
         for (let i = 0; (DesktopEntries.applications.values || []).length === 0 && i < 300; i++) discoveryClock.wait(10)
         root._check(IconResolver.appEntry("") === null && Notifications.entryIconSource("", "") === ""

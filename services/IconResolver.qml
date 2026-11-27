@@ -225,12 +225,15 @@ Singleton {
         const tail = tailOf(lower)
         const steamIcon = root.steamGameIcon(lower)
         const entry = root.appEntry(original) || root.appEntry(noDesktop)
+        // the identity is a guess at a theme name, never a path: a window or stream named after a FIFO held Qt's one
+        // image thread for good (the desktop entry's own icon may be a path)
+        const guess = s => s.indexOf("/") < 0 ? s : ""
         const candidates = [
             entry && entry.icon,
             steamIcon,
-            noDesktop,
-            lower,
-            tail
+            guess(noDesktop),
+            guess(lower),
+            guess(tail)
         ]
         let icon = ""
         for (let i = 0; i < candidates.length && icon.length === 0; i++)
