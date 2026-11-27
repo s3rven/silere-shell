@@ -2041,8 +2041,8 @@ if $has_qs && ! $qs_too_old && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] &
     qs_configs="$(_silere_running_configs)"
     other_configs="$(printf '%s\n' "$qs_configs" | grep -Fxv -e "$ROOT/shell.qml" -e '')" || other_configs=""
     if [ -z "$other_configs" ]; then
-        start_prompt="Start silere now?"
-        [ -n "$qs_configs" ] && start_prompt="Restart silere now to load this version?"
+        start_prompt="Start Silere now?"
+        [ -n "$qs_configs" ] && start_prompt="Restart Silere now to load this version?"
         _recommended=0
         if _ask "$start_prompt"; then
             bash "$ROOT/scripts/silere" restart && started=true
@@ -2051,11 +2051,11 @@ if $has_qs && ! $qs_too_old && $qs_modules_ok && [ -n "${WAYLAND_DISPLAY:-}" ] &
     fi
 fi
 if $autostart_ready; then
-    $started || printf "  silere starts at your next login, or now with: ${DIM}%s run${R}\n" "$SILERE_CMD"
+    $started || printf "  Silere starts at your next login, or now with: ${DIM}%s run${R}\n" "$SILERE_CMD"
 elif $started; then
-    printf "  ${YELLOW}autostart is not set up${R} — add the line above to your Hyprland or niri config so silere starts at login\n"
+    printf "  ${YELLOW}autostart is not set up${R} — add the line above to your Hyprland or niri config so Silere starts at login\n"
 else
-    printf "  ${YELLOW}autostart is not set up${R} — silere will not start on its own\n"
+    printf "  ${YELLOW}autostart is not set up${R} — Silere will not start on its own\n"
     printf "  add the line above to your Hyprland or niri config, or run it now:\n"
     printf "    ${DIM}%s run${R}\n" "$SILERE_CMD"
 fi

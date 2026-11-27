@@ -60,6 +60,7 @@ settings file carries its own `__version` and migrates separately.
   another notification daemon), and Night Light and Do Not Disturb are named in Settings as on Home.
 - The urgent arrow cuts a long scratchpad name with an ellipsis instead of mid-emoji, and a wired connection with a
   generic name reads Ethernet on the bar, as on Home.
+- After a rollback, the notification names the release it went back to instead of a 40-character commit id.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you

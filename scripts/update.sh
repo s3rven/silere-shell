@@ -364,7 +364,7 @@ _rollback_applied_update() {
     else
         _restart_unsupervised_shell || true
     fi
-    _notify "Silere Shell rolled back" "restored $JOURNAL_FROM"
+    _notify "Silere Shell rolled back" "restored $(git -C "$ROOT" describe --tags --always "$JOURNAL_FROM" 2>/dev/null || printf '%.8s' "$JOURNAL_FROM")"
     printf 'silere-update: rolled back to %s\n' "$JOURNAL_FROM"
 }
 
