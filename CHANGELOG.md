@@ -53,6 +53,8 @@ settings file carries its own `__version` and migrates separately.
 - The microphone widget and the apps under Input follow the microphone each app records from, so they no longer read
   Muted while an app hears an unmuted one.
 - `silere mic mute` shows the same Microphone · Muted OSD as the mute key, so the OSD keeps its width.
+- On Hyprland with `workspace_back_and_forth`, jumping to a window on the current workspace (a notification click,
+  Now Playing) no longer flips to the previous workspace and back.
 
 ## Releases
 

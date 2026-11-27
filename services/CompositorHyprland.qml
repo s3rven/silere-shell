@@ -314,9 +314,12 @@ QtObject {
             || (c.wsRef !== undefined && c.wsRef !== null && c.wsRef >= 0)
         const addr = c.ref
             ? (String(c.ref).startsWith("address:") ? String(c.ref) : "address:" + c.ref) : ""
-        if (hasWs && addr.length > 0) HyprDispatch.dispatchPair("workspace", target, "focuswindow", addr)
-        else if (hasWs) HyprDispatch.dispatch("workspace", target)
+        // the workspace already shown: binds:workspace_back_and_forth takes a switch to it as "go back", and
+        // focuswindow then came straight back, two switches for none
+        const here = !special && c.wsRef === root.focusedWorkspaceRef
+        if (hasWs && !here && addr.length > 0) HyprDispatch.dispatchPair("workspace", target, "focuswindow", addr)
         else if (addr.length > 0) HyprDispatch.dispatch("focuswindow", addr)
+        else if (hasWs && !here) HyprDispatch.dispatch("workspace", target)
     }
 
     function refreshToplevels(): void {
