@@ -82,6 +82,8 @@ settings file carries its own `__version` and migrates separately.
 - The updater's repair and rollback hints quote the path so bash, zsh and fish all read it, accented names included.
 - History opened from the clock stays centred on it as the missed bell folds, and the clock is marked while it is
   open, as for the calendar.
+- The menu opened from its keybind puts the focus on its tab, so the arrow keys move at once, as in Quick Actions
+  and tray menus.
 
 ## Releases
 

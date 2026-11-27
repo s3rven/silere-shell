@@ -28,6 +28,13 @@ Item {
         _recentDrawer.holdLayout()
     }
 
+    function focusActiveTab(): void {
+        const tab = MenuState.activeTab
+        const item = tab === MenuState.settingsTab ? _railSettings : tab === MenuState.recentTab ? _railRecent
+            : tab === MenuState.mediaTab ? _railMedia : _railHome
+        item.forceActiveFocus(Qt.TabFocusReason)
+    }
+
     function stopWarmDelays(): void {
         _settingsWarmDelay.stop()
         _recentWarmDelay.stop()

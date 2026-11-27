@@ -101,6 +101,7 @@ AnchoredPopupState {
         // on the way in, so a closing History keeps its rows; a missed-notification badge must not land on last time's app
         if (open) recentFilter = ""
         else {
+            keyboardEntry = false
             closeSettingsSelect()
             homePicker = ""
         }
@@ -448,9 +449,13 @@ AnchoredPopupState {
 
     readonly property string _refusedText: "error: the menu stays closed while the session is idle or the overview is open"
 
+    // opened from a keybind: the rail's tab takes the focus, so the arrows move at once, as Quick Actions and the tray do
+    property bool keyboardEntry: false
+
     // the IPC call and the Hyprland global shortcut open Home the same way
     function keybindToggle(): string {
         if (root.open) { root.close(); return "ok" }
+        root.keyboardEntry = true
         root.selectTab(root.homeTab)
         root.openUnanchored()
         return root.open ? "ok" : root._refusedText

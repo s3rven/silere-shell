@@ -194,6 +194,8 @@ FittedPopupWindow {
             if (activeTab === 1) _settingsNavRetained = true
             panel._syncPageRetention()
             Qt.callLater(function() { panel._geometryReady = true })
+            // a keybind open usually builds the window: the open edge came before it
+            if (MenuState.open && MenuState.keyboardEntry) Qt.callLater(rail.focusActiveTab)
         }
 
         function _syncPageRetention(): void {
@@ -366,6 +368,7 @@ FittedPopupWindow {
                 panel._navOpen = false
                 if (MenuState.open) {
                     _closedUnload.stop()
+                    if (MenuState.keyboardEntry) Qt.callLater(rail.focusActiveTab)
                     panel._syncPageRetention()
                     // closeFinished is canceled when a close animation reverses; transient drawer state must not depend on that callback
                     panel.powerOpen = false
