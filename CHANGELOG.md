@@ -27,6 +27,8 @@ settings file carries its own `__version` and migrates separately.
   under the pointer.
 - A notification that comes in your first minutes away and is still waiting when the session goes idle counts on the
   bell as missed.
+- A notification over a browser video keeps its timer after four minutes without input too, instead of waiting until
+  the pointer moves.
 
 ## Releases
 
