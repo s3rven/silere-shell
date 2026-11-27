@@ -13,12 +13,10 @@ settings file carries its own `__version` and migrates separately.
 
 - A mistyped option to `silere update`, `status`, `log`, `stop`, `restart`, `use`, `link` or `uninstall` names that
   command's usage in one line, as the control commands do, instead of printing the whole help.
-- With several monitors on Hyprland, moving the pointer to another monitor asks Hyprland for its monitor list only
-  when that monitor shows a workspace named other than its number, the one case Quickshell 0.3.2 loses track of.
-- A notification that arrives while a web browser plays video keeps its usual timer instead of waiting over the video
-  for the pointer to move. Browsers hold their wake lock through the idle daemon (hypridle), which the compositor and
-  so the shell never hear of; a browser's playing media now counts as that lock.
-- Settings > System > Keybinds reads a hyprlang `workspace, -1` bind as going to the previous workspace, not to workspace -1.
+- While a web browser plays video or music, a notification keeps its usual timer however long since your last input,
+  instead of waiting over the video for the pointer to move.
+- Settings › System › Keybinds reads a hyprlang `workspace, -1` bind as going to the previous workspace, not to
+  workspace -1.
 - On niri, the workspace arrow points to a window that needs you on a monitor whose bar is off, as it does on
   Hyprland.
 - A Hyprland submap entered on a monitor whose bar is off shows its name on the bar that is on.
@@ -27,41 +25,41 @@ settings file carries its own `__version` and migrates separately.
   under the pointer.
 - A notification that comes in your first minutes away and is still waiting when the session goes idle counts on the
   bell as missed.
-- A notification over a browser video keeps its timer after four minutes without input too, instead of waiting until
-  the pointer moves.
 - Notification timeouts wait while the calendar or a tray menu is open too, not only the menu and quick actions.
 - A volume or brightness script replacing its notification no longer makes the cards below it dip and slide back.
-- Turning on Do not disturb counts the notifications it files before they were ever shown on the bell as missed.
+- Turning on Do Not Disturb counts the notifications it files before they were ever shown on the bell as missed.
 - Notifications waiting behind Show more while you are away are filed at idle with the rest, instead of staying up
-  while newer ones went to History.
+  while newer ones went to History; those that came after your last input count on the bell as missed.
 - A key or wheel step on the Night Light, display brightness or seek slider still applies when Escape or closing the
   menu follows it at once.
-- Settings and History reopen at the height they closed at again; the heights were lost as soon as the menu finished
-  closing.
+- Settings and History open at the height they closed at, instead of growing into place as the page fades in.
 - An empty Wi-Fi list says No networks found instead of switching back to Searching every eight seconds.
 - Now Playing says Stopped, not Paused, for a player that stopped with its track still loaded.
-- An app whose window, tray or audio stream id is a file path no longer has that file loaded as its icon.
+- A window, tray app or audio stream whose id is a file path no longer gets that file as its icon; a named pipe there
+  stopped every icon and cover from loading until a restart.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
   play again or step away, instead of folding after 15 seconds with nothing left to resume it.
-- Right-click the clock to open notification history, where its missed-notification bell leads; again to close it.
+- Right-click the clock to open notification history, where its missed-notification bell leads, and again to close
+  it; the clock stays marked while History is open, as it does for the calendar.
 - On a computer without Wi-Fi, clicking the network widget with the cable unplugged shows Ethernet as Disconnected
   instead of a Home page with no network row.
 - On a desktop, hovering the battery pill for a low mouse or keyboard names the device.
 - On a laptop without power modes (TLP, auto-cpufreq), clicking the battery opens its details in Home.
 - With the OSD off, a low battery sends a notification instead of nothing; only the critical level used to.
 - Two browser tabs recording read as one app listening on the microphone widget, not two.
-- The microphone widget and the apps under Input follow the microphone each app records from, so they no longer read
-  Muted while an app hears an unmuted one.
+- The microphone widget and the apps listed under Input show muted or live by the microphone each app records from,
+  so they no longer read Muted while an app hears an unmuted microphone.
 - `silere mic mute` shows the same Microphone · Muted OSD as the mute key, so the OSD keeps its width.
 - On Hyprland with `workspace_back_and_forth`, jumping to a window on the current workspace (a notification click,
   Now Playing) no longer flips to the previous workspace and back.
 - The `media-changed` hook reports `stopped` for a player that stopped with its track loaded, and runs when a paused
   player stops.
 - A hyprsunset started outside Silere (its own unit) takes Night Light's temperature when Silere finds it running,
-  instead of staying neutral while the switch reads on.
-- Behind a sign-in page or with no internet, the updates widget no longer reports the package check as broken.
-- A settings file Silere cannot change the mode of (root's, after a run under sudo) no longer leaves notification
-  history and hooks off for the session.
+  instead of keeping its own temperature while the switch reads on.
+- Behind a sign-in page or with no internet, the updates widget no longer calls the package check broken, and the
+  check waits for the network to clear before trying again.
+- A settings file owned by root (after running Silere under sudo) no longer turns notification history and hooks off
+  for the session.
 - Settings no longer marks Devices as changed for a custom lock command or a display list that is folded out of sight.
 - Searching Settings for roundness finds the Roundness row.
 - Let critical through is greyed while popup notifications are off, since nothing can pop up past them.
@@ -71,29 +69,22 @@ settings file carries its own `__version` and migrates separately.
   back over yours later.
 - Updates install where an older qmllint is present (Fedora's Qt tools, Qt 6.10), instead of being refused as an
   update that does not load.
-- `silere service start` keeps your locale for the shell and the session, instead of starting them in the C locale.
-- The updater's repair and rollback hints work when copied for a checkout whose path has a space.
+- The updater's repair and rollback hints quote the checkout's path, so they paste into bash, zsh or fish even with
+  spaces or accented letters in it.
 - Shell completion offers `--yes` only after `repair --apply` or `--undo`, and `run`'s two flags in either order.
-- Behind a sign-in page the package check waits for the network to clear instead of rerunning every three minutes.
-- The microphone widget's glyph, colour, text and level all follow whether an app hears you, instead of mixing the
-  default microphone's mute in.
 - A notification that times out while you are away with browser music playing counts on the bell as missed.
-- Cards filed from behind Show more at idle count as missed only if they came after your last input.
-- The updater's repair and rollback hints quote the path so bash, zsh and fish all read it, accented names included.
-- History opened from the clock stays centred on it as the missed bell folds, and the clock is marked while it is
-  open, as for the calendar.
 - The menu opened from its keybind puts the focus on its tab, so the arrow keys move at once, as in Quick Actions
   and tray menus.
 - Wi-Fi or Bluetooth blocked by the hardware switch keeps its row readable in Home; only the switch dims.
 - With a bar on each monitor, an open tray menu lights its app's icon only on the bar it opened from.
 - Greyed tray menu entries follow High contrast like every other disabled row.
-- With Reduce motion on, Clear history and the widget reset show no ring that never drains, and every confirm says
-  Press again.
+- With Reduce motion on, Clear history and the widget reset no longer show a ring that sits full and never drains, as
+  the power actions already did.
+- Restore default settings asks you to Press again, as the power actions do, not Tap again.
 - A bar widget stays marked while the menu page it opened is showing, as the clock and the tray already were.
 - Quick Actions lights Power Mode for Power Saver as well as Performance, as Home does.
 - Without JetBrainsMono Nerd Font, opening Settings no longer switches the shell to the first font installed (often a
   serif); another Nerd Font stands in.
-- `silere theme` saves its accent and mode in one write instead of two.
 - Choosing Mix while the Auto accent is on starts from the wallpaper's accent on screen, not an older custom colour.
 - Reload palette shows only while the palette is missing or broken; a working one is followed as it changes.
 - On niri, the window title stays while a Silere popup or a launcher holds the keyboard instead of folding away.
@@ -104,8 +95,8 @@ settings file carries its own `__version` and migrates separately.
 - With one monitor, the bar's system, network and temperature readers rest while a fullscreen game or film covers the
   bar, as they do in the overview.
 - A computer with no CPU sensor Silere can read stops scanning for one every minute after five minutes.
-- On a network without internet (a LAN-only one), Silere asks NetworkManager to recheck every 30 s for five minutes,
-  then only while Home is open.
+- On a network without internet (a LAN-only one), the bar stops rechecking every 30 seconds after five minutes;
+  opening the menu, or keeping Home open, still rechecks.
 
 ## Releases
 
