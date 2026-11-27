@@ -91,6 +91,8 @@ settings file carries its own `__version` and migrates separately.
   Press again.
 - A bar widget stays marked while the menu page it opened is showing, as the clock and the tray already were.
 - Quick Actions lights Power Mode for Power Saver as well as Performance, as Home does.
+- Without JetBrainsMono Nerd Font, opening Settings no longer switches the shell to the first font installed (often a
+  serif); another Nerd Font stands in.
 
 ## Releases
 

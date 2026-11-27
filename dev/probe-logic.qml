@@ -10080,6 +10080,10 @@ ShellRoot {
             host.destroy()
         }
         }
+        root._check(Settings.fallbackTextFont(["Hack Nerd Font", "Symbols Nerd Font"]) === "Hack Nerd Font"
+                && Settings.fallbackTextFont(["Symbols Nerd Font"]) === Settings.defaultFont
+                && Settings.fallbackTextFont([]) === Settings.defaultFont,
+            "without the default font another Nerd Font stands in, never the symbols-only one or the first font installed")
         // two real fonts or nothing to tell apart: a missing DejaVu Sans is substituted by fontconfig, as in a container
         // that carries only the Nerd Font, and the measurement then compares two routes to one face
         if (Qt.fontFamilies().indexOf("DejaVu Sans") >= 0) {

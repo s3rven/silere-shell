@@ -15,9 +15,14 @@ Singleton {
         // an empty scan means fc-list is absent or still running, not that the font is gone
         if (chosen.length > 0 && (installed.length === 0 || installed.indexOf(chosen) >= 0))
             return chosen
-        // the default is not installed everywhere; without a Nerd Font the bar is all tofu
+        // the default is not installed everywhere; without a Nerd Font the bar is all tofu. Another Nerd Font stands in,
+        // never the symbols-only one and never families[0]: families lists every font, and its first was a serif
         if (installed.length === 0 || installed.indexOf(root.defaultFont) >= 0) return root.defaultFont
-        return installed[0]
+        return root.fallbackTextFont(FontScan.iconFamilies)
+    }
+    function fallbackTextFont(nerdFonts): string {
+        const found = (nerdFonts || []).find(f => f !== "Symbols Nerd Font")
+        return found || root.defaultFont
     }
     readonly property string iconFont: {
         const installed = FontScan.iconFamilies
