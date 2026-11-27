@@ -339,7 +339,8 @@ QtObject {
         if (at >= 0 && !root._windowChanged(current[at], w)) {
             const titleChanged = current[at].title !== w.title
             current[at].title = w.title
-            if (titleChanged) root._armTitleSync(w.is_focused)
+            // the window kept in front while a layer surface holds the keyboard syncs as the focused one
+            if (titleChanged) root._armTitleSync(w.is_focused || w.id === root.activeToplevel?.ref)
             return
         }
         root._winRaw = NiriEvents.windowsWithUpsert(current, w)
