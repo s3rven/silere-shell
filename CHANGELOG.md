@@ -72,6 +72,7 @@ settings file carries its own `__version` and migrates separately.
 - Updates install where an older qmllint is present (Fedora's Qt tools, Qt 6.10), instead of being refused as an
   update that does not load.
 - `silere service start` keeps your locale for the shell and the session, instead of starting them in the C locale.
+- The updater's repair and rollback hints work when copied for a checkout whose path has a space.
 
 ## Releases
 

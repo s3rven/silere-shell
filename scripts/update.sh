@@ -930,7 +930,7 @@ if [ "${1:-}" = "--pin-release" ]; then
     [ "$pin_branch" = main ] \
         || _fail "checkout is on ${pin_branch:-a detached HEAD} — switch to main before pinning a release"
     if _has_local_changes; then
-        _fail "local changes block pinning a release — run: bash $ROOT/scripts/repair.sh --apply"
+        _fail "local changes block pinning a release — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
     fi
     _fetch_main || _fail "git fetch failed (check network / connectivity)"
     _resolve_trusted_release pin
@@ -981,7 +981,7 @@ if [ "${1:-}" = "--apply" ]; then
         _fail "$release_tag is not the release that was confirmed ($cached_tag) — check for updates again"
     fi
     if _has_local_changes; then
-        _fail "local changes block the update — run: bash $ROOT/scripts/repair.sh --apply"
+        _fail "local changes block the update — run: bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply"
     fi
     # after a Qt upgrade qs can fail to start, and the gate below would blame the release
     if command -v qs >/dev/null 2>&1 && ! env -u LC_ALL qs --version >/dev/null 2>&1; then
@@ -1032,7 +1032,7 @@ if [ "${1:-}" = "--apply" ]; then
             && _fail "fast-forward merge failed — local branch diverged"
         # git lists offending paths tab-indented on the next lines
         merge_file="$(awk 'sub(/^\t/, "") { print; exit }' <<<"$merge_err")"
-        _fail "$merge_line${merge_file:+ $merge_file} — bash $ROOT/scripts/repair.sh --apply clears blocking files"
+        _fail "$merge_line${merge_file:+ $merge_file} — bash $(printf '%q' "$ROOT/scripts/repair.sh") --apply clears blocking files"
     fi
     # Retain the validated recovery journal until the moved checkout reaches
     # stable storage; otherwise a failed sync can erase the only rollback path.
@@ -1052,7 +1052,7 @@ if [ "${1:-}" = "--apply" ]; then
         # The journal stays until a later run sees the shell up on the new revision, so
         # a release that fails to come back can be restored with --rollback.
         if systemctl --user --no-block restart silere-shell.service; then
-            printf 'silere-update: the shell was restarted; if it does not come back, run: bash %s --rollback\n' \
+            printf 'silere-update: the shell was restarted; if it does not come back, run: bash %q --rollback\n' \
                 "$ROOT/scripts/update.sh" >&2
         else
             _write_apply_journal restart-failed "$local_rev" "$remote_rev" "$release_tag" \
@@ -1062,7 +1062,7 @@ if [ "${1:-}" = "--apply" ]; then
     # no unit: the journal stays here too, or a release that fails to start could never be rolled back. The next
     # run of this script clears it
     elif _restart_unsupervised_shell; then
-        printf 'silere-update: the shell is restarting; if it does not come back, run: bash %s --rollback\n' \
+        printf 'silere-update: the shell is restarting; if it does not come back, run: bash %q --rollback\n' \
             "$ROOT/scripts/update.sh" >&2
         _notify "Silere Shell updated" "$count new $plural$note_suffix"
     else
