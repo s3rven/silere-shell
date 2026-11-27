@@ -80,10 +80,8 @@ Pill {
         acceptedButtons: (Audio.hasSoundSettings ? Qt.RightButton : Qt.NoButton)
             | (root._canSwitch ? Qt.MiddleButton : Qt.NoButton)
         gesturePolicy: TapHandler.ReleaseWithinBounds
-        onSingleTapped: (point, button) => {
-            if (!root.canActivate) return
-            if (button === Qt.RightButton) Audio.openSoundSettings()
-            else Audio.cycleSource()
-        }
+        // every middle click steps once, a quick second one included; a double right click opens one window
+        onTapped: (point, button) => { if (root.canActivate && button === Qt.MiddleButton) Audio.cycleSource() }
+        onSingleTapped: (point, button) => { if (root.canActivate && button === Qt.RightButton) Audio.openSoundSettings() }
     }
 }

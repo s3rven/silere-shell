@@ -22,6 +22,7 @@ settings file carries its own `__version` and migrates separately.
 - On niri, the workspace arrow points to a window that needs you on a monitor whose bar is off, as it does on
   Hyprland.
 - A Hyprland submap entered on a monitor whose bar is off shows its name on the bar that is on.
+- Two quick middle clicks on the volume or microphone widget step two outputs or inputs, not one.
 
 ## Releases
 
