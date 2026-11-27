@@ -134,10 +134,7 @@ Singleton {
 
     function _isTouchpad(event): bool {
         if (!event || !event.device) return false
-        if (event.device.type !== undefined) return event.device.type === PointerDevice.TouchPad
-        if (event.device.deviceType !== undefined) return event.device.deviceType === PointerDevice.TouchPad
-        const name = event.device.name ? String(event.device.name).toLowerCase() : ""
-        return name.includes("touchpad") || name.includes("trackpad")
+        return event.device.type === PointerDevice.TouchPad
     }
 
     function _restartTimer(key: string): void {

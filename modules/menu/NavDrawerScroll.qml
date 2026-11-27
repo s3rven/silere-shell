@@ -13,7 +13,6 @@ Item {
     // the title shares the page header's line: MenuWindow's 12px page inset, then a 32px header row
     readonly property int listTop: _title.y + _title.height + 8
     default property alias content: _content.data
-    readonly property alias viewportHeight: _scroll.height
     signal viewportResized()
     signal closeRequested()
 
