@@ -48,10 +48,14 @@ Column {
         ToggleRow {
             glyph: "󰗘"; label: "Switch animation"
             key: "workspaceShift"
+            available: !ShellSettings.reduceMotion
+            dependsNote: "Off with Reduce motion"
         }
         ToggleRow {
             glyph: "󰂟"; label: "Notification pulse"
             key: "wsNotifPulse"
+            available: !ShellSettings.reduceMotion
+            dependsNote: "Off with Reduce motion"
         }
         ToggleRow {
             glyph: "󰕦"; label: "Urgent window pulse"

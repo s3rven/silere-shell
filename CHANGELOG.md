@@ -65,6 +65,7 @@ settings file carries its own `__version` and migrates separately.
 - Settings no longer marks Devices as changed for a custom lock command or a display list that is folded out of sight.
 - Searching Settings for roundness finds the Roundness row.
 - Let critical through is greyed while popup notifications are off, since nothing can pop up past them.
+- Switch animation and Notification pulse say they are off while Reduce motion is on.
 
 ## Releases
 
