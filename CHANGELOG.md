@@ -90,6 +90,7 @@ settings file carries its own `__version` and migrates separately.
 - With Reduce motion on, Clear history and the widget reset show no ring that never drains, and every confirm says
   Press again.
 - A bar widget stays marked while the menu page it opened is showing, as the clock and the tray already were.
+- Quick Actions lights Power Mode for Power Saver as well as Performance, as Home does.
 
 ## Releases
 

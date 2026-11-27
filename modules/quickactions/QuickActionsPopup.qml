@@ -310,7 +310,8 @@ FittedPopupWindow {
                 label: "Power Mode"
                 checkable: false
                 enabled: PowerProfiles.profile.length > 0 && !PowerProfiles.changing
-                active: PowerProfiles.profile === "performance"
+                // off the default either way, as Home's row reads it: Power Saver is a choice too
+                active: PowerProfiles.profile !== "" && PowerProfiles.profile !== "balanced"
                 error: PowerProfiles.lastError.length > 0
                 warning: PowerProfiles.degraded
                 detailText: PowerProfiles.lastError.length > 0 ? PowerProfiles.lastError
