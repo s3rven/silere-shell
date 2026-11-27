@@ -8,7 +8,7 @@ body:
       label: Area
       options:
         - Bar and workspaces
-        - Control menu and settings
+        - Menu and settings
         - Notifications and OSD
         - Media and visualizer
         - Installation and updates

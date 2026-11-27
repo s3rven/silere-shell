@@ -8,7 +8,8 @@ Explain what changes for users, including disabled, missing-dependency, and erro
 
 ## Verification
 
-CI runs the lint and headless type-check for you, so there's nothing to run by hand.
+CI runs the checks on every pull request. Running `bash scripts/test-qml-headless.sh` and `bash dev/test-logic.sh`
+first catches most problems sooner.
 
 - [ ] Tried the change in a running Hyprland or niri session, or said why that wasn't possible
 - [ ] Kept unrelated formatting, generated theme files, and personal settings out of the change
