@@ -472,7 +472,8 @@ Singleton {
             _reconnect.stop()
         } else {
             root.lastFailed = true
-            root._failStreak++
+            // behind a sign-in page or with no internet the network pill already says so; the checker is not broken
+            if (Network.connectivityIssue.length === 0) root._failStreak++
             root.lastError = t.startsWith("ERR")
                 ? root._safeError(t.substring(3).trim())
                 : code !== 0 ? "Package check failed (exit " + code + ")"
@@ -490,7 +491,8 @@ Singleton {
             if (root._discardResult || !ShellSettings.updatesWidget) return
             root._touchNow()
             root.lastFailed = true
-            root._failStreak++
+            // behind a sign-in page or with no internet the network pill already says so; the checker is not broken
+            if (Network.connectivityIssue.length === 0) root._failStreak++
             root.lastError = "Package check timed out"
             _retry.restart()
         }

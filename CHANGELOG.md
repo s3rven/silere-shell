@@ -59,6 +59,7 @@ settings file carries its own `__version` and migrates separately.
   player stops.
 - A hyprsunset started outside Silere (its own unit) takes Night Light's temperature when Silere finds it running,
   instead of staying neutral while the switch reads on.
+- Behind a sign-in page or with no internet, the updates widget no longer reports the package check as broken.
 
 ## Releases
 
