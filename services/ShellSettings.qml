@@ -732,7 +732,7 @@ Singleton {
         ],
         popups: [
             { master: "notifPopupEnabled", hides: ["notifFullscreenSilence", "notifScreenShareSilence", "notifGroupThreads",
-                "notifPosition", "notifMaxVisible", "notifDefaultTimeout"] },
+                "notifPosition", "notifMaxVisible", "notifDefaultTimeout", "notifCriticalBypass"] },
             { master: "dndSchedule", hides: ["dndFrom", "dndTo"] }
         ],
         warnings: [

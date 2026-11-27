@@ -89,6 +89,8 @@ Column {
             glyph: "󰀦"; label: "Let critical through"
             description: "Past do not disturb, fullscreen and muted apps"
             key: "notifCriticalBypass"
+            available: ShellSettings.notifPopupEnabled
+            dependsNote: "Popups are off"
         }
     }
 }
