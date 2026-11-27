@@ -329,7 +329,9 @@ Singleton {
 
     function _checkCommand(automatic: bool): var {
         // without flatpak, or without an app from it, the part finds nothing and adds nothing
-        const flatpak = !automatic || Date.now() - root._flatpakCheckedMs >= root._flatpakEveryMs ? root._flatpakPart() : ""
+        // a clock set back below the last check's stamp is due too, as every other cadence here treats it
+        const flatpakAge = Date.now() - root._flatpakCheckedMs
+        const flatpak = !automatic || flatpakAge < 0 || flatpakAge >= root._flatpakEveryMs ? root._flatpakPart() : ""
         if (!automatic) return ["bash", "-c", root._cmd() + flatpak]
         return ["bash", "-c",
             'if . "$1" && _silere_network_metered; then printf "DEFER metered\\n"; exit 0; fi\n' + root._cmd() + flatpak,
