@@ -94,6 +94,7 @@ settings file carries its own `__version` and migrates separately.
 - Without JetBrainsMono Nerd Font, opening Settings no longer switches the shell to the first font installed (often a
   serif); another Nerd Font stands in.
 - `silere theme` saves its accent and mode in one write instead of two.
+- Choosing Mix while the Auto accent is on starts from the wallpaper's accent on screen, not an older custom colour.
 
 ## Releases
 

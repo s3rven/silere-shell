@@ -253,8 +253,11 @@ Column {
                                     ShellSettings.neutralAccentAuto = true
                                     return
                                 }
+                                // custom opens on the colour already stored, or from Auto on the wallpaper's own, the one
+                                // in view; only a preset overwrites it
+                                if (opt.custom && ShellSettings.neutralAccentAuto)
+                                    ShellSettings.neutralAccent = String(Theme.wallpaperAccent)
                                 ShellSettings.neutralAccentAuto = false
-                                // custom opens on the colour already stored; only a preset overwrites it
                                 if (!opt.custom) ShellSettings.neutralAccent = opt.color
                             })
                         }
