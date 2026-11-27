@@ -35,9 +35,12 @@ Scope {
     signal saved()
     signal saveFailed(var error)
 
+    property real _burstStart: 0
+    // a steady stream of changes (history during a notification flood) still reaches the disk: a burst waits 2 s at most
     function queue(): void {
         ConfigStore.ensureDirectory()
-        _debounce.restart()
+        if (!_debounce.running) root._burstStart = Date.now()
+        if (Date.now() - root._burstStart < 2000) _debounce.restart()
     }
 
     function stop(): void {

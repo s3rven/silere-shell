@@ -39,6 +39,8 @@ settings file carries its own `__version` and migrates separately.
   stopped every icon and cover from loading until a restart.
 - A notification icon name with a slash in it shows no icon: one climbing out of the icon theme to a named pipe stopped
   every icon and cover from loading.
+- Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
+  no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
   play again or step away, instead of folding after 15 seconds with nothing left to resume it.
 - Right-click the clock to open notification history, where its missed-notification bell leads, and again to close
