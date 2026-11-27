@@ -472,13 +472,11 @@ Singleton {
             _reconnect.stop()
         } else {
             root.lastFailed = true
-            // behind a sign-in page or with no internet the network pill already says so; the checker is not broken
-            if (Network.connectivityIssue.length === 0) root._failStreak++
             root.lastError = t.startsWith("ERR")
                 ? root._safeError(t.substring(3).trim())
                 : code !== 0 ? "Package check failed (exit " + code + ")"
                 : "Package check returned an invalid count"
-            _retry.restart()
+            root._noteFailure()
         }
     }
 
@@ -491,10 +489,8 @@ Singleton {
             if (root._discardResult || !ShellSettings.updatesWidget) return
             root._touchNow()
             root.lastFailed = true
-            // behind a sign-in page or with no internet the network pill already says so; the checker is not broken
-            if (Network.connectivityIssue.length === 0) root._failStreak++
             root.lastError = "Package check timed out"
-            _retry.restart()
+            root._noteFailure()
         }
         onExited: code => {
             if (root._discardResult) {
@@ -598,6 +594,14 @@ Singleton {
         watchChanges: true
         printErrors: false
         onFileChanged: root._noteLocalChange(true)
+    }
+
+    // behind a sign-in page or with no internet the network pill already says so: the checker is not called broken,
+    // and the check waits for the network to clear (onConnectivityIssueChanged) instead of rerunning every 3 minutes
+    function _noteFailure(): void {
+        if (Network.connectivityIssue.length > 0) return
+        root._failStreak++
+        _retry.restart()
     }
 
     Timer {
