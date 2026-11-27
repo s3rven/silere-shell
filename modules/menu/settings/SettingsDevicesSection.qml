@@ -11,7 +11,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     readonly property bool _hasBrightnessChoice: Brightness.devices.length > 1
         || ShellSettings.brightnessDevice.length > 0

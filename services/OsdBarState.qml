@@ -304,7 +304,6 @@ Singleton {
 
     Timer {
         id: _entrySweep
-        repeat: false
         onTriggered: root._sweepEntries()
     }
 
@@ -328,7 +327,6 @@ Singleton {
     Timer {
         id: _deviceNameTimer
         interval: 3000
-        repeat: false
         onTriggered: root._hideDeviceName()
     }
 

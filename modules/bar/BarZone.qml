@@ -12,7 +12,6 @@ Row {
     required property bool compact
     property real textFitScale: 1
 
-    spacing: 0
 
     // the pointer anywhere over the zone holds its widgets' hover details open: one closing as the pointer moved on slid
     // its neighbours out from under it, and aimed at a neighbour's centre, two moves in three landed on the next one over;
@@ -168,7 +167,6 @@ Row {
                 && currentMeta !== null && nextMeta !== null
                 && currentMeta.group !== nextMeta.group
             height: parent.height
-            spacing: 0
             // child visible cascades from this row, so use its non-cascading layout state
             visible: key.length > 0 && show
             onShowChanged: zone._queueVisibilitySync()

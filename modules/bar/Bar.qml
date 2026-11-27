@@ -262,7 +262,6 @@ PanelWindow {
 
             ParallelAnimation {
                 id: _enterAnim
-                running: false
                 NumberAnimation {
                     target: contents; property: "opacity"
                     to: 1; duration: Motion.ms(170); easing.type: Easing.OutCubic
@@ -276,7 +275,6 @@ PanelWindow {
 
             ParallelAnimation {
                 id: _exitAnim
-                running: false
                 NumberAnimation {
                     target: contents; property: "opacity"
                     to: 0; duration: Motion.ms(125); easing.type: Easing.InCubic

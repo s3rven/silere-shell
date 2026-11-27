@@ -8,7 +8,6 @@ import "../controls"
 Column {
     id: root
     width: parent ? parent.width : 0
-    spacing: 0
 
     property bool firstSection: true
     property bool animationActive: true

@@ -258,7 +258,6 @@ Singleton {
 
     readonly property BoundedProcess _zoneLookup: BoundedProcess {
         id: _zoneProc
-        running: false
         timeoutMs: 5000
         command: ["bash", "-c", TimeZonePlace.script]
         stdout: StdioCollector { id: _zoneOut }

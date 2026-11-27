@@ -27,7 +27,6 @@ Rectangle {
     Column {
         id: col
         width: parent.width
-        spacing: 0
     }
 
     RowDividers { id: _dividers; column: col; indent: root.dividerIndent }

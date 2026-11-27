@@ -241,7 +241,6 @@ Rectangle {
     Timer {
         id: _placementSettle
         interval: Motion.popSettle
-        repeat: false
         onTriggered: root._placementSettled = true
     }
 
@@ -312,7 +311,6 @@ Rectangle {
     }
     FrameAnimation {
         id: _startupFrame
-        running: false
         onTriggered: {
             if (++root._warmupFrames < 3) return
             stop()

@@ -8,7 +8,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     readonly property bool _usesPalette: !ShellSettings.neutralTheme || ShellSettings.neutralAccentAuto
     readonly property string _paletteStatus: ({ missing: "Missing", invalid: "Invalid", unreadable: "Unreadable" })[MatugenTheme.loadState] ?? ""

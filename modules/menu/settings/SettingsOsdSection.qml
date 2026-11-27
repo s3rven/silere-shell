@@ -4,7 +4,6 @@ import "../controls"
 
 Column {
     width: parent ? parent.width : 0
-    spacing: 0
 
     SectionLabel { label: "APPEARANCE"; first: true }
 

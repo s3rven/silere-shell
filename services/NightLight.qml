@@ -160,7 +160,6 @@ Singleton {
 
     BoundedProcess {
         id: _geoProc
-        running: false
         timeoutMs: 5000
         command: ["bash", "-c", TimeZonePlace.script]
         stdout: StdioCollector { id: _geoOut }
@@ -474,7 +473,6 @@ Singleton {
     // bounded only for its exit report: a tool removed mid-session fails to start without one
     BoundedProcess {
         id: _sunsetProc
-        running: false
         // a StdioCollector grows for as long as the night light runs; keep only the last line
         property string _lastErrLine: ""
         stderr: SplitParser {

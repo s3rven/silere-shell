@@ -77,7 +77,6 @@ Item {
     Column {
         id: _col
         width: parent.width
-        spacing: 0
 
         SelectRow {
             visible: Bluetooth.adapterCount > 1
@@ -125,7 +124,6 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: Bluetooth.available && Bluetooth.enabled && Bluetooth.devices.length > 0
             interactive: contentHeight > height
-            spacing: 0
             // every visible value comes from the device or service; the delegate owns no row state, so off-screen instances are safe to recycle
             reuseItems: true
             model: root._shown

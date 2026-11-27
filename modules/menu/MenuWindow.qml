@@ -762,7 +762,6 @@ FittedPopupWindow {
                           : panel.activeTab === 1 ? (settingsLoader.item?.implicitHeight
                                 ?? _pagePlaceholder.implicitHeight)
                           : (recentLoader.item?.implicitHeight ?? _pagePlaceholder.implicitHeight)
-                    clip: false
 
                     Item {
                         id: _pagePlaceholder

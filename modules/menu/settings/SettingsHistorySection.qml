@@ -5,7 +5,6 @@ import "../controls"
 Column {
     id: root
     width: parent ? parent.width : 0
-    spacing: 0
 
     // unmuting removes the row, and a list model rebuilds every row: the keyboard goes on from the row now in its place
     function _refocusMuted(index: int): void {

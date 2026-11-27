@@ -41,7 +41,6 @@ Singleton {
     Timer {
         id: _delay
         interval: 5000
-        repeat: false
         onTriggered: {
             _proc._generation = root._generation
             _proc.running = true
@@ -51,7 +50,6 @@ Singleton {
     BoundedProcess {
         id: _proc
         property int _generation: 0
-        running: false
         timeoutMs: 5000
         // ignore only this process. Another Quickshell instance can own the notification name too, and is still a real conflict worth showing
         command: ["bash", "-c",

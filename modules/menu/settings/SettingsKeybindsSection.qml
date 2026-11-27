@@ -12,7 +12,6 @@ import "../../../services/KeybindList.js" as KeybindList
 Column {
     id: root
     width: parent ? parent.width : 0
-    spacing: 0
 
     property var rows: []
     property bool loaded: false

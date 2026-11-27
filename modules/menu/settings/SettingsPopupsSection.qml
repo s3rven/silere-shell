@@ -5,7 +5,6 @@ import "../controls"
 Column {
     id: root
     width: parent ? parent.width : 0
-    spacing: 0
 
     readonly property int _chipW: Math.max(_position.naturalChipWidth, _maxShown.naturalChipWidth)
 

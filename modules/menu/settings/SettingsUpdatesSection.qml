@@ -91,7 +91,6 @@ Column {
     }
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     CollapsibleSection {
         expanded: !ShellUpdate.packaged

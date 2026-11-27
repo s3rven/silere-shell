@@ -25,7 +25,6 @@ Column {
     readonly property string validationMessage: root.validationFor(root.draft)
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     function validationFor(text: string): string {
         const schema = ShellSettings.schemaFor(root.settingKey)

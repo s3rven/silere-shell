@@ -7,7 +7,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     function _alertMode(osdEnabled, glowEnabled): string {
         const o = osdEnabled === true

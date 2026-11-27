@@ -8,7 +8,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     readonly property bool _enabled: ShellSettings.barBorderVisible || ShellSettings.underlineGlow
     readonly property string _style: ShellSettings.underlineGlow ? "glow" : "static"

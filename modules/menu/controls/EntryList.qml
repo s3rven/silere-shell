@@ -25,7 +25,6 @@ Item {
         id: _list
         anchors.fill: parent
         interactive: contentHeight > height
-        spacing: 0
         reuseItems: true
         model: root.model
 

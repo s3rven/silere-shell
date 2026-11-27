@@ -20,7 +20,6 @@ Item {
     Timer {
         id: _guard
         interval: 250
-        repeat: false
         onTriggered: root.ignoring = false
     }
 

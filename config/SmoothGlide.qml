@@ -76,7 +76,6 @@ QtObject {
     }
 
     property FrameAnimation _tick: FrameAnimation {
-        running: false
         onTriggered: root._advance(frameTime)
         onRunningChanged: root._syncCount()
     }

@@ -9,7 +9,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     // opening the page is the refresh: fonts installed since the last visit show up here
     Component.onCompleted: {

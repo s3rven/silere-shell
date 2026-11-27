@@ -53,7 +53,6 @@ Singleton {
     Timer {
         id: _mkdirRetry
         interval: root.directoryRetryDelay(root._directoryFailures)
-        repeat: false
         onTriggered: root._startDirectoryAttempt()
     }
 

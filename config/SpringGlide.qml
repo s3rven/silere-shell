@@ -29,7 +29,6 @@ QtObject {
     Component.onCompleted: root.value = root.target
 
     property FrameAnimation _tick: FrameAnimation {
-        running: false
         onTriggered: {
             // a slow frame still integrates in small steps, or the spring overshoots on catch-up
             const span = Math.min(frameTime, 0.05)

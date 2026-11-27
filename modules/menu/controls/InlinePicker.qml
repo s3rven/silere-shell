@@ -19,7 +19,6 @@ Column {
     readonly property real foldTarget: _section.radiusColumn.implicitHeight
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     ScrollHold {
         id: _hold

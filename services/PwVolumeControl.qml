@@ -125,7 +125,6 @@ QtObject {
 
     readonly property Timer _writeThrottle: Timer {
         interval: 16
-        repeat: false
         onTriggered: {
             const a = ctl.audio
             if (!a) return

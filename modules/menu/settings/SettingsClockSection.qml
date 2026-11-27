@@ -6,7 +6,6 @@ Column {
     id: root
 
     width: parent ? parent.width : 0
-    spacing: 0
 
     readonly property int _calendarChipW: Math.max(_weekStart.naturalChipWidth, _units.naturalChipWidth)
 
