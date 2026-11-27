@@ -298,6 +298,8 @@ Singleton {
             return
         }
         root._badSensorPaths = ""
+        // the retry budget is per loss: a sensor that reads again earns its five tries back
+        root._sensorRetries = 0
         root._probeComplete = true
     }
 
