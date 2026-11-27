@@ -279,7 +279,12 @@ Singleton {
     }
     // hyprland 0.57 gives every named workspace the same ref, so only the name tells two apart
     function _workspaceKeyOf(ref: int, ws): string { return ref + "\n" + (ws ? String(ws.name ?? "") : "") }
-    function _workspaceArgument(ws): string { return !ws ? "" : ws.wsId > 0 ? String(ws.wsId) : String(ws.name ?? "") }
+    // niri numbers a named workspace too, so there its name goes first
+    function _workspaceArgument(ws): string {
+        const name = ws ? String(ws.name ?? "") : ""
+        return !ws ? "" : Compositor.perOutputWorkspaceIds && name.length > 0 ? name
+            : ws.wsId > 0 ? String(ws.wsId) : name
+    }
     function _workspaceSeen(ref: int, ws): void {
         const key = root._workspaceKeyOf(ref, ws)
         if (key === root._workspaceKey) return
