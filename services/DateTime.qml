@@ -15,18 +15,17 @@ Singleton {
     property bool wanted: true
     property bool overviewOpen: false
 
-    // a monotonic timer stops across suspend, so the next tick can land up to a minute after wake
-    property bool _resync: false
+    readonly property int _stepMs: ShellSettings.barShowClock && ShellSettings.showSeconds
+        && !Idle.isIdle && !root.overviewOpen ? 1000 : 60000
+    // epoch arithmetic, since every zone's offset is whole minutes. Quickshell's SystemClock rounds in local time, and
+    // in a DST fall-back's repeated hour that put its next tick an hour back: it fired every millisecond for the hour
+    function nextTickMs(nowMs: real, stepMs: int): real { return nowMs + stepMs - nowMs % stepMs }
+    property date currentDate: new Date()
+    // a monotonic timer stops in suspend, so wall time past its deadline gives a lower bound on sleep
+    signal woke(real sleptMs)
+    property real _dueMs: 0
+    Timer { id: clock; onTriggered: root._tick() }
 
-    SystemClock {
-        id: clock
-        enabled: root.wanted && !root._resync
-        precision: ShellSettings.barShowClock && ShellSettings.showSeconds
-            && !Idle.isIdle && !root.overviewOpen
-            ? SystemClock.Seconds : SystemClock.Minutes
-    }
-
-    readonly property date currentDate: clock.date
     // a minute sample keeps the format previews from updating on every second tick
     property date minuteSample: new Date()
 
@@ -69,7 +68,7 @@ Singleton {
     property string cachedSeconds:  ""
     property int hour24: 0
 
-    Component.onCompleted: _update()
+    Component.onCompleted: if (root.wanted) root._tick(); else root._update()
 
     // relative "ago" text for surfaces that report when something last ran; the caller
     // owns its own now, so nothing here ticks for a readout that is not on screen
@@ -115,12 +114,6 @@ Singleton {
     }
 
     Connections {
-        target: clock
-        function onDateChanged() { root._update() }
-        function onEnabledChanged() { if (clock.enabled) root._update() }
-    }
-
-    Connections {
         target: ShellSettings
         function onClock12hChanged() { root._refreshMinute() }
         function onShowSecondsChanged() { root._update() }
@@ -130,26 +123,32 @@ Singleton {
     Connections {
         target: Idle
         function onIsIdleChanged() {
-            root.catchUp()
-            root._update()
+            if (root.wanted) root.catchUp()
+            else root._update()
         }
     }
 
-    function catchUp(): void {
-        if (!clock.enabled
-                || Qt.formatDateTime(new Date(), "yyyyMMddHHmm") === root._lastMinute) return
-        root._resync = true
-        root._resync = false
+    onWantedChanged: if (root.wanted) root._tick(); else { clock.stop(); root._dueMs = 0 }
+    on_StepMsChanged: if (root.wanted) root._tick()
+    function _tick(): void {
+        const step = root._stepMs
+        const now = Date.now()
+        const late = root._dueMs > 0 ? now - root._dueMs : 0
+        root._dueMs = root.nextTickMs(now, step)
+        clock.interval = root._dueMs - now
+        clock.restart()
+        root.currentDate = new Date(now - now % step)
+        root._update()
+        if (late > 30000 || late < -62000) root.woke(Math.max(0, late))
     }
-
-    onOverviewOpenChanged: if (!root.overviewOpen) root._update()
+    function catchUp(): void { if (root.wanted) root._tick() }
 
     function _refreshMinute(): void {
         root._lastMinute = ""
         root._update()
     }
 
-    function _update(current = clock.date): void {
+    function _update(current = root.currentDate): void {
         const minute = Qt.formatDateTime(current, "yyyyMMddHHmm")
         if (minute !== _lastMinute) {
             _lastMinute = minute

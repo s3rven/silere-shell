@@ -13635,9 +13635,36 @@ ShellRoot {
         // a minute tick armed before suspend fires late after wake; catching up re-reads the wall clock
         DateTime._lastMinute = "190001010000"
         DateTime.catchUp()
-        root._check(DateTime._lastMinute === Qt.formatDateTime(new Date(), "yyyyMMddHHmm")
-                && !DateTime._resync,
+        root._check(DateTime._lastMinute === Qt.formatDateTime(new Date(), "yyyyMMddHHmm"),
             "a stale clock catches up to the wall clock on a wake-time event")
+        const fallBack = Date.UTC(2026, 9, 25, 1, 30, 15, 250)
+        root._check(DateTime.nextTickMs(fallBack, 60000) === Date.UTC(2026, 9, 25, 1, 31)
+                && DateTime.nextTickMs(fallBack, 1000) === Date.UTC(2026, 9, 25, 1, 30, 16),
+            "the clock's next tick is the next whole minute or second during the repeated hour")
+        const ratesWas = Battery._rates, meanWas = Battery._meanRate, woken = []
+        const sawWake = ms => woken.push(ms)
+        DateTime.woke.connect(sawWake)
+        const wakeAt = Date.now()
+        Battery._rates = [[wakeAt - 3 * 3600000, 15]]
+        Battery._meanRate = 15
+        DateTime._dueMs = wakeAt - 3 * 3600000
+        DateTime.catchUp()
+        DateTime.catchUp()
+        root._check(woken.length === 1 && Math.abs(woken[0] - 3 * 3600000) < 2000
+                && DateTime._dueMs > wakeAt && DateTime._dueMs - Date.now() <= 60000
+                && Battery._rates.length === 0 && Battery._meanRate === 0,
+            "a wake is told once with the time slept, the clock is due within a minute, the power window starts over")
+        woken.length = 0
+        DateTime._dueMs = Date.now() - 5000
+        DateTime.catchUp()
+        root._check(woken.length === 0, "a tick a few seconds late catches up without calling it a wake")
+        woken.length = 0
+        DateTime._dueMs = Date.now() + 3600000
+        DateTime.catchUp()
+        root._check(woken.length === 1 && woken[0] === 0, "a clock set back an hour is a wake that slept no time")
+        DateTime.woke.disconnect(sawWake)
+        Battery._rates = ratesWas
+        Battery._meanRate = meanWas
     }
 
     function _checksKeybindList(): void {

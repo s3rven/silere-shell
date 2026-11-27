@@ -174,8 +174,16 @@ Singleton {
     readonly property real _rateNow: upowerReady ? Math.abs(Number(UPower.displayDevice.changeRate) || 0) : 0
     property var _rates: []
     property real _meanRate: 0
-    on_RateNowChanged: Qt.callLater(root._sampleRate)
-    onStateChanged: {
+    on_RateNowChanged: {
+        DateTime.catchUp()
+        Qt.callLater(root._sampleRate)
+    }
+    onStateChanged: root._restartWindow()
+    Connections {
+        target: DateTime
+        function onWoke() { root._restartWindow() }
+    }
+    function _restartWindow(): void {
         root._rates = []
         root._meanRate = 0
         Qt.callLater(root._sampleRate)

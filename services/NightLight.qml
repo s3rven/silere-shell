@@ -187,10 +187,9 @@ Singleton {
             if (!Idle.isIdle && ShellSettings.nightLightAuto && root.enabled) root._solarTick++
         }
     }
-    // the minute timer stops across suspend; the network returning is the wake the shell sees
     Connections {
-        target: Network
-        function onConnectedChanged() {
+        target: DateTime
+        function onWoke() {
             if (ShellSettings.nightLightAuto && root.enabled) root._solarTick++
         }
     }

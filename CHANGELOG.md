@@ -48,6 +48,10 @@ settings file carries its own `__version` and migrates separately.
 - Automatic update checks look at Flatpak apps again after the clock was set back, instead of waiting for it to catch
   up with the last check.
 - After a long sleep, the menu's History count drops notifications past Keep history for as the menu opens.
+- The clock no longer spins through the repeated hour when summer time ends, writing a warning to the journal every
+  millisecond for that hour.
+- After the laptop wakes, the battery's time left starts from the current draw instead of reading about 2.5 times off
+  for five minutes, and Night Light catches up with the sun even when the laptop wakes offline.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
