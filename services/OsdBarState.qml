@@ -422,14 +422,14 @@ Singleton {
     function _alertBatteryLow(): void {
         if (!Battery.available || !Battery.low || Battery.alertWarning !== "low"
                 || !ShellSettings.osdBatteryWarn) return
-        const label = "Low Battery · " + Math.round(Battery.pct) + "%"
+        const label = "Battery low · " + Math.round(Battery.pct) + "%"
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.warning)
     }
     function _alertBatteryCritical(): void {
         if (!Battery.available || !Battery.critical || Battery.alertWarning !== "critical"
                 || !ShellSettings.osdBatteryWarn || SystemAlerts.criticalPopsUp) return
-        const label = "Critical Battery · " + Math.round(Battery.pct) + "%"
+        const label = "Battery critical · " + Math.round(Battery.pct) + "%"
             + (Battery.timeLabel ? "  " + Battery.timeLabel : "")
         root.showAlert("battery", Battery.icon, Battery.pct / 100, label, Theme.error)
     }
@@ -447,12 +447,12 @@ Singleton {
     function _alertTempHot(): void {
         if (!CpuTemp.hot || !ShellSettings.osdTempWarn) return
         root.showAlert("temp", "󰔏", Math.min(1.0, (CpuTemp.temp - 50) / 65),
-            "CPU Hot · " + Math.round(CpuTemp.temp) + "°", Theme.warning)
+            "CPU hot · " + Math.round(CpuTemp.temp) + "°", Theme.warning)
     }
     function _alertTempCritical(): void {
         if (!CpuTemp.critical || !ShellSettings.osdTempWarn || SystemAlerts.criticalPopsUp) return
         root.showAlert("temp", "󰔏", Math.min(1.0, (CpuTemp.temp - 50) / 65),
-            "CPU Critical · " + Math.round(CpuTemp.temp) + "°", Theme.error)
+            "CPU critical · " + Math.round(CpuTemp.temp) + "°", Theme.error)
     }
     // the watchers carry their osdEnabled gate in their target binding, so the replay has to apply it itself
     function _replayBatteryAlerts(): void {

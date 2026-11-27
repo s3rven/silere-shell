@@ -1546,7 +1546,7 @@ ShellRoot {
         const repeatWas = { armed: OsdBarState._armed, motion: ShellSettings.reduceMotion }
         OsdBarState._armed = true
         ShellSettings.reduceMotion = true
-        OsdBarState._upsertEntry("battery", "", 0.05, "Critical Battery · 5%", false, Theme.error)
+        OsdBarState._upsertEntry("battery", "", 0.05, "Battery critical · 5%", false, Theme.error)
         OsdBarState._upsertEntry("power", "", 0, "Balanced", false, Theme.accent)
         OsdBarState._upsertEntry("volume", "", 0.45, "45%", false, Theme.accent)
         OsdBarState._closeEntry(OsdBarState._entryIndex("power"))
@@ -1652,7 +1652,7 @@ ShellRoot {
         ShellSettings.osdTempWarn = true
         discoveryClock.wait(1)
         root._check(OsdBarState.kind === "temp" && OsdBarState.showing
-                && OsdBarState.label === "CPU Hot · 90°",
+                && OsdBarState.label === "CPU hot · 90°",
             "enabling temperature warnings replays a CPU that is already hot")
         ShellSettings.osdTempWarn = false
         CpuTemp.critical = true
@@ -1660,7 +1660,7 @@ ShellRoot {
         ShellSettings.osdTempWarn = true
         discoveryClock.wait(1)
         root._check(OsdBarState.kind === "temp" && OsdBarState.showing
-                && OsdBarState.label === "CPU Critical · 90°"
+                && OsdBarState.label === "CPU critical · 90°"
                 && String(OsdBarState.fillColor) === String(Theme.error),
             "enabling temperature warnings replays the critical tier without downgrading it")
         ShellSettings.osdTempWarn = false
@@ -10361,7 +10361,9 @@ ShellRoot {
             + "grep -Fxq -- \"$4\" \"$d/bus-alerts\" && grep -Fxq -- -1 \"$d/bus-alerts\"",
             "check", captureAlert, fastFailure[2], busFailure[2], alertTitle] })
         launchRun.exited.connect(function(code) {
-            root._check(code === 0 && fastFailure[2] === lateFailure[2] && lateFailure.slice(4).join(" ") === "sh -c sleep 6; exit 1",
+            root._check(code === 0 && lateFailure.slice(4).join(" ") === "sh -c sleep 6; exit 1"
+                    && fastFailure[2].indexOf("false quit with an error") >= 0
+                    && SystemAlerts.launchArgv(["systemctl", "suspend"], alertTitle)[2].indexOf("may require authorization") >= 0,
                 "launch failures preserve the title over either alert transport and stay silent after a normal long-running command closes")
             root._launchFailDone = true
             launchRun.destroy()

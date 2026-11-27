@@ -83,8 +83,11 @@ Singleton {
     // only a failure to start is reported: a lock that ran an hour, or a terminal passing on the hangup its
     // monitor got when the window closed, exits nonzero too, and alerting then calls a normal close a failure
     function launchArgv(command, failTitle: string): var {
-        const alert = root.notificationCommand(failTitle,
-            "It may require authorization or be blocked by a running task.", "critical", "dialog-error", -1)
+        // an app that quits at once is not a refused system command, and its own error never reaches silere log
+        const name = String(command[0] ?? "").split("/").pop()
+        const alert = root.notificationCommand(failTitle, /^(systemctl|loginctl)$/.test(name)
+            ? "It may require authorization or be blocked by a running task."
+            : name + " quit with an error. Run it in a terminal to see why.", "critical", "dialog-error", -1)
         const note = alert.map(word => root._shellQuote(word)).join(" ")
         const argv = ["bash", "-c", '"$@" || [ "$SECONDS" -ge 5 ] || ' + note + " >/dev/null", "bash"]
         for (let i = 0; i < command.length; i++) argv.push(String(command[i]))
@@ -111,7 +114,7 @@ Singleton {
     function _checkBattCrit(): void {
         if (Battery.available && Battery.critical && Battery.alertWarning === "critical"
                 && ShellSettings.osdBatteryWarn && !_battCritSent) {
-            if (_send("Battery Critical",
+            if (_send("Battery critical",
                 Math.round(Battery.pct) + "% — plug in now",
                 "critical", "battery-caution")) _battCritSent = true
         }
@@ -120,13 +123,13 @@ Singleton {
     function _checkBattLow(): void {
         if (Battery.available && Battery.low && Battery.alertWarning === "low" && ShellSettings.osdBatteryWarn
                 && !ShellSettings.osdEnabled && !_battLowSent) {
-            if (_send("Battery Low", Math.round(Battery.pct) + "%" + (Battery.timeLabel ? " · " + Battery.timeLabel : ""),
+            if (_send("Battery low", Math.round(Battery.pct) + "%" + (Battery.timeLabel ? " · " + Battery.timeLabel : ""),
                 "normal", "battery-low")) _battLowSent = true
         }
     }
     function _checkCpuCrit(): void {
         if (CpuTemp.critical && ShellSettings.osdTempWarn && !_cpuCritSent) {
-            if (_send("CPU Critical Temperature",
+            if (_send("CPU temperature critical",
                 Math.round(CpuTemp.temp) + "°C — reduce load immediately",
                 "critical", "dialog-warning")) _cpuCritSent = true
         }
@@ -285,7 +288,7 @@ Singleton {
     function crashText(line: string): string {
         const f = String(line || "").trim().split("\t")
         if (f.length < 4 || !/^[0-9]+$/.test(f[0])) return ""
-        return "Quickshell " + (f[2] || "") + " stopped" + (f[3].length > 0 ? " (" + f[3] + ")" : "")
+        return ["Quickshell", f[2]].filter(s => s.length > 0).join(" ") + " stopped" + (f[3].length > 0 ? " (" + f[3] + ")" : "")
             + " at " + DateTime.clockText(new Date(Number(f[0]) * 1000)) + ". silere doctor names the report."
     }
     BoundedProcess {

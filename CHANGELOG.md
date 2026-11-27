@@ -54,6 +54,8 @@ settings file carries its own `__version` and migrates separately.
   for five minutes, and Night Light catches up with the sun even when the laptop wakes offline.
 - At a larger interface size, the bar's hover text (the battery estimate, device and network names) has room for as much
   as at 100% instead of a third less.
+- Battery and temperature alerts read in sentence case, the same in a notification as on the OSD, and an app that fails
+  to start says to run it in a terminal instead of blaming permissions.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
