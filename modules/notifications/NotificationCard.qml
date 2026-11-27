@@ -504,7 +504,8 @@ Item {
             // a sender's own request is capped at 30 s, not discarded
             return t > 0 ? Math.min(t, 30000) : ShellSettings.notifDefaultTimeout
         }
-        interval: Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs)
+        // read again when a fold ends, or the countdown restarts from its full length
+        interval: { void card._folding; return Math.max(400, fullInterval - card._shownMs() + card._hoverPausedMs) }
         running: card.enabled && shouldRun && !card._paused && !card._folding
         // past the quiet stage only a playing browser keeps this running (it may be music with nobody there): what
         // runs out then was not read either, and the bell says so

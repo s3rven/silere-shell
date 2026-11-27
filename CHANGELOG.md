@@ -44,6 +44,7 @@ settings file carries its own `__version` and migrates separately.
 - Dismissing a notification closes it as its card starts to slide out, so a card cut off mid-exit (a monitor unplugged,
   nothing drawing) no longer leaves it open or brings it back on another monitor.
 - A card dismissed before it finished appearing, by a script for one, no longer slides back in.
+- A card folded away behind newer ones and back keeps its countdown instead of starting it over.
 - Notification history is saved at least every two seconds while notifications keep coming, so a logout in a flood
   no longer loses everything since it began.
 - A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
