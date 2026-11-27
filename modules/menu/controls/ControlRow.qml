@@ -15,8 +15,6 @@ MenuRow {
     readonly property color _ink: Theme.inkFor(root.accentColor)
     // transparent follows the normal active/inactive hierarchy. A semantic colour lets a failure remain recognisable even when the control is off
     property color  statusColor: "transparent"
-    // a status of someone else's words, such as a track title, is cut short instead of growing the row
-    property bool   statusOneLine: false
     property bool   active:       false
     property bool   available:    true
     property bool   showSwitch:   false
@@ -209,8 +207,7 @@ MenuRow {
                               : Theme.menuTextDetail
             font.pixelSize: Settings.fontCaption
             font.weight:    Font.Medium
-            wrapMode:       root.statusOneLine ? Text.NoWrap : Text.WrapAtWordBoundaryOrAnywhere
-            elide:          root.statusOneLine ? Text.ElideRight : Text.ElideNone
+            wrapMode:       Text.WrapAtWordBoundaryOrAnywhere
             ColorFade on color {}
         }
     }
