@@ -30,6 +30,7 @@ settings file carries its own `__version` and migrates separately.
 - A notification over a browser video keeps its timer after four minutes without input too, instead of waiting until
   the pointer moves.
 - Notification timeouts wait while the calendar or a tray menu is open too, not only the menu and quick actions.
+- A volume or brightness script replacing its notification no longer makes the cards below it dip and slide back.
 
 ## Releases
 

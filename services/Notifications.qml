@@ -796,6 +796,9 @@ Singleton {
         // no entrance: the replacement takes the card's place, as a replaces_id update does
         root.markSeen(notification.id)
         const ids = stale.map(e => String(e.id))
+        // replacing the newest card, it turns into the new one in place as a thread does: no gap held under it
+        const newest = root.list[root.list.length - 1]
+        if (newest && ids.indexOf(String(newest.id)) >= 0) root.threadFoldedInPlace(ids)
         root._dropFromList(ids)
         for (let i = 0; i < stale.length; i++) {
             root._markClosing(stale[i].id, stale[i].notification)

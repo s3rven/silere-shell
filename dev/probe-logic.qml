@@ -2884,6 +2884,23 @@ ShellRoot {
         root._check(same.reason === "expired",
             "a card its own stack tag replaced closes as expired, not as dismissed by the user")
         Notifications._consumeClosing(9001, same)
+        {
+            // the newest card replaced by its tag turns into the new one in place; an older one leaves its gap
+            const top = make(9005, "volscript", ""), after = make(9006, "volscript", "")
+            top.hints = { "x-dunst-stack-tag": "volume" }
+            after.hints = { "x-dunst-stack-tag": "volume" }
+            const inPlace = []
+            const watchInPlace = ids => inPlace.push(ids.join(","))
+            Notifications.threadFoldedInPlace.connect(watchInPlace)
+            Notifications.list = [plain, top].map(n => ({ notification: n, id: n.id, time: 1000 }))
+            Notifications._retireStacked(after)
+            Notifications.threadFoldedInPlace.disconnect(watchInPlace)
+            root._check(inPlace.length === 1 && inPlace[0] === "9005",
+                "a stack tag replacing the newest card swaps it in place, so the cards below keep their place")
+            Notifications._consumeClosing(9005, top)
+            top.destroy()
+            after.destroy()
+        }
         Notifications.list = listWas
         for (const n of [same, plain, other, next]) n.destroy()
         {
