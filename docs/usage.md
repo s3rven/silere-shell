@@ -163,7 +163,8 @@ None of these ask for administrator rights.
 
 Click the track length to show the time left instead. With several players open, choose one under
 **Players** to pin it for the session. Choose **Automatic** to follow playback again.
-If you pause playback in Now Playing, the page stays open after the bar hides the track.
+A track you pause from the bar or Now Playing, or that Silere paused when headphones left, stays on the bar until you
+play again or step away; a pause made elsewhere folds the track away after 15 seconds.
 
 The **Audio visualizer** under **Settings › Widgets › Media** uses Cava's PipeWire input.
 The media widget keeps its playback progress line while Cava starts or if it fails. If a failure

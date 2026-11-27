@@ -41,6 +41,8 @@ settings file carries its own `__version` and migrates separately.
 - An empty Wi-Fi list says No networks found instead of switching back to Searching every eight seconds.
 - Now Playing says Stopped, not Paused, for a player that stopped with its track still loaded.
 - An app whose window, tray or audio stream id is a file path no longer has that file loaded as its icon.
+- A track you pause from the bar or Now Playing, or one paused as headphones disconnect, stays on the bar until you
+  play again or step away, instead of folding after 15 seconds with nothing left to resume it.
 
 ## Releases
 

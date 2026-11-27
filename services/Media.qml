@@ -133,11 +133,34 @@ Singleton {
     function _syncShown(): void {
         if (!available)  { _pauseTimer.stop(); _hideTimer.stop(); if (shown) shown = false; return }
         if (playing)     { _pauseTimer.stop(); _hideTimer.stop(); if (!shown) shown = true; return }
-        if (shown && !_pauseTimer.running && !_hideTimer.running) _pauseTimer.start()
+        if (shown && !_pauseHeld && !_pauseTimer.running && !_hideTimer.running) _pauseTimer.start()
+    }
+
+    // a pause Silere made (the bar, Now Playing, headphones leaving) keeps the track up: Silere has no play key of its
+    // own, so once it folded nothing here could resume it. Playing again, another track or player, or idle lets it go
+    property bool _pauseHeld: false
+    function _holdPause(): void {
+        root._pauseHeld = true
+        _pauseTimer.stop()
+        _hideTimer.stop()
+    }
+    function _releasePause(): void {
+        if (!root._pauseHeld) return
+        root._pauseHeld = false
+        root._syncShown()
+    }
+    Connections {
+        target: Audio
+        function onPausedForSpeakers() { if (root.shown) root._holdPause() }
+    }
+    Connections {
+        target: Idle
+        function onIsIdleChanged() { if (Idle.isIdle) root._releasePause() }
     }
 
     onAvailableChanged: { _syncShown(); _syncStableArt() }
     onPlayingChanged:   {
+        if (playing) _pauseHeld = false
         _syncShown()
         _reanchor()
         if (playing) {
@@ -238,7 +261,7 @@ Singleton {
         onTriggered: root._recompute()
     }
 
-    onPlayerChanged: { root.trackRevision++; root._reanchor() }
+    onPlayerChanged: { root.trackRevision++; root._reanchor(); root._releasePause() }
     readonly property string artist: SafeText.singleLineText(
         player ? player.trackArtist : "", root.maxMetadataChars)
     readonly property string title: SafeText.singleLineText(
@@ -589,7 +612,7 @@ Singleton {
         onTriggered: if (root.artUrl.length === 0) root.stableArtUrl = ""
     }
     onArtUrlChanged: _syncStableArt()
-    onTitleChanged: { _reanchor(); _syncStableArt() }
+    onTitleChanged: { _reanchor(); _syncStableArt(); _releasePause() }
 
     readonly property string playerName:
         !player              ? "" :
@@ -915,6 +938,7 @@ Singleton {
 
     function togglePlay(): void {
         if (!canTogglePlaying) return
+        if (root.playing && root.shown) root._holdPause()
         player.togglePlaying()
     }
 
