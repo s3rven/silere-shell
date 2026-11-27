@@ -129,8 +129,9 @@ Singleton {
         }
     }
     readonly property Timer _pollTimer: Timer {
-        interval: root.ready ? 3000 : 15000
-        running: root._wanted
+        // read back a light that exists; a machine without one is rescanned at each open, not every 15 s
+        interval: 3000
+        running: root._wanted && root.ready
         repeat: true
         onTriggered: root.rescan()
     }

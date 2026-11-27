@@ -101,6 +101,7 @@ settings file carries its own `__version` and migrates separately.
   install command, where it conflicts with tuned-ppd.
 - `silere doctor` warns when a Bluetooth adapter is present but bluetooth.service is not running, which hides
   Bluetooth everywhere, and `silere toggle bluetooth` asks whether it is running.
+- On a computer without a keyboard light, the open menu no longer looks for one every 15 seconds.
 
 ## Releases
 
