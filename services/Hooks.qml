@@ -39,10 +39,12 @@ Singleton {
     readonly property string _groupWaitScript: '"$@"; code=$?; '
         + 'IFS= read -r own < /proc/self/stat || exit "$code"; '
         + 'self=${own%% *}; rest=${own##*) }; set -- $rest; group=$3; outer=$PPID; '
-        // the containing deadline already bounds the run, so poll slowly: /proc churn here scales with every process on the box, times four runners
-        + 'while :; do alive=false; for stat in /proc/[0-9]*/stat; do '
-        + '[ -r "$stat" ] || continue; IFS= read -r line < "$stat" || continue; '
-        + 'pid=${line%% *}; rest=${line##*) }; set -- $rest; '
+        // the containing deadline already bounds the run, so poll slowly. What the hook leaves was forked after this
+        // shell, so only newer pids are read (a scan of every process cost ~20 ms), all of them once the counter wrapped
+        + 'while :; do alive=false; last=0; read -r last 2>/dev/null < /proc/sys/kernel/ns_last_pid; '
+        + 'for dir in /proc/[0-9]*; do pid=${dir#/proc/}; '
+        + '{ [ "$pid" -gt "$self" ] || [ "$last" -lt "$self" ]; } || continue; '
+        + 'IFS= read -r line 2>/dev/null < "$dir/stat" || continue; rest=${line##*) }; set -- $rest; '
         + '[ "${1:-}" != Z ] && [ "${3:-}" = "$group" ] '
         + '&& [ "$pid" != "$self" ] && [ "$pid" != "$outer" ] '
         + '&& { alive=true; break; }; done; $alive || exit "$code"; sleep 0.25; done'
