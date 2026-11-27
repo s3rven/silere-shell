@@ -143,6 +143,8 @@ Item {
         const inPlace = card._swiping && Math.sign(cardRect.x) !== card.slideDir
         card._swiping = false
         card._leaving = true
+        // dismissed before its window's first frame: the deferred entry must not slide it back in
+        card._entryPending = false
         card._thread = card._thread
         card._rimHeld = card._showCountdown
         card.leaving()
