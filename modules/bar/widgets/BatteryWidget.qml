@@ -50,7 +50,7 @@ Pill {
     MotionBehavior on _baseOpacity {NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic } }
 
     text: {
-        if (_device) return _device.pct + "%"
+        if (_device) return expanded ? _device.name + " " + _device.pct + "%" : _device.pct + "%"
         if (ShellSettings.valuesOnHover && !expanded)
             return ""
         if (!expanded)
