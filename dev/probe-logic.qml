@@ -1105,6 +1105,13 @@ ShellRoot {
         root._check(runningBare && heldUnderPanel && !fixture.card._paused,
             "a notification's timeout waits while a panel is open and runs again once it closes")
         MenuState.open = menuOpenWas
+        const calendarOpenWas = CalendarState.open
+        CalendarState.open = true
+        const heldUnderCalendar = fixture.card._paused
+        CalendarState.open = false
+        root._check(heldUnderCalendar && !fixture.card._paused,
+            "a notification's timeout waits behind the calendar, which covers the stack's corner")
+        CalendarState.open = calendarOpenWas
         fixture.card.forceActiveFocus(Qt.TabFocusReason)
         fixture.input.wait(20)
         root._check(fixture.card.activeFocus && fixture.card._paused && fixture.card._expanded,

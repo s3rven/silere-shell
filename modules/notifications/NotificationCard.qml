@@ -459,7 +459,7 @@ Item {
     // panel is open: the calendar and a menu opened from the bar's right cover the stack's corner, actions included.
     // A browser's video is not quiet, whatever the idle monitors say (see _browserPlaying)
     readonly property bool _paused: _cardHover.hovered || card.stackHovered || card._keyboardFocused
-        || (Idle.isQuiet && !card._browserPlaying) || card._handsOff || ControlSurfaces.anyOpen
+        || (Idle.isQuiet && !card._browserPlaying) || card._handsOff || OverlayCoordinator.anyOpen
         || (card._replyOpen && (_replyInput.activeFocus || _replyInput.text.length > 0))
 
     property real _hoverPausedMs: 0
