@@ -172,12 +172,19 @@ Singleton {
         if (root.toolAvailable && Networking.canCheckConnectivity) Networking.checkConnectivity()
     }
     // NetworkManager backs off to one check every five minutes, so a finished sign-in would otherwise show late; only
-    // while something shows it, or a network that blocks the check host was asked about all day
+    // while something shows it. "No internet" is asked about for five minutes, then with Home open: on a LAN-only
+    // network, or one that blocks the check host, the bar's pill alone had it asked every 30 s all day
+    property int _limitedRechecks: 0
+    onConnectivityIssueChanged: root._limitedRechecks = 0
     Timer {
         interval: 30000
         repeat: true
         running: root.connectivityIssue.length > 0 && !Idle.isIdle && (ShellSettings.barShowNetwork || MenuState.homeActive)
-        onTriggered: root.recheckInternet()
+            && (root.connectivityIssue !== "limited" || MenuState.homeActive || root._limitedRechecks < 10)
+        onTriggered: {
+            if (root.connectivityIssue === "limited") root._limitedRechecks++
+            root.recheckInternet()
+        }
     }
     Connections {
         target: MenuState
