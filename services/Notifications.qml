@@ -117,13 +117,14 @@ Singleton {
         }
     }
     // each timed card files itself at the idle edge; one behind the more chip loaded as they went, once the edge had
-    // passed it by, and waited out the whole absence over newer ones filed. Whatever timed card is left goes too, unseen
+    // passed it by, and waited out the whole absence over newer ones filed. Whatever timed card is left goes too, and
+    // counts as missed if it came after the last input, as a card does at the edge (unseenAtIdle)
     function _retireAtIdle(idle: bool): void {
         if (!idle) return
         root._retireActive(e => {
             const n = e ? e.notification : null
             return !n || (n.urgency === NotificationUrgency.Critical ? !(n.expireTimeout > 0) : n.expireTimeout === 0)
-        }, e => true)
+        }, e => Date.now() - (root._times[e.id] ?? e.time ?? 0) < Idle.idleSeconds * 1000)
     }
 
     // history is newest-first, so first-seen order is recency order: the app that spoke

@@ -78,6 +78,7 @@ settings file carries its own `__version` and migrates separately.
 - The microphone widget's glyph, colour, text and level all follow whether an app hears you, instead of mixing the
   default microphone's mute in.
 - A notification that times out while you are away with browser music playing counts on the bell as missed.
+- Cards filed from behind Show more at idle count as missed only if they came after your last input.
 
 ## Releases
 

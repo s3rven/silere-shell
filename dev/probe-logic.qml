@@ -15468,21 +15468,28 @@ ShellRoot {
                 { urgency: 1, expireTimeout: -1, summary: "Behind the chip" },
                 { urgency: 1, expireTimeout: 0, summary: "Resident" },
                 { urgency: 2, expireTimeout: -1, summary: "Critical" },
-                { urgency: 2, expireTimeout: 5000, summary: "Timed critical" }
+                { urgency: 2, expireTimeout: 5000, summary: "Timed critical" },
+                { urgency: 1, expireTimeout: -1, summary: "Read before leaving" }
             ]
             for (const n of idleCards) Object.assign(n, { transient: false, tracked: true, appName: "Probe",
                 appIcon: "", desktopEntry: "", body: "", expire() { this.reason = "expired"; this.tracked = false } })
             const listBefore = Notifications.list
-            Notifications.list = idleCards.map((n, i) => ({ notification: n, id: 81 + i, time: Date.now() }))
+            const timesBefore = Notifications._times
+            Notifications._times = ({})
+            // the last came before the last input: you were there for it
+            Notifications.list = idleCards.map((n, i) => ({ notification: n, id: 81 + i,
+                time: i === 4 ? Date.now() - (Idle.idleSeconds + 100) * 1000 : Date.now() }))
             const idleMissedWas = Notifications.missedCount
             Notifications._retireAtIdle(false)
-            const untouchedAwake = Notifications.activeCount === 4
+            const untouchedAwake = Notifications.activeCount === 5
             Notifications._retireAtIdle(true)
             root._check(untouchedAwake && Notifications.activeCount === 2 && idleCards[0].reason === "expired"
-                    && idleCards[3].reason === "expired" && idleCards[1].tracked && idleCards[2].tracked
+                    && idleCards[3].reason === "expired" && idleCards[4].reason === "expired"
+                    && idleCards[1].tracked && idleCards[2].tracked
                     && (MenuState.recentActive || Notifications.missedCount === idleMissedWas + 2),
-                "timed cards still up once the idle edge settles are filed as missed; resident and critical ones stay")
+                "timed cards still up once the idle edge settles are filed, as missed if they came after the last input")
             Notifications.missedCount = idleMissedWas
+            Notifications._times = timesBefore
             Notifications.list = listBefore
         }
         Notifications.replyingId = replyingWas
