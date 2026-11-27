@@ -74,6 +74,7 @@ Column {
         SelectRow {
             key: "barIconSize"
             glyph: "󰀻"; label: "Icon size"
+            description: "Tray and workspace app icons"
             fallbackLabel: ShellSettings.barIconSize + "px"
             model: [
                 { value: 12, label: "Normal" },
