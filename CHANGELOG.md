@@ -57,6 +57,8 @@ settings file carries its own `__version` and migrates separately.
   Now Playing) no longer flips to the previous workspace and back.
 - The `media-changed` hook reports `stopped` for a player that stopped with its track loaded, and runs when a paused
   player stops.
+- A hyprsunset started outside Silere (its own unit) takes Night Light's temperature when Silere finds it running,
+  instead of staying neutral while the switch reads on.
 
 ## Releases
 

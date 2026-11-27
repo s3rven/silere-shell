@@ -443,8 +443,12 @@ Singleton {
                 root.lastError = ""
             }
             root.enabled = state === 1
-            if (root.enabled && root._runningTool.length === 0)
+            if (root.enabled && root._runningTool.length === 0) {
                 root._runningTool = root.tool
+                // a hyprsunset started elsewhere (its own unit) sits at its own temperature while the switch reads on
+                if (root.tool === "hyprsunset" && ShellSettings.nightLightOn && SystemTools.hasHyprctl)
+                    root._sendTemperature()
+            }
             root._probedOnce = true
             root._maybeRestore()
         }
