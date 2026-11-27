@@ -13495,6 +13495,11 @@ ShellRoot {
                 && !Audio.twoWay([app("pw-loopback", "pw-loopback")], [app("pw-loopback", "pw-loopback")])
                 && !Audio.twoWay([{}], [{}]) && !Audio.twoWay([], [app("firefox", "Firefox")]),
             "a call is one app recording and playing at once; a recorder alone, an effects processor or a loopback is not")
+        const stream = (binary, name) => ({ properties: app(binary, name) })
+        root._check(Audio.captureSummaryOf([stream("firefox", "Firefox"), stream("firefox", "Firefox")]) === "Firefox"
+                && Audio.captureSummaryOf([stream("firefox", "Firefox"), stream("obs", "OBS")]) === "2 apps listening"
+                && Audio.captureSummaryOf([]) === "",
+            "the microphone names one app recording twice (two browser tabs) as that app, not as two apps")
         const indicatorsWas = Indicators.items
         Indicators.items = []
         const indicatorSet = Indicators.set("vpn-work", "󰦝", "office") === "ok" && Indicators.set("build", "󰔟", "") === "ok"

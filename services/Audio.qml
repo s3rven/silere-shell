@@ -345,11 +345,17 @@ Singleton {
     readonly property int playbackCount: playbackStreams.length
     readonly property int captureCount: captureStreams.length
     readonly property bool micActive: captureCount > 0
-    readonly property string captureSummary: {
-        const c = root.captureStreams
+    readonly property string captureSummary: root.captureSummaryOf(root.captureStreams)
+    // by app, not stream: two browser tabs recording are one app listening
+    function captureSummaryOf(nodes): string {
+        const c = nodes || []
         if (c.length === 0) return ""
-        if (c.length === 1) return root.streamLabel(c[0])
-        return c.length + " apps listening"
+        const apps = []
+        for (let i = 0; i < c.length; i++) {
+            const key = root.appKey(c[i] ? c[i].properties : null) || "#" + i
+            if (apps.indexOf(key) < 0) apps.push(key)
+        }
+        return apps.length === 1 ? root.streamLabel(c[0]) : apps.length + " apps listening"
     }
 
 

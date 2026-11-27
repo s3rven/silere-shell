@@ -49,6 +49,7 @@ settings file carries its own `__version` and migrates separately.
 - On a desktop, hovering the battery pill for a low mouse or keyboard names the device.
 - On a laptop without power modes (TLP, auto-cpufreq), clicking the battery opens its details in Home.
 - With the OSD off, a low battery sends a notification instead of nothing; only the critical level used to.
+- Two browser tabs recording read as one app listening on the microphone widget, not two.
 
 ## Releases
 
