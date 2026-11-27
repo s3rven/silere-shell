@@ -67,7 +67,7 @@ Singleton {
         if (root._hardened[path] === true) return
         root._hardened[path] = true
         Quickshell.execDetached(["bash", "-c",
-            "[ ! -L \"$1\" ] && chmod 0600 -- \"$1\"", "bash", path])
+            "[ ! -L \"$1\" ] && chmod go= -- \"$1\"", "bash", path])
     }
 
     BoundedProcess {
@@ -79,7 +79,9 @@ Singleton {
             // one that leads nowhere or to a folder someone else owns
             "umask 077; if [ -L \"$1\" ]; then [ -d \"$1\" ] && [ -O \"$1\" ] || exit 1; " +
             "else mkdir -m 0700 -p -- \"$1\" || exit $?; chmod 0700 -- \"$1\" || exit $?; fi; " +
-            "[ ! -e \"$3\" ] || [ -L \"$3\" ] || chmod 0600 -- \"$3\" || exit $?; " +
+            // others lose access, the owner gains none: a settings file root owns after a sudo run, or one made
+            // read-only, left the store never ready, so no history and no hooks either. Its own save reports it
+            "[ ! -e \"$3\" ] || [ -L \"$3\" ] || chmod go= -- \"$3\" || true; " +
             // the state folder only holds history: a failure there stops history saving, never settings.
             // History used to live in the config folder; a failed move leaves it there and starts a fresh one
             "if [ -n \"$2\" ] && [ ! -L \"$2\" ] && mkdir -m 0700 -p -- \"$2\" && chmod 0700 -- \"$2\"; then " +
