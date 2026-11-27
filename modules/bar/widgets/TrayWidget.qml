@@ -256,7 +256,6 @@ Item {
                 }
 
                 Rectangle {
-                    id: _hoverCap
                     anchors.centerIn: parent
                     width: parent.width
                     height: Metrics.barRowHeight

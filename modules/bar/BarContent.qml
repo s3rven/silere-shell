@@ -289,7 +289,6 @@ Item {
     }
 
     Loader {
-        id: _centerVisualizer
         x: root._centerVizX
         width: root._centerVizWidth
         y: Metrics.barWidgetReach

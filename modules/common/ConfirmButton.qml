@@ -167,7 +167,6 @@ Rectangle {
     }
 
     Loader {
-        id: _confirmArc
         anchors.fill: parent
         active: root._armed && Motion.ms(1) > 0
         opacity: root._armT

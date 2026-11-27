@@ -720,7 +720,6 @@ Singleton {
     }
 
     Timer {
-        id: _vpnFallbackPoll
         // the interface list covers tunnels; this is only a net for a VPN with no interface of its own
         interval: 900000
         repeat: true

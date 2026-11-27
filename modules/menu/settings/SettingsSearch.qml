@@ -89,7 +89,6 @@ Column {
     }
 
     Item {
-        id: _toolbar
         width: root.width
         height: root.expanded ? root.fieldHeight : root.toggleHeight
         IconButton {
@@ -209,7 +208,6 @@ Column {
                 height: parent.height
                 clip: true
                 Item {
-                    id: _field
                     // input and actions keep their full geometry from the first frame, including rapid typing after opening; only the reveal moves
                     x: _fieldViewport.width - width - _fieldClip.x
                     width: root.width

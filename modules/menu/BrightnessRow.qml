@@ -93,7 +93,6 @@ Item {
                 model: root._optionsShown && Brightness.devices.length > 1 ? Brightness.deviceChoices : []
 
                 delegate: InlineOptionRow {
-                    id: _option
                     required property var modelData
                     readonly property bool active: modelData.value === Brightness.deviceChoice
 

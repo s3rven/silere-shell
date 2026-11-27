@@ -179,7 +179,6 @@ MenuRow {
             spacing: root._chipGap
 
             Repeater {
-                id: _optionRepeater
                 model: root.model
 
                 delegate: Item {
@@ -263,7 +262,6 @@ MenuRow {
                     }
 
                     Row {
-                        id: _content
                         anchors.centerIn: parent
                         spacing: 4
                         ShellText {

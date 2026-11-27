@@ -398,7 +398,6 @@ PageShell {
                 }
 
                 ControlRow {
-                    id: _signInRow
                     visible: root._signInShown
                     glyph: "󰖟"
                     title: "Sign in to this network"
@@ -515,7 +514,6 @@ PageShell {
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
-                            spacing: 0
 
                             ToggleRow {
                                 glyph: "󰖙"
@@ -574,7 +572,6 @@ PageShell {
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
-                            spacing: 0
 
                             InlineOptionRow {
                                 glyph: "󰔛"
@@ -628,7 +625,6 @@ PageShell {
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
-                            spacing: 0
 
                             Repeater {
                                 model: [1, 2]
@@ -681,7 +677,6 @@ PageShell {
                     content: Component {
                         Column {
                             width: parent ? parent.width : 0
-                            spacing: 0
 
                             Repeater {
                                 model: PowerProfiles.choices

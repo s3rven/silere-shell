@@ -121,10 +121,8 @@ PageShell {
     Column {
         id: _col
         width: parent.width
-        spacing: 0
 
         Item {
-            id: _header
             x: 4
             width: parent.width - 8
             height: Metrics.snap4Up(_heading.implicitHeight + 2 + _source.implicitHeight)
@@ -320,7 +318,6 @@ PageShell {
         Item { width: 1; height: 14 }
 
         Column {
-            id: _trackCol
             width: parent.width
             opacity: root._textOpacity
             transform: Translate { y: root._textSlide }
@@ -591,7 +588,6 @@ PageShell {
                     model: Media.playerList
 
                     InlineOptionRow {
-                        id: _playerRow
                         required property var modelData
                         glyph: modelData.isPlaying ? "󰐊"
                             : modelData.playbackState === MprisPlaybackState.Stopped ? "󰓛" : "󰏤"

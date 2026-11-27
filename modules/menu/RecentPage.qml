@@ -302,7 +302,6 @@ PageShell {
     }
 
     Item {
-        id: _pageSurface
         width: parent.width
         height: root.viewportHeight
 
@@ -544,7 +543,6 @@ PageShell {
             }
 
             ShellText {
-                id: _searchGlyph
                 x: (_searchBox.height - implicitWidth) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰍉"
@@ -708,7 +706,6 @@ PageShell {
             anchors.bottomMargin: 10
             width: parent.width
             // runs of one app close up and days pull apart, so every gap is carried by the delegate
-            spacing: 0
             visible: root.rowCount > 0
             cacheBuffer: 240
             // no reuseItems: a pooled row stays painted after a search removes it

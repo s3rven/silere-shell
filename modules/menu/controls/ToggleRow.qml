@@ -115,7 +115,6 @@ MenuRow {
         spacing: 2
 
         ShellText {
-            id: _label
             width: parent.width
             text:           root.label
             opacity: root._showDependsNote ? root._controlOpacity : 1.0
@@ -128,7 +127,6 @@ MenuRow {
         }
 
         ShellText {
-            id: _desc
             visible: root._hasDetail
             width:   parent.width
             text:           root._detailText

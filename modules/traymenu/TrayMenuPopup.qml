@@ -328,7 +328,6 @@ FittedPopupWindow {
                 }
 
                 Item {
-                    id: _mark
                     visible: _entry.checkable
                     anchors.centerIn: _lead
                     width: Settings.fontSize
@@ -372,7 +371,6 @@ FittedPopupWindow {
                 }
 
                 ShellIcon {
-                    id: _icon
                     visible: !_entry.checkable && _entry.iconSrc !== "" && status === Image.Ready
                     anchors.centerIn: _lead
                     side: win.leadWidth
@@ -491,7 +489,6 @@ FittedPopupWindow {
                 HoverHandler { id: _flyHover }
 
                 Timer {
-                    id: _flyClose
                     interval: 180
                     running: _flyout.opened && !_rowHover.hovered && !_flyout._focusPending
                         && !TrayMenuState.branchHovered(_flyout, win.stage.children)
@@ -613,7 +610,6 @@ FittedPopupWindow {
                 spacing: 1
 
                 Repeater {
-                    id: _topRows
                     model: _opener.children
                     delegate: _rowDelegate
                     onItemAdded: (index, item) => {

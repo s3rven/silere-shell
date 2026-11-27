@@ -208,7 +208,6 @@ Item {
 
             // the chips sit outside this: fading them blinks the control the click landed on
             Column {
-                id: _tabContent
                 width: _optCol.width
                 opacity: root._tabFade
                 x: root._tabShift

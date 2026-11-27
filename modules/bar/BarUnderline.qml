@@ -384,7 +384,6 @@ Item {
         readonly property real _tempFloor:    0.24
 
         PulseLoop {
-            id: _tempFlash
             target:         _lineEffect
             targetProperty: "_tempPulseGlow"
             peak:           _lineEffect._tempPeak

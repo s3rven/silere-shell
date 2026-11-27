@@ -71,7 +71,6 @@ Item {
         active: root.shown
         sourceComponent: Component {
             Canvas {
-                id: _cv
                 anchors.left: parent.left;     anchors.leftMargin: 2
                 anchors.right: parent.right;   anchors.rightMargin: 2
                 anchors.top: parent.top;       anchors.topMargin: 33

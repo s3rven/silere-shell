@@ -313,7 +313,6 @@ Item {
     property real _dragScrollOffset: 0
 
     Timer {
-        id: _autoScrollTick
         interval: 16
         repeat: true
         running: root._autoScrollDir !== 0 && root._draggingKey.length > 0
@@ -981,7 +980,6 @@ Item {
     }
 
     Item {
-        id: _footer
         y: root._rowsBottom + root._footerGap
         width: parent.width
         height: root._footerH

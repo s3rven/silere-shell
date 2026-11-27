@@ -111,7 +111,6 @@ Item {
     // only the first scan searches: each 8 s rescan otherwise flipped an empty list back to Searching
     property bool _searched: false
     Timer {
-        id: _rescan
         interval: 8000
         repeat: true
         running: root._canScan() && root._selected === "" && !Idle.isIdle
@@ -144,7 +143,6 @@ Item {
     Column {
         id: _col
         width: parent.width
-        spacing: 0
 
         InlineOptionRow {
             glyph: "󰖟"
@@ -178,7 +176,6 @@ Item {
             height: Math.min(contentHeight, 240)
             visible: root._networks.length > 0
             interactive: contentHeight > height
-            spacing: 0
             reuseItems: true
             model: root._networks
 
@@ -187,7 +184,6 @@ Item {
                 required property var modelData
                 required property int index
                 width: _list.width
-                spacing: 0
 
                 // a pooled row rebinds holding the previous row's values
                 property bool motionReady: true

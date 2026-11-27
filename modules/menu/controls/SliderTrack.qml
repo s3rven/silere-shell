@@ -222,7 +222,6 @@ Item {
     // The layer sits on this child, not the track: on the snapped track its texture took the unsnapped fraction of a
     // pixel and drew a row taller at 1.25
     Item {
-        id: _body
         width: Metrics.devicePx(root.width, root._dpr)
         height: Metrics.devicePx(root.height, root._dpr)
         layer.enabled: root.visible && root.showThumb && !root._canInteract

@@ -420,7 +420,6 @@ PageShell {
                     ShellSettings.highContrast ? 0.24 : 0.14)
 
                 ShellText {
-                    id: _hdrIcon
                     anchors.centerIn: parent
                     opacity: _detail._fade
                     text: _detailHeader._meta.glyph
@@ -443,7 +442,6 @@ PageShell {
                 opacity: _detail._fade
 
                 ShellText {
-                    id: _hdrTitle
                     width: parent.width
                     text: _detailHeader._meta.label
                     color: Theme.text
@@ -592,7 +590,6 @@ PageShell {
             id: _secWidgets
             Column {
                 width: _detailBody.width
-                spacing: 0
 
                 DraggableWidgetList { width: parent.width; scroller: root.scroller }
             }
@@ -637,7 +634,6 @@ PageShell {
             id: _secUpdates
             Column {
                 width: _detailBody.width
-                spacing: 0
                 SettingsUpdatesSection {
                     animationActive: root.active && root._shownSection === "updates"
                         && !root.powerOpen && !Idle.isIdle

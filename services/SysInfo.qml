@@ -152,7 +152,6 @@ Singleton {
     Timer { id: _uptimePoll; onTriggered: if (root._active && root._homeWanted) _uptimeFile.reload() }
 
     Timer {
-        id: _poll
         interval: 2000
         repeat: true
         running: root._active

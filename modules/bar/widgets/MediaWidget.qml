@@ -160,7 +160,6 @@ Item {
         height: Math.max(_playIcon.implicitHeight, textClip.height)
 
         Item {
-            id: _playIconSlot
             anchors.verticalCenter: parent.verticalCenter
             visible: root._helperEnabled
             width: root._helperEnabled ? root._helperWidth : 0

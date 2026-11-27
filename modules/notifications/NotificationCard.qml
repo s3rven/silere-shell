@@ -426,7 +426,6 @@ Item {
     }
 
     Timer {
-        id: _timeUpdate
         interval: card._timeUpdateMs
         running:  card.visible && ShellSettings.notifPopupEnabled
             && card.enabled && card._timeLive && !Idle.isIdle
@@ -1180,7 +1179,6 @@ Item {
     }
 
     Item {
-        id: _cardBorder
         anchors.fill: cardRect
         opacity: cardRect.opacity
 

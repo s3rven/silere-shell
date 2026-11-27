@@ -5,7 +5,6 @@ import Quickshell.Wayland
 // drawn for a moment as a fullscreen window covers the bar: qt's elapsed-time driver advances only on drawn frames,
 // and a fade caught in flight under the cover would otherwise stop every Timer until something of the shell draws
 PanelWindow {
-    id: win
 
     required property ShellScreen targetScreen
     screen: targetScreen

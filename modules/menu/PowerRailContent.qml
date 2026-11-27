@@ -53,7 +53,6 @@ Item {
             visible: root._statusVisible
 
             PowerRailRow {
-                id: _powMode
                 visible: PowerProfiles.available
                 width: parent.width
                 label: root._profileValue
@@ -109,7 +108,6 @@ Item {
             }
 
             PowerRailRow {
-                id: _powLock
                 width: parent.width
                 label: "Lock"
                 glyph: "󰍁"
@@ -127,7 +125,6 @@ Item {
             }
 
             PowerRailRow {
-                id: _powSusp
                 width: parent.width
                 label: "Sleep"
                 glyph: "󰒲"

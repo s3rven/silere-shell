@@ -650,7 +650,6 @@ Item {
     }
 
     Item {
-        id: _strip
         objectName: "workspace-strip"
         y: root._rowY
         width: root.width

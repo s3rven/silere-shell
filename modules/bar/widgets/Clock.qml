@@ -141,7 +141,6 @@ Item {
         id: _content
         x: root._horizontalPadding
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 0
         layoutDirection: root.mirrored ? Qt.RightToLeft : Qt.LeftToRight
 
         // the space sits on the side facing the date, which flips with the row
@@ -154,7 +153,6 @@ Item {
         }
 
         Item {
-            id: _dateSectionClip
             anchors.verticalCenter: parent.verticalCenter
             height:  _dateRow.implicitHeight
             // the day and date ease their own widths; easing their sum again stalls until they settle
@@ -169,7 +167,6 @@ Item {
                 id: _dateRow
                 anchors.verticalCenter: parent.verticalCenter
                 x: root.mirrored ? parent.width - width : 0
-                spacing: 0
 
                 CollapsingText {
                     text:     DateTime.cachedDayName
@@ -187,7 +184,6 @@ Item {
 
         Row {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
 
             // red is for a screen another app is capturing; a mode the user chose stays quiet
             CollapsingText {

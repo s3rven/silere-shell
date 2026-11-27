@@ -19,7 +19,6 @@ Item {
     height: implicitHeight
 
     Item {
-        id: _band
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

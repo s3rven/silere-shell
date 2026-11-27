@@ -95,7 +95,6 @@ Item {
     }
 
     Rectangle {
-        id: _fill
         readonly property real _topR: Math.max(0, root.topRadius - root.cardInset)
         readonly property real _botR: Math.max(0, root.bottomRadius - root.cardInset)
 

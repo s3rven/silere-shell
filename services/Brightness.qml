@@ -341,7 +341,6 @@ Singleton {
 
     // a firmware hotkey notifies only actual_brightness, whose value amdgpu reports on its own hardware scale
     FileView {
-        id: _actualBrightnessFile
         path: root._device.length > 0
             ? "/sys/class/backlight/" + root._device + "/actual_brightness" : ""
         watchChanges: root._device.length > 0

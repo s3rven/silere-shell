@@ -37,7 +37,6 @@ Repeater {
 
     model: column ? column.children.length : 0
     delegate: Rectangle {
-        id: _line
         required property int index
         readonly property Item row: root.column ? (root.column.children[index] ?? null) : null
         readonly property bool hasRowAbove: root._sepVisible[index] ?? false

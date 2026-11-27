@@ -421,7 +421,6 @@ FittedPopupWindow {
                         spacing: 6
 
                         ShellText {
-                            id: _mLabel
                             anchors.baseline: _yLabel.baseline
                             // a long localized name gives way to the arrows rather than running under them
                             width: Math.min(implicitWidth, Math.max(0,
@@ -504,7 +503,6 @@ FittedPopupWindow {
                 clip: true
 
                 Column {
-                    id: _weekAxis
                     visible: ShellSettings.calendarWeekNumbers
                     x: 0
                     width: card.weekCol
@@ -645,7 +643,6 @@ FittedPopupWindow {
 
                 // off means the service is never created; a binding below would otherwise instantiate it
                 Loader {
-                    id: _weatherBody
                     y: 4
                     width: parent.width
                     height: _weather.lineH - 4

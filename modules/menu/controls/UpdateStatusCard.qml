@@ -47,7 +47,6 @@ Rectangle {
     Column {
         id: _col
         width: parent.width
-        spacing: 0
 
         Item {
             id: _main
@@ -124,7 +123,6 @@ Rectangle {
                 }
 
                 ShellText {
-                    id: _status
                     width: parent.width
                     text: root.status
                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -170,7 +168,6 @@ Rectangle {
         }
 
         Item {
-            id: _detailWrap
             visible: height > 0.5
             width: parent.width
             height: root.detail.length > 0 ? 4 * Math.ceil((_detailText.implicitHeight + 3 + 9) / 4) : 0

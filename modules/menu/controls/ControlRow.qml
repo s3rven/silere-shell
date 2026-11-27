@@ -108,7 +108,6 @@ MenuRow {
         width: Metrics.glyphSlotWidth; height: 18
 
         ShellText {
-            id: _glyph
             anchors.centerIn: parent
             text:           root.glyph
             color:          root.active ? Theme.withAlpha(root._ink, 0.95)

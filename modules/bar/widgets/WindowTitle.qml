@@ -549,7 +549,6 @@ Item {
         clip: true
 
         Item {
-            id: _group
             readonly property real _w: root._iconSpan + root._measuredContentWidth
             x: root._zone === "left" ? root._horizontalPadding
                 : root._zone === "right"
@@ -577,7 +576,6 @@ Item {
                 clip: root._marqueeLive
 
                 ShellText {
-                    id: content
                     x: root._scrollX
                     anchors.verticalCenter: parent.verticalCenter
                     text:           root._formatted

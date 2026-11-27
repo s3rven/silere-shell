@@ -94,7 +94,6 @@ Item {
     // as SliderTrack: dimmed piece by piece, the rail showed through the handle, so a strip that cannot be used is
     // one layer, on this child because the snapped root would draw it a row taller at 1.25
     Item {
-        id: _body
         width: Metrics.devicePx(root.width, root._dpr)
         height: Metrics.devicePx(root.height, root._dpr)
         layer.enabled: root.visible && !root._canInteract

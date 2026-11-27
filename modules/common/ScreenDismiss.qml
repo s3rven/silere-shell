@@ -5,7 +5,6 @@ import "../../services"
 
 // hyprland 0.57 and niri hand a click on another monitor to whatever is under it, which left the popup open and holding the keyboard
 PanelWindow {
-    id: win
 
     required property ShellScreen targetScreen
 
