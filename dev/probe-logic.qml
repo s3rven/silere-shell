@@ -12276,6 +12276,12 @@ ShellRoot {
         root._check(niri.workspaceToplevels.length === 1 && niri.workspaceToplevels[0].ref === 92
                 && niri.workspaceToplevels[0].output === "DP-2",
             "niri workspace windows carry the id the urgent arrow matches on a bar-less monitor")
+        niri._onLine(JSON.stringify({ WorkspaceActiveWindowChanged: { workspace_id: 30, active_window_id: 92 } }))
+        niri._onLine(JSON.stringify({ WindowFocusChanged: { id: null } }))
+        root._check(niri.activeToplevel !== null && niri.activeToplevel.ref === 92,
+            "with a layer surface holding niri's keyboard (a popup, a launcher) the window in front keeps the title")
+        niri._onLine(JSON.stringify({ WorkspaceActiveWindowChanged: { workspace_id: 30, active_window_id: null } }))
+        root._check(niri.activeToplevel === null, "an empty focused niri workspace has no active window")
 
         niri.destroy()
 

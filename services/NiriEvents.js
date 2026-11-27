@@ -36,6 +36,18 @@ function workspacesWithActivated(src, id, focused) {
     return { workspaces: ws, output: output }
 }
 
+// a workspace's active window, which it keeps while a layer surface holds the keyboard and no window is focused
+function workspacesWithActiveWindow(src, id, windowId) {
+    for (let i = 0; i < src.length; i++) {
+        if (!src[i] || src[i].id !== id) continue
+        if ((src[i].active_window_id ?? null) === windowId) return src
+        const ws = src.slice()
+        ws[i] = Object.assign({}, src[i], { active_window_id: windowId })
+        return ws
+    }
+    return src
+}
+
 // a workspace or a window row, by id: both carry is_urgent
 function workspacesWithUrgency(src, id, urgent) {
     for (let i = 0; i < src.length; i++) {

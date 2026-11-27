@@ -237,6 +237,13 @@ QtObject {
                 break
             }
         }
+        // a layer surface holding the keyboard (a Silere popup, a launcher) leaves no window focused: the focused
+        // workspace's active window is still the one in front, as Hyprland keeps reporting it, so the title stays
+        if (!focused) {
+            const front = ws.find(w => w && w.is_focused)
+            const id = front ? front.active_window_id ?? null : null
+            if (id !== null) focused = wins.find(w => w && w.id === id) || null
+        }
         if (!focused) return null
         let home = null
         for (let i = 0; i < ws.length; i++)
@@ -385,6 +392,11 @@ QtObject {
                 ev.WorkspaceActivated.id, !!ev.WorkspaceActivated.focused)
             root._wsRaw = next.workspaces
             root.workspaceActivated(next.output)
+            return
+        }
+        if (ev.WorkspaceActiveWindowChanged) {
+            const d = ev.WorkspaceActiveWindowChanged
+            root._wsRaw = NiriEvents.workspacesWithActiveWindow(root._wsRaw, d.workspace_id, d.active_window_id ?? null)
             return
         }
         if (ev.WorkspaceUrgencyChanged) {
