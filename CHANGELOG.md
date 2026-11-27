@@ -97,6 +97,7 @@ settings file carries its own `__version` and migrates separately.
 - Choosing Mix while the Auto accent is on starts from the wallpaper's accent on screen, not an older custom colour.
 - Reload palette shows only while the palette is missing or broken; a working one is followed as it changes.
 - On niri, the window title stays while a Silere popup or a launcher holds the keyboard instead of folding away.
+- Opening niri's overview no longer resizes every window into the bar's space and back.
 
 ## Releases
 

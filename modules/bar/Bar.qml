@@ -81,7 +81,8 @@ PanelWindow {
     MotionBehavior on surfaceHeight {
         NumberAnimation { duration: Motion.medium; easing.type: Easing.OutCubic }
     }
-    exclusiveZone: bar.concealed ? 0 : bar._targetCoreHeight
+    // niri's overview is live: giving its strip back resized every column into it and back again on close
+    exclusiveZone: bar.concealed && !Compositor.overviewIsLive ? 0 : bar._targetCoreHeight
     implicitHeight: 4 * Math.ceil((bar.surfaceHeight
         + bar.insetPad * bar.floatingProgress + bar.effectPad) / 4)
 
